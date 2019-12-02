@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "set DEBUG=* & nodemon app.js"
+    "start": "set DEBUG=streamActionsBot & nodemon app.js"
   },
   "repository": {
     "type": "git",
@@ -27,7 +27,7 @@
     "eslint": "6.7.2",
     "eslint-config-airbnb-base": "14.0.0",
     "eslint-plugin-import": "2.18.2",
-    "nodemon": "2.0.1"
+    "nodemon": "2.0.0"
   },
   "nodemonConfig": {
     "restartable": "rs",
