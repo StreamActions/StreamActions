@@ -31,7 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Plugin\" />
+    <Folder Include="Plugin\Events\" />
   </ItemGroup>
 
 </Project>
