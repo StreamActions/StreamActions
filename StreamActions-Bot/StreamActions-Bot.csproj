@@ -27,11 +27,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
     <PackageReference Include="TwitchLib" Version="3.1.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Plugin\Events\" />
   </ItemGroup>
 
 </Project>

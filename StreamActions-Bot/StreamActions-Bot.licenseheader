@@ -1,4 +1,6 @@
-﻿/*
+﻿extensions: designer.cs generated.cs
+extensions: .cs
+/*
  * Copyright © 2019-2020 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,17 +15,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-namespace StreamActions
-{
-    internal class Program
-    {
-        #region Private Methods
-
-        private static void Main(string[] args)
-        {
-        }
-
-        #endregion Private Methods
-    }
-}
