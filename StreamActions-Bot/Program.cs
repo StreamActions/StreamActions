@@ -16,7 +16,7 @@
 
 using System;
 
-namespace App.StreamActions
+namespace StreamActions
 {
     internal class Program
     {
