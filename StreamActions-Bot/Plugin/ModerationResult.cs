@@ -17,11 +17,21 @@
 namespace StreamActions.Plugin
 {
     /// <summary>
-    /// Represents the result of a ModerationEvent handler.
+    /// Represents the result of a <see cref="PluginManager.OnMessageModeration"/> EventHandler.
     /// </summary>
     public class ModerationResult
     {
         #region Public Properties
+
+        /// <summary>
+        /// The message to send to chat after the action is taken.
+        /// </summary>
+        public string ModerationMessage { get; set; }
+
+        /// <summary>
+        /// The reason to attach to the moderation command.
+        /// </summary>
+        public string ModerationReason { get; set; }
 
         /// <summary>
         /// Set to true to indicate that the sender should be banned.
@@ -86,7 +96,7 @@ namespace StreamActions.Plugin
         }
 
         /// <summary>
-        /// Set to true to indicate that the sender should be timed out for TimeoutSeconds.
+        /// Set to true to indicate that the sender should be timed out for <see cref="TimeoutSeconds"/>.
         /// </summary>
         public bool ShouldTimeout
         {
@@ -110,7 +120,7 @@ namespace StreamActions.Plugin
         }
 
         /// <summary>
-        /// The number of seconds to timeout the sender for. Setting this will also set ShouldTimeout.
+        /// The number of seconds to timeout the sender for. Setting this will also set <see cref="ShouldTimeout"/>.
         /// </summary>
         public int TimeoutSeconds
         {
@@ -139,10 +149,10 @@ namespace StreamActions.Plugin
         #region Public Methods
 
         /// <summary>
-        /// Determines whether b is a harsher ModerationResult than this.
+        /// Determines whether <paramref name="b"/> is a harsher ModerationResult than this.
         /// </summary>
         /// <param name="b">A ModerationResult to compare.</param>
-        /// <returns>True if b is a harsher ModerationResult.</returns>
+        /// <returns>True if <paramref name="b"/> is a harsher ModerationResult.</returns>
         public bool IsHarsher(ModerationResult b) => b == null || this.ShouldBan
                 ? false
                 : b.ShouldBan
@@ -164,27 +174,27 @@ namespace StreamActions.Plugin
         #region Private Fields
 
         /// <summary>
-        /// Field that backs the ShouldBan property.
+        /// Field that backs the <see cref="ShouldBan"/> property.
         /// </summary>
         private bool _shouldBan = false;
 
         /// <summary>
-        /// Field that backs the ShouldDelete property.
+        /// Field that backs the <see cref="ShouldDelete"/> property.
         /// </summary>
         private bool _shouldDelete = false;
 
         /// <summary>
-        /// Field that backs the ShouldPurge property.
+        /// Field that backs the <see cref="ShouldPurge"/> property.
         /// </summary>
         private bool _shouldPurge = false;
 
         /// <summary>
-        /// Field that backs the ShouldTimeout property.
+        /// Field that backs the <see cref="ShouldTimeout"/> property.
         /// </summary>
         private bool _shouldTimeout = false;
 
         /// <summary>
-        /// Field that backs the TimeoutSeconds property.
+        /// Field that backs the <see cref="TimeoutSeconds"/> property.
         /// </summary>
         private int _timeoutSeconds = 0;
 

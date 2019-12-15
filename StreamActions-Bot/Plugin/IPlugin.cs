@@ -21,35 +21,41 @@ namespace StreamActions.Plugin
     /// </summary>
     public interface IPlugin
     {
+        #region Public Properties
+
+        /// <summary>
+        /// Whether the plugin should always be enabled. This should only be true in core plugins and special circumstances.
+        /// </summary>
+        public bool AlwaysEnabled { get; }
+
+        /// <summary>
+        /// A description of the plugin.
+        /// </summary>
+        public string PluginDescription { get; }
+
+        /// <summary>
+        /// The name of the plugin.
+        /// </summary>
+        public string PluginName { get; }
+
+        /// <summary>
+        /// The plugin version.
+        /// </summary>
+        public string PluginVersion { get; }
+
+        #endregion Public Properties
+
         #region Public Methods
 
         /// <summary>
-        /// Called when the plugin is disabled. Event delegates should be unregistered here.
+        /// Called when the plugin is disabled. EventHandler delegates should be unsubscribed here.
         /// </summary>
         public void Disabled();
 
         /// <summary>
-        /// Called when the plugin is enabled. Event delegates should be registered here.
+        /// Called when the plugin is enabled. EventHandler delegates should be subscribed here.
         /// </summary>
         public void Enabled();
-
-        /// <summary>
-        /// Returns a basic, friendly description of the plugin.
-        /// </summary>
-        /// <returns>A description of the plugin..</returns>
-        public string GetPluginDescription();
-
-        /// <summary>
-        /// Returns a friendly name of the plugin.
-        /// </summary>
-        /// <returns>The name of the plugin.</returns>
-        public string GetPluginName();
-
-        /// <summary>
-        /// Returns the plugin version.
-        /// </summary>
-        /// <returns>The plugin version.</returns>
-        public string GetPluginVersion();
 
         #endregion Public Methods
     }
