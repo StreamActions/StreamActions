@@ -16,12 +16,13 @@
 
 using StreamActions.Plugin;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using TwitchLib.Client.Events;
 
 namespace StreamActions.Plugins
 {
+    /// <summary>
+    /// Handles various moderation actions against chat messages, such as links protection.
+    /// </summary>
     public class Moderation : IPlugin
     {
         #region Public Constructors
@@ -37,33 +38,22 @@ namespace StreamActions.Plugins
 
         #region Public Properties
 
-        /// <summary>
-        /// If the plugin should always be enabled.
-        /// </summary>
         public bool AlwaysEnabled => false;
 
-        /// <summary>
-        /// The description of the plugin
-        /// </summary>
+        public string PluginAuthor => "StreamActions Team";
+
         public string PluginDescription => "Moderation plugin for StreamActions";
 
-        /// <summary>
-        /// The name of the plugin.
-        /// </summary>
         public string PluginName => "Moderation";
 
-        /// <summary>
-        /// The version of the plugin.
-        /// </summary>
+        public Uri PluginUri => throw new NotImplementedException();
+
         public string PluginVersion => "1.0.0";
 
         #endregion Public Properties
 
         #region Public Methods
 
-        /// <summary>
-        /// Method called when the plugin gets disabled <see cref="PluginManager.UnloadPlugin(string)"/>.
-        /// </summary>
         public void Disabled()
         {
             PluginManager.Instance.OnMessageModeration -= this.Moderation_OnCapsCheck;
@@ -78,9 +68,6 @@ namespace StreamActions.Plugins
             PluginManager.Instance.OnMessageModeration -= this.Moderation_OnZalgoCheck;
         }
 
-        /// <summary>
-        /// Method called when the plugin gets activated see <see cref="PluginManager.LoadPlugins(string, bool)"/>.
-        /// </summary>
         public void Enabled()
         {
             PluginManager.Instance.OnMessageModeration += this.Moderation_OnCapsCheck;

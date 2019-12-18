@@ -62,30 +62,45 @@ namespace StreamActions.Plugin
         #region Public Properties
 
         /// <summary>
-        /// Singleton of <see cref="PluginManager"/>
+        /// Singleton of <see cref="PluginManager"/>.
         /// </summary>
         public static PluginManager Instance => _instance.Value;
 
         /// <summary>
-        /// Indicates if the bot is in lock down mode. When this is set, only plugins with <see cref="TwitchLib.Client.Models.ChatMessage"/> EventHandlers will be enabled.
+        /// Indicates if the bot is in lock down mode. When this is set, only plugins with <see cref="OnMessageModeration"/> EventHandlers or the <see cref="IPlugin.AlwaysEnabled"/>
+        /// property will be enabled.
         /// </summary>
         public bool InLockdown => this._inLockdown;
 
         /// <summary>
-        /// Provides a copy of the currently loaded plugins. Other plugins and classes should NEVER hold onto a reference to another plugin.
+        /// Provides a copy of the currently loaded plugins as WeakReferences.
         /// </summary>
-        public Dictionary<string, IPlugin> Plugins => new Dictionary<string, IPlugin>(this._plugins);
+        public Dictionary<string, WeakReference<IPlugin>> Plugins
+        {
+            get
+            {
+                Dictionary<string, WeakReference<IPlugin>> value = new Dictionary<string, WeakReference<IPlugin>>();
+
+                foreach (KeyValuePair<string, IPlugin> kvp in this._plugins)
+                {
+                    value.Add(kvp.Key, new WeakReference<IPlugin>(kvp.Value));
+                }
+
+                return value;
+            }
+        }
 
         #endregion Public Properties
 
         #region Internal Methods
 
         /// <summary>
-        /// Switches the bot out of lock down mode. Plugins are re-enabled if user settings permit
+        /// Switches the bot out of lock down mode. Plugins are re-enabled if user settings permit.
         /// </summary>
         internal void EndLockdown()
         {
             this._inLockdown = false;
+
             foreach (KeyValuePair<string, IPlugin> kvp in this._plugins)
             {
                 //TODO: Call IPlugin.Enabled() if plugin is currently enabled in user settings
@@ -121,17 +136,27 @@ namespace StreamActions.Plugin
         /// <summary>
         /// Loads all plugins from the specified assembly.
         /// </summary>
-        /// <param name="relativePath">The path to the assembly file, relative to the plugins directory.</param>
+        /// <param name="relativePath">The path to the assembly file, relative to the plugins directory. Set to null or empty string to load from the current assembly.
+        /// Paths must always use <c>\</c> as the directory separator character unless they come from a member that has already detected the OS directory separator character.</param>
         /// <param name="isReloading">Indicates if the assembly is being reloaded, and should therefore disable existing instances first for GC.</param>
         internal void LoadPlugins(string relativePath, bool isReloading = false)
         {
-            string pluginLocation = Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "plugins", relativePath.Replace('\\', Path.DirectorySeparatorChar)));
-            PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
-            System.Reflection.Assembly assembly = loadContext.LoadFromAssemblyName(new System.Reflection.AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
+            System.Reflection.Assembly assembly;
+
+            if (relativePath == null || relativePath.Length == 0)
+            {
+                assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            }
+            else
+            {
+                string pluginLocation = Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "plugins", relativePath.Replace('\\', Path.DirectorySeparatorChar)));
+                PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
+                assembly = loadContext.LoadFromAssemblyName(new System.Reflection.AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
+            }
 
             foreach (Type type in assembly.GetTypes())
             {
-                if (typeof(IPlugin).IsAssignableFrom(type))
+                if (typeof(IPlugin).IsAssignableFrom(type) && type.IsClass && !type.IsAbstract)
                 {
                     if (Activator.CreateInstance(type) is IPlugin result)
                     {

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace StreamActions.Plugin
 {
     /// <summary>
@@ -24,9 +26,14 @@ namespace StreamActions.Plugin
         #region Public Properties
 
         /// <summary>
-        /// Whether the plugin should always be enabled. This should only be true in core plugins and special circumstances.
+        /// Whether the plugin should always be enabled for all channels. This should only be true in core plugins and special circumstances.
         /// </summary>
         public bool AlwaysEnabled { get; }
+
+        /// <summary>
+        /// The author of the plugin.
+        /// </summary>
+        public string PluginAuthor { get; }
 
         /// <summary>
         /// A description of the plugin.
@@ -39,7 +46,12 @@ namespace StreamActions.Plugin
         public string PluginName { get; }
 
         /// <summary>
-        /// The plugin version.
+        /// The Uri of the plugin.
+        /// </summary>
+        public Uri PluginUri { get; }
+
+        /// <summary>
+        /// The plugin version. Usage of semver is highly preferred.
         /// </summary>
         public string PluginVersion { get; }
 
@@ -48,12 +60,12 @@ namespace StreamActions.Plugin
         #region Public Methods
 
         /// <summary>
-        /// Called when the plugin is disabled. EventHandler delegates should be unsubscribed here.
+        /// Called when the plugin is disabled either globally, or by all channels. EventHandler delegates must be unsubscribed here.
         /// </summary>
         public void Disabled();
 
         /// <summary>
-        /// Called when the plugin is enabled. EventHandler delegates should be subscribed here.
+        /// Called when the plugin is enabled either globally, or by at least one channel. EventHandler delegates must be subscribed here.
         /// </summary>
         public void Enabled();
 
