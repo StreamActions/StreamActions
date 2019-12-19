@@ -21,6 +21,7 @@ using System.IO;
 using System.Reflection;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using StreamActions.Attributes;
 
 namespace StreamActions.Plugin
 {
