@@ -16,7 +16,10 @@
 
 using StreamActions.Plugin;
 using System;
+using System.Collections.Generic;
+using System.Text;
 using TwitchLib.Client.Events;
+using TwitchLib.Client.Models;
 
 namespace StreamActions.Plugins
 {
@@ -95,7 +98,6 @@ namespace StreamActions.Plugins
         private ModerationResult ChatModerator_OnCapsCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-
             // TODO: Add check if this is enabled in user settings.
             // TODO: Add filter check.
 
@@ -244,6 +246,34 @@ namespace StreamActions.Plugins
             // TODO: Add filter check.
 
             return moderationResult;
+        }
+
+        /// <summary>
+        /// Checks if the message has too many caps.
+        /// </summary>
+        /// <param name="message">The string message without any Twitch emotes.</param>
+        /// <param name="maximum">Maximum amount of caps allowed in a message.</param>
+        /// <returns>if we hit the caps limit.</returns>
+        private bool HasMaximumCaps(string message, int maximum)
+        {
+            bool hasMaximumCaps = false;
+            int count = 0;
+
+            for (int i = 0; i < message.Length; i++)
+            {
+                if (char.IsUpper(message[i]))
+                {
+                    count++;
+                    // Check if we hit the maximum allowed, no point in keeping going once we hit the maximum.
+                    if (count >= maximum)
+                    {
+                        hasMaximumCaps = true;
+                        break;
+                    }
+                }
+            }
+
+            return hasMaximumCaps;
         }
 
         #endregion Private Methods
