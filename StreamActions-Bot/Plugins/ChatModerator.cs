@@ -23,14 +23,14 @@ namespace StreamActions.Plugins
     /// <summary>
     /// Handles various moderation actions against chat messages, such as links protection.
     /// </summary>
-    public class Moderation : IPlugin
+    public class ChatModerator : IPlugin
     {
         #region Public Constructors
 
         /// <summary>
         /// Class constructor.
         /// </summary>
-        public Moderation()
+        public ChatModerator()
         {
         }
 
@@ -42,9 +42,9 @@ namespace StreamActions.Plugins
 
         public string PluginAuthor => "StreamActions Team";
 
-        public string PluginDescription => "Moderation plugin for StreamActions";
+        public string PluginDescription => "Chat Moderation plugin for StreamActions";
 
-        public string PluginName => "Moderation";
+        public string PluginName => "ChatModerator";
 
         public Uri PluginUri => throw new NotImplementedException();
 
@@ -56,30 +56,30 @@ namespace StreamActions.Plugins
 
         public void Disabled()
         {
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnCapsCheck;
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnColouredMessageCheck;
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnEmotesCheck;
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnFakePurgeCheck;
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnLinksCheck;
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnLongMessageCheck;
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnOneManSpamCheck;
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnRepetitionCheck;
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnSymbolsCheck;
-            PluginManager.Instance.OnMessageModeration -= this.Moderation_OnZalgoCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnCapsCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnColouredMessageCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnEmotesCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnFakePurgeCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnLinksCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnLongMessageCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnOneManSpamCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnRepetitionCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnSymbolsCheck;
+            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnZalgoCheck;
         }
 
         public void Enabled()
         {
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnCapsCheck;
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnColouredMessageCheck;
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnEmotesCheck;
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnFakePurgeCheck;
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnLinksCheck;
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnLongMessageCheck;
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnOneManSpamCheck;
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnRepetitionCheck;
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnSymbolsCheck;
-            PluginManager.Instance.OnMessageModeration += this.Moderation_OnZalgoCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnCapsCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnColouredMessageCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnEmotesCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnFakePurgeCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnLinksCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnLongMessageCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnOneManSpamCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnRepetitionCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnSymbolsCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnZalgoCheck;
         }
 
         #endregion Public Methods
@@ -92,7 +92,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnCapsCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnCapsCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -108,7 +108,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnColouredMessageCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnColouredMessageCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -124,7 +124,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnEmotesCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnEmotesCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -140,7 +140,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnFakePurgeCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnFakePurgeCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -156,7 +156,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnLinksCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnLinksCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -172,7 +172,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnLongMessageCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnLongMessageCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -188,7 +188,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnOneManSpamCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnOneManSpamCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -204,7 +204,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnRepetitionCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnRepetitionCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -220,7 +220,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnSymbolsCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnSymbolsCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -236,7 +236,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult Moderation_OnZalgoCheck(object sender, OnMessageReceivedArgs e)
+        private ModerationResult ChatModerator_OnZalgoCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 

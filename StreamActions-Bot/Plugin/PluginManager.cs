@@ -18,8 +18,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Timers;
+using System.Reflection;
 using TwitchLib.Client.Events;
+using TwitchLib.Client.Models;
 
 namespace StreamActions.Plugin
 {
@@ -31,7 +32,14 @@ namespace StreamActions.Plugin
         #region Public Delegates
 
         /// <summary>
-        /// Represents the method that will handle a <see cref="PluginManager.OnMessageModeration"/> event.
+        /// Represents the method that will handle a <see cref="TwitchLib.Client.TwitchClient.OnChatCommandReceived"/> event.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An object that contains the received command.</param>
+        public delegate void ChatCommandReceivedEventHandler(object sender, OnChatCommandReceivedArgs e);
+
+        /// <summary>
+        /// Represents the method that will handle a <see cref="OnMessageModeration"/> event.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An object that contains the received message.</param>
@@ -43,17 +51,12 @@ namespace StreamActions.Plugin
         #region Public Events
 
         /// <summary>
-        /// Fires when a command that passed moderation is received, returns <see cref="TwitchLib.Client.Models.ChatCommand"/>.
-        /// </summary>
-        public event EventHandler<OnChatCommandReceivedArgs> OnChatCommandReceived;
-
-        /// <summary>
-        /// Fires when a new chat message arrives and is ready to be processed for moderation, returns <see cref="TwitchLib.Client.Models.ChatMessage"/>.
+        /// Fires when a new chat message arrives and is ready to be processed for moderation, returns <see cref="ChatMessage"/>.
         /// </summary>
         public event MessageModerationEventHandler OnMessageModeration;
 
         /// <summary>
-        /// Fires when a new chat message arrives and has passed moderation, returns <see cref="TwitchLib.Client.Models.ChatMessage"/>.
+        /// Fires when a new chat message arrives and has passed moderation, returns <see cref="ChatMessage"/>.
         /// </summary>
         public event EventHandler<OnMessageReceivedArgs> OnMessageReceived;
 
@@ -65,6 +68,11 @@ namespace StreamActions.Plugin
         /// Singleton of <see cref="PluginManager"/>.
         /// </summary>
         public static PluginManager Instance => _instance.Value;
+
+        /// <summary>
+        /// The character that is used as the prefix to identify a chat command.
+        /// </summary>
+        public char ChatCommandIdentifier { get; set; } = '!';
 
         /// <summary>
         /// Indicates if the bot is in lock down mode. When this is set, only plugins with <see cref="OnMessageModeration"/> EventHandlers or the <see cref="IPlugin.AlwaysEnabled"/>
@@ -95,6 +103,55 @@ namespace StreamActions.Plugin
         #region Internal Methods
 
         /// <summary>
+        /// Calls <see cref="IPlugin.Disabled"/> and unregisters all <see cref="ChatCommandReceivedEventHandler"/> for the type.
+        /// </summary>
+        /// <param name="typeName">The full name of the plugin to disable, as would be provided by Type.FullName.</param>
+        internal void DisablePlugin(string typeName)
+        {
+            this._plugins[typeName].Disabled();
+
+            foreach (MethodInfo mInfo in this._plugins[typeName].GetType().GetMethods())
+            {
+                foreach (ChatCommandAttribute attr in Attribute.GetCustomAttributes(mInfo, typeof(ChatCommandAttribute)))
+                {
+                    if (attr is BotnameChatCommandAttribute bchatAttr)
+                    {
+                        _ = this._botnameChatCommandEventHandlers.TryRemove(bchatAttr.Command + (bchatAttr.SubCommand ?? " " + bchatAttr.SubCommand), out _);
+                    }
+                    else if (attr is ChatCommandAttribute chatAttr)
+                    {
+                        _ = this._chatCommandEventHandlers.TryRemove(chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand), out _);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Calls <see cref="IPlugin.Enabled"/> and registers all <see cref="ChatCommandReceivedEventHandler"/> for the type.
+        /// </summary>
+        /// <param name="typeName">The full name of the plugin to enable, as would be provided by Type.FullName.</param>
+        internal void EnablePlugin(string typeName)
+        {
+            //TODO: check if plugin is currently enabled in user settings
+            this._plugins[typeName].Enabled();
+
+            foreach (MethodInfo mInfo in this._plugins[typeName].GetType().GetMethods())
+            {
+                foreach (ChatCommandAttribute attr in Attribute.GetCustomAttributes(mInfo, typeof(ChatCommandAttribute)))
+                {
+                    if (attr is BotnameChatCommandAttribute bchatAttr)
+                    {
+                        _ = this._botnameChatCommandEventHandlers.TryAdd(bchatAttr.Command + (bchatAttr.SubCommand ?? " " + bchatAttr.SubCommand), (ChatCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(ChatCommandReceivedEventHandler), mInfo));
+                    }
+                    else if (attr is ChatCommandAttribute chatAttr)
+                    {
+                        _ = this._chatCommandEventHandlers.TryAdd(chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand), (ChatCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(ChatCommandReceivedEventHandler), mInfo));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Switches the bot out of lock down mode. Plugins are re-enabled if user settings permit.
         /// </summary>
         internal void EndLockdown()
@@ -103,7 +160,7 @@ namespace StreamActions.Plugin
 
             foreach (KeyValuePair<string, IPlugin> kvp in this._plugins)
             {
-                //TODO: Call IPlugin.Enabled() if plugin is currently enabled in user settings
+                this.EnablePlugin(kvp.Key);
             }
         }
 
@@ -128,7 +185,7 @@ namespace StreamActions.Plugin
             {
                 if (!lockdownPlugins.Contains(kvp.Key))
                 {
-                    kvp.Value.Disabled();
+                    this.DisablePlugin(kvp.Key);
                 }
             }
         }
@@ -141,17 +198,17 @@ namespace StreamActions.Plugin
         /// <param name="isReloading">Indicates if the assembly is being reloaded, and should therefore disable existing instances first for GC.</param>
         internal void LoadPlugins(string relativePath, bool isReloading = false)
         {
-            System.Reflection.Assembly assembly;
+            Assembly assembly;
 
             if (relativePath == null || relativePath.Length == 0)
             {
-                assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                assembly = Assembly.GetExecutingAssembly();
             }
             else
             {
                 string pluginLocation = Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "plugins", relativePath.Replace('\\', Path.DirectorySeparatorChar)));
                 PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
-                assembly = loadContext.LoadFromAssemblyName(new System.Reflection.AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
+                assembly = loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
             }
 
             foreach (Type type in assembly.GetTypes())
@@ -166,7 +223,7 @@ namespace StreamActions.Plugin
                         }
 
                         _ = this._plugins.TryAdd(type.FullName, result);
-                        //TODO: Call IPlugin.Enabled() if plugin is currently enabled in user settings
+                        this.EnablePlugin(type.FullName);
                     }
                 }
             }
@@ -178,10 +235,8 @@ namespace StreamActions.Plugin
         /// <param name="fullName">The full name of the plugin to disable, as would be provided by Type.FullName.</param>
         internal void UnloadPlugin(string fullName)
         {
-            if (this._plugins.TryRemove(fullName, out IPlugin plugin))
-            {
-                plugin.Disabled();
-            }
+            this.DisablePlugin(fullName);
+            _ = this._plugins.TryRemove(fullName, out _);
         }
 
         #endregion Internal Methods
@@ -189,24 +244,19 @@ namespace StreamActions.Plugin
         #region Private Fields
 
         /// <summary>
-        /// Number of milliseconds to add to the timer that removes entries from <see cref="_moderatedMessageIds"/>, per EventHandler hooked to <see cref="OnMessageModeration"/>.
-        /// </summary>
-        private const int _moderationTimerMultiplier = 250;
-
-        /// <summary>
         /// Field that backs the <see cref="Instance"/> property.
         /// </summary>
         private static readonly Lazy<PluginManager> _instance = new Lazy<PluginManager>(() => new PluginManager());
 
         /// <summary>
-        /// Stores the <see cref="TwitchLib.Client.Models.ChatMessage.Id"/> of chat messages that had moderation actions taken, so that <see cref="OnChatCommandReceived"/> knows to drop them.
+        /// Stores the enabled <see cref="ChatCommandReceivedEventHandler"/> delegates that handle <see cref="TwitchLib.Client.TwitchClient.OnChatCommandReceived"/> events for the <c>!botname</c> tree.
         /// </summary>
-        private readonly ICollection<string> _moderatedMessageIds = new HashSet<string>();
+        private readonly ConcurrentDictionary<string, ChatCommandReceivedEventHandler> _botnameChatCommandEventHandlers = new ConcurrentDictionary<string, ChatCommandReceivedEventHandler>();
 
         /// <summary>
-        /// Write lock object for <see cref="_moderatedMessageIds"/>.
+        /// Stores the enabled <see cref="ChatCommandReceivedEventHandler"/> delegates that handle <see cref="TwitchLib.Client.TwitchClient.OnChatCommandReceived"/> events.
         /// </summary>
-        private readonly object _moderatedMessageIdsLock = new object();
+        private readonly ConcurrentDictionary<string, ChatCommandReceivedEventHandler> _chatCommandEventHandlers = new ConcurrentDictionary<string, ChatCommandReceivedEventHandler>();
 
         /// <summary>
         /// ConcurrentDictionary of currently loaded plugins.
@@ -222,8 +272,12 @@ namespace StreamActions.Plugin
 
         #region Private Constructors
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         private PluginManager()
         {
+            //TODO: Check the settings file for an alternate ChatCommandIdentifier
         }
 
         #endregion Private Constructors
@@ -231,36 +285,21 @@ namespace StreamActions.Plugin
         #region Private Methods
 
         /// <summary>
-        /// Passes <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> on to subscribers of <see cref="OnChatCommandReceived"/> if the underlying message has not been marked for moderation.
+        /// Passes <see cref="OnMessageReceivedArgs"/> on to subscribers of <see cref="OnMessageModeration"/> to determine if a moderation action should be taken.
+        /// If the message passes moderation, passes it on to subscribers of <see cref="OnMessageReceived"/> and <see cref="ChatCommandReceivedEventHandler"/>, otherwise,
+        /// performs the harshest indicated moderation action.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        private void Twitch_OnChatCommandReceived(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (this._moderatedMessageIds.Contains(e.Command.ChatMessage.Id))
-            {
-                return;
-            }
-
-            OnChatCommandReceived?.Invoke(this, e);
-        }
-
-        /// <summary>
-        /// Passes <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> on to subscribers of <see cref="OnMessageModeration"/> to determine if a moderation action should be taken.
-        /// If the message passes moderation, passes it on to subscribers of <see cref="OnMessageReceived"/>, otherwise, performs the harshest indicated moderation action and marks it to
-        /// be ignored by <see cref="OnChatCommandReceived"/>.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         private void Twitch_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult harshestModeration = new ModerationResult();
             int numModeration = 0;
             if (OnMessageModeration != null)
             {
-                foreach (Delegate d in OnMessageModeration.GetInvocationList())
+                foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
                 {
-                    ModerationResult rs = (ModerationResult)d.DynamicInvoke(this, e);
+                    ModerationResult rs = (ModerationResult)d.Invoke(this, e);
                     if (harshestModeration.IsHarsher(rs))
                     {
                         harshestModeration = rs;
@@ -272,28 +311,41 @@ namespace StreamActions.Plugin
 
             if (harshestModeration.ShouldModerate)
             {
-                lock (this._moderatedMessageIdsLock)
-                {
-                    this._moderatedMessageIds.Add(e.ChatMessage.Id);
-                }
-
-                using Timer timer = new Timer();
-                timer.Elapsed += (sender, te) =>
-                {
-                    lock (this._moderatedMessageIdsLock)
-                    {
-                        _ = this._moderatedMessageIds.Remove(e.ChatMessage.Id);
-                    }
-                };
-                timer.AutoReset = false;
-                timer.Interval = numModeration * _moderationTimerMultiplier;
-                timer.Enabled = true;
-
                 //TODO: Take the moderation action and send the ModerationMessage to chat if not InLockdown
             }
             else
             {
                 OnMessageReceived?.Invoke(this, e);
+
+                if (Equals(e.ChatMessage.Message[0], this.ChatCommandIdentifier))
+                {
+                    ChatCommand chatCommand = new ChatCommand(e.ChatMessage);
+                    ChatCommandReceivedEventHandler eventHandler;
+
+                    //TODO: Replace string "botname" with the botname var
+                    if (string.Equals(chatCommand.CommandText, "botname", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1], out eventHandler))
+                        {
+                            eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                        }
+                        else if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0], out eventHandler))
+                        {
+                            eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                        }
+                    }
+                    else
+                    {
+                        if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0], out eventHandler))
+                        {
+                            eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                        }
+                        else if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText, out eventHandler))
+                        {
+                            eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                        }
+                    }
+                }
             }
         }
 
