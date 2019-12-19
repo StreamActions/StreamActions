@@ -16,7 +16,7 @@
 
 using System;
 
-namespace StreamActions.Plugin
+namespace StreamActions.Attributes
 {
     /// <summary>
     /// Marks a method as an EventHandler for a specified <see cref="TwitchLib.Client.Models.ChatCommand"/> under the <c>!botname</c> tree.
@@ -31,7 +31,8 @@ namespace StreamActions.Plugin
         /// </summary>
         /// <param name="command">The command to detect.</param>
         public BotnameChatCommandAttribute(string command) : base(command)
-        { }
+        {
+        }
 
         /// <summary>
         /// Marks the method as being the handler for a <c>!botname command subcommand</c>.
@@ -39,7 +40,8 @@ namespace StreamActions.Plugin
         /// <param name="command">The command to detect.</param>
         /// <param name="subcommand">The subcommand to detect.</param>
         public BotnameChatCommandAttribute(string command, string subcommand) : base(command, subcommand)
-        { }
+        {
+        }
 
         #endregion Public Constructors
     }

@@ -16,7 +16,7 @@
 
 using System;
 
-namespace StreamActions.Plugin
+namespace StreamActions.Attributes
 {
     /// <summary>
     /// Marks a method as an EventHandler for a <see cref="TwitchLib.Client.TwitchClient.OnChatCommandReceived"/> event with a specified <see cref="TwitchLib.Client.Models.ChatCommand.CommandText"/>.
