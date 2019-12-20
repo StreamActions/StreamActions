@@ -351,5 +351,26 @@ namespace StreamActions.Plugin
         }
 
         #endregion Private Methods
+
+        #region Public Methods
+
+        /// <summary>
+        /// Attempts to subscribe the provided Delegate to the designated chat <c>!command</c>.
+        /// </summary>
+        /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
+        /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> Delegate to subscribe.</param>
+        /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool SubscribeChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._chatCommandEventHandlers.TryAdd(command, handler);
+
+        /// <summary>
+        /// Attempts to unsubscribe the designated chat <c>!command</c>.
+        /// </summary>
+        /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
+        /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool UnsubscribeChatCommand(string command) => this._chatCommandEventHandlers.TryRemove(command, out _);
+
+        #endregion Public Methods
     }
 }

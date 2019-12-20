@@ -152,7 +152,7 @@ namespace StreamActions.Plugin
         /// Determines whether <paramref name="b"/> is a harsher ModerationResult than this.
         /// </summary>
         /// <param name="b">A ModerationResult to compare.</param>
-        /// <returns>True if <paramref name="b"/> is a harsher ModerationResult.</returns>
+        /// <returns><c>true</c> if <paramref name="b"/> is a harsher ModerationResult.</returns>
         public bool IsHarsher(ModerationResult b) => b == null || this.ShouldBan
                 ? false
                 : b.ShouldBan
