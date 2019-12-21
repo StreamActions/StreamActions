@@ -371,6 +371,48 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
         public bool UnsubscribeChatCommand(string command) => this._chatCommandEventHandlers.TryRemove(command, out _);
 
+        /// <summary>
+        /// Updates the subscribed <c>!botname command</c> names.
+        /// </summary>
+        /// <param name="commandMap">A Dictionary of commands to update. Key is the original command name; value is the new command name.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
+        public void UpdateBotnameChatCommands(Dictionary<string, string> commandMap)
+        {
+            if (commandMap == null)
+            {
+                throw new ArgumentNullException(nameof(commandMap));
+            }
+
+            foreach (KeyValuePair<string, string> kvp in commandMap)
+            {
+                if (this._botnameChatCommandEventHandlers.TryRemove(kvp.Key, out ChatCommandReceivedEventHandler handler))
+                {
+                    _ = this._botnameChatCommandEventHandlers.TryAdd(kvp.Value, handler);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates the subscribed <c>!command</c> names.
+        /// </summary>
+        /// <param name="commandMap">A Dictionary of commands to update. Key is the original command name; value is the new command name.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
+        public void UpdateChatCommands(Dictionary<string, string> commandMap)
+        {
+            if (commandMap == null)
+            {
+                throw new ArgumentNullException(nameof(commandMap));
+            }
+
+            foreach (KeyValuePair<string, string> kvp in commandMap)
+            {
+                if (this._chatCommandEventHandlers.TryRemove(kvp.Key, out ChatCommandReceivedEventHandler handler))
+                {
+                    _ = this._chatCommandEventHandlers.TryAdd(kvp.Value, handler);
+                }
+            }
+        }
+
         #endregion Public Methods
     }
 }
