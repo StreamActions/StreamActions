@@ -30,6 +30,9 @@ namespace StreamActions.Plugins
     {
         #region Public Events
 
+        /// <summary>
+        /// Fires when the current culture has been changed.
+        /// </summary>
         public event EventHandler<OnCultureChangedArgs> OnCultureChanged;
 
         #endregion Public Events
@@ -56,7 +59,12 @@ namespace StreamActions.Plugins
         }
 
         public bool AlwaysEnabled => true;
+
+        /// <summary>
+        /// Provides the currently active culture.
+        /// </summary>
         public CultureInfo CurrentCulture => this._currentCulture;
+
         public string PluginAuthor => "StreamActions Team";
 
         public string PluginDescription => "Provides i18n support";
@@ -70,6 +78,43 @@ namespace StreamActions.Plugins
         #endregion Public Properties
 
         #region Public Methods
+
+        /// <summary>
+        /// Loads the i18n files for the specified culture and merges it all into a single <see cref="I18nDocument"/>.
+        /// The files must be under the <c>i18n/lang-region</c> folder, such as <c>i18n/en-US</c> or <c>i18n/es-ES</c> and have <c>.json</c> extensions.
+        /// </summary>
+        /// <param name="newCulture">The culture to load.</param>
+        /// <returns>An <see cref="I18nDocument"/> containing the merged contents of all valid json files.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="newCulture"/> is null.</exception>
+        public static async Task<I18nDocument> LoadCultureAsync(CultureInfo newCulture)
+        {
+            if (newCulture == null)
+            {
+                throw new ArgumentNullException(nameof(newCulture));
+            }
+
+            I18nDocument document = new I18nDocument();
+
+            string i18nLocation = Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "i18n", newCulture.Name));
+
+            if (Directory.Exists(i18nLocation))
+            {
+                foreach (string f in Directory.EnumerateFiles(i18nLocation, "*.json", new EnumerationOptions()
+                {
+                    RecurseSubdirectories = true
+                }))
+                {
+                    try
+                    {
+                        using FileStream fs = File.OpenRead(f);
+                        document.Merge(await JsonSerializer.DeserializeAsync<I18nDocument>(fs));
+                    }
+                    catch (JsonException ex) { _ = ex.LineNumber; }
+                }
+            }
+
+            return document;
+        }
 
         public void Disabled()
         {
@@ -140,41 +185,10 @@ namespace StreamActions.Plugins
                 OldI18nDocument = new WeakReference<I18nDocument>(oldDocument)
             };
 
-            this._i18nDocument = await this.LoadCulture(newCulture).ConfigureAwait(false);
+            this._i18nDocument = await LoadCultureAsync(newCulture).ConfigureAwait(false);
             this._currentCulture = newCulture;
 
             OnCultureChanged?.Invoke(this, args);
-        }
-
-        /// <summary>
-        /// Loads the i18n files for the specified culture and merges it all into a single <see cref="I18nDocument"/>.
-        /// The files must be under the <c>i18n/lang-region</c> folder, such as <c>i18n/en-US</c> or <c>i18n/es-ES</c> and have <c>.json</c> extensions.
-        /// </summary>
-        /// <param name="newCulture">The culture to load.</param>
-        /// <returns>An <see cref="I18nDocument"/> containing the merged contents of all valid json files.</returns>
-        private async Task<I18nDocument> LoadCulture(CultureInfo newCulture)
-        {
-            I18nDocument document = new I18nDocument();
-
-            string i18nLocation = Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "i18n", newCulture.Name));
-
-            if (Directory.Exists(i18nLocation))
-            {
-                foreach (string f in Directory.EnumerateFiles(i18nLocation, "*.json", new EnumerationOptions()
-                {
-                    RecurseSubdirectories = true
-                }))
-                {
-                    try
-                    {
-                        using FileStream fs = File.OpenRead(f);
-                        document.Merge(await JsonSerializer.DeserializeAsync<I18nDocument>(fs));
-                    }
-                    catch (JsonException ex) { _ = ex.LineNumber; }
-                }
-            }
-
-            return document;
         }
     }
 
