@@ -15,6 +15,7 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using StreamActions.Enums;
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
@@ -29,7 +30,7 @@ namespace StreamActions.Database.Documents
         #region Public Properties
 
         /// <summary>
-        /// The users <see cref="BotGlobal"/>.
+        /// The users <see cref="StreamActions.Enums.BotGlobal"/>.
         /// </summary>
         [BsonElement]
         [BsonDefaultValue(BotGlobal.None)]
@@ -37,7 +38,7 @@ namespace StreamActions.Database.Documents
         public BotGlobal BotGlobalPermission { get; set; }
 
         /// <summary>
-        /// The users <see cref="TwitchBroadcaster"/>.
+        /// The users <see cref="StreamActions.Enums.TwitchBroadcaster"/>.
         /// </summary>
         [BsonElement]
         [BsonDefaultValue(TwitchBroadcaster.None)]
@@ -84,7 +85,7 @@ namespace StreamActions.Database.Documents
         public Dictionary<int, List<Guid>> PermissionGroupMembership { get; set; }
 
         /// <summary>
-        /// The users <see cref="TwitchStaff"/>.
+        /// The users <see cref="StreamActions.Enums.TwitchStaff"/>.
         /// </summary>
         [BsonElement]
         [BsonDefaultValue(TwitchStaff.None)]
@@ -92,77 +93,5 @@ namespace StreamActions.Database.Documents
         public TwitchStaff StaffType { get; set; }
 
         #endregion Public Properties
-
-        #region Public Enums
-
-        /// <summary>
-        /// A flag representing global permissions on the bot.
-        /// </summary>
-        public enum BotGlobal
-        {
-            /// <summary>
-            /// No additional permissions.
-            /// </summary>
-            None,
-
-            /// <summary>
-            /// SuperAdmin; all permissions granted.
-            /// </summary>
-            SuperAdmin,
-
-            /// <summary>
-            /// Banned; all permissions denied.
-            /// </summary>
-            Banned
-        }
-
-        /// <summary>
-        /// A flag representing a channels Twitch partner status.
-        /// </summary>
-        public enum TwitchBroadcaster
-        {
-            /// <summary>
-            /// Normal channel.
-            /// </summary>
-            None,
-
-            /// <summary>
-            /// Affiliate status.
-            /// </summary>
-            Affiliate,
-
-            /// <summary>
-            /// Partner status.
-            /// </summary>
-            Partner
-        }
-
-        /// <summary>
-        /// A flag representing Twitch staff.
-        /// </summary>
-        public enum TwitchStaff
-        {
-            /// <summary>
-            /// Normal viewer.
-            /// </summary>
-            None,
-
-            /// <summary>
-            /// Twitch staff.
-            /// </summary>
-            Staff,
-
-            /// <summary>
-            /// Twitch admin.
-            /// </summary>
-            Admin,
-
-            /// <summary>
-            /// Twitch global moderator.
-            /// </summary>
-            GlobalMod
-        }
-
-        #endregion Public Enums
     }
 }
