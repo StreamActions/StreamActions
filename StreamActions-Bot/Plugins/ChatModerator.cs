@@ -89,9 +89,9 @@ namespace StreamActions.Plugins
         #region Filter check methods
 
         /// <summary>
-        /// Method that checks if the message has a fake purge
+        /// Method that checks if the message has a fake purge.
         /// </summary>
-        /// <param name="message">Message to be checked</param>
+        /// <param name="message">Message to be checked.</param>
         /// <returns>If the message has a fake purge.</returns>
         private bool HasFakePurge(string message) =>
             message.Equals("<message deleted>", StringComparison.OrdinalIgnoreCase) ||
@@ -142,7 +142,7 @@ namespace StreamActions.Plugins
         private bool HasMaximumMessageLength(string message, int maximum) => message.Length >= maximum;
 
         /// <summary>
-        /// Method that checks if the message has too many symbols
+        /// Method that checks if the message has too many symbols.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <param name="maximum">Maximum allowed of non letters and digits.</param>

@@ -67,7 +67,7 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
-        /// Method called when someone adds a new command alias
+        /// Method called when someone adds a new command alias.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
