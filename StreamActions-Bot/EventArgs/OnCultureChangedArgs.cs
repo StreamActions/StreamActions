@@ -12,6 +12,11 @@ namespace StreamActions.EventArgs
         #region Public Properties
 
         /// <summary>
+        /// The channel whose culture was changed.
+        /// </summary>
+        public string Channel { get; set; }
+
+        /// <summary>
         /// The old culture that is no longer being used.
         /// </summary>
         public CultureInfo OldCulture { get; set; }

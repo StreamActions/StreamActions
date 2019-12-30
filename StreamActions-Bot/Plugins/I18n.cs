@@ -18,6 +18,7 @@ using StreamActions.EventArgs;
 using StreamActions.JsonDocuments;
 using StreamActions.Plugin;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -63,7 +64,20 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Provides the currently active culture.
         /// </summary>
-        public CultureInfo CurrentCulture => this._currentCulture;
+        public Dictionary<string, WeakReference<CultureInfo>> CurrentCulture
+        {
+            get
+            {
+                Dictionary<string, WeakReference<CultureInfo>> value = new Dictionary<string, WeakReference<CultureInfo>>();
+
+                foreach (KeyValuePair<string, CultureInfo> kvp in this._currentCulture)
+                {
+                    value.Add(kvp.Key, new WeakReference<CultureInfo>(kvp.Value));
+                }
+
+                return value;
+            }
+        }
 
         public string PluginAuthor => "StreamActions Team";
 
@@ -78,6 +92,32 @@ namespace StreamActions.Plugins
         #endregion Public Properties
 
         #region Public Methods
+
+        /// <summary>
+        /// Attempts to retrieve the specified i18n replacement string.
+        /// </summary>
+        /// <param name="category">The category to select from.</param>
+        /// <param name="key">The string key to select.</param>
+        /// <param name="document">The <see cref="I18nDocument"/> to use.</param>
+        /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
+        /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
+        public static string Get(string category, string key, I18nDocument document, string defVal = null)
+        {
+            if (document == null)
+            {
+                throw new ArgumentNullException(nameof(document));
+            }
+
+            if (document.I18nData.TryGetValue(category, out Dictionary<string, string> data))
+            {
+                if (data.TryGetValue(key, out string value))
+                {
+                    return value;
+                }
+            }
+
+            return defVal;
+        }
 
         /// <summary>
         /// Loads the i18n files for the specified culture and merges it all into a single <see cref="I18nDocument"/>.
@@ -130,25 +170,35 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="category">The category to select from.</param>
         /// <param name="key">The string key to select.</param>
+        /// <param name="culture">The CultureInfo that should be used.</param>
         /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
-        /// <param name="document">The <see cref="I18nDocument"/> to use; <c>null</c> for the document of the <see cref="CurrentCulture"/>.</param>
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
-        public string Get(string category, string key, string defVal = null, I18nDocument document = null)
+        public string Get(string category, string key, CultureInfo culture, string defVal = null)
         {
-            if (document == null)
+            if (culture == null)
             {
-                document = this._i18nDocument;
+                throw new ArgumentNullException(nameof(culture));
             }
 
-            if (document.I18nData.TryGetValue(category, out Dictionary<string, string> data))
+            return Get(category, key, this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(culture.Name, new I18nDocument()), defVal);
+        }
+
+        /// <summary>
+        /// Attempts to retrieve the specified i18n replacement string.
+        /// </summary>
+        /// <param name="category">The category to select from.</param>
+        /// <param name="key">The string key to select.</param>
+        /// <param name="channel">The channel whose CurrentCulture should be used.</param>
+        /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
+        /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
+        public string Get(string category, string key, string channel, string defVal = null)
+        {
+            if (channel == null)
             {
-                if (data.TryGetValue(key, out string value))
-                {
-                    return value;
-                }
+                throw new ArgumentNullException(nameof(channel));
             }
 
-            return defVal;
+            return Get(category, key, this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", false)).Name, new I18nDocument()), defVal);
         }
 
         #endregion Public Methods
@@ -158,12 +208,12 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Field that backs <see cref="CurrentCulture"/>.
         /// </summary>
-        private CultureInfo _currentCulture = CultureInfo.CurrentCulture;
+        private readonly ConcurrentDictionary<string, CultureInfo> _currentCulture = new ConcurrentDictionary<string, CultureInfo>();
 
         /// <summary>
         /// An <see cref="I18nDocument"/> containing all currently loaded i18n data.
         /// </summary>
-        private I18nDocument _i18nDocument = new I18nDocument();
+        private readonly ConcurrentDictionary<string, I18nDocument> _i18nDocuments = new ConcurrentDictionary<string, I18nDocument>();
 
         #endregion Private Fields
 
@@ -172,21 +222,29 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Changes the current culture to the specified one.
         /// </summary>
+        /// <param name="channel">The channel whose culture should be changed.</param>
         /// <param name="culture">The <c>languagecode2-country/regioncode2</c> name of the new culture to load.</param>
+        /// <param name="useUseroverride">A Boolean that denotes whether to use the user-selected culture settings (<c>true</c>) or the default culture settings (<c>false</c>).</param>
         /// <exception cref="CultureNotFoundException"><paramref name="culture"/> is not a valid culture name.</exception>
-        private async void ChangeCulture(string culture)
+        private async void ChangeCulture(string channel, string culture, bool useUseroverride = false)
         {
-            CultureInfo newCulture = new CultureInfo(culture, true);
-            I18nDocument oldDocument = this._i18nDocument;
+            CultureInfo newCulture = new CultureInfo(culture, useUseroverride);
+            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUseroverride)).Name, new I18nDocument());
 
             OnCultureChangedArgs args = new OnCultureChangedArgs()
             {
-                OldCulture = this.CurrentCulture,
+                Channel = channel,
+                OldCulture = this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUseroverride)),
                 OldI18nDocument = new WeakReference<I18nDocument>(oldDocument)
             };
 
-            this._i18nDocument = await LoadCultureAsync(newCulture).ConfigureAwait(false);
-            this._currentCulture = newCulture;
+            if (!this._i18nDocuments.ContainsKey(newCulture.Name))
+            {
+                _ = this._i18nDocuments.TryAdd(newCulture.Name, await LoadCultureAsync(newCulture).ConfigureAwait(false));
+            }
+
+            _ = this._currentCulture.TryRemove(channel, out _);
+            _ = this._currentCulture.TryAdd(channel, newCulture);
 
             OnCultureChanged?.Invoke(this, args);
         }
