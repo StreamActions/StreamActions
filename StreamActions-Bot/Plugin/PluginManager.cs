@@ -82,7 +82,7 @@ namespace StreamActions.Plugin
         public bool InLockdown => this._inLockdown;
 
         /// <summary>
-        /// Provides a copy of the currently loaded plugins as WeakReferences.
+        /// Provides a copy of the currently loaded plugins as WeakReferences, by FullName.
         /// </summary>
         public Dictionary<string, WeakReference<IPlugin>> Plugins
         {

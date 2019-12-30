@@ -62,7 +62,7 @@ namespace StreamActions.Plugins
         public bool AlwaysEnabled => true;
 
         /// <summary>
-        /// Provides the currently active culture.
+        /// Provides the currently active culture of each channel, by id.
         /// </summary>
         public Dictionary<string, WeakReference<CultureInfo>> CurrentCulture
         {
@@ -188,7 +188,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="category">The category to select from.</param>
         /// <param name="key">The string key to select.</param>
-        /// <param name="channel">The channel whose CurrentCulture should be used.</param>
+        /// <param name="channel">The channel id whose CurrentCulture should be used.</param>
         /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
         public string Get(string category, string key, string channel, string defVal = null)
@@ -222,7 +222,7 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Changes the current culture to the specified one.
         /// </summary>
-        /// <param name="channel">The channel whose culture should be changed.</param>
+        /// <param name="channel">The channel id whose culture should be changed.</param>
         /// <param name="culture">The <c>languagecode2-country/regioncode2</c> name of the new culture to load.</param>
         /// <param name="useUseroverride">A Boolean that denotes whether to use the user-selected culture settings (<c>true</c>) or the default culture settings (<c>false</c>).</param>
         /// <exception cref="CultureNotFoundException"><paramref name="culture"/> is not a valid culture name.</exception>
