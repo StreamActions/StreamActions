@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.JsonDocuments
 {
@@ -26,6 +27,12 @@ namespace StreamActions.JsonDocuments
     public class I18nDocument
     {
         #region Public Properties
+
+        /// <summary>
+        /// An empty I18nDocument for usage as a default. Must be kept empty.
+        /// </summary>
+        [JsonIgnore]
+        public static I18nDocument Empty => _empty.Value;
 
         /// <summary>
         /// A Dictionary containing Dictionaries of i18n pairs. Key is category; value is Dictionary. Inner Dictionary key is string key; Inner Dictionary value is i18ned string.
@@ -52,5 +59,14 @@ namespace StreamActions.JsonDocuments
         }
 
         #endregion Public Methods
+
+        #region Private Fields
+
+        /// <summary>
+        /// Field that backs <see cref="Empty"/>.
+        /// </summary>
+        private static readonly Lazy<I18nDocument> _empty = new Lazy<I18nDocument>(() => new I18nDocument());
+
+        #endregion Private Fields
     }
 }

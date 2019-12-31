@@ -180,7 +180,7 @@ namespace StreamActions.Plugins
                 throw new ArgumentNullException(nameof(culture));
             }
 
-            return Get(category, key, this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(culture.Name, new I18nDocument()), defVal);
+            return Get(category, key, this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(culture.Name, I18nDocument.Empty), defVal);
         }
 
         /// <summary>
@@ -198,7 +198,7 @@ namespace StreamActions.Plugins
                 throw new ArgumentNullException(nameof(channel));
             }
 
-            return Get(category, key, this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", false)).Name, new I18nDocument()), defVal);
+            return Get(category, key, this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", false)).Name, I18nDocument.Empty), defVal);
         }
 
         #endregion Public Methods
@@ -229,7 +229,7 @@ namespace StreamActions.Plugins
         private async void ChangeCulture(string channel, string culture, bool useUseroverride = false)
         {
             CultureInfo newCulture = new CultureInfo(culture, useUseroverride);
-            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUseroverride)).Name, new I18nDocument());
+            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUseroverride)).Name, I18nDocument.Empty);
 
             OnCultureChangedArgs args = new OnCultureChangedArgs()
             {
