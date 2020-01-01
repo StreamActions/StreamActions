@@ -33,7 +33,7 @@ namespace StreamActions.Plugin
         #region Public Delegates
 
         /// <summary>
-        /// Represents the method that will handle a <see cref="TwitchLib.Client.TwitchClient.OnChatCommandReceived"/> event.
+        /// Represents the method that will handle a ChatCommandReceived event.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An object that contains the received command.</param>
@@ -46,6 +46,13 @@ namespace StreamActions.Plugin
         /// <param name="e">An object that contains the received message.</param>
         /// <returns>A <see cref="ModerationResult"/> representing any moderation action to take on the message.</returns>
         public delegate ModerationResult MessageModerationEventHandler(object sender, OnMessageReceivedArgs e);
+
+        /// <summary>
+        /// Represents the method that will handle a WhisperCommandReceived event.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An object that contains the received command.</param>
+        public delegate void WhisperCommandReceivedEventHandler(object sender, OnWhisperCommandReceivedArgs e);
 
         #endregion Public Delegates
 
@@ -60,6 +67,11 @@ namespace StreamActions.Plugin
         /// Fires when a new chat message arrives and has passed moderation, returns <see cref="ChatMessage"/>.
         /// </summary>
         public event EventHandler<OnMessageReceivedArgs> OnMessageReceived;
+
+        /// <summary>
+        /// Fires when a new whisper arrives, returns <see cref="WhisperMessage"/>.
+        /// </summary>
+        public event EventHandler<OnWhisperReceivedArgs> OnWhisperReceived;
 
         #endregion Public Events
 
@@ -99,7 +111,168 @@ namespace StreamActions.Plugin
             }
         }
 
+        /// <summary>
+        /// The character that is used as the prefix to identify a whisper command.
+        /// </summary>
+        public char WhisperCommandIdentifier { get; set; } = '!';
+
         #endregion Public Properties
+
+        #region Public Methods
+
+        /// <summary>
+        /// Attempts to subscribe the provided Delegate to the designated chat <c>!botname command</c>.
+        /// </summary>
+        /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
+        /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> Delegate to subscribe.</param>
+        /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool SubscribeBotnameChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._botnameChatCommandEventHandlers.TryAdd(command, handler);
+
+        /// <summary>
+        /// Attempts to subscribe the provided Delegate to the designated whisper <c>!botname command</c>.
+        /// </summary>
+        /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
+        /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> Delegate to subscribe.</param>
+        /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool SubscribeBotnameWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._botnameWhisperCommandEventHandlers.TryAdd(command, handler);
+
+        /// <summary>
+        /// Attempts to subscribe the provided Delegate to the designated chat <c>!command</c>.
+        /// </summary>
+        /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
+        /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> Delegate to subscribe.</param>
+        /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool SubscribeChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._chatCommandEventHandlers.TryAdd(command, handler);
+
+        /// <summary>
+        /// Attempts to subscribe the provided Delegate to the designated whisper <c>!command</c>.
+        /// </summary>
+        /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
+        /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> Delegate to subscribe.</param>
+        /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool SubscribeWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._whisperCommandEventHandlers.TryAdd(command, handler);
+
+        /// <summary>
+        /// Attempts to unsubscribe the designated chat <c>!botname command</c>.
+        /// </summary>
+        /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
+        /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool UnsubscribeBotnameChatCommand(string command) => this._botnameChatCommandEventHandlers.TryRemove(command, out _);
+
+        /// <summary>
+        /// Attempts to unsubscribe the designated whisper <c>!botname command</c>.
+        /// </summary>
+        /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
+        /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool UnsubscribeBotnameWhisperCommand(string command) => this._botnameWhisperCommandEventHandlers.TryRemove(command, out _);
+
+        /// <summary>
+        /// Attempts to unsubscribe the designated chat <c>!command</c>.
+        /// </summary>
+        /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
+        /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool UnsubscribeChatCommand(string command) => this._chatCommandEventHandlers.TryRemove(command, out _);
+
+        /// <summary>
+        /// Attempts to unsubscribe the designated whisper <c>!command</c>.
+        /// </summary>
+        /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
+        /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool UnsubscribeWhisperCommand(string command) => this._whisperCommandEventHandlers.TryRemove(command, out _);
+
+        /// <summary>
+        /// Updates the subscribed chat <c>!botname command</c> names.
+        /// </summary>
+        /// <param name="commandMap">A Dictionary of commands to update. Key is the original command name; value is the new command name.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
+        public void UpdateBotnameChatCommands(Dictionary<string, string> commandMap)
+        {
+            if (commandMap == null)
+            {
+                throw new ArgumentNullException(nameof(commandMap));
+            }
+
+            foreach (KeyValuePair<string, string> kvp in commandMap)
+            {
+                if (this._botnameChatCommandEventHandlers.TryRemove(kvp.Key, out ChatCommandReceivedEventHandler handler))
+                {
+                    _ = this._botnameChatCommandEventHandlers.TryAdd(kvp.Value, handler);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates the subscribed whisper <c>!botname command</c> names.
+        /// </summary>
+        /// <param name="commandMap">A Dictionary of commands to update. Key is the original command name; value is the new command name.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
+        public void UpdateBotnameWhisperCommands(Dictionary<string, string> commandMap)
+        {
+            if (commandMap == null)
+            {
+                throw new ArgumentNullException(nameof(commandMap));
+            }
+
+            foreach (KeyValuePair<string, string> kvp in commandMap)
+            {
+                if (this._botnameWhisperCommandEventHandlers.TryRemove(kvp.Key, out WhisperCommandReceivedEventHandler handler))
+                {
+                    _ = this._botnameWhisperCommandEventHandlers.TryAdd(kvp.Value, handler);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates the subscribed chat <c>!command</c> names.
+        /// </summary>
+        /// <param name="commandMap">A Dictionary of commands to update. Key is the original command name; value is the new command name.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
+        public void UpdateChatCommands(Dictionary<string, string> commandMap)
+        {
+            if (commandMap == null)
+            {
+                throw new ArgumentNullException(nameof(commandMap));
+            }
+
+            foreach (KeyValuePair<string, string> kvp in commandMap)
+            {
+                if (this._chatCommandEventHandlers.TryRemove(kvp.Key, out ChatCommandReceivedEventHandler handler))
+                {
+                    _ = this._chatCommandEventHandlers.TryAdd(kvp.Value, handler);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates the subscribed whisper <c>!command</c> names.
+        /// </summary>
+        /// <param name="commandMap">A Dictionary of commands to update. Key is the original command name; value is the new command name.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
+        public void UpdateWhisperCommands(Dictionary<string, string> commandMap)
+        {
+            if (commandMap == null)
+            {
+                throw new ArgumentNullException(nameof(commandMap));
+            }
+
+            foreach (KeyValuePair<string, string> kvp in commandMap)
+            {
+                if (this._whisperCommandEventHandlers.TryRemove(kvp.Key, out WhisperCommandReceivedEventHandler handler))
+                {
+                    _ = this._whisperCommandEventHandlers.TryAdd(kvp.Value, handler);
+                }
+            }
+        }
+
+        #endregion Public Methods
 
         #region Internal Methods
 
@@ -250,12 +423,17 @@ namespace StreamActions.Plugin
         private static readonly Lazy<PluginManager> _instance = new Lazy<PluginManager>(() => new PluginManager());
 
         /// <summary>
-        /// Stores the enabled <see cref="ChatCommandReceivedEventHandler"/> delegates that handle <see cref="TwitchLib.Client.TwitchClient.OnChatCommandReceived"/> events for the <c>!botname</c> tree.
+        /// Stores the enabled <see cref="ChatCommandReceivedEventHandler"/> delegates that handle ChatCommandReceived events for the <c>!botname</c> tree.
         /// </summary>
         private readonly ConcurrentDictionary<string, ChatCommandReceivedEventHandler> _botnameChatCommandEventHandlers = new ConcurrentDictionary<string, ChatCommandReceivedEventHandler>();
 
         /// <summary>
-        /// Stores the enabled <see cref="ChatCommandReceivedEventHandler"/> delegates that handle <see cref="TwitchLib.Client.TwitchClient.OnChatCommandReceived"/> events.
+        /// Stores the enabled <see cref="WhisperCommandReceivedEventHandler"/> delegates that handle WhisperCommandReceived events for the <c>!botname</c> tree.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, WhisperCommandReceivedEventHandler> _botnameWhisperCommandEventHandlers = new ConcurrentDictionary<string, WhisperCommandReceivedEventHandler>();
+
+        /// <summary>
+        /// Stores the enabled <see cref="ChatCommandReceivedEventHandler"/> delegates that handle ChatCommandReceived events.
         /// </summary>
         private readonly ConcurrentDictionary<string, ChatCommandReceivedEventHandler> _chatCommandEventHandlers = new ConcurrentDictionary<string, ChatCommandReceivedEventHandler>();
 
@@ -263,6 +441,11 @@ namespace StreamActions.Plugin
         /// ConcurrentDictionary of currently loaded plugins.
         /// </summary>
         private readonly ConcurrentDictionary<string, IPlugin> _plugins = new ConcurrentDictionary<string, IPlugin>();
+
+        /// <summary>
+        /// Stores the enabled <see cref="WhisperCommandReceivedEventHandler"/> delegates that handle WhisperCommandReceived events.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, WhisperCommandReceivedEventHandler> _whisperCommandEventHandlers = new ConcurrentDictionary<string, WhisperCommandReceivedEventHandler>();
 
         /// <summary>
         /// Field that backs the <see cref="InLockdown"/> property.
@@ -279,6 +462,8 @@ namespace StreamActions.Plugin
         private PluginManager()
         {
             //TODO: Check the settings file for an alternate ChatCommandIdentifier
+            TwitchLibClient.Instance.TwitchClient.OnMessageReceived += this.Twitch_OnMessageReceived;
+            TwitchLibClient.Instance.TwitchClient.OnWhisperReceived += this.Twitch_OnWhisperReceived;
         }
 
         #endregion Private Constructors
@@ -287,7 +472,7 @@ namespace StreamActions.Plugin
 
         /// <summary>
         /// Passes <see cref="OnMessageReceivedArgs"/> on to subscribers of <see cref="OnMessageModeration"/> to determine if a moderation action should be taken.
-        /// If the message passes moderation, passes it on to subscribers of <see cref="OnMessageReceived"/> and <see cref="ChatCommandReceivedEventHandler"/>, otherwise,
+        /// If the message passes moderation, passes it on to subscribers of <see cref="OnMessageReceived"/> and <see cref="ChatCommandReceivedEventHandler"/> handlers, otherwise,
         /// performs the harshest indicated moderation action.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -350,69 +535,46 @@ namespace StreamActions.Plugin
             }
         }
 
+        /// <summary>
+        /// Passes <see cref="OnWhisperReceivedArgs"/> on to subscribers of <see cref="OnWhisperReceived"/> and <see cref="WhisperCommandReceivedEventHandler"/> handlers.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="OnWhisperReceivedArgs"/> object.</param>
+        private void Twitch_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
+        {
+            OnWhisperReceived?.Invoke(this, e);
+
+            if (Equals(e.WhisperMessage.Message[0], this.WhisperCommandIdentifier))
+            {
+                WhisperCommand whisperCommand = new WhisperCommand(e.WhisperMessage);
+                WhisperCommandReceivedEventHandler eventHandler;
+
+                //TODO: Replace string "botname" with the botname var
+                if (string.Equals(whisperCommand.CommandText, "botname", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0] + " " + whisperCommand.ArgumentsAsList[1], out eventHandler))
+                    {
+                        eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                    }
+                    else if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0], out eventHandler))
+                    {
+                        eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                    }
+                }
+                else
+                {
+                    if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText + " " + whisperCommand.ArgumentsAsList[0], out eventHandler))
+                    {
+                        eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                    }
+                    else if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText, out eventHandler))
+                    {
+                        eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                    }
+                }
+            }
+        }
+
         #endregion Private Methods
-
-        #region Public Methods
-
-        /// <summary>
-        /// Attempts to subscribe the provided Delegate to the designated chat <c>!command</c>.
-        /// </summary>
-        /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
-        /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> Delegate to subscribe.</param>
-        /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool SubscribeChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._chatCommandEventHandlers.TryAdd(command, handler);
-
-        /// <summary>
-        /// Attempts to unsubscribe the designated chat <c>!command</c>.
-        /// </summary>
-        /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
-        /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool UnsubscribeChatCommand(string command) => this._chatCommandEventHandlers.TryRemove(command, out _);
-
-        /// <summary>
-        /// Updates the subscribed <c>!botname command</c> names.
-        /// </summary>
-        /// <param name="commandMap">A Dictionary of commands to update. Key is the original command name; value is the new command name.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
-        public void UpdateBotnameChatCommands(Dictionary<string, string> commandMap)
-        {
-            if (commandMap == null)
-            {
-                throw new ArgumentNullException(nameof(commandMap));
-            }
-
-            foreach (KeyValuePair<string, string> kvp in commandMap)
-            {
-                if (this._botnameChatCommandEventHandlers.TryRemove(kvp.Key, out ChatCommandReceivedEventHandler handler))
-                {
-                    _ = this._botnameChatCommandEventHandlers.TryAdd(kvp.Value, handler);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Updates the subscribed <c>!command</c> names.
-        /// </summary>
-        /// <param name="commandMap">A Dictionary of commands to update. Key is the original command name; value is the new command name.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
-        public void UpdateChatCommands(Dictionary<string, string> commandMap)
-        {
-            if (commandMap == null)
-            {
-                throw new ArgumentNullException(nameof(commandMap));
-            }
-
-            foreach (KeyValuePair<string, string> kvp in commandMap)
-            {
-                if (this._chatCommandEventHandlers.TryRemove(kvp.Key, out ChatCommandReceivedEventHandler handler))
-                {
-                    _ = this._chatCommandEventHandlers.TryAdd(kvp.Value, handler);
-                }
-            }
-        }
-
-        #endregion Public Methods
     }
 }

@@ -19,25 +19,25 @@ using System;
 namespace StreamActions.Attributes
 {
     /// <summary>
-    /// Marks a method as an EventHandler for a OnChatCommandReceived event with a specified <see cref="TwitchLib.Client.Models.ChatCommand.CommandText"/>.
+    /// Marks a method as an EventHandler for a OnWhisperCommandReceived event with a specified <see cref="TwitchLib.Client.Models.WhisperCommand.CommandText"/>.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public class ChatCommandAttribute : Attribute
+    public class WhisperCommandAttribute : Attribute
     {
         #region Public Constructors
 
         /// <summary>
-        /// Marks the method as being the chat handler for a <c>!command</c>.
+        /// Marks the method as being the whisper handler for a <c>!command</c>.
         /// </summary>
         /// <param name="command">The command to detect, without the <c>!</c>.</param>
-        public ChatCommandAttribute(string command) => this.Command = command;
+        public WhisperCommandAttribute(string command) => this.Command = command;
 
         /// <summary>
-        /// Marks the method as being the chat handler for a <c>!command subcommand</c>.
+        /// Marks the method as being the whisper handler for a <c>!command subcommand</c>.
         /// </summary>
         /// <param name="command">The command to detect, without the <c>!</c>.</param>
         /// <param name="subcommand">The subcommand to detect.</param>
-        public ChatCommandAttribute(string command, string subcommand)
+        public WhisperCommandAttribute(string command, string subcommand)
         {
             this.Command = command;
             this.SubCommand = subcommand;

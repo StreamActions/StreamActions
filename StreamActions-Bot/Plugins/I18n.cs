@@ -206,7 +206,7 @@ namespace StreamActions.Plugins
         #region Private Fields
 
         /// <summary>
-        /// Field that backs <see cref="CurrentCulture"/>.
+        /// Field that backs the <see cref="CurrentCulture"/> property.
         /// </summary>
         private readonly ConcurrentDictionary<string, CultureInfo> _currentCulture = new ConcurrentDictionary<string, CultureInfo>();
 

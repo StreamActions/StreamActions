@@ -19,27 +19,27 @@ using System;
 namespace StreamActions.Attributes
 {
     /// <summary>
-    /// Marks a method as an EventHandler for a specified ChatCommand under the <c>!botname</c> tree.
+    /// Marks a method as an EventHandler for a specified WhisperCommand under the <c>!botname</c> tree.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public class BotnameChatCommandAttribute : ChatCommandAttribute
+    public class BotnameWhisperCommandAttribute : WhisperCommandAttribute
     {
         #region Public Constructors
 
         /// <summary>
-        /// Marks the method as being the chat handler for a <c>!botname command</c>.
+        /// Marks the method as being the whisper handler for a <c>!botname command</c>.
         /// </summary>
         /// <param name="command">The command to detect.</param>
-        public BotnameChatCommandAttribute(string command) : base(command)
+        public BotnameWhisperCommandAttribute(string command) : base(command)
         {
         }
 
         /// <summary>
-        /// Marks the method as being the chat handler for a <c>!botname command subcommand</c>.
+        /// Marks the method as being the whisper handler for a <c>!botname command subcommand</c>.
         /// </summary>
         /// <param name="command">The command to detect.</param>
         /// <param name="subcommand">The subcommand to detect.</param>
-        public BotnameChatCommandAttribute(string command, string subcommand) : base(command, subcommand)
+        public BotnameWhisperCommandAttribute(string command, string subcommand) : base(command, subcommand)
         {
         }
 
