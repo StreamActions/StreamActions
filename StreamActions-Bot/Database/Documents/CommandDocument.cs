@@ -63,13 +63,6 @@ namespace StreamActions.Database.Documents
         public uint Count { get; set; }
 
         /// <summary>
-        /// If the command is enabled or not.
-        /// </summary>
-        [BsonElement]
-        [BsonDefaultValue(true)]
-        public bool Enabled { get; set; }
-
-        /// <summary>
         /// Global cooldown for the command.
         /// </summary>
         [BsonElement]
@@ -83,6 +76,20 @@ namespace StreamActions.Database.Documents
         [BsonRequired]
         [BsonId]
         public Guid Id { get; set; }
+
+        /// <summary>
+        /// If the command is enabled or not.
+        /// </summary>
+        [BsonElement]
+        [BsonDefaultValue(true)]
+        public bool IsEnabled { get; set; }
+
+        /// <summary>
+        /// If the command should be shown in the command list.
+        /// </summary>
+        [BsonElement]
+        [BsonDefaultValue(true)]
+        public bool IsVisible { get; set; }
 
         /// <summary>
         /// Permission required to run this command.
@@ -105,13 +112,6 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfNull]
         public uint UserCooldown { get; set; }
-
-        /// <summary>
-        /// If the command should be shown in the command list.
-        /// </summary>
-        [BsonElement]
-        [BsonDefaultValue(true)]
-        public bool Visible { get; set; }
 
         #endregion Public Properties
     }

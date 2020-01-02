@@ -16,6 +16,7 @@
 
 using StreamActions.Plugin;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -177,11 +178,14 @@ namespace StreamActions.Plugins
         /// <returns>The message without any emotes.</returns>
         private string RemoveEmotesFromMessage(string message, EmoteSet emoteSet)
         {
-            StringBuilder sb = new StringBuilder();
+            List<Emote> emotes = emoteSet.Emotes;
 
-            // TODO: Implement logic to remove the emotes at specific indexes.
+            for (int i = emotes.Count - 1; i >= 0; i--)
+            {
+                message = message.Remove(emotes[i].StartIndex, (emotes[i].EndIndex - emotes[i].StartIndex));
+            }
 
-            return sb.ToString();
+            return message;
         }
 
         #endregion Filter check methods
