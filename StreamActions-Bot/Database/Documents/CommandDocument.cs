@@ -16,7 +16,9 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.Enums;
+using StreamActions.MemoryDocuments;
 using System;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Database.Documents
 {
@@ -32,7 +34,7 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonDefaultValue(StreamStatus.Offline | StreamStatus.Online)]
-        public StreamStatus Available { get; set; }
+        public StreamStatus AvailableWhen { get; set; }
 
         /// <summary>
         /// The <see cref="UserDocument.Id"/> of the channel this command belongs to.
@@ -47,6 +49,13 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonRequired]
         public string Command { get; set; }
+
+        /// <summary>
+        /// Contains information about the commands cooldowns.
+        /// </summary>
+        [BsonIgnore]
+        [JsonIgnore]
+        public CommandCooldownDocument CommandCooldown => this._commandCooldown;
 
         /// <summary>
         /// Cost of the command if set.
@@ -114,5 +123,14 @@ namespace StreamActions.Database.Documents
         public uint UserCooldown { get; set; }
 
         #endregion Public Properties
+
+        #region Private Fields
+
+        /// <summary>
+        /// Field that backs the <see cref="CommandCooldown"/> property.
+        /// </summary>
+        private readonly CommandCooldownDocument _commandCooldown = new CommandCooldownDocument();
+
+        #endregion Private Fields
     }
 }

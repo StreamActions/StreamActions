@@ -331,6 +331,24 @@ namespace StreamActions
 
         #endregion Public Events
 
+        #region Public Methods
+
+        /// <summary>
+        /// Sends a formatted Twitch channel chat message.
+        /// </summary>
+        /// <param name="channel">Channel to send message to.</param>
+        /// <param name="message">The message to be sent.</param>
+        public void SendMessage(string channel, string message) => this._twitchClient.SendMessage(channel, message);
+
+        /// <summary>
+        /// Sends a formatted whisper message to someone.
+        /// </summary>
+        /// <param name="receiver">The receiver of the whisper.</param>
+        /// <param name="message">The message to be sent.</param>
+        public void SendWhisper(string receiver, string message) => this._twitchClient.SendWhisper(receiver, message);
+
+        #endregion Public Methods
+
         #region Internal Properties
 
         /// <summary>
@@ -346,6 +364,18 @@ namespace StreamActions
         /// Connects the <see cref="TwitchClient"/>.
         /// </summary>
         internal void Connect() => this._twitchClient.Connect();
+
+        /// <summary>
+        /// Join the Twitch IRC chat of <paramref name="channel"/>.
+        /// </summary>
+        /// <param name="channel">The channel to join.</param>
+        internal void JoinChannel(string channel) => this._twitchClient.JoinChannel(channel);
+
+        /// <summary>
+        /// Leaves (PART) the Twitch IRC chat of <paramref name="channel"/>.
+        /// </summary>
+        /// <param name="channel">The channel to leave.</param>
+        internal void LeaveChannel(string channel) => this._twitchClient.LeaveChannel(channel);
 
         /// <summary>
         /// Reconnects the <see cref="TwitchClient"/>.
@@ -367,7 +397,7 @@ namespace StreamActions
         /// <returns>A Task that can be awaited.</returns>
         internal Task WaitForFinalDisconnect() => Task.Run(async () =>
                                                                      {
-                                                                         while (!this._shutdown || this._twitchClient.IsConnected)
+                                                                         while (!this._shutdown || this.IsConnected)
                                                                          {
                                                                              await Task.Delay(1000).ConfigureAwait(false);
                                                                          }
@@ -419,7 +449,6 @@ namespace StreamActions
             //TODO: Detect and load from settings file
             string twitchUsername = "";
             string twitchOAuth = "";
-            string twitchChannel = "";
 
             ConnectionCredentials credentials = new ConnectionCredentials(twitchUsername, twitchOAuth);
             ClientOptions clientOptions = new ClientOptions()
@@ -431,7 +460,7 @@ namespace StreamActions
             WebSocketClient webSocketClient = new WebSocketClient(clientOptions);
 
             this._twitchClient = new TwitchClient(webSocketClient);
-            this._twitchClient.Initialize(credentials, twitchChannel);
+            this._twitchClient.Initialize(credentials);
             this._twitchClient.OnAnonGiftedSubscription += this.TwitchClient_OnAnonGiftedSubscription;
             this._twitchClient.OnBeingHosted += this.TwitchClient_OnBeingHosted;
             this._twitchClient.OnChannelStateChanged += this.TwitchClient_OnChannelStateChanged;
@@ -774,10 +803,17 @@ namespace StreamActions
         private async void TwitchClient_OnConnected(object sender, OnConnectedArgs e)
         {
             this.OnConnected?.Invoke(this, e);
+            //TODO: Load from settings.
+            List<string> channels = new List<string>();
+            foreach (string channel in channels)
+            {
+                this.JoinChannel(channel);
+            }
+
             DateTime nextConnectAttempt = this._nextConnectAttempt;
             await Task.Delay(30000).ConfigureAwait(false);
 
-            if (this._twitchClient.IsConnected && this._nextConnectAttempt.CompareTo(nextConnectAttempt) == 0)
+            if (this.IsConnected && this._nextConnectAttempt.CompareTo(nextConnectAttempt) == 0)
             {
                 this._nextConnectAttemptBackoffKey = 0;
             }

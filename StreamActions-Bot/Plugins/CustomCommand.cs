@@ -15,8 +15,10 @@
  */
 
 using StreamActions.Attributes;
+using StreamActions.Database.Documents;
 using StreamActions.Plugin;
 using System;
+using System.Collections.Concurrent;
 using TwitchLib.Client.Events;
 
 namespace StreamActions.Plugins
@@ -53,6 +55,12 @@ namespace StreamActions.Plugins
 
         #endregion Public Methods
 
+        #region Private Fields
+
+        private readonly ConcurrentDictionary<string, CommandDocument> _customCommands = new ConcurrentDictionary<string, CommandDocument>();
+
+        #endregion Private Fields
+
         #region Private Methods
 
         /// <summary>
@@ -75,6 +83,10 @@ namespace StreamActions.Plugins
         private void CustomCommand_OnAliasCommand(object sender, OnChatCommandReceivedArgs e)
         {
             // TODO: Implement command adding logic.
+        }
+
+        private void CustomCommand_OnCommand(object sender, OnChatCommandReceivedArgs e)
+        {
         }
 
         /// <summary>
