@@ -32,10 +32,9 @@ namespace StreamActions
         /// <summary>
         /// Adds a job to the scheduler.
         /// </summary>
-        /// <param name="name">The name of the job.</param>
         /// <param name="action">The method to call when the time has elapsed.</param>
         /// <param name="schedule">The schedule defining when the job runs.</param>
-        public static void AddJob(string name, Action action, Schedule schedule) => JobManager.AddJob(action, (s) => s = schedule.WithName(name));
+        public static void AddJob(Action action, Action<Schedule> schedule) => JobManager.AddJob(action, schedule);
 
         /// <summary>
         /// Cancels and removes a scheduled job.
