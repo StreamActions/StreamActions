@@ -66,6 +66,20 @@ namespace StreamActions.MemoryDocuments
         #region Public Methods
 
         /// <summary>
+        /// Cleans up expired user cooldowns.
+        /// </summary>
+        public void CleanupUserCooldowns()
+        {
+            foreach (KeyValuePair<string, DateTime> kvp in this._userCooldownExpires)
+            {
+                if (DateTime.Now.CompareTo(kvp.Value) >= 0)
+                {
+                    _ = this._userCooldownExpires.TryRemove(kvp.Key, out DateTime _);
+                }
+            }
+        }
+
+        /// <summary>
         /// Indicates if the specified user Id is currently on cooldown for this command.
         /// </summary>
         /// <param name="userId">The user Id to check.</param>
