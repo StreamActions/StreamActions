@@ -15,6 +15,7 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using StreamActions.Enums;
 using System;
 
 namespace StreamActions.Database.Documents
@@ -24,20 +25,6 @@ namespace StreamActions.Database.Documents
     /// </summary>
     public class SubscriberDocument
     {
-        #region Public Enums
-
-        /// <summary>
-        /// An enum representing subscription tiers.
-        /// </summary>
-        public enum SubscriptionPlan
-        {
-            Plan1000,
-            Plan2000,
-            Plan3000
-        }
-
-        #endregion Public Enums
-
         #region Public Properties
 
         /// <summary>
