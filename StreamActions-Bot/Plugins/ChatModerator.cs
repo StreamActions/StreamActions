@@ -17,9 +17,10 @@
 using StreamActions.Plugin;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Text.RegularExpressions;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using System.Linq;
 
 namespace StreamActions.Plugins
 {
@@ -38,6 +39,40 @@ namespace StreamActions.Plugins
         }
 
         #endregion Public Constructors
+
+        #region Private filter regex
+
+        /// <summary>
+        /// Regular expression that is used for getting the number of capital letters in a string.
+        /// </summary>
+        private readonly Regex _capsRegex = new Regex(@"[A-Z]", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is used for getting the amount of grouped symbols in a string.
+        /// </summary>
+        private readonly Regex _groupedSymbolsRegex = new Regex(@"([-!$%#^&*()_+|~=`{}\[\]:'<>?,.\/\\;""])\1+", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is for finding URLs in a string.
+        /// </summary>
+        private readonly Regex _linkRegex = new Regex(@"((?:(http|https|rtsp):\/\/(?:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,64}(?:\:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,25})?\@)?)?((?:(?:[a-z0-9][a-z0-9\-]{0,64}\.)+(?:(?:aero|a[cdefgilmnoqrstuwxz])|(?:biz|bike|bot|b[abdefghijmnorstvwyz])|(?:com|c[acdfghiklmnoruvxyz])|d[ejkmoz]|(?:edu|e[cegrstu])|(?:fyi|f[ijkmor])|(?:gov|g[abdefghilmnpqrstuwy])|(?:how|h[kmnrtu])|(?:info|i[delmnoqrst])|(?:jobs|j[emop])|k[eghimnrwyz]|l[abcikrstuvy]|(?:mil|mobi|moe|m[acdeghklmnopqrstuvwxyz])|(?:name|net|n[acefgilopruz])|(?:org|om)|(?:pro|p[aefghklmnrstwy])|qa|(?:r[eouw])|(?:s[abcdeghijklmnortuvyz])|(?:t[cdfghjklmnoprtvwz])|u[agkmsyz]|(?:vote|v[ceginu])|(?:xxx)|(?:watch|w[fs])|y[etu]|z[amw]))|(?:(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])))(?:\:\d{1,5})?)(\/(?:(?:[a-z0-9\;\/\?\:\@\&\=\#\~\-\.\+\!\*\\\'\(\)\,\_])|(?:\%[a-fA-F0-9]{2}))*)?(?:\b|$)|(\.[a-z]+\/|magnet:\/\/|mailto:\/\/|ed2k:\/\/|irc:\/\/|ircs:\/\/|skype:\/\/|ymsgr:\/\/|xfire:\/\/|steam:\/\/|aim:\/\/|spotify:\/\/)", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is used to getting the number of repeating characters or words in a string.
+        /// </summary>
+        private readonly Regex _repetitionRegex = new Regex(@"(\S+\s*)\1+", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is used for getting the number of symbols in a string.
+        /// </summary>
+        private readonly Regex _symbolsRegex = new Regex(@"[-!$%#^&*()_+|~=`{}\[\]:'<>?,.\/\\;""]", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is used for getting the number of zalgo/boxed/disruptive symbols in a string.
+        /// </summary>
+        private readonly Regex _zalgoRegex = new Regex(@"[^\uD83C-\uDBFF\uDC00-\uDFFF\u0401\u0451\u0410-\u044f\u0009-\u02b7\u2000-\u20bf\u2122\u0308]", RegexOptions.Compiled);
+
+        #endregion Private filter regex
 
         #region Public Properties
 
@@ -90,85 +125,77 @@ namespace StreamActions.Plugins
         #region Filter check methods
 
         /// <summary>
+        /// Method that will return the longest sequence amount of repeating characters or words in the message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Length of longest sequence repeating characters and words in the message.</returns>
+        private int GetLongestSequenceOfRepeatingCharacters(string message) => this._repetitionRegex.Matches(message).Max(m => m.Length);
+
+        /// <summary>
+        /// Method that will return the longest sequence amount of repeating symbol in the message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Length of longest sequence repeating symbols in the message.</returns>
+        private int GetLongestSequenceOfRepeatingSymbols(string message) => this._groupedSymbolsRegex.Matches(message).Max(m => m.Length);
+
+        /// <summary>
+        /// Method that gets the length of a message
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>The length of the message.</returns>
+        private int GetMessageLength(string message) => message.Length;
+
+        /// <summary>
+        /// Method that gets the number of caps in a message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Number of caps in the message.</returns>
+        private int GetNumberOfCaps(string message) => this._capsRegex.Matches(message).Sum(m => m.Length);
+
+        /// <summary>
+        /// Method that gets the number of emotes in a message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Number of emotes in the message.</returns>
+        private int GetNumberOfEmotes(EmoteSet emoteSet) => emoteSet.Emotes.Count;
+
+        /// <summary>
+        /// Method that gets the number of symbols in a message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Number of symbols in the message.</returns>
+        private int GetNumberOfSymbols(string message) => this._symbolsRegex.Matches(message).Sum(m => m.Length);
+
+        /// <summary>
         /// Method that checks if the message has a fake purge.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>If the message has a fake purge.</returns>
         private bool HasFakePurge(string message) =>
             message.Equals("<message deleted>", StringComparison.OrdinalIgnoreCase) ||
+            message.Equals("<deleted message>", StringComparison.OrdinalIgnoreCase) ||
             message.Equals("message deleted by a moderator.", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Checks if the message has too many caps.
-        /// </summary>
-        /// <param name="message">The string message without any Twitch emotes.</param>
-        /// <param name="maximum">Maximum amount of caps allowed in a message.</param>
-        /// <returns>if we hit the caps limit.</returns>
-        private bool HasMaximumCaps(string message, int maximum)
-        {
-            bool hasMaximumCaps = false;
-            int count = 0;
-
-            for (int i = 0; i < message.Length; i++)
-            {
-                if (char.IsUpper(message[i]))
-                {
-                    count++;
-                    // Check if we hit the maximum allowed, no point in keeping going once we hit the maximum.
-                    if (count >= maximum)
-                    {
-                        hasMaximumCaps = true;
-                        break;
-                    }
-                }
-            }
-
-            return hasMaximumCaps;
-        }
-
-        /// <summary>
-        /// Method that checks if the message has too many emotes.
+        /// Method that is used to check if a message is coloured, meaning it starts with the command /me on Twitch.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
-        /// <param name="maximum">Maximum number of emotes allowed in a message.</param>
-        /// <returns>If the message has too many emotes.</returns>
-        private bool HasMaximumEmotes(EmoteSet emoteSet, int maximum) => emoteSet.Emotes.Count >= maximum;
+        /// <returns>True if the message starts with /me.</returns>
+        private bool HasTwitchAction(string message) => message.StartsWith("/me", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Method that checks if the message is lengthy.
+        /// Method that is used to check if the message contains a URL.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
-        /// <param name="maximum">Maximum length of message allowed.</param>
-        /// <returns>if the message is lenghty.</returns>
-        private bool HasMaximumMessageLength(string message, int maximum) => message.Length >= maximum;
+        /// <returns>True if the message has a URL.</returns>
+        private bool HasUrl(string message) => this._linkRegex.IsMatch(message);
 
         /// <summary>
-        /// Method that checks if the message has too many symbols.
+        /// Method that is used to check if a message contains zalgo characters.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
-        /// <param name="maximum">Maximum allowed of non letters and digits.</param>
-        /// <returns>If we git the maximum symbols.</returns>
-        private bool HasMaximumSymbols(string message, int maximum)
-        {
-            bool hasMaximumSymbols = false;
-            int count = 0;
-
-            for (int i = 0; i < message.Length; i++)
-            {
-                if (!char.IsWhiteSpace(message[i]) && !char.IsLetterOrDigit(message[i]))
-                {
-                    count++;
-                    // Check if we hit the maximum allowed, no point in keeping going once we hit the maximum.
-                    if (count >= maximum)
-                    {
-                        hasMaximumSymbols = true;
-                        break;
-                    }
-                }
-            }
-
-            return hasMaximumSymbols;
-        }
+        /// <returns>True if the message has zalgo characters.</returns>
+        private bool HasZalgo(string message) => this._zalgoRegex.IsMatch(message);
 
         /// <summary>
         /// Method that removes Twitch emotes from a string.
