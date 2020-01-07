@@ -14,33 +14,24 @@
  * limitations under the License.
  */
 
-using StreamActions.JsonDocuments;
-using System;
-using System.Globalization;
-
 namespace StreamActions.EventArgs
 {
     /// <summary>
-    /// Indicated that the <see cref="StreamActions.Plugins.I18n.CurrentCulture"/> has changed, and provides a copy of the old culture.
+    /// Represents disconnecting client event.
     /// </summary>
-    public class OnCultureChangedArgs
+    public class OnWebSocketClientDisconnectedArgs
     {
         #region Public Properties
 
         /// <summary>
-        /// The channel whose culture was changed.
+        /// The IP:Port combination that identifies the disconnecting client.
         /// </summary>
-        public string Channel { get; set; }
+        public string IpPort { get; set; }
 
         /// <summary>
-        /// The old culture that is no longer being used.
+        /// The URI path that was being accessed.
         /// </summary>
-        public CultureInfo OldCulture { get; set; }
-
-        /// <summary>
-        /// A WeakReference to the old <see cref="I18nDocument"/> that is no longer being used.
-        /// </summary>
-        public WeakReference<I18nDocument> OldI18nDocument { get; set; }
+        public string Path { get; set; }
 
         #endregion Public Properties
     }

@@ -124,7 +124,7 @@ namespace StreamActions.Plugin
         /// Attempts to subscribe the provided Delegate to the designated chat <c>!botname command</c>.
         /// </summary>
         /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
-        /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> Delegate to subscribe.</param>
+        /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
         public bool SubscribeBotnameChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._botnameChatCommandEventHandlers.TryAdd(command, handler);
@@ -133,7 +133,7 @@ namespace StreamActions.Plugin
         /// Attempts to subscribe the provided Delegate to the designated whisper <c>!botname command</c>.
         /// </summary>
         /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
-        /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> Delegate to subscribe.</param>
+        /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
         public bool SubscribeBotnameWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._botnameWhisperCommandEventHandlers.TryAdd(command, handler);
@@ -142,7 +142,7 @@ namespace StreamActions.Plugin
         /// Attempts to subscribe the provided Delegate to the designated chat <c>!command</c>.
         /// </summary>
         /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
-        /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> Delegate to subscribe.</param>
+        /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
         public bool SubscribeChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._chatCommandEventHandlers.TryAdd(command, handler);
@@ -151,7 +151,7 @@ namespace StreamActions.Plugin
         /// Attempts to subscribe the provided Delegate to the designated whisper <c>!command</c>.
         /// </summary>
         /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
-        /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> Delegate to subscribe.</param>
+        /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
         public bool SubscribeWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._whisperCommandEventHandlers.TryAdd(command, handler);

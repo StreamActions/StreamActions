@@ -231,7 +231,7 @@ namespace StreamActions.Plugins
             CultureInfo newCulture = new CultureInfo(culture, useUseroverride);
             I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUseroverride)).Name, I18nDocument.Empty);
 
-            OnCultureChangedArgs args = new OnCultureChangedArgs()
+            OnCultureChangedArgs args = new OnCultureChangedArgs
             {
                 Channel = channel,
                 OldCulture = this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUseroverride)),

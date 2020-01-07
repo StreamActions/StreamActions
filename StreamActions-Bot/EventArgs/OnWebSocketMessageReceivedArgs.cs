@@ -14,33 +14,37 @@
  * limitations under the License.
  */
 
-using StreamActions.JsonDocuments;
-using System;
-using System.Globalization;
+using System.Text;
 
 namespace StreamActions.EventArgs
 {
     /// <summary>
-    /// Indicated that the <see cref="StreamActions.Plugins.I18n.CurrentCulture"/> has changed, and provides a copy of the old culture.
+    /// Represents a WebSocket message received event.
     /// </summary>
-    public class OnCultureChangedArgs
+    public class OnWebSocketMessageReceivedArgs
     {
         #region Public Properties
 
         /// <summary>
-        /// The channel whose culture was changed.
+        /// The raw data received by the WebSocket.
         /// </summary>
-        public string Channel { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "FxCopAnalyzers Bug")]
+        public byte[] Data { get; set; }
 
         /// <summary>
-        /// The old culture that is no longer being used.
+        /// The data received by the WebSocket, converted to a UTF8-encoded string.
         /// </summary>
-        public CultureInfo OldCulture { get; set; }
+        public string DataAsString => Encoding.UTF8.GetString(this.Data);
 
         /// <summary>
-        /// A WeakReference to the old <see cref="I18nDocument"/> that is no longer being used.
+        /// The IP:Port combination that identifies the connection sending the data.
         /// </summary>
-        public WeakReference<I18nDocument> OldI18nDocument { get; set; }
+        public string IpPort { get; set; }
+
+        /// <summary>
+        /// The URI path that is being accessed.
+        /// </summary>
+        public string Path { get; set; }
 
         #endregion Public Properties
     }
