@@ -22,6 +22,7 @@ using System.Reflection;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using StreamActions.Attributes;
+using System.Threading.Tasks;
 
 namespace StreamActions.Plugin
 {
@@ -477,62 +478,69 @@ namespace StreamActions.Plugin
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
-        private void Twitch_OnMessageReceived(object sender, OnMessageReceivedArgs e)
+        private async void Twitch_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult harshestModeration = new ModerationResult();
-            int numModeration = 0;
-            if (OnMessageModeration != null)
+
+            await Task.Run(() =>
+             {
+                 int numModeration = 0;
+                 if (OnMessageModeration != null)
+                 {
+                     foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
+                     {
+                         ModerationResult rs = (ModerationResult)d.Invoke(this, e);
+                         if (harshestModeration.IsHarsher(rs))
+                         {
+                             harshestModeration = rs;
+                         }
+                     }
+
+                     numModeration = OnMessageModeration.GetInvocationList().Length;
+                 }
+             }).ConfigureAwait(false);
+
+            await Task.Run(() =>
             {
-                foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
+                if (harshestModeration.ShouldModerate)
                 {
-                    ModerationResult rs = (ModerationResult)d.Invoke(this, e);
-                    if (harshestModeration.IsHarsher(rs))
+                    //TODO: Take the moderation action and send the ModerationMessage to chat if not InLockdown
+                }
+                else
+                {
+                    OnMessageReceived?.Invoke(this, e);
+
+                    if (Equals(e.ChatMessage.Message[0], this.ChatCommandIdentifier))
                     {
-                        harshestModeration = rs;
+                        ChatCommand chatCommand = new ChatCommand(e.ChatMessage);
+                        ChatCommandReceivedEventHandler eventHandler;
+
+                        //TODO: Replace string "botname" with the botname var
+                        if (string.Equals(chatCommand.CommandText, "botname", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1], out eventHandler))
+                            {
+                                eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                            }
+                            else if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0], out eventHandler))
+                            {
+                                eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                            }
+                        }
+                        else
+                        {
+                            if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0], out eventHandler))
+                            {
+                                eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                            }
+                            else if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText, out eventHandler))
+                            {
+                                eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                            }
+                        }
                     }
                 }
-
-                numModeration = OnMessageModeration.GetInvocationList().Length;
-            }
-
-            if (harshestModeration.ShouldModerate)
-            {
-                //TODO: Take the moderation action and send the ModerationMessage to chat if not InLockdown
-            }
-            else
-            {
-                OnMessageReceived?.Invoke(this, e);
-
-                if (Equals(e.ChatMessage.Message[0], this.ChatCommandIdentifier))
-                {
-                    ChatCommand chatCommand = new ChatCommand(e.ChatMessage);
-                    ChatCommandReceivedEventHandler eventHandler;
-
-                    //TODO: Replace string "botname" with the botname var
-                    if (string.Equals(chatCommand.CommandText, "botname", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1], out eventHandler))
-                        {
-                            eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
-                        }
-                        else if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0], out eventHandler))
-                        {
-                            eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
-                        }
-                    }
-                    else
-                    {
-                        if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0], out eventHandler))
-                        {
-                            eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
-                        }
-                        else if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText, out eventHandler))
-                        {
-                            eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
-                        }
-                    }
-                }
-            }
+            }).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -540,40 +548,40 @@ namespace StreamActions.Plugin
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="OnWhisperReceivedArgs"/> object.</param>
-        private void Twitch_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
-        {
-            OnWhisperReceived?.Invoke(this, e);
+        private async void Twitch_OnWhisperReceived(object sender, OnWhisperReceivedArgs e) => await Task.Run(() =>
+                                                                                             {
+                                                                                                 OnWhisperReceived?.Invoke(this, e);
 
-            if (Equals(e.WhisperMessage.Message[0], this.WhisperCommandIdentifier))
-            {
-                WhisperCommand whisperCommand = new WhisperCommand(e.WhisperMessage);
-                WhisperCommandReceivedEventHandler eventHandler;
+                                                                                                 if (Equals(e.WhisperMessage.Message[0], this.WhisperCommandIdentifier))
+                                                                                                 {
+                                                                                                     WhisperCommand whisperCommand = new WhisperCommand(e.WhisperMessage);
+                                                                                                     WhisperCommandReceivedEventHandler eventHandler;
 
-                //TODO: Replace string "botname" with the botname var
-                if (string.Equals(whisperCommand.CommandText, "botname", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0] + " " + whisperCommand.ArgumentsAsList[1], out eventHandler))
-                    {
-                        eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                    }
-                    else if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0], out eventHandler))
-                    {
-                        eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                    }
-                }
-                else
-                {
-                    if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText + " " + whisperCommand.ArgumentsAsList[0], out eventHandler))
-                    {
-                        eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                    }
-                    else if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText, out eventHandler))
-                    {
-                        eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                    }
-                }
-            }
-        }
+                                                                                                     //TODO: Replace string "botname" with the botname var
+                                                                                                     if (string.Equals(whisperCommand.CommandText, "botname", StringComparison.InvariantCultureIgnoreCase))
+                                                                                                     {
+                                                                                                         if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0] + " " + whisperCommand.ArgumentsAsList[1], out eventHandler))
+                                                                                                         {
+                                                                                                             eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                                                                                                         }
+                                                                                                         else if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0], out eventHandler))
+                                                                                                         {
+                                                                                                             eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                                                                                                         }
+                                                                                                     }
+                                                                                                     else
+                                                                                                     {
+                                                                                                         if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText + " " + whisperCommand.ArgumentsAsList[0], out eventHandler))
+                                                                                                         {
+                                                                                                             eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                                                                                                         }
+                                                                                                         else if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText, out eventHandler))
+                                                                                                         {
+                                                                                                             eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                                                                                                         }
+                                                                                                     }
+                                                                                                 }
+                                                                                             }).ConfigureAwait(false);
 
         #endregion Private Methods
     }
