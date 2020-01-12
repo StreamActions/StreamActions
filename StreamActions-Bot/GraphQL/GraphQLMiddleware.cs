@@ -17,7 +17,6 @@
 using EntityGraphQL;
 using EntityGraphQL.Schema;
 using StreamActions.EventArgs;
-using StreamActions.MemoryDocuments;
 using System;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -56,9 +55,9 @@ namespace StreamActions.GraphQL
         private readonly MappedSchemaProvider<GraphQLSchema> _schemaProvider;
 
         /// <summary>
-        /// Contains a Dictionary of user contexts. Key is IpPort; value is <see cref="GraphQLUserContextDocument"/>.
+        /// Contains a Dictionary of user contexts. Key is IpPort; value is <see cref="GraphQLSchema"/>.
         /// </summary>
-        private readonly ConcurrentDictionary<string, GraphQLUserContextDocument> _userContext = new ConcurrentDictionary<string, GraphQLUserContextDocument>();
+        private readonly ConcurrentDictionary<string, GraphQLSchema> _userContext = new ConcurrentDictionary<string, GraphQLSchema>();
 
         #endregion Private Fields
 
@@ -86,7 +85,7 @@ namespace StreamActions.GraphQL
         /// <param name="e">An object that contains the client's request.</param>
         /// <returns><c>true</c> to allow the connection; <c>false</c> otherwise.</returns>
         private bool GraphQL_WebSocketClientConnectedEventHandler(object sender, OnWebSocketClientConnectedArgs e) =>
-            //TODO: Authenticate client, place into _userContext as <ipPort, document>
+            //TODO: Authenticate client, place into _userContext as <ipPort, schema>
             false;
 
         /// <summary>
@@ -112,7 +111,8 @@ namespace StreamActions.GraphQL
                     {
                         PropertyNameCaseInsensitive = true,
                     });
-                    result = this._userContext[e.IpPort].Schema.QueryObject(query, this._schemaProvider, null, false, this._userContext[e.IpPort]);
+
+                    result = this._userContext[e.IpPort].QueryObject(query, this._schemaProvider);
                 }
                 catch (JsonException ex)
                 {

@@ -14,22 +14,41 @@
  * limitations under the License.
  */
 
+using StreamActions.Database.Documents;
+
 namespace StreamActions.GraphQL
 {
     /// <summary>
-    /// A GraphQL schema object
+    /// A GraphQL schema object.
     /// </summary>
     public class GraphQLSchema
     {
+        #region Public Properties
+
+        /// <summary>
+        /// A <see cref="UserDocument"/> indicating the user that this client is authenticated as.
+        /// </summary>
+        public UserDocument AuthenticatedUser => this._authenticatedUser;
+
+        #endregion Public Properties
+
         #region Internal Constructors
 
         /// <summary>
         /// Constructor.
         /// </summary>
-        internal GraphQLSchema()
-        {
-        }
+        /// <param name="authenticatedUser">The <see cref="UserDocument"/> indicating the user that this client is authenticated as.</param>
+        internal GraphQLSchema(UserDocument authenticatedUser) => this._authenticatedUser = authenticatedUser;
 
         #endregion Internal Constructors
+
+        #region Private Fields
+
+        /// <summary>
+        /// Field that backs the <see cref="AuthenticatedUser"/> property.
+        /// </summary>
+        private readonly UserDocument _authenticatedUser;
+
+        #endregion Private Fields
     }
 }
