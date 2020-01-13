@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using TwitchLib.PubSub;
 using TwitchLib.PubSub.Events;
@@ -215,15 +216,9 @@ namespace StreamActions
         /// </summary>
         private TwitchLibPubSub()
         {
-            // TODO: Make this read from settings, or either get it from the API.
-            string botId = "";
-            string channelId = "";
-
             this._twitchPubSub = new TwitchPubSub();
 
-            this._twitchPubSub.ListenToFollows(channelId);
-            this._twitchPubSub.ListenToChatModeratorActions(botId, channelId);
-            // TODO: Listen to eveything.
+            this.SetListeners();
 
             this._twitchPubSub.OnPubSubServiceClosed += this.TwitchPubSub_OnPubSubServiceClosed;
             this._twitchPubSub.OnPubSubServiceConnected += this.TwitchPubSub_OnPubSubServiceConnected;
@@ -416,6 +411,24 @@ namespace StreamActions
         #region Private Methods
 
         /// <summary>
+        /// Method that sets all the PubSub listeners for all channels.
+        /// </summary>
+        private void SetListeners()
+        {
+            // TODO: Get bot ID.
+            string botId = "";
+            // TODO: Get all channel IDs.
+            List<string> channelIds = new List<string>();
+
+            foreach (string channelId in channelIds)
+            {
+                // TODO: Listen to all topics.
+                this._twitchPubSub.ListenToFollows(channelId);
+                this._twitchPubSub.ListenToChatModeratorActions(botId, channelId);
+            }
+        }
+
+        /// <summary>
         /// Makes sure we were able to listen to a response then passes <see cref="OnListenResponse"/> events down to subscribed plugins.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -455,6 +468,7 @@ namespace StreamActions
                     lock (this._lock)
                     {
                         this._twitchPubSub.Disconnect();
+                        this.SetListeners();
                         this._twitchPubSub.Connect();
                     }
 
