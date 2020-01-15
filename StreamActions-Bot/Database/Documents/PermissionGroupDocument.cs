@@ -16,15 +16,18 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
+using StreamActions.GraphQL.Connections;
+using StreamActions.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace StreamActions.Database.Documents
 {
     /// <summary>
     /// A document representing a permission group.
     /// </summary>
-    public class PermissionGroupDocument
+    public class PermissionGroupDocument : ICursorable
     {
         #region Public Properties
 
@@ -33,7 +36,7 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonRequired]
-        public int ChannelId { get; set; }
+        public string ChannelId { get; set; }
 
         /// <summary>
         /// The name of the permission group.
@@ -61,5 +64,15 @@ namespace StreamActions.Database.Documents
         public Dictionary<string, bool> Permissions { get; set; }
 
         #endregion Public Properties
+
+        #region Public Methods
+
+        public string GetCursor()
+        {
+            _ = I18n.Instance.CurrentCulture.GetValueOrDefault(this.ChannelId, new WeakReference<CultureInfo>(new CultureInfo("en-US"))).TryGetTarget(out CultureInfo culture);
+            return this.Id.ToString("D", culture);
+        }
+
+        #endregion Public Methods
     }
 }

@@ -35,8 +35,4 @@
     <PackageReference Include="WatsonWebsocket" Version="2.0.2" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="GraphQL\Connections\" />
-  </ItemGroup>
-
 </Project>

@@ -42,7 +42,7 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonRequired]
         [BsonId]
-        public int Id { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         /// A Dictionary of known subscribers. Key is the <see cref="UserDocument.Id"/> of the subscriber; value is a <see cref="SubscriberDocument"/> denoting the known

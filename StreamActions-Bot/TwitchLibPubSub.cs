@@ -143,6 +143,15 @@ namespace StreamActions
 
         #endregion Public Events
 
+        #region Public Properties
+
+        /// <summary>
+        /// Singleton of <see cref="TwitchLibPubSub"/>.
+        /// </summary>
+        public TwitchLibPubSub Instance => _instance.Value;
+
+        #endregion Public Properties
+
         #region Internal Properties
 
         /// <summary>
@@ -203,7 +212,7 @@ namespace StreamActions
         private int _nextConnectAttemptBackoffKey = 0;
 
         /// <summary>
-        /// Indicates if theclient is being shutdown and should allow disconnecting.
+        /// Indicates if the client is being shutdown and should allow disconnecting.
         /// </summary>
         private bool _shutdown = false;
 

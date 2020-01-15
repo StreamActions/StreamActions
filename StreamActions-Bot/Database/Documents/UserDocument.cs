@@ -16,6 +16,7 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.Enums;
+using StreamActions.GraphQL.Connections;
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
@@ -25,7 +26,7 @@ namespace StreamActions.Database.Documents
     /// <summary>
     /// A document representing a Twitch user.
     /// </summary>
-    public class UserDocument
+    public class UserDocument : ICursorable
     {
         #region Public Properties
 
@@ -66,7 +67,7 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonRequired]
         [BsonId]
-        public int Id { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         /// The users login name on Twitch.
@@ -93,5 +94,11 @@ namespace StreamActions.Database.Documents
         public TwitchStaff StaffType { get; set; }
 
         #endregion Public Properties
+
+        #region Public Methods
+
+        public string GetCursor() => this.Id;
+
+        #endregion Public Methods
     }
 }

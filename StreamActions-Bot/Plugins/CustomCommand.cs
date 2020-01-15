@@ -101,7 +101,7 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
-        /// Method called when someone changes the permisions of a command.
+        /// Method called when someone changes the permissions of a command.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>

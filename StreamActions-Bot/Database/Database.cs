@@ -60,7 +60,7 @@ namespace StreamActions.Database
         /// </summary>
         private Database()
         {
-            //TODO: Check user settings for options to connect to a remote datbase
+            //TODO: Check user settings for options to connect to a remote database
             MongoClientSettings settings = new MongoClientSettings
             {
                 AllowInsecureTls = false,

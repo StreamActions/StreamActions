@@ -16,8 +16,12 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.Enums;
+using StreamActions.GraphQL.Connections;
 using StreamActions.MemoryDocuments;
+using StreamActions.Plugins;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Database.Documents
@@ -25,7 +29,7 @@ namespace StreamActions.Database.Documents
     /// <summary>
     /// A document structure representing a command.
     /// </summary>
-    public class CommandDocument
+    public class CommandDocument : ICursorable
     {
         #region Public Properties
 
@@ -41,7 +45,7 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonRequired]
-        public int ChannelId { get; set; }
+        public string ChannelId { get; set; }
 
         /// <summary>
         /// The name and trigger for this command.
@@ -123,6 +127,16 @@ namespace StreamActions.Database.Documents
         public uint UserCooldown { get; set; }
 
         #endregion Public Properties
+
+        #region Public Methods
+
+        public string GetCursor()
+        {
+            _ = I18n.Instance.CurrentCulture.GetValueOrDefault(this.ChannelId, new WeakReference<CultureInfo>(new CultureInfo("en-US"))).TryGetTarget(out CultureInfo culture);
+            return this.Id.ToString("D", culture);
+        }
+
+        #endregion Public Methods
 
         #region Private Fields
 

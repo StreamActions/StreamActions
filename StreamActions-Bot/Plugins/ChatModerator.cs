@@ -40,40 +40,6 @@ namespace StreamActions.Plugins
 
         #endregion Public Constructors
 
-        #region Private filter regex
-
-        /// <summary>
-        /// Regular expression that is used for getting the number of capital letters in a string.
-        /// </summary>
-        private readonly Regex _capsRegex = new Regex(@"[A-Z]", RegexOptions.Compiled);
-
-        /// <summary>
-        /// Regular expression that is used for getting the amount of grouped symbols in a string.
-        /// </summary>
-        private readonly Regex _groupedSymbolsRegex = new Regex(@"([-!$%#^&*()_+|~=`{}\[\]:'<>?,.\/\\;""])\1+", RegexOptions.Compiled);
-
-        /// <summary>
-        /// Regular expression that is for finding URLs in a string.
-        /// </summary>
-        private readonly Regex _linkRegex = new Regex(@"((?:(http|https|rtsp):\/\/(?:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,64}(?:\:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,25})?\@)?)?((?:(?:[a-z0-9][a-z0-9\-]{0,64}\.)+(?:(?:aero|a[cdefgilmnoqrstuwxz])|(?:biz|bike|bot|b[abdefghijmnorstvwyz])|(?:com|c[acdfghiklmnoruvxyz])|d[ejkmoz]|(?:edu|e[cegrstu])|(?:fyi|f[ijkmor])|(?:gov|g[abdefghilmnpqrstuwy])|(?:how|h[kmnrtu])|(?:info|i[delmnoqrst])|(?:jobs|j[emop])|k[eghimnrwyz]|l[abcikrstuvy]|(?:mil|mobi|moe|m[acdeghklmnopqrstuvwxyz])|(?:name|net|n[acefgilopruz])|(?:org|om)|(?:pro|p[aefghklmnrstwy])|qa|(?:r[eouw])|(?:s[abcdeghijklmnortuvyz])|(?:t[cdfghjklmnoprtvwz])|u[agkmsyz]|(?:vote|v[ceginu])|(?:xxx)|(?:watch|w[fs])|y[etu]|z[amw]))|(?:(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])))(?:\:\d{1,5})?)(\/(?:(?:[a-z0-9\;\/\?\:\@\&\=\#\~\-\.\+\!\*\\\'\(\)\,\_])|(?:\%[a-fA-F0-9]{2}))*)?(?:\b|$)|(\.[a-z]+\/|magnet:\/\/|mailto:\/\/|ed2k:\/\/|irc:\/\/|ircs:\/\/|skype:\/\/|ymsgr:\/\/|xfire:\/\/|steam:\/\/|aim:\/\/|spotify:\/\/)", RegexOptions.Compiled);
-
-        /// <summary>
-        /// Regular expression that is used to getting the number of repeating characters or words in a string.
-        /// </summary>
-        private readonly Regex _repetitionRegex = new Regex(@"(\S+\s*)\1+", RegexOptions.Compiled);
-
-        /// <summary>
-        /// Regular expression that is used for getting the number of symbols in a string.
-        /// </summary>
-        private readonly Regex _symbolsRegex = new Regex(@"[-!$%#^&*()_+|~=`{}\[\]:'<>?,.\/\\;""]", RegexOptions.Compiled);
-
-        /// <summary>
-        /// Regular expression that is used for getting the number of zalgo/boxed/disruptive symbols in a string.
-        /// </summary>
-        private readonly Regex _zalgoRegex = new Regex(@"[^\uD83C-\uDBFF\uDC00-\uDFFF\u0401\u0451\u0410-\u044f\u0009-\u02b7\u2000-\u20bf\u2122\u0308]", RegexOptions.Compiled);
-
-        #endregion Private filter regex
-
         #region Public Properties
 
         public bool AlwaysEnabled => false;
@@ -121,6 +87,44 @@ namespace StreamActions.Plugins
         }
 
         #endregion Public Methods
+
+        #region Private filter regex
+
+        // Ignore Spelling: cdefgilmnoqrstuwxz, abdefghijmnorstvwyz, acdfghiklmnoruvxyz, ejkmoz, cegrstu, fyi, ijkmor, abdefghilmnpqrstuwy, kmnrtu, delmnoqrst, emop, eghimnrwyz
+        // Ignore Spelling: eghimnrwyz, eghimnrwyz, eghimnrwyz, abcikrstuvy, mobi, moe, acdeghklmnopqrstuvwxyz, acefgilopruz, aefghklmnrstwy, qa, eouw, abcdeghijklmnortuvyz
+        // Ignore Spelling: cdfghjklmnoprtvwz, agkmsyz, ceginu, xxx, fs, etu, amw
+
+        /// <summary>
+        /// Regular expression that is used for getting the number of capital letters in a string.
+        /// </summary>
+        private readonly Regex _capsRegex = new Regex(@"[A-Z]", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is used for getting the amount of grouped symbols in a string.
+        /// </summary>
+        private readonly Regex _groupedSymbolsRegex = new Regex(@"([-!$%#^&*()_+|~=`{}\[\]:'<>?,.\/\\;""])\1+", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is for finding URLs in a string.
+        /// </summary>
+        private readonly Regex _linkRegex = new Regex(@"((?:(http|https|rtsp):\/\/(?:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,64}(?:\:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,25})?\@)?)?((?:(?:[a-z0-9][a-z0-9\-]{0,64}\.)+(?:(?:aero|a[cdefgilmnoqrstuwxz])|(?:biz|bike|bot|b[abdefghijmnorstvwyz])|(?:com|c[acdfghiklmnoruvxyz])|d[ejkmoz]|(?:edu|e[cegrstu])|(?:fyi|f[ijkmor])|(?:gov|g[abdefghilmnpqrstuwy])|(?:how|h[kmnrtu])|(?:info|i[delmnoqrst])|(?:jobs|j[emop])|k[eghimnrwyz]|l[abcikrstuvy]|(?:mil|mobi|moe|m[acdeghklmnopqrstuvwxyz])|(?:name|net|n[acefgilopruz])|(?:org|om)|(?:pro|p[aefghklmnrstwy])|qa|(?:r[eouw])|(?:s[abcdeghijklmnortuvyz])|(?:t[cdfghjklmnoprtvwz])|u[agkmsyz]|(?:vote|v[ceginu])|(?:xxx)|(?:watch|w[fs])|y[etu]|z[amw]))|(?:(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])))(?:\:\d{1,5})?)(\/(?:(?:[a-z0-9\;\/\?\:\@\&\=\#\~\-\.\+\!\*\\\'\(\)\,\_])|(?:\%[a-fA-F0-9]{2}))*)?(?:\b|$)|(\.[a-z]+\/|magnet:\/\/|mailto:\/\/|ed2k:\/\/|irc:\/\/|ircs:\/\/|skype:\/\/|ymsgr:\/\/|xfire:\/\/|steam:\/\/|aim:\/\/|spotify:\/\/)", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is used to getting the number of repeating characters or words in a string.
+        /// </summary>
+        private readonly Regex _repetitionRegex = new Regex(@"(\S+\s*)\1+", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is used for getting the number of symbols in a string.
+        /// </summary>
+        private readonly Regex _symbolsRegex = new Regex(@"[-!$%#^&*()_+|~=`{}\[\]:'<>?,.\/\\;""]", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is used for getting the number of zalgo/boxed/disruptive symbols in a string.
+        /// </summary>
+        private readonly Regex _zalgoRegex = new Regex(@"[^\uD83C-\uDBFF\uDC00-\uDFFF\u0401\u0451\u0410-\u044f\u0009-\u02b7\u2000-\u20bf\u2122\u0308]", RegexOptions.Compiled);
+
+        #endregion Private filter regex
 
         #region Filter check methods
 
@@ -299,7 +303,7 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
-        /// Method that will check the message for lenghty messages.
+        /// Method that will check the message for lengthy messages.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>

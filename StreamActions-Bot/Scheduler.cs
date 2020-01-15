@@ -27,7 +27,7 @@ namespace StreamActions
         #region Public Events
 
         /// <summary>
-        /// Evemt raised when a job ends.
+        /// Event raised when a job ends.
         /// </summary>
         public static event EventHandler<JobEndInfo> OnJobEnd;
 

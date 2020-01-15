@@ -135,7 +135,7 @@ namespace StreamActions
         public event EventHandler<OnConnectedArgs> OnConnected;
 
         /// <summary>
-        /// Forces when bot suffers conneciton error.
+        /// Forces when bot suffers connection error.
         /// </summary>
         public event EventHandler<OnConnectionErrorArgs> OnConnectionError;
 
@@ -305,7 +305,7 @@ namespace StreamActions
         public event EventHandler<OnUserStateChangedArgs> OnUserStateChanged;
 
         /// <summary>
-        /// Fires when a viewer gets timedout by any moderator.
+        /// Fires when a viewer gets timed out by any moderator.
         /// </summary>
         public event EventHandler<OnUserTimedoutArgs> OnUserTimedout;
 
@@ -433,7 +433,7 @@ namespace StreamActions
         private int _nextConnectAttemptBackoffKey = 0;
 
         /// <summary>
-        /// Indicates if theclient is being shutdown and should allow disconnecting.
+        /// Indicates if the client is being shutdown and should allow disconnecting.
         /// </summary>
         private bool _shutdown = false;
 

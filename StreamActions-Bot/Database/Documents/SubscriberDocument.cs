@@ -28,7 +28,7 @@ namespace StreamActions.Database.Documents
         #region Public Properties
 
         /// <summary>
-        /// The number of continous months the user has been subscribed for.
+        /// The number of continuous months the user has been subscribed for.
         /// </summary>
         [BsonElement]
         [BsonDefaultValue(0)]
