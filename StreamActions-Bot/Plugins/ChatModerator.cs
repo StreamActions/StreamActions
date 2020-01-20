@@ -21,6 +21,7 @@ using System.Text.RegularExpressions;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using System.Linq;
+using StreamActions.Database.Documents;
 
 namespace StreamActions.Plugins
 {
@@ -48,6 +49,7 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Chat Moderation plugin for StreamActions";
 
+        public PluginDocument PluginDocument => throw new NotImplementedException();
         public string PluginName => "ChatModerator";
 
         public Uri PluginUri => throw new NotImplementedException();

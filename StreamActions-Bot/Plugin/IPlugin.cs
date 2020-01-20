@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+using StreamActions.Database.Documents;
 using System;
 
 namespace StreamActions.Plugin
@@ -39,6 +40,11 @@ namespace StreamActions.Plugin
         /// A description of the plugin.
         /// </summary>
         public string PluginDescription { get; }
+
+        /// <summary>
+        /// Document for if the plugin is enabled or not.
+        /// </summary>
+        public PluginDocument PluginDocument { get; }
 
         /// <summary>
         /// The name of the plugin.
