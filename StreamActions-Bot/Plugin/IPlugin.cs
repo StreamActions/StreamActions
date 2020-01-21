@@ -47,6 +47,11 @@ namespace StreamActions.Plugin
         public PluginDocument PluginDocument { get; }
 
         /// <summary>
+        /// The Id of the plugin.
+        /// </summary>
+        public Guid PluginId { get; }
+
+        /// <summary>
         /// The name of the plugin.
         /// </summary>
         public string PluginName { get; }

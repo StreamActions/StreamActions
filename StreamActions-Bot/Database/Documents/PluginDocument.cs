@@ -31,11 +31,10 @@ namespace StreamActions.Database.Documents
         public string ChannelId { get; set; }
 
         /// <summary>
-        /// Id of the document.
+        /// Id of the plugin.
         /// </summary>
         [BsonElement]
         [BsonRequired]
-        [BsonId]
         public Guid Id { get; }
 
         /// <summary>

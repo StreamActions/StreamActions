@@ -34,6 +34,9 @@ namespace StreamActions.Plugins
         public string PluginDescription => "Custom Command plugin for StreamActions";
 
         public PluginDocument PluginDocument => throw new NotImplementedException();
+
+        public Guid PluginId => throw new NotImplementedException();
+
         public string PluginName => "CustomCommand";
 
         public Uri PluginUri => throw new NotImplementedException();

@@ -50,6 +50,9 @@ namespace StreamActions.Plugins
         public string PluginDescription => "Chat Moderation plugin for StreamActions";
 
         public PluginDocument PluginDocument => throw new NotImplementedException();
+
+        public Guid PluginId => throw new NotImplementedException();
+
         public string PluginName => "ChatModerator";
 
         public Uri PluginUri => throw new NotImplementedException();
