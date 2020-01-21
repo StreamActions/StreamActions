@@ -34,6 +34,7 @@ namespace StreamActions.Database.Documents
         /// Id of the document.
         /// </summary>
         [BsonElement]
+        [BsonRequired]
         [BsonId]
         public Guid Id { get; }
 
