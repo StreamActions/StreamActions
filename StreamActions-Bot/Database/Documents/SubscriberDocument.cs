@@ -16,6 +16,7 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.Enums;
+using StreamActions.GraphQL.Connections;
 using System;
 
 namespace StreamActions.Database.Documents
@@ -23,7 +24,7 @@ namespace StreamActions.Database.Documents
     /// <summary>
     /// A document representing subscription information, stored in a <see cref="UserRelationshipDocument"/>.
     /// </summary>
-    public class SubscriberDocument
+    public class SubscriberDocument : ICursorable
     {
         #region Public Properties
 
@@ -48,7 +49,16 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonRequired]
+        [BsonDateTimeOptions(DateOnly = false, Kind = DateTimeKind.Utc, Representation = MongoDB.Bson.BsonType.DateTime)]
         public DateTime SubscribedAt { get; set; }
+
+        /// <summary>
+        /// The <see cref="UserDocument.Id"/> of the subscriber.
+        /// </summary>
+        [BsonElement]
+        [BsonRequired]
+        [BsonId]
+        public string SubscriberId { get; set; }
 
         /// <summary>
         /// The current month's subscription tier.
@@ -66,5 +76,11 @@ namespace StreamActions.Database.Documents
         public int TotalMonths { get; set; }
 
         #endregion Public Properties
+
+        #region Public Methods
+
+        public string GetCursor() => this.SubscriberId;
+
+        #endregion Public Methods
     }
 }

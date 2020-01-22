@@ -15,7 +15,6 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using System;
 using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents
@@ -28,31 +27,27 @@ namespace StreamActions.Database.Documents
         #region Public Properties
 
         /// <summary>
-        /// A Dictionary of known followers. Key is the <see cref="UserDocument.Id"/> of the follower; value is the timestamp denoting when the user followed the channel.
-        /// This Dictionary may include users who have unfollowed the channel, unless the bot checks and deletes those entries.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "BsonDocument")]
-        public Dictionary<int, DateTime> Followers { get; set; }
-
-        /// <summary>
         /// The <see cref="UserDocument.Id"/> of the channel whose relationships are expressed in this document.
         /// </summary>
         [BsonElement]
         [BsonRequired]
         [BsonId]
-        public string Id { get; set; }
+        public string ChannelId { get; set; }
 
         /// <summary>
-        /// A Dictionary of known subscribers. Key is the <see cref="UserDocument.Id"/> of the subscriber; value is a <see cref="SubscriberDocument"/> denoting the known
-        /// information about the subscription. This Dictionary may include users who have unsubscribed from the channel or allowed their subscription to lapse, unless the bot
+        /// A List of known followers. This List may include users who have unfollowed the channel, unless the bot checks and deletes those entries.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public List<FollowerDocument> Followers { get; } = new List<FollowerDocument>();
+
+        /// <summary>
+        /// A List of known subscribers. This List may include users who have unsubscribed from the channel or allowed their subscription to lapse, unless the bot
         /// checks and deletes those entries.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "BsonDocument")]
-        public Dictionary<int, SubscriberDocument> Subscribers { get; set; }
+        public List<SubscriberDocument> Subscribers { get; } = new List<SubscriberDocument>();
 
         #endregion Public Properties
     }
