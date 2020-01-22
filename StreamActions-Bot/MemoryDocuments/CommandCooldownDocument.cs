@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+using EntityGraphQL.Schema;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -46,15 +47,31 @@ namespace StreamActions.MemoryDocuments
         /// <summary>
         /// Indicates when the cooldown for a user Id expires.
         /// </summary>
+        [GraphQLIgnore]
         public Dictionary<string, DateTime> UserCooldownExpires
         {
             get
             {
                 Dictionary<string, DateTime> value = new Dictionary<string, DateTime>();
 
-                foreach (KeyValuePair<string, DateTime> kvp in this._userCooldownExpires)
+                foreach (KeyValuePair<string, CommandUserCooldownDocument> kvp in this._userCooldownExpires)
                 {
-                    value.Add(kvp.Key, kvp.Value);
+                    value.Add(kvp.Value.UserId, kvp.Value.CooldownExpires);
+                }
+
+                return value;
+            }
+        }
+
+        public List<CommandUserCooldownDocument> UserCooldowns
+        {
+            get
+            {
+                List<CommandUserCooldownDocument> value = new List<CommandUserCooldownDocument>();
+
+                foreach (KeyValuePair<string, CommandUserCooldownDocument> kvp in this._userCooldownExpires)
+                {
+                    value.Add(kvp.Value);
                 }
 
                 return value;
@@ -70,11 +87,11 @@ namespace StreamActions.MemoryDocuments
         /// </summary>
         public void CleanupUserCooldowns()
         {
-            foreach (KeyValuePair<string, DateTime> kvp in this._userCooldownExpires)
+            foreach (KeyValuePair<string, CommandUserCooldownDocument> kvp in this._userCooldownExpires)
             {
-                if (DateTime.Now.CompareTo(kvp.Value) >= 0)
+                if (DateTime.Now.CompareTo(kvp.Value.CooldownExpires) >= 0)
                 {
-                    _ = this._userCooldownExpires.TryRemove(kvp.Key, out DateTime _);
+                    _ = this._userCooldownExpires.TryRemove(kvp.Key, out CommandUserCooldownDocument _);
                 }
             }
         }
@@ -121,7 +138,7 @@ namespace StreamActions.MemoryDocuments
         public void StartUserCooldown(string userId, TimeSpan time)
         {
             _ = this._userCooldownExpires.TryRemove(userId, out _);
-            _ = this._userCooldownExpires.TryAdd(userId, DateTime.Now.Add(time));
+            _ = this._userCooldownExpires.TryAdd(userId, new CommandUserCooldownDocument { UserId = userId, CooldownExpires = DateTime.Now.Add(time) });
         }
 
         /// <summary>
@@ -136,7 +153,7 @@ namespace StreamActions.MemoryDocuments
         /// </summary>
         /// <param name="userId">The userId to check.</param>
         /// <returns>A TimeSpan indicating the time left until the user Ids cooldown expires.</returns>
-        public TimeSpan UserCooldownTimeRemaining(string userId) => this.IsUserOnCooldown(userId) ? this._userCooldownExpires[userId] - DateTime.Now : TimeSpan.Zero;
+        public TimeSpan UserCooldownTimeRemaining(string userId) => this.IsUserOnCooldown(userId) ? this._userCooldownExpires[userId].CooldownExpires - DateTime.Now : TimeSpan.Zero;
 
         /// <summary>
         /// Awaits the expiration of this commands global cooldown.
@@ -165,7 +182,7 @@ namespace StreamActions.MemoryDocuments
         /// <summary>
         /// Field that backs the <see cref="UserCooldownExpires"/> property.
         /// </summary>
-        private readonly ConcurrentDictionary<string, DateTime> _userCooldownExpires = new ConcurrentDictionary<string, DateTime>();
+        private readonly ConcurrentDictionary<string, CommandUserCooldownDocument> _userCooldownExpires = new ConcurrentDictionary<string, CommandUserCooldownDocument>();
 
         #endregion Private Fields
     }

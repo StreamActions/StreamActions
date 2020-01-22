@@ -14,39 +14,23 @@
  * limitations under the License.
  */
 
-using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.GraphQL.Connections;
+using System;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.MemoryDocuments
 {
-    /// <summary>
-    /// Represents a permission assigned to a <see cref="PermissionGroupDocument"/>.
-    /// </summary>
-    public class PermissionDocument : ICursorable
+    public class CommandUserCooldownDocument : ICursorable
     {
         #region Public Properties
 
-        /// <summary>
-        /// If <c>true</c>, permission is explicitly denied; otherwise, permission is allowed.
-        /// </summary>
-        [BsonElement]
-        [BsonRequired]
-        [BsonDefaultValue(false)]
-        public bool IsDenied { get; set; }
-
-        /// <summary>
-        /// The unique permission name that is being represented.
-        /// </summary>
-        [BsonElement]
-        [BsonRequired]
-        [BsonId]
-        public string PermissionName { get; set; }
+        public DateTime CooldownExpires { get; set; }
+        public string UserId { get; set; }
 
         #endregion Public Properties
 
         #region Public Methods
 
-        public string GetCursor() => this.PermissionName;
+        public string GetCursor() => this.UserId;
 
         #endregion Public Methods
     }
