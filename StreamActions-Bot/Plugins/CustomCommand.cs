@@ -19,10 +19,15 @@ using StreamActions.Database.Documents;
 using StreamActions.Plugin;
 using System;
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using TwitchLib.Client.Events;
 
 namespace StreamActions.Plugins
 {
+    /// <summary>
+    /// Handles adding, editing, removing, tag parsing, and output of user-created commands
+    /// </summary>
+    [Guid("96FBAB20-3348-47F9-8222-525FB0BEEF70")]
     public class CustomCommand : IPlugin
     {
         #region Public Properties
@@ -33,9 +38,7 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Custom Command plugin for StreamActions";
 
-        public PluginDocument PluginDocument => throw new NotImplementedException();
-
-        public Guid PluginId => throw new NotImplementedException();
+        public Guid PluginGuid => typeof(CustomCommand).GUID;
 
         public string PluginName => "CustomCommand";
 

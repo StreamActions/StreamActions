@@ -16,34 +16,31 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using System;
+using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents
 {
+    /// <summary>
+    /// Represents the enabled status of a plugin.
+    /// </summary>
     public class PluginDocument
     {
         #region Public Properties
 
         /// <summary>
-        /// Id of the channel that owns this plugin.
+        /// A List of ChannelIds where this plugin is enabled.
         /// </summary>
         [BsonElement]
-        [BsonRequired]
-        public string ChannelId { get; set; }
+        [BsonIgnoreIfNull]
+        public List<string> EnabledChannelIds { get; } = new List<string>();
 
         /// <summary>
-        /// Id of the plugin.
+        /// The Guid of the plugin.
         /// </summary>
         [BsonElement]
         [BsonRequired]
-        public Guid Id { get; }
-
-        /// <summary>
-        /// Status of the plugin.
-        /// </summary>
-        [BsonElement]
-        [BsonRequired]
-        [BsonDefaultValue(false)]
-        public bool IsEnabled { get; set; }
+        [BsonId]
+        public Guid Id { get; set; }
 
         #endregion Public Properties
     }

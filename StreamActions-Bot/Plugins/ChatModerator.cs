@@ -21,13 +21,14 @@ using System.Text.RegularExpressions;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using System.Linq;
-using StreamActions.Database.Documents;
+using System.Runtime.InteropServices;
 
 namespace StreamActions.Plugins
 {
     /// <summary>
     /// Handles various moderation actions against chat messages, such as links protection.
     /// </summary>
+    [Guid("723C3D97-7FB3-40C9-AFC5-904D38170384")]
     public class ChatModerator : IPlugin
     {
         #region Public Constructors
@@ -49,9 +50,7 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Chat Moderation plugin for StreamActions";
 
-        public PluginDocument PluginDocument => throw new NotImplementedException();
-
-        public Guid PluginId => throw new NotImplementedException();
+        public Guid PluginGuid => typeof(ChatModerator).GUID;
 
         public string PluginName => "ChatModerator";
 

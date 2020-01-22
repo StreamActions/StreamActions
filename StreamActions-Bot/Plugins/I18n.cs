@@ -22,11 +22,16 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace StreamActions.Plugins
 {
+    /// <summary>
+    /// Handles I18n tasks.
+    /// </summary>
+    [Guid("53739937-794D-406F-AFF3-5340F96C4D50")]
     public class I18n : IPlugin
     {
         #region Public Events
@@ -83,6 +88,7 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Provides i18n support";
 
+        public Guid PluginGuid => typeof(I18n).GUID;
         public string PluginName => "I18n";
 
         public Uri PluginUri => throw new NotImplementedException();
