@@ -15,7 +15,6 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Bson.Serialization.Options;
 using StreamActions.GraphQL.Connections;
 using StreamActions.Plugins;
 using System;
@@ -54,14 +53,12 @@ namespace StreamActions.Database.Documents
         public Guid Id { get; set; }
 
         /// <summary>
-        /// A Dictionary of permissions assigned to this group. Key is the permission name; value is <c>true</c> to allow the permission, <c>false</c> to explicit (override) deny it.
-        /// Permissions not present in the Dictionary inherit from other assigned groups, and default to implicit deny if no assigned groups allow it.
+        /// A List of permissions assigned to this group. Permissions not present in the List inherit from other assigned groups,
+        /// and default to implicit deny if no assigned groups allow it.
         /// </summary>
         [BsonElement]
-        [BsonRequired]
-        [BsonDictionaryOptions(DictionaryRepresentation.ArrayOfDocuments)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "BsonDocument")]
-        public Dictionary<string, bool> Permissions { get; set; }
+        [BsonIgnoreIfNull]
+        public List<PermissionDocument> Permissions { get; } = new List<PermissionDocument>();
 
         #endregion Public Properties
 
