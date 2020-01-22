@@ -88,7 +88,7 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Provides i18n support";
 
-        public Guid PluginGuid => typeof(I18n).GUID;
+        public Guid PluginId => typeof(I18n).GUID;
         public string PluginName => "I18n";
 
         public Uri PluginUri => throw new NotImplementedException();

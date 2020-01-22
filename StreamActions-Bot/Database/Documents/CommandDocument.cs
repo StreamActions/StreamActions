@@ -22,7 +22,6 @@ using StreamActions.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text.Json.Serialization;
 
 namespace StreamActions.Database.Documents
 {
@@ -58,7 +57,6 @@ namespace StreamActions.Database.Documents
         /// Contains information about the commands cooldowns.
         /// </summary>
         [BsonIgnore]
-        [JsonIgnore]
         public CommandCooldownDocument CommandCooldown => this._commandCooldown;
 
         /// <summary>

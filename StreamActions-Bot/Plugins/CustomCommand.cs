@@ -38,7 +38,7 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Custom Command plugin for StreamActions";
 
-        public Guid PluginGuid => typeof(CustomCommand).GUID;
+        public Guid PluginId => typeof(CustomCommand).GUID;
 
         public string PluginName => "CustomCommand";
 

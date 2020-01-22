@@ -43,7 +43,7 @@ namespace StreamActions.Plugin
         /// <summary>
         /// A Guid used to identify the plugin.
         /// </summary>
-        public Guid PluginGuid { get; }
+        public Guid PluginId { get; }
 
         /// <summary>
         /// The name of the plugin.

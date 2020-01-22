@@ -50,7 +50,7 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Chat Moderation plugin for StreamActions";
 
-        public Guid PluginGuid => typeof(ChatModerator).GUID;
+        public Guid PluginId => typeof(ChatModerator).GUID;
 
         public string PluginName => "ChatModerator";
 

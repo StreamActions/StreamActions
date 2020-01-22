@@ -19,7 +19,6 @@ using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace StreamActions.Database.Documents
 {
@@ -58,7 +57,6 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        [JsonIgnore]
         public string Email { get; set; }
 
         /// <summary>
