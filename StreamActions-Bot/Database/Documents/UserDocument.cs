@@ -17,7 +17,6 @@
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
-using System;
 using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents
@@ -80,8 +79,7 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "BsonDocument")]
-        public Dictionary<int, List<Guid>> PermissionGroupMembership { get; set; }
+        public List<PermissionGroupMembershipDocument> PermissionGroupMembership { get; } = new List<PermissionGroupMembershipDocument>();
 
         /// <summary>
         /// The users <see cref="StreamActions.Enums.TwitchStaff"/>.
