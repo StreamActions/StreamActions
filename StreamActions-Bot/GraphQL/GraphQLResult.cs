@@ -35,7 +35,7 @@ namespace StreamActions.GraphQL
         /// <param name="result">The input object to copy.</param>
         public GraphQLResult(QueryResult result) : base()
         {
-            if (result == null)
+            if (result is null)
             {
                 throw new ArgumentNullException(nameof(result));
             }

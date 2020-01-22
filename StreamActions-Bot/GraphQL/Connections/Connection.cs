@@ -65,7 +65,7 @@ namespace StreamActions.GraphQL.Connections
         /// <param name="reverse">Set to <c>true</c> to reverse the order of <see cref="Edges"/> after inserting.</param>
         public void InsertEdges(List<TEdgeType> edges, bool reverse = false)
         {
-            if (edges == null)
+            if (edges is null)
             {
                 throw new ArgumentNullException(nameof(edges));
             }

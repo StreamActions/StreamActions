@@ -21,14 +21,15 @@ using System.Globalization;
 namespace StreamActions.EventArgs
 {
     /// <summary>
-    /// Indicated that the <see cref="StreamActions.Plugins.I18n.CurrentCulture"/> has changed, and provides a copy of the old culture.
+    /// Indicated that the <see cref="StreamActions.Plugins.I18n.CurrentCulture"/> or <see cref="StreamActions.Plugins.I18n.GlobalCulture"/> has changed,
+    /// and provides a copy of the old culture.
     /// </summary>
     public class OnCultureChangedArgs
     {
         #region Public Properties
 
         /// <summary>
-        /// The channel whose culture was changed.
+        /// The channel whose culture was changed. <c>*</c> for the <see cref="StreamActions.Plugins.I18n.GlobalCulture"/>.
         /// </summary>
         public string Channel { get; set; }
 

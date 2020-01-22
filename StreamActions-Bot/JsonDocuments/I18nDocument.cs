@@ -50,7 +50,7 @@ namespace StreamActions.JsonDocuments
         /// <param name="from">The <see cref="I18nDocument"/> to merge.</param>
         public void Merge(I18nDocument from)
         {
-            if (from == null)
+            if (from is null)
             {
                 throw new ArgumentNullException(nameof(from));
             }

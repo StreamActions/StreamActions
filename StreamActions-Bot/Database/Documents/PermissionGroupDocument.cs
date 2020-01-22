@@ -16,7 +16,6 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.GraphQL.Connections;
-using StreamActions.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -64,11 +63,7 @@ namespace StreamActions.Database.Documents
 
         #region Public Methods
 
-        public string GetCursor()
-        {
-            _ = I18n.Instance.CurrentCulture.GetValueOrDefault(this.ChannelId, new WeakReference<CultureInfo>(new CultureInfo("en-US"))).TryGetTarget(out CultureInfo culture);
-            return this.Id.ToString("D", culture);
-        }
+        public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
 
         #endregion Public Methods
     }

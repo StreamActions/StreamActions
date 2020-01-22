@@ -84,6 +84,8 @@ namespace StreamActions.Plugins
             }
         }
 
+        public CultureInfo GlobalCulture => this._globalCulture;
+
         public string PluginAuthor => "StreamActions Team";
 
         public string PluginDescription => "Provides i18n support";
@@ -109,7 +111,7 @@ namespace StreamActions.Plugins
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
         public static string Get(string category, string key, I18nDocument document, string defVal = null)
         {
-            if (document == null)
+            if (document is null)
             {
                 throw new ArgumentNullException(nameof(document));
             }
@@ -134,7 +136,7 @@ namespace StreamActions.Plugins
         /// <exception cref="ArgumentNullException"><paramref name="newCulture"/> is null.</exception>
         public static async Task<I18nDocument> LoadCultureAsync(CultureInfo newCulture)
         {
-            if (newCulture == null)
+            if (newCulture is null)
             {
                 throw new ArgumentNullException(nameof(newCulture));
             }
@@ -181,7 +183,7 @@ namespace StreamActions.Plugins
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
         public string Get(string category, string key, CultureInfo culture, string defVal = null)
         {
-            if (culture == null)
+            if (culture is null)
             {
                 throw new ArgumentNullException(nameof(culture));
             }
@@ -199,7 +201,7 @@ namespace StreamActions.Plugins
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
         public string Get(string category, string key, string channel, string defVal = null)
         {
-            if (channel == null)
+            if (channel is null)
             {
                 throw new ArgumentNullException(nameof(channel));
             }
@@ -221,6 +223,8 @@ namespace StreamActions.Plugins
         /// </summary>
         private readonly ConcurrentDictionary<string, I18nDocument> _i18nDocuments = new ConcurrentDictionary<string, I18nDocument>();
 
+        private CultureInfo _globalCulture = new CultureInfo("en-US", false);
+
         #endregion Private Fields
 
         #region Private Methods
@@ -232,15 +236,15 @@ namespace StreamActions.Plugins
         /// <param name="culture">The <c>languagecode2-country/regioncode2</c> name of the new culture to load.</param>
         /// <param name="useUseroverride">A Boolean that denotes whether to use the user-selected culture settings (<c>true</c>) or the default culture settings (<c>false</c>).</param>
         /// <exception cref="CultureNotFoundException"><paramref name="culture"/> is not a valid culture name.</exception>
-        private async void ChangeCulture(string channel, string culture, bool useUseroverride = false)
+        private async void ChangeCulture(string channel, string culture, bool useUserOverride = false)
         {
-            CultureInfo newCulture = new CultureInfo(culture, useUseroverride);
-            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUseroverride)).Name, I18nDocument.Empty);
+            CultureInfo newCulture = new CultureInfo(culture, useUserOverride);
+            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUserOverride)).Name, I18nDocument.Empty);
 
             OnCultureChangedArgs args = new OnCultureChangedArgs
             {
                 Channel = channel,
-                OldCulture = this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUseroverride)),
+                OldCulture = this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUserOverride)),
                 OldI18nDocument = new WeakReference<I18nDocument>(oldDocument)
             };
 
@@ -251,6 +255,28 @@ namespace StreamActions.Plugins
 
             _ = this._currentCulture.TryRemove(channel, out _);
             _ = this._currentCulture.TryAdd(channel, newCulture);
+
+            OnCultureChanged?.Invoke(this, args);
+        }
+
+        private async void ChangeGlobalCulture(string culture, bool useUserOverride = false)
+        {
+            CultureInfo newCulture = new CultureInfo(culture, useUserOverride);
+            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._globalCulture.Name, I18nDocument.Empty);
+
+            OnCultureChangedArgs args = new OnCultureChangedArgs
+            {
+                Channel = "*",
+                OldCulture = this._globalCulture,
+                OldI18nDocument = new WeakReference<I18nDocument>(oldDocument)
+            };
+
+            if (!this._i18nDocuments.ContainsKey(newCulture.Name))
+            {
+                _ = this._i18nDocuments.TryAdd(newCulture.Name, await LoadCultureAsync(newCulture).ConfigureAwait(false));
+            }
+
+            this._globalCulture = newCulture;
 
             OnCultureChanged?.Invoke(this, args);
         }

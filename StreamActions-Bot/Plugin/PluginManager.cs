@@ -18,6 +18,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
@@ -113,6 +114,16 @@ namespace StreamActions.Plugin
         }
 
         /// <summary>
+        /// A list of all currently registered <c>!botname</c> chat commands.
+        /// </summary>
+        public IEnumerable<string> RegisteredBotnameChatCommands => this._registeredBotnameChatCommands.SelectMany(l => l.Value.Select(x => x));
+
+        /// <summary>
+        /// A list of all currently registered chat commands.
+        /// </summary>
+        public IEnumerable<string> RegisteredChatCommands => this._registeredChatCommands.SelectMany(l => l.Value.Select(x => x));
+
+        /// <summary>
         /// The character that is used as the prefix to identify a whisper command.
         /// </summary>
         public char WhisperCommandIdentifier { get; set; } = '!';
@@ -120,6 +131,136 @@ namespace StreamActions.Plugin
         #endregion Public Properties
 
         #region Public Methods
+
+        /// <summary>
+        /// Indicates if the <c>!botname</c> tree already has the provided command registered.
+        /// </summary>
+        /// <param name="command">The command name to test.</param>
+        /// <returns><c>true</c> if that command already exists under the <c>!botname</c> tree.</returns>
+        public bool DoesBotnameCommandExist(string command) => this._registeredBotnameChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+
+        /// <summary>
+        /// Indicates if the provided command is already registered.
+        /// </summary>
+        /// <param name="command">The command name to test.</param>
+        /// <returns><c>true</c> if that command already exists.</returns>
+        public bool DoesCommandExist(string command) => this._registeredChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+
+        /// <summary>
+        /// Registers a <c>!botname</c> chat command.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is registering the command.</param>
+        /// <param name="command">The command to register.</param>
+        /// <returns><c>true</c> on success; <c>false</c> if command is already registered.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public bool RegisterBotnameChatCommand(string typeName, string command)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (!this.DoesBotnameCommandExist(command))
+            {
+                if (!this._registeredBotnameChatCommands.ContainsKey(typeName))
+                {
+                    _ = this._registeredBotnameChatCommands.TryAdd(typeName, new List<string>());
+                }
+
+                this._registeredBotnameChatCommands[typeName].Add(command);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Registers <c>!botname</c> chat commands.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is registering the commands.</param>
+        /// <param name="commands">The commands to register.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="commands"/> is null or empty.</exception>
+        public void RegisterBotnameChatCommands(string typeName, string[] commands)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (commands is null || commands.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(commands));
+            }
+
+            foreach (string command in commands)
+            {
+                _ = this.RegisterBotnameChatCommand(typeName, command);
+            }
+        }
+
+        /// <summary>
+        /// Registers a chat command.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is registering the command.</param>
+        /// <param name="command">The command to register.</param>
+        /// <returns><c>true</c> on success; <c>false</c> if command is already registered.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public bool RegisterChatCommand(string typeName, string command)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (!this.DoesCommandExist(command))
+            {
+                if (!this._registeredChatCommands.ContainsKey(typeName))
+                {
+                    _ = this._registeredChatCommands.TryAdd(typeName, new List<string>());
+                }
+
+                this._registeredChatCommands[typeName].Add(command);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Registers chat commands.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is registering the commands.</param>
+        /// <param name="commands">The commands to register.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="commands"/> is null or empty.</exception>
+        public void RegisterChatCommands(string typeName, string[] commands)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (commands is null || commands.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(commands));
+            }
+
+            foreach (string command in commands)
+            {
+                _ = this.RegisterChatCommand(typeName, command);
+            }
+        }
 
         /// <summary>
         /// Attempts to subscribe the provided Delegate to the designated chat <c>!botname command</c>.
@@ -156,6 +297,84 @@ namespace StreamActions.Plugin
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
         public bool SubscribeWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._whisperCommandEventHandlers.TryAdd(command, handler);
+
+        /// <summary>
+        /// Unregisters all <c>!botname</c> chat commands from a Type.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is unregistering the commands.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null.</exception>
+        public void UnregisterAllBotnameChatCommands(string typeName)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            _ = this._registeredBotnameChatCommands.TryRemove(typeName, out _);
+        }
+
+        /// <summary>
+        /// Unregisters all chat commands from a Type.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is unregistering the commands.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null.</exception>
+        public void UnregisterAllChatCommands(string typeName)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            _ = this._registeredChatCommands.TryRemove(typeName, out _);
+        }
+
+        /// <summary>
+        /// Unregisters a <c>!botname</c> chat command.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is unregistering the command.</param>
+        /// <param name="command">The command to unregister.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public void UnregisterBotnameChatCommand(string typeName, string command)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (this._registeredBotnameChatCommands.ContainsKey(typeName))
+            {
+                _ = this._registeredBotnameChatCommands[typeName].Remove(command);
+            }
+        }
+
+        /// <summary>
+        /// Unregisters a chat command.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is unregistering the command.</param>
+        /// <param name="command">The command to unregister.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public void UnregisterChatCommand(string typeName, string command)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (this._registeredChatCommands.ContainsKey(typeName))
+            {
+                _ = this._registeredChatCommands[typeName].Remove(command);
+            }
+        }
 
         /// <summary>
         /// Attempts to unsubscribe the designated chat <c>!botname command</c>.
@@ -196,7 +415,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
         public void UpdateBotnameChatCommands(Dictionary<string, string> commandMap)
         {
-            if (commandMap == null)
+            if (commandMap is null)
             {
                 throw new ArgumentNullException(nameof(commandMap));
             }
@@ -217,7 +436,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
         public void UpdateBotnameWhisperCommands(Dictionary<string, string> commandMap)
         {
-            if (commandMap == null)
+            if (commandMap is null)
             {
                 throw new ArgumentNullException(nameof(commandMap));
             }
@@ -238,7 +457,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
         public void UpdateChatCommands(Dictionary<string, string> commandMap)
         {
-            if (commandMap == null)
+            if (commandMap is null)
             {
                 throw new ArgumentNullException(nameof(commandMap));
             }
@@ -259,7 +478,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="commandMap"/> is null.</exception>
         public void UpdateWhisperCommands(Dictionary<string, string> commandMap)
         {
-            if (commandMap == null)
+            if (commandMap is null)
             {
                 throw new ArgumentNullException(nameof(commandMap));
             }
@@ -317,10 +536,12 @@ namespace StreamActions.Plugin
                     if (attr is BotnameChatCommandAttribute bchatAttr)
                     {
                         _ = this._botnameChatCommandEventHandlers.TryAdd(bchatAttr.Command + (bchatAttr.SubCommand ?? " " + bchatAttr.SubCommand), (ChatCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(ChatCommandReceivedEventHandler), mInfo));
+                        _ = this.RegisterBotnameChatCommand(typeName, bchatAttr.Command);
                     }
                     else if (attr is ChatCommandAttribute chatAttr)
                     {
                         _ = this._chatCommandEventHandlers.TryAdd(chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand), (ChatCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(ChatCommandReceivedEventHandler), mInfo));
+                        _ = this.RegisterChatCommand(typeName, chatAttr.Command);
                     }
                 }
             }
@@ -375,7 +596,7 @@ namespace StreamActions.Plugin
         {
             Assembly assembly;
 
-            if (relativePath == null || relativePath.Length == 0)
+            if (relativePath is null || relativePath.Length == 0)
             {
                 assembly = Assembly.GetExecutingAssembly();
             }
@@ -411,6 +632,8 @@ namespace StreamActions.Plugin
         internal void UnloadPlugin(string fullName)
         {
             this.DisablePlugin(fullName);
+            this.UnregisterAllChatCommands(fullName);
+            this.UnregisterAllBotnameChatCommands(fullName);
             _ = this._plugins.TryRemove(fullName, out _);
         }
 
@@ -442,6 +665,16 @@ namespace StreamActions.Plugin
         /// ConcurrentDictionary of currently loaded plugins.
         /// </summary>
         private readonly ConcurrentDictionary<string, IPlugin> _plugins = new ConcurrentDictionary<string, IPlugin>();
+
+        /// <summary>
+        /// ConcurrentDictionary of registered <c>!botname</c> chat commands.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, List<string>> _registeredBotnameChatCommands = new ConcurrentDictionary<string, List<string>>();
+
+        /// <summary>
+        /// ConcurrentDictionary of registered chat commands.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, List<string>> _registeredChatCommands = new ConcurrentDictionary<string, List<string>>();
 
         /// <summary>
         /// Stores the enabled <see cref="WhisperCommandReceivedEventHandler"/> delegates that handle WhisperCommandReceived events.
