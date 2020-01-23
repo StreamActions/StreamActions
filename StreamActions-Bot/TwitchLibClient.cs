@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
@@ -338,14 +339,42 @@ namespace StreamActions
         /// </summary>
         /// <param name="channel">Channel to send message to.</param>
         /// <param name="message">The message to be sent.</param>
-        public void SendMessage(string channel, string message) => this._twitchClient.SendMessage(channel, message);
+        /// <exception cref="ArgumentNullException"><paramref name="channel"/> or <paramref name="message"/> is null.</exception>
+        public void SendMessage(string channel, string message)
+        {
+            if (channel is null)
+            {
+                throw new ArgumentNullException(nameof(channel));
+            }
+
+            if (message is null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            message.Split('\n').ToList().ForEach(m => this._twitchClient.SendMessage(channel, m));
+        }
 
         /// <summary>
         /// Sends a formatted whisper message to someone.
         /// </summary>
         /// <param name="receiver">The receiver of the whisper.</param>
         /// <param name="message">The message to be sent.</param>
-        public void SendWhisper(string receiver, string message) => this._twitchClient.SendWhisper(receiver, message);
+        /// <exception cref="ArgumentNullException"><paramref name="receiver"/> or <paramref name="message"/> is null.</exception>
+        public void SendWhisper(string receiver, string message)
+        {
+            if (receiver is null)
+            {
+                throw new ArgumentNullException(nameof(receiver));
+            }
+
+            if (message is null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            message.Split('\n').ToList().ForEach(m => this._twitchClient.SendWhisper(receiver, m));
+        }
 
         #endregion Public Methods
 
