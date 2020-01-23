@@ -14,14 +14,59 @@
  * limitations under the License.
  */
 
+using StreamActions.JsonDocuments;
+using System.IO;
+using System.Text.Json;
+using TwitchLib.Api;
+
 namespace StreamActions
 {
     internal class Program
     {
+        #region Public Properties
+
+        /// <summary>
+        /// The bot's settings.
+        /// </summary>
+        public static SettingsDocument Settings => _settings;
+
+        /// <summary>
+        /// Singleton of <see cref="TwitchAPI"/>.
+        /// </summary>
+        public static TwitchAPI TwitchApi => _twitchApi;
+
+        #endregion Public Properties
+
+        #region Private Fields
+
+        /// <summary>
+        /// Field that backs <see cref="Settings"/>.
+        /// </summary>
+        private static SettingsDocument _settings;
+
+        /// <summary>
+        /// Field that backs <see cref="TwitchAPI"/>.
+        /// </summary>
+        private static TwitchAPI _twitchApi;
+
+        #endregion Private Fields
+
         #region Private Methods
 
-        private static void Main()
+        private static async void Main()
         {
+            using FileStream fs = File.OpenRead(Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "settings.json")));
+            JsonSerializerOptions options = new JsonSerializerOptions
+            {
+                AllowTrailingCommas = true,
+                PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Skip
+            };
+            _settings = await JsonSerializer.DeserializeAsync<SettingsDocument>(fs, options);
+
+            _twitchApi = new TwitchAPI();
+            _twitchApi.Settings.ClientId = _settings.TwitchClientId;
+            _twitchApi.Settings.AccessToken = _settings.BotOAuth;
         }
 
         #endregion Private Methods

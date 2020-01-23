@@ -60,15 +60,27 @@ namespace StreamActions.Database
         /// </summary>
         private Database()
         {
-            //TODO: Check user settings for options to connect to a remote database
             MongoClientSettings settings = new MongoClientSettings
             {
                 AllowInsecureTls = false,
                 ApplicationName = "StreamActions-Bot",
                 ConnectionMode = ConnectionMode.Automatic,
                 ConnectTimeout = TimeSpan.FromSeconds(30),
-                GuidRepresentation = GuidRepresentation.Standard
+                GuidRepresentation = GuidRepresentation.Standard,
+                UseTls = Program.Settings.DBUseTLS
             };
+
+            if (!(Program.Settings.DBHost is null))
+            {
+                settings.Server = Program.Settings.DBPort > 0
+                    ? new MongoServerAddress(Program.Settings.DBHost, Program.Settings.DBPort)
+                    : new MongoServerAddress(Program.Settings.DBHost);
+            }
+
+            if (!(Program.Settings.DBName is null || Program.Settings.DBUsername is null))
+            {
+                settings.Credential = MongoCredential.CreateCredential(Program.Settings.DBName, Program.Settings.DBUsername, Program.Settings.DBPassword);
+            }
 
             this._mongoClient = new MongoClient(settings);
         }

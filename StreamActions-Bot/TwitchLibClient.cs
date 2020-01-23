@@ -475,11 +475,7 @@ namespace StreamActions
         /// </summary>
         private TwitchLibClient()
         {
-            //TODO: Detect and load from settings file
-            string twitchUsername = "";
-            string twitchOAuth = "";
-
-            ConnectionCredentials credentials = new ConnectionCredentials(twitchUsername, twitchOAuth);
+            ConnectionCredentials credentials = new ConnectionCredentials(Program.Settings.BotLogin, Program.Settings.BotOAuth);
             ClientOptions clientOptions = new ClientOptions()
             {
                 MessagesAllowedInPeriod = 30,
@@ -832,9 +828,7 @@ namespace StreamActions
         private async void TwitchClient_OnConnected(object sender, OnConnectedArgs e)
         {
             this.OnConnected?.Invoke(this, e);
-            //TODO: Load from settings.
-            List<string> channels = new List<string>();
-            foreach (string channel in channels)
+            foreach (string channel in Program.Settings.ChannelsToJoin)
             {
                 this.JoinChannel(channel);
             }

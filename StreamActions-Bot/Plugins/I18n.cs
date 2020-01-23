@@ -168,10 +168,7 @@ namespace StreamActions.Plugins
         {
         }
 
-        public void Enabled()
-        {
-            //TODO: Load the current language from the settings file.
-        }
+        public void Enabled() => this.ChangeGlobalCulture(Program.Settings.GlobalCulture);
 
         /// <summary>
         /// Attempts to retrieve the specified i18n replacement string.

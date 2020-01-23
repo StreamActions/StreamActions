@@ -695,7 +695,8 @@ namespace StreamActions.Plugin
         /// </summary>
         private PluginManager()
         {
-            //TODO: Check the settings file for an alternate ChatCommandIdentifier
+            this.ChatCommandIdentifier = Program.Settings.ChatCommandIdentifier == 0 ? Program.Settings.ChatCommandIdentifier : this.ChatCommandIdentifier;
+            this.WhisperCommandIdentifier = Program.Settings.WhisperCommandIdentifier == 0 ? Program.Settings.WhisperCommandIdentifier : this.WhisperCommandIdentifier;
             TwitchLibClient.Instance.TwitchClient.OnMessageReceived += this.Twitch_OnMessageReceived;
             TwitchLibClient.Instance.TwitchClient.OnWhisperReceived += this.Twitch_OnWhisperReceived;
         }
@@ -748,8 +749,7 @@ namespace StreamActions.Plugin
                         ChatCommand chatCommand = new ChatCommand(e.ChatMessage);
                         ChatCommandReceivedEventHandler eventHandler;
 
-                        //TODO: Replace string "botname" with the botname var
-                        if (string.Equals(chatCommand.CommandText, "botname", StringComparison.InvariantCultureIgnoreCase))
+                        if (string.Equals(chatCommand.CommandText, Program.Settings.BotLogin, StringComparison.InvariantCultureIgnoreCase))
                         {
                             if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1], out eventHandler))
                             {
@@ -790,8 +790,7 @@ namespace StreamActions.Plugin
                                                                                                      WhisperCommand whisperCommand = new WhisperCommand(e.WhisperMessage);
                                                                                                      WhisperCommandReceivedEventHandler eventHandler;
 
-                                                                                                     //TODO: Replace string "botname" with the botname var
-                                                                                                     if (string.Equals(whisperCommand.CommandText, "botname", StringComparison.InvariantCultureIgnoreCase))
+                                                                                                     if (string.Equals(whisperCommand.CommandText, Program.Settings.BotLogin, StringComparison.InvariantCultureIgnoreCase))
                                                                                                      {
                                                                                                          if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0] + " " + whisperCommand.ArgumentsAsList[1], out eventHandler))
                                                                                                          {

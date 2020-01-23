@@ -266,13 +266,9 @@ namespace StreamActions
         /// </summary>
         private WebSocketServer()
         {
-            string listenerIp = "*";
-            bool useSsl = false;
-            int listenerPort;
-
-            //TODO: Detect listenerIp, listenerPort, and useSsl options from settings file
-            //TODO: Skip the next line if listenerPort is defined in the settings file and is not default
-            listenerPort = useSsl ? 443 : 80;
+            string listenerIp = Program.Settings.WSListenIp ?? "*";
+            bool useSsl = Program.Settings.WSUseSSL;
+            int listenerPort = Program.Settings.WSListenPort > 0 ? Program.Settings.WSListenPort : (useSsl ? 443 : 80);
 
             this._wsServer = new WatsonWsServer(listenerIp, listenerPort, useSsl)
             {
