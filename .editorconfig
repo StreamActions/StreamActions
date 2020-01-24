@@ -248,3 +248,6 @@ dotnet_naming_style.camel_case_with__.capitalization = camel_case
 
 # IDE0047: Remove unnecessary parentheses
 dotnet_diagnostic.IDE0047.severity = none
+
+# CA1308: Normalize strings to uppercase
+dotnet_diagnostic.CA1308.severity = silent

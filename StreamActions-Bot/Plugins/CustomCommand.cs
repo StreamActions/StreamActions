@@ -17,10 +17,13 @@
 using StreamActions.Attributes;
 using StreamActions.Database.Documents;
 using StreamActions.Plugin;
+using MongoDB.Driver;
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using TwitchLib.Client.Events;
+using System.Collections.Generic;
+using StreamActions.Enums;
 
 namespace StreamActions.Plugins
 {
@@ -72,28 +75,97 @@ namespace StreamActions.Plugins
 
         /// <summary>
         /// Method called when someone adds a new custom command.
+        /// Syntax for the command is the following: !command add [permission] [command] [response] - !command add -m !social Follow my Twitter!
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
         [ChatCommand("command", "add")]
-        private void CustomCommand_OnAddCommand(object sender, OnChatCommandReceivedArgs e)
+        private async void CustomCommand_OnAddCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            // TODO: Implement command adding logic.
-        }
+            // List of the arguments said after a command.
+            List<string> arguments = e.Command.ArgumentsAsList;
+            // Permission to be set on the command.
+            UserLevel userLevel = UserLevel.Viewer;
+            // The command itself wihtout the prefix.
+            string command;
+            // The response for this command.
+            string response;
 
-        /// <summary>
-        /// Method called when someone adds a new command alias.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        [ChatCommand("command", "alias")]
-        private void CustomCommand_OnAliasCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            // TODO: Implement command adding logic.
-        }
+            if (arguments.Count >= 3)
+            {
+                // Remove the prefix from the command.
+                if (arguments[1].StartsWith(PluginManager.Instance.ChatCommandIdentifier))
+                {
+                    arguments[1] = arguments[1].Substring(1);
+                }
 
-        private void CustomCommand_OnCommand(object sender, OnChatCommandReceivedArgs e)
-        {
+                command = arguments[1].ToLowerInvariant();
+
+                if (!PluginManager.Instance.DoesCommandExist(command))
+                {
+                    switch (arguments[0])
+                    {
+                        case "-b":
+                            userLevel = UserLevel.Broadcaster;
+                            break;
+
+                        case "-ts":
+                            userLevel = UserLevel.TwitchStaff;
+                            break;
+
+                        case "-ta":
+                            userLevel = UserLevel.TwitchAdmin;
+                            break;
+
+                        case "-m":
+                            userLevel = UserLevel.Moderator;
+                            break;
+
+                        case "-s":
+                            userLevel = UserLevel.Subscriber;
+                            break;
+
+                        case "-c":
+                            // TODO: Register the permission.
+                            userLevel = UserLevel.Custom;
+                            break;
+
+                        case "-v":
+                            userLevel = UserLevel.VIP;
+                            break;
+
+                        default:
+                            userLevel = UserLevel.Viewer;
+                            break;
+                    }
+
+                    // Remove the permission and command from the list.
+                    arguments.RemoveRange(0, 2);
+
+                    response = string.Join(' ', arguments);
+
+                    IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+
+                    await commands.InsertOneAsync(new CommandDocument
+                    {
+                        ChannelId = e.Command.ChatMessage.RoomId,
+                        Command = command,
+                        Response = response,
+                        Permission = userLevel,
+                        GlobalCooldown = 5
+                    }).ConfigureAwait(false);
+
+                    _ = PluginManager.Instance.SubscribeChatCommand(command, (sender, e) => TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, response));
+                }
+                else
+                {
+                    // Command exists.
+                }
+            }
+            else
+            {
+                // Show usage.
+            }
         }
 
         /// <summary>
@@ -101,19 +173,8 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        [ChatCommand("command", "edit")]
+        [ChatCommand("command", "modify")]
         private void CustomCommand_OnEditCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            // TODO: Implement command adding logic.
-        }
-
-        /// <summary>
-        /// Method called when someone changes the permissions of a command.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        [ChatCommand("command", "permission")]
-        private void CustomCommand_OnPermissionChangeCommand(object sender, OnChatCommandReceivedArgs e)
         {
             // TODO: Implement command adding logic.
         }
@@ -127,15 +188,6 @@ namespace StreamActions.Plugins
         private void CustomCommand_OnRemoveCommand(object sender, OnChatCommandReceivedArgs e)
         {
             // TODO: Implement command adding logic.
-        }
-
-        /// <summary>
-        /// Parses a custom command messages and adds variables where needed.
-        /// </summary>
-        /// <param name="commandMessage">The custom command message reference.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        private void ParseCommandVariables(ref string commandMessage, OnChatCommandReceivedArgs e)
-        {
         }
 
         #endregion Private Methods
