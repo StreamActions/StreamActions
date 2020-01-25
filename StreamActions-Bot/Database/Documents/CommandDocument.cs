@@ -101,14 +101,6 @@ namespace StreamActions.Database.Documents
         public bool IsVisible { get; set; }
 
         /// <summary>
-        /// Permission required to run this command.
-        /// </summary>
-        [BsonElement]
-        [BsonDefaultValue(UserLevel.Viewer)]
-        [BsonRequired]
-        public UserLevel Permission { get; set; }
-
-        /// <summary>
         /// The response for this command.
         /// </summary>
         [BsonElement]
@@ -121,6 +113,14 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfNull]
         public uint UserCooldown { get; set; }
+
+        /// <summary>
+        /// Permission required to run this command.
+        /// </summary>
+        [BsonElement]
+        [BsonDefaultValue(UserLevel.Viewer)]
+        [BsonRequired]
+        public UserLevel UserLevel { get; set; }
 
         #endregion Public Properties
 

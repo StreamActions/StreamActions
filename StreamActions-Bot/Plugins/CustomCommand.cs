@@ -22,8 +22,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using TwitchLib.Client.Events;
-using System.Collections.Generic;
 using StreamActions.Enums;
+using System.Text.RegularExpressions;
 
 namespace StreamActions.Plugins
 {
@@ -55,17 +55,37 @@ namespace StreamActions.Plugins
 
         public void Disabled()
         {
-            // Unload custom commands.
+            IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+
+            foreach (CommandDocument command in commands.Find(_ => true).ToList())
+            {
+                _ = PluginManager.Instance.UnsubscribeChatCommand(command.Command);
+            }
         }
 
         public void Enabled()
         {
-            // Load custom commands.
+            IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+
+            foreach (CommandDocument command in commands.Find(_ => true).ToList())
+            {
+                _ = PluginManager.Instance.SubscribeChatCommand(command.Command, (sender, e) => TwitchLibClient.Instance.SendMessage(command.ChannelId, command.Response));
+            }
         }
 
         #endregion Public Methods
 
         #region Private Fields
+
+        /// <summary>
+        /// Regular expression used to detect the command format for when adding or editing commands.
+        /// </summary>
+        private readonly Regex _commandAddEditRegex = new Regex("(?<command>" + PluginManager.Instance.ChatCommandIdentifier + "\\S{1,})\\s((?<userlevel>(-b|-m|ts|ta|-s|-v|-c))\\s)?(?<response>[\\w\\W]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Regular expression used to detect the command format for when removing a command.
+        /// </summary>
+        private readonly Regex _commandRemoveRegex = new Regex("(?<command>" + PluginManager.Instance.ChatCommandIdentifier + "\\S{1,})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private readonly ConcurrentDictionary<string, CommandDocument> _customCommands = new ConcurrentDictionary<string, CommandDocument>();
 
@@ -75,35 +95,24 @@ namespace StreamActions.Plugins
 
         /// <summary>
         /// Method called when someone adds a new custom command.
-        /// Syntax for the command is the following: !command add [permission] [command] [response] - !command add -m !social Follow my Twitter!
+        /// Syntax for the command is the following: !command add [command] [permission] [response] - !command add !social -m Follow my Twitter!
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
         [ChatCommand("command", "add")]
         private async void CustomCommand_OnAddCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            // List of the arguments said after a command.
-            List<string> arguments = e.Command.ArgumentsAsList;
-            // Permission to be set on the command.
-            UserLevel userLevel = UserLevel.Viewer;
-            // The command itself wihtout the prefix.
-            string command;
-            // The response for this command.
-            string response;
+            Match commandMatch = this._commandAddEditRegex.Match(e.Command.ArgumentsAsString);
 
-            if (arguments.Count >= 3)
+            if (commandMatch.Success)
             {
-                // Remove the prefix from the command.
-                if (arguments[1].StartsWith(PluginManager.Instance.ChatCommandIdentifier))
+                if (!PluginManager.Instance.DoesCommandExist(commandMatch.Groups["command"].Value))
                 {
-                    arguments[1] = arguments[1].Substring(1);
-                }
+                    UserLevel userLevel = UserLevel.Viewer;
+                    string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
+                    string response = commandMatch.Groups["response"].Value;
 
-                command = arguments[1].ToLowerInvariant();
-
-                if (!PluginManager.Instance.DoesCommandExist(command))
-                {
-                    switch (arguments[0])
+                    switch (commandMatch.Groups["userlevel"].Value)
                     {
                         case "-b":
                             userLevel = UserLevel.Broadcaster;
@@ -139,11 +148,6 @@ namespace StreamActions.Plugins
                             break;
                     }
 
-                    // Remove the permission and command from the list.
-                    arguments.RemoveRange(0, 2);
-
-                    response = string.Join(' ', arguments);
-
                     IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
                     await commands.InsertOneAsync(new CommandDocument
@@ -151,11 +155,13 @@ namespace StreamActions.Plugins
                         ChannelId = e.Command.ChatMessage.RoomId,
                         Command = command,
                         Response = response,
-                        Permission = userLevel,
+                        UserLevel = userLevel,
                         GlobalCooldown = 5
                     }).ConfigureAwait(false);
 
                     _ = PluginManager.Instance.SubscribeChatCommand(command, (sender, e) => TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, response));
+
+                    // Command added.
                 }
                 else
                 {
@@ -170,13 +176,87 @@ namespace StreamActions.Plugins
 
         /// <summary>
         /// Method called when someone edits a custom command.
+        /// Syntax for the command is the following: !command modify [command] [permission] [response] - !command modify !social -m Follow my Twitter!
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
         [ChatCommand("command", "modify")]
-        private void CustomCommand_OnEditCommand(object sender, OnChatCommandReceivedArgs e)
+        private async void CustomCommand_OnEditCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            // TODO: Implement command adding logic.
+            Match commandMatch = this._commandAddEditRegex.Match(e.Command.ArgumentsAsString);
+
+            if (commandMatch.Success)
+            {
+                if (PluginManager.Instance.DoesCommandExist(commandMatch.Groups["command"].Value))
+                {
+                    UserLevel userLevel = UserLevel.Viewer;
+                    string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
+                    string response = commandMatch.Groups["response"].Value;
+
+                    switch (commandMatch.Groups["userlevel"].Value)
+                    {
+                        case "-b":
+                            userLevel = UserLevel.Broadcaster;
+                            break;
+
+                        case "-ts":
+                            userLevel = UserLevel.TwitchStaff;
+                            break;
+
+                        case "-ta":
+                            userLevel = UserLevel.TwitchAdmin;
+                            break;
+
+                        case "-m":
+                            userLevel = UserLevel.Moderator;
+                            break;
+
+                        case "-s":
+                            userLevel = UserLevel.Subscriber;
+                            break;
+
+                        case "-c":
+                            // TODO: Register the permission.
+                            userLevel = UserLevel.Custom;
+                            break;
+
+                        case "-v":
+                            userLevel = UserLevel.VIP;
+                            break;
+
+                        default:
+                            userLevel = UserLevel.Viewer;
+                            break;
+                    }
+
+                    IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+
+                    // Update the document.
+                    UpdateDefinition<CommandDocument> commandUpdate = Builders<CommandDocument>.Update.Set(c => c.Response, response);
+                    FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == command);
+
+                    // Update permission if the user specified it.
+                    if (!string.IsNullOrEmpty(commandMatch.Groups["userlevel"].Value))
+                    {
+                        _ = commandUpdate.Set(c => c.UserLevel, userLevel);
+                    }
+
+                    _ = await commands.UpdateOneAsync(filter, commandUpdate).ConfigureAwait(false);
+
+                    _ = PluginManager.Instance.UnsubscribeChatCommand(command);
+                    _ = PluginManager.Instance.SubscribeChatCommand(command, (sender, e) => TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, response));
+
+                    // Command modified.
+                }
+                else
+                {
+                    // Command does not exist.
+                }
+            }
+            else
+            {
+                // Show usage + current permission and response.
+            }
         }
 
         /// <summary>
@@ -185,9 +265,35 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
         [ChatCommand("command", "remove")]
-        private void CustomCommand_OnRemoveCommand(object sender, OnChatCommandReceivedArgs e)
+        private async void CustomCommand_OnRemoveCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            // TODO: Implement command adding logic.
+            Match commandMatch = this._commandRemoveRegex.Match(e.Command.ArgumentsAsString);
+
+            if (commandMatch.Success)
+            {
+                if (PluginManager.Instance.DoesCommandExist(commandMatch.Groups["command"].Value))
+                {
+                    string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
+
+                    IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+
+                    FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == command);
+
+                    _ = await commands.DeleteOneAsync(filter).ConfigureAwait(false);
+
+                    _ = PluginManager.Instance.UnsubscribeChatCommand(command);
+
+                    // Command removed.
+                }
+                else
+                {
+                    // Command doesn't exist.
+                }
+            }
+            else
+            {
+                // Show usage.
+            }
         }
 
         #endregion Private Methods
