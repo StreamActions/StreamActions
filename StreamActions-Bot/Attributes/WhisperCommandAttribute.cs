@@ -19,44 +19,30 @@ using System;
 namespace StreamActions.Attributes
 {
     /// <summary>
-    /// Marks a method as an EventHandler for a OnWhisperCommandReceived event with a specified <see cref="TwitchLib.Client.Models.WhisperCommand.CommandText"/>.
+    /// Marks a method as an EventHandler for a specified WhisperCommand.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public class WhisperCommandAttribute : Attribute
+    public class WhisperCommandAttribute : CommandAttribute
     {
         #region Public Constructors
 
         /// <summary>
         /// Marks the method as being the whisper handler for a <c>!command</c>.
         /// </summary>
-        /// <param name="command">The command to detect, without the <c>!</c>.</param>
-        public WhisperCommandAttribute(string command) => this.Command = command;
+        /// <param name="command">The command to detect.</param>
+        public WhisperCommandAttribute(string command) : base(command)
+        {
+        }
 
         /// <summary>
         /// Marks the method as being the whisper handler for a <c>!command subcommand</c>.
         /// </summary>
-        /// <param name="command">The command to detect, without the <c>!</c>.</param>
+        /// <param name="command">The command to detect.</param>
         /// <param name="subcommand">The subcommand to detect.</param>
-        public WhisperCommandAttribute(string command, string subcommand)
+        public WhisperCommandAttribute(string command, string subcommand) : base(command, subcommand)
         {
-            this.Command = command;
-            this.SubCommand = subcommand;
         }
 
         #endregion Public Constructors
-
-        #region Public Properties
-
-        /// <summary>
-        /// The command the marked method will handle.
-        /// </summary>
-        public string Command { get; }
-
-        /// <summary>
-        /// The subcommand the marked method will handle. <c>null</c> if handling the main command.
-        /// </summary>
-        public string SubCommand { get; }
-
-        #endregion Public Properties
     }
 }

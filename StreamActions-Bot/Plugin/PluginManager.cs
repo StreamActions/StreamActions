@@ -133,18 +133,40 @@ namespace StreamActions.Plugin
         #region Public Methods
 
         /// <summary>
-        /// Indicates if the <c>!botname</c> tree already has the provided command registered.
+        /// Indicates if the <c>!botname</c> tree already has the provided chat command registered.
         /// </summary>
         /// <param name="command">The command name to test.</param>
         /// <returns><c>true</c> if that command already exists under the <c>!botname</c> tree.</returns>
-        public bool DoesBotnameCommandExist(string command) => this._registeredBotnameChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+        public bool DoesBotnameChatCommandExist(string command) => this._registeredBotnameChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
 
         /// <summary>
-        /// Indicates if the provided command is already registered.
+        /// Indicates if the <c>!botname</c> tree already has the provided whisper command registered.
+        /// </summary>
+        /// <param name="command">The command name to test.</param>
+        /// <returns><c>true</c> if that command already exists under the <c>!botname</c> tree.</returns>
+        public bool DoesBotnameWhisperCommandExist(string command) => this._registeredBotnameWhisperCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+
+        /// <summary>
+        /// Indicates if the provided chat command is already registered.
         /// </summary>
         /// <param name="command">The command name to test.</param>
         /// <returns><c>true</c> if that command already exists.</returns>
-        public bool DoesCommandExist(string command) => this._registeredChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+        public bool DoesChatCommandExist(string command) => this._registeredChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+
+        /// <summary>
+        /// Indicates if the provided custom chat command is already registered.
+        /// </summary>
+        /// <param name="channelId">The channelId to test.</param>
+        /// <param name="command">The command name to test.</param>
+        /// <returns><c>true</c> if that command already exists.</returns>
+        public bool DoesCustomChatCommandExist(string channelId, string command) => this._registeredCustomChatCommands.Where(l => string.Equals(l.Key, channelId, StringComparison.InvariantCultureIgnoreCase)).Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+
+        /// <summary>
+        /// Indicates if the provided whisper command is already registered.
+        /// </summary>
+        /// <param name="command">The command name to test.</param>
+        /// <returns><c>true</c> if that command already exists.</returns>
+        public bool DoesWhisperCommandExist(string command) => this._registeredWhisperCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
 
         /// <summary>
         /// Registers a <c>!botname</c> chat command.
@@ -165,7 +187,7 @@ namespace StreamActions.Plugin
                 throw new ArgumentNullException(nameof(command));
             }
 
-            if (!this.DoesBotnameCommandExist(command))
+            if (!this.DoesBotnameChatCommandExist(command))
             {
                 if (!this._registeredBotnameChatCommands.ContainsKey(typeName))
                 {
@@ -205,6 +227,64 @@ namespace StreamActions.Plugin
         }
 
         /// <summary>
+        /// Registers a <c>!botname</c> whisper command.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is registering the command.</param>
+        /// <param name="command">The command to register.</param>
+        /// <returns><c>true</c> on success; <c>false</c> if command is already registered.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public bool RegisterBotnameWhisperCommand(string typeName, string command)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (!this.DoesBotnameWhisperCommandExist(command))
+            {
+                if (!this._registeredBotnameWhisperCommands.ContainsKey(typeName))
+                {
+                    _ = this._registeredBotnameWhisperCommands.TryAdd(typeName, new List<string>());
+                }
+
+                this._registeredBotnameWhisperCommands[typeName].Add(command);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Registers <c>!botname</c> whisper commands.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is registering the commands.</param>
+        /// <param name="commands">The commands to register.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="commands"/> is null or empty.</exception>
+        public void RegisterBotnameWhisperCommands(string typeName, string[] commands)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (commands is null || commands.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(commands));
+            }
+
+            foreach (string command in commands)
+            {
+                _ = this.RegisterBotnameWhisperCommand(typeName, command);
+            }
+        }
+
+        /// <summary>
         /// Registers a chat command.
         /// </summary>
         /// <param name="typeName">The Type.FullName that is registering the command.</param>
@@ -223,7 +303,7 @@ namespace StreamActions.Plugin
                 throw new ArgumentNullException(nameof(command));
             }
 
-            if (!this.DoesCommandExist(command))
+            if (!this.DoesChatCommandExist(command))
             {
                 if (!this._registeredChatCommands.ContainsKey(typeName))
                 {
@@ -263,6 +343,105 @@ namespace StreamActions.Plugin
         }
 
         /// <summary>
+        /// Registers a custom chat command.
+        /// </summary>
+        /// <param name="channelId">The channelId that is registering the command.</param>
+        /// <param name="command">The command to register.</param>
+        /// <returns><c>true</c> on success; <c>false</c> if command is already registered.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="channelId"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public bool RegisterCustomChatCommand(string channelId, string command)
+        {
+            if (channelId is null)
+            {
+                throw new ArgumentNullException(nameof(channelId));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (!this.DoesCustomChatCommandExist(channelId, command))
+            {
+                if (!this._registeredCustomChatCommands.ContainsKey(channelId))
+                {
+                    _ = this._registeredCustomChatCommands.TryAdd(channelId, new List<string>());
+                }
+
+                this._registeredCustomChatCommands[channelId].Add(command);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// A list of all currently registered custom chat commands for channelId.
+        /// </summary>
+        /// <param name="channelId">The channelId to check.</param>
+        /// <returns>A list of registed custom chat commands.</returns>
+        public IEnumerable<string> RegisteredCustomChatCommands(string channelId) => this._registeredCustomChatCommands.Where(l => string.Equals(l.Key, channelId, StringComparison.InvariantCultureIgnoreCase)).SelectMany(l => l.Value.Select(x => x));
+
+        /// <summary>
+        /// Registers a whisper command.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is registering the command.</param>
+        /// <param name="command">The command to register.</param>
+        /// <returns><c>true</c> on success; <c>false</c> if command is already registered.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public bool RegisterWhisperCommand(string typeName, string command)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (!this.DoesWhisperCommandExist(command))
+            {
+                if (!this._registeredWhisperCommands.ContainsKey(typeName))
+                {
+                    _ = this._registeredWhisperCommands.TryAdd(typeName, new List<string>());
+                }
+
+                this._registeredWhisperCommands[typeName].Add(command);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Registers whisper commands.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is registering the commands.</param>
+        /// <param name="commands">The commands to register.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="commands"/> is null or empty.</exception>
+        public void RegisterWhisperCommands(string typeName, string[] commands)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (commands is null || commands.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(commands));
+            }
+
+            foreach (string command in commands)
+            {
+                _ = this.RegisterWhisperCommand(typeName, command);
+            }
+        }
+
+        /// <summary>
         /// Attempts to subscribe the provided Delegate to the designated chat <c>!botname command</c>.
         /// </summary>
         /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
@@ -290,6 +469,24 @@ namespace StreamActions.Plugin
         public bool SubscribeChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._chatCommandEventHandlers.TryAdd(command, handler);
 
         /// <summary>
+        /// Attempts to subscribe the provided Delegate to the designated custom chat <c>!command</c>.
+        /// </summary>
+        /// <param name="channelId">The channelId the command belongs to.</param>
+        /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
+        /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> to subscribe.</param>
+        /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool SubscribeCustomChatCommand(string channelId, string command, ChatCommandReceivedEventHandler handler)
+        {
+            if (!this._customChatCommandEventHandlers.ContainsKey(channelId))
+            {
+                _ = this._customChatCommandEventHandlers.TryAdd(channelId, new ConcurrentDictionary<string, ChatCommandReceivedEventHandler>());
+            }
+
+            return this._customChatCommandEventHandlers[channelId].TryAdd(command, handler);
+        }
+
+        /// <summary>
         /// Attempts to subscribe the provided Delegate to the designated whisper <c>!command</c>.
         /// </summary>
         /// <param name="command">The command to subscribe to, without the <c>!</c>.</param>
@@ -314,6 +511,21 @@ namespace StreamActions.Plugin
         }
 
         /// <summary>
+        /// Unregisters all <c>!botname</c> whisper commands from a Type.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is unregistering the commands.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null.</exception>
+        public void UnregisterAllBotnameWhisperCommands(string typeName)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            _ = this._registeredBotnameWhisperCommands.TryRemove(typeName, out _);
+        }
+
+        /// <summary>
         /// Unregisters all chat commands from a Type.
         /// </summary>
         /// <param name="typeName">The Type.FullName that is unregistering the commands.</param>
@@ -326,6 +538,36 @@ namespace StreamActions.Plugin
             }
 
             _ = this._registeredChatCommands.TryRemove(typeName, out _);
+        }
+
+        /// <summary>
+        /// Unregisters all custom chat commands from a channelId.
+        /// </summary>
+        /// <param name="channelId">The channelId that is unregistering the commands.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="channelId"/> is null.</exception>
+        public void UnregisterAllCustomChatCommands(string channelId)
+        {
+            if (channelId is null)
+            {
+                throw new ArgumentNullException(nameof(channelId));
+            }
+
+            _ = this._registeredCustomChatCommands.TryRemove(channelId, out _);
+        }
+
+        /// <summary>
+        /// Unregisters all whisper commands from a Type.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is unregistering the commands.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null.</exception>
+        public void UnregisterAllWhisperCommands(string typeName)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            _ = this._registeredWhisperCommands.TryRemove(typeName, out _);
         }
 
         /// <summary>
@@ -349,6 +591,30 @@ namespace StreamActions.Plugin
             if (this._registeredBotnameChatCommands.ContainsKey(typeName))
             {
                 _ = this._registeredBotnameChatCommands[typeName].Remove(command);
+            }
+        }
+
+        /// <summary>
+        /// Unregisters a <c>!botname</c> whisper command.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is unregistering the command.</param>
+        /// <param name="command">The command to unregister.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public void UnregisterBotnameWhisperCommand(string typeName, string command)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (this._registeredBotnameWhisperCommands.ContainsKey(typeName))
+            {
+                _ = this._registeredBotnameWhisperCommands[typeName].Remove(command);
             }
         }
 
@@ -377,6 +643,54 @@ namespace StreamActions.Plugin
         }
 
         /// <summary>
+        /// Unregisters a custom chat command.
+        /// </summary>
+        /// <param name="channelId">The channelId the command is from.</param>
+        /// <param name="command">The command to unregister.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="channelId"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public void UnregisterCustomChatCommand(string channelId, string command)
+        {
+            if (channelId is null)
+            {
+                throw new ArgumentNullException(nameof(channelId));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (this._registeredCustomChatCommands.ContainsKey(channelId))
+            {
+                _ = this._registeredCustomChatCommands[channelId].Remove(command);
+            }
+        }
+
+        /// <summary>
+        /// Unregisters a whisper command.
+        /// </summary>
+        /// <param name="typeName">The Type.FullName that is unregistering the command.</param>
+        /// <param name="command">The command to unregister.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
+        public void UnregisterWhisperCommand(string typeName, string command)
+        {
+            if (typeName is null)
+            {
+                throw new ArgumentNullException(nameof(typeName));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            if (this._registeredWhisperCommands.ContainsKey(typeName))
+            {
+                _ = this._registeredWhisperCommands[typeName].Remove(command);
+            }
+        }
+
+        /// <summary>
         /// Attempts to unsubscribe the designated chat <c>!botname command</c>.
         /// </summary>
         /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
@@ -399,6 +713,30 @@ namespace StreamActions.Plugin
         /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
         public bool UnsubscribeChatCommand(string command) => this._chatCommandEventHandlers.TryRemove(command, out _);
+
+        /// <summary>
+        /// Attempts to unsubscribe the designated custom chat <c>!command</c>.
+        /// </summary>
+        /// <param name="channelId">The channelId the command is from.</param>
+        /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
+        /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
+        public bool UnsubscribeCustomChatCommand(string channelId, string command)
+        {
+            if (channelId is null)
+            {
+                throw new ArgumentNullException(nameof(channelId));
+            }
+
+            if (command is null || command.Length == 0)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return this._customChatCommandEventHandlers.ContainsKey(channelId)
+                ? this._customChatCommandEventHandlers[channelId].TryRemove(command, out _)
+                : false;
+        }
 
         /// <summary>
         /// Attempts to unsubscribe the designated whisper <c>!command</c>.
@@ -506,7 +844,7 @@ namespace StreamActions.Plugin
 
             foreach (MethodInfo mInfo in this._plugins[typeName].GetType().GetMethods())
             {
-                foreach (ChatCommandAttribute attr in Attribute.GetCustomAttributes(mInfo, typeof(ChatCommandAttribute)))
+                foreach (CommandAttribute attr in Attribute.GetCustomAttributes(mInfo, typeof(CommandAttribute)))
                 {
                     if (attr is BotnameChatCommandAttribute bchatAttr)
                     {
@@ -515,6 +853,14 @@ namespace StreamActions.Plugin
                     else if (attr is ChatCommandAttribute chatAttr)
                     {
                         _ = this._chatCommandEventHandlers.TryRemove(chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand), out _);
+                    }
+                    else if (attr is BotnameWhisperCommandAttribute bwhisperAttr)
+                    {
+                        _ = this._botnameWhisperCommandEventHandlers.TryRemove(bwhisperAttr.Command + (bwhisperAttr.SubCommand ?? " " + bwhisperAttr.SubCommand), out _);
+                    }
+                    else if (attr is WhisperCommandAttribute whisperAttr)
+                    {
+                        _ = this._whisperCommandEventHandlers.TryRemove(whisperAttr.Command + (whisperAttr.SubCommand ?? " " + whisperAttr.SubCommand), out _);
                     }
                 }
             }
@@ -531,7 +877,7 @@ namespace StreamActions.Plugin
 
             foreach (MethodInfo mInfo in this._plugins[typeName].GetType().GetMethods())
             {
-                foreach (ChatCommandAttribute attr in Attribute.GetCustomAttributes(mInfo, typeof(ChatCommandAttribute)))
+                foreach (CommandAttribute attr in Attribute.GetCustomAttributes(mInfo, typeof(CommandAttribute)))
                 {
                     if (attr is BotnameChatCommandAttribute bchatAttr)
                     {
@@ -542,6 +888,16 @@ namespace StreamActions.Plugin
                     {
                         _ = this._chatCommandEventHandlers.TryAdd(chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand), (ChatCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(ChatCommandReceivedEventHandler), mInfo));
                         _ = this.RegisterChatCommand(typeName, chatAttr.Command);
+                    }
+                    else if (attr is BotnameWhisperCommandAttribute bwhisperAttr)
+                    {
+                        _ = this._botnameWhisperCommandEventHandlers.TryAdd(bwhisperAttr.Command + (bwhisperAttr.SubCommand ?? " " + bwhisperAttr.SubCommand), (WhisperCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(WhisperCommandReceivedEventHandler), mInfo));
+                        _ = this.RegisterBotnameWhisperCommand(typeName, bwhisperAttr.Command);
+                    }
+                    else if (attr is WhisperCommandAttribute whisperAttr)
+                    {
+                        _ = this._whisperCommandEventHandlers.TryAdd(whisperAttr.Command + (whisperAttr.SubCommand ?? " " + whisperAttr.SubCommand), (WhisperCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(WhisperCommandReceivedEventHandler), mInfo));
+                        _ = this.RegisterWhisperCommand(typeName, whisperAttr.Command);
                     }
                 }
             }
@@ -634,6 +990,8 @@ namespace StreamActions.Plugin
             this.DisablePlugin(fullName);
             this.UnregisterAllChatCommands(fullName);
             this.UnregisterAllBotnameChatCommands(fullName);
+            this.UnregisterAllWhisperCommands(fullName);
+            this.UnregisterAllBotnameWhisperCommands(fullName);
             _ = this._plugins.TryRemove(fullName, out _);
         }
 
@@ -662,6 +1020,11 @@ namespace StreamActions.Plugin
         private readonly ConcurrentDictionary<string, ChatCommandReceivedEventHandler> _chatCommandEventHandlers = new ConcurrentDictionary<string, ChatCommandReceivedEventHandler>();
 
         /// <summary>
+        /// Stores the enabled <see cref="ChatCommandReceivedEventHandler"/> delegates that handle ChatCommandReceived events for Custom Commands.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, ChatCommandReceivedEventHandler>> _customChatCommandEventHandlers = new ConcurrentDictionary<string, ConcurrentDictionary<string, ChatCommandReceivedEventHandler>>();
+
+        /// <summary>
         /// ConcurrentDictionary of currently loaded plugins.
         /// </summary>
         private readonly ConcurrentDictionary<string, IPlugin> _plugins = new ConcurrentDictionary<string, IPlugin>();
@@ -672,9 +1035,24 @@ namespace StreamActions.Plugin
         private readonly ConcurrentDictionary<string, List<string>> _registeredBotnameChatCommands = new ConcurrentDictionary<string, List<string>>();
 
         /// <summary>
+        /// ConcurrentDictionary of registered <c>!botname</c> whisper commands.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, List<string>> _registeredBotnameWhisperCommands = new ConcurrentDictionary<string, List<string>>();
+
+        /// <summary>
         /// ConcurrentDictionary of registered chat commands.
         /// </summary>
         private readonly ConcurrentDictionary<string, List<string>> _registeredChatCommands = new ConcurrentDictionary<string, List<string>>();
+
+        /// <summary>
+        /// ConcurrentDictionary of registered custom chat commands.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, List<string>> _registeredCustomChatCommands = new ConcurrentDictionary<string, List<string>>();
+
+        /// <summary>
+        /// ConcurrentDictionary of registered whisper commands.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, List<string>> _registeredWhisperCommands = new ConcurrentDictionary<string, List<string>>();
 
         /// <summary>
         /// Stores the enabled <see cref="WhisperCommandReceivedEventHandler"/> delegates that handle WhisperCommandReceived events.
