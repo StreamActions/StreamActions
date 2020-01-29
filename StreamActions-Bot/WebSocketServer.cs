@@ -22,7 +22,6 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
-using WatsonWebsocket;
 
 namespace StreamActions
 {
@@ -252,11 +251,6 @@ namespace StreamActions
         /// </summary>
         private readonly ConcurrentDictionary<string, List<WebSocketMessageReceivedEventHandler>> _messageEventHandlers = new ConcurrentDictionary<string, List<WebSocketMessageReceivedEventHandler>>();
 
-        /// <summary>
-        /// The <see cref="WatsonWsServer"/> instance.
-        /// </summary>
-        private readonly WatsonWsServer _wsServer;
-
         #endregion Private Fields
 
         #region Private Constructors
@@ -269,13 +263,6 @@ namespace StreamActions
             string listenerIp = Program.Settings.WSListenIp ?? "*";
             bool useSsl = Program.Settings.WSUseSSL;
             int listenerPort = Program.Settings.WSListenPort > 0 ? Program.Settings.WSListenPort : (useSsl ? 443 : 80);
-
-            this._wsServer = new WatsonWsServer(listenerIp, listenerPort, useSsl)
-            {
-                ClientConnected = this.ClientConnected,
-                ClientDisconnected = this.ClientDisconnected,
-                MessageReceived = this.MessageReceived
-            };
         }
 
         #endregion Private Constructors
