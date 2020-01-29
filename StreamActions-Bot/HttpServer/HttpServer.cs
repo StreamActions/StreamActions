@@ -61,46 +61,52 @@ namespace StreamActions.HttpServer
 
         #region Internal Methods
 
-        internal async void SendHTTPResponseAsync(TcpClient client, Stream stream, HttpStatusCode statusCode, byte[] content, Dictionary<string, string> httpHeaders = null, bool isClosing = true)
+        internal static bool IsWebSocketUpgradeRequest(HttpServerRequestMessage request) => request.Headers.Contains("Upgrade") && request.Headers.GetValues("Upgrade").Contains("websocket")
+            && request.Headers.Contains("Connection") && request.Headers.GetValues("Connection").Contains("Upgrade");
+
+        internal static async Task SendHTTPResponseAsync(TcpClient client, Stream stream, HttpStatusCode statusCode, byte[] content, Dictionary<string, List<string>> httpHeaders = null, bool isClosing = true)
         {
             if (httpHeaders is null)
             {
-                httpHeaders = new Dictionary<string, string>();
+                httpHeaders = new Dictionary<string, List<string>>();
             }
 
             if (!httpHeaders.ContainsKey("Content-Length"))
             {
-                httpHeaders.Add("Content-Length", content.Length.ToString(CultureInfo.InvariantCulture));
+                httpHeaders.Add("Content-Length", new List<string> { content.Length.ToString(CultureInfo.InvariantCulture) });
             }
 
             if (!httpHeaders.ContainsKey("Content-Type") && content.Length > 0)
             {
-                httpHeaders.Add("Content-Type", "text/plain");
+                httpHeaders.Add("Content-Type", new List<string> { "text/plain" });
             }
 
             if (!httpHeaders.ContainsKey("Last-Modified"))
             {
-                httpHeaders.Add("Last-Modified", DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture));
+                httpHeaders.Add("Last-Modified", new List<string> { DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture) });
             }
 
             _ = httpHeaders.Remove("Date");
-            httpHeaders.Add("Date", DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture));
+            httpHeaders.Add("Date", new List<string> { DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture) });
 
             if (!httpHeaders.ContainsKey("Server"))
             {
-                httpHeaders.Add("Server", typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString());
+                httpHeaders.Add("Server", new List<string> { typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString() });
             }
 
             if (isClosing)
             {
-                httpHeaders.Add("Connection", "close");
+                httpHeaders.Add("Connection", new List<string> { "close" });
             }
 
             string header = "HTTP/1.1 " + (int)statusCode + " " + GetStatusDescription(statusCode) + _endl;
 
-            foreach (KeyValuePair<string, string> kvp in httpHeaders)
+            foreach (KeyValuePair<string, List<string>> kvp in httpHeaders)
             {
-                header += kvp.Key + ": " + kvp.Value + _endl;
+                foreach (string value in kvp.Value)
+                {
+                    header += kvp.Key + ": " + value + _endl;
+                }
             }
 
             header += _endl;
@@ -125,7 +131,7 @@ namespace StreamActions.HttpServer
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "As designed by Microsoft")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Closed by SendHTTPResponseAsync")]
-        internal async Task<HttpRequestMessage> WaitForRequestAsync()
+        internal async Task<HttpServerRequestMessage> WaitForRequestAsync()
         {
             TcpClient client = await this._server.AcceptTcpClientAsync().ConfigureAwait(false);
             client.ReceiveTimeout = _requestTimeout;
@@ -141,7 +147,7 @@ namespace StreamActions.HttpServer
                 catch (AuthenticationException)
                 {
                     stream.WriteTimeout = _streamTimeout;
-                    this.SendHTTPResponseAsync(client, sslStream, HttpStatusCode.InternalServerError, Array.Empty<byte>());
+                    await SendHTTPResponseAsync(client, sslStream, HttpStatusCode.InternalServerError, Array.Empty<byte>()).ConfigureAwait(false);
                     return null;
                 }
 
@@ -151,7 +157,7 @@ namespace StreamActions.HttpServer
             stream.ReadTimeout = _streamTimeout;
             stream.WriteTimeout = _streamTimeout;
 
-            return await this.WaitAndParseRequestAsync(client, stream).ConfigureAwait(false);
+            return await WaitAndParseRequestAsync(client, stream).ConfigureAwait(false);
         }
 
         #endregion Internal Methods
@@ -180,7 +186,7 @@ namespace StreamActions.HttpServer
         private const int _requestTimeout = 15000;
         private const int _streamTimeout = 5000;
         private static readonly Regex _headerRegex = new Regex(@"^(?<field>\S*): (?<value>[\S\s]+)$", RegexOptions.Compiled);
-        private static readonly Regex _requestRegex = new Regex(@"^(?<method>(GET|HEAD|POST|PUT|DELETE|PATCH)) (?<path>\/\S*) (?<protocol>HTTP\/1\.1)$", RegexOptions.Compiled);
+        private static readonly Regex _requestRegex = new Regex(@"^(?<method>(GET|HEAD|POST|PUT|DELETE|PATCH)) (?<path>\/\S*) (?<protocol>HTTP\/1\.1)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private readonly X509Certificate2 _certificate;
         private readonly TcpListener _server;
         private readonly bool _useSsl;
@@ -277,7 +283,7 @@ namespace StreamActions.HttpServer
             };
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Upstream type is responsible for this")]
-        private async Task<HttpRequestMessage> WaitAndParseRequestAsync(TcpClient client, Stream stream)
+        private static async Task<HttpServerRequestMessage> WaitAndParseRequestAsync(TcpClient client, Stream stream)
         {
             byte[] buffer = new byte[64];
             StringBuilder requestData = new StringBuilder();
@@ -305,15 +311,17 @@ namespace StreamActions.HttpServer
 
             if (!_requestRegex.IsMatch(requestLine))
             {
-                this.SendHTTPResponseAsync(client, stream, HttpStatusCode.BadRequest, Array.Empty<byte>());
+                await SendHTTPResponseAsync(client, stream, HttpStatusCode.BadRequest, Array.Empty<byte>()).ConfigureAwait(false);
                 return null;
             }
 
             Match match = _requestRegex.Match(requestLine);
 
-            HttpRequestMessage requestMessage = new HttpRequestMessage(GetHttpMethod(match.Groups["method"].Value), match.Groups["path"].Value)
+            HttpServerRequestMessage requestMessage = new HttpServerRequestMessage(GetHttpMethod(match.Groups["method"].Value.ToUpperInvariant()), match.Groups["path"].Value)
             {
-                Version = HttpVersion.Version11
+                Version = HttpVersion.Version11,
+                TcpClient = client,
+                Stream = stream
             };
 
             foreach (string line in lines)
@@ -325,18 +333,18 @@ namespace StreamActions.HttpServer
 
                 if (!_headerRegex.IsMatch(line))
                 {
-                    this.SendHTTPResponseAsync(client, stream, HttpStatusCode.BadRequest, Array.Empty<byte>());
+                    await SendHTTPResponseAsync(client, stream, HttpStatusCode.BadRequest, Array.Empty<byte>()).ConfigureAwait(false);
                     return null;
                 }
 
                 match = _headerRegex.Match(line);
 
-                requestMessage.Headers.Add(match.Groups["field"].Value, match.Groups["value"].Value);
+                requestMessage.Headers.Add(match.Groups["field"].Value, match.Groups["value"].Value.Trim());
             }
 
             if (requestMessage.Headers.Host is null)
             {
-                this.SendHTTPResponseAsync(client, stream, HttpStatusCode.BadRequest, Array.Empty<byte>());
+                await SendHTTPResponseAsync(client, stream, HttpStatusCode.BadRequest, Array.Empty<byte>()).ConfigureAwait(false);
                 return null;
             }
 

@@ -14,12 +14,83 @@
  * limitations under the License.
  */
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.WebSockets;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
+
 namespace StreamActions.HttpServer
 {
     /// <summary>
     /// Handles the WebSocket Upgrade handshake.
     /// </summary>
-    internal class WebSocketUpgradeHandler
+    internal static class WebSocketUpgradeHandler
     {
+        #region Internal Methods
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5350:Do Not Use Weak Cryptographic Algorithms", Justification = "RFC6455")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Upstream type is responsible for this")]
+        internal static async Task<HttpServerWebSocketContext> UpgradeWebSocketRequest(HttpServerRequestMessage request, string selectedSubProtocol = null, Dictionary<string, List<string>> httpHeaders = null)
+        {
+            if (!ValidateWebSocketUpgradeRequest(request))
+            {
+                return null;
+            }
+
+            SHA1 sha1 = SHA1.Create();
+            string swk = Convert.ToBase64String(sha1.ComputeHash(Encoding.UTF8.GetBytes(request.Headers.GetValues("Sec-WebSocket-Key").Single() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")));
+            sha1.Dispose();
+
+            if (httpHeaders is null)
+            {
+                httpHeaders = new Dictionary<string, List<string>>();
+            }
+            else
+            {
+                _ = httpHeaders.Remove("Connection");
+                _ = httpHeaders.Remove("Upgrade");
+                _ = httpHeaders.Remove("Sec-WebSocket-Accept");
+            }
+            httpHeaders.Add("Connection", new List<string> { "Upgrade" });
+            httpHeaders.Add("Upgrade", new List<string> { "websocket" });
+            httpHeaders.Add("Sec-WebSocket-Accept", new List<string> { swk });
+
+            await HttpServer.SendHTTPResponseAsync(request.TcpClient, request.Stream, HttpStatusCode.SwitchingProtocols, Array.Empty<byte>(), httpHeaders, false).ConfigureAwait(false);
+
+            WebSocket webSocket = WebSocket.CreateFromStream(request.Stream, true, selectedSubProtocol, _keepAliveInterval);
+
+            WebHeaderCollection requestHeaders = new WebHeaderCollection();
+
+            foreach (KeyValuePair<string, IEnumerable<string>> kvp in request.Headers)
+            {
+                foreach (string value in kvp.Value)
+                {
+                    requestHeaders.Add(kvp.Key, value);
+                }
+            }
+
+            HttpServerWebSocketContext context = new HttpServerWebSocketContext(request.RequestUri, requestHeaders, request.CookieCollection, request.User, request.User.Identity.IsAuthenticated,
+                request.TcpClient.Client.RemoteEndPoint.AddressFamily);
+        }
+
+        internal static bool ValidateWebSocketUpgradeRequest(HttpServerRequestMessage request) => request.Method == HttpMethod.Get && request.Headers.Contains("Upgrade")
+            && request.Headers.GetValues("Upgrade").Count() == 1 && request.Headers.GetValues("Upgrade").Single() == "websocket" && request.Headers.Contains("Connection")
+            && request.Headers.GetValues("Connection").Count() == 1 && request.Headers.GetValues("Connection").Single() == "Upgrade" && request.Headers.Contains("Sec-WebSocket-Key")
+            && request.Headers.GetValues("Sec-WebSocket-Key").Count() == 1 && Convert.FromBase64String(request.Headers.GetValues("Sec-WebSocket-Key").Single()).Length == 16
+            && request.Headers.Contains("Sec-WebSocket-Version") && request.Headers.GetValues("Sec-WebSocket-Version").Count() == 1
+            && request.Headers.GetValues("Sec-WebSocket-Version").Single() == "13";
+
+        #endregion Internal Methods
+
+        #region Private Fields
+
+        private static readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(30);
+
+        #endregion Private Fields
     }
 }
