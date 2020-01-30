@@ -19,12 +19,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Security;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StreamActions.HttpServer
+namespace StreamActions.Http
 {
     /// <summary>
     /// Handles the WebSocket Upgrade handshake.
@@ -37,15 +38,6 @@ namespace StreamActions.HttpServer
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Upstream type is responsible for this")]
         internal static async Task<HttpServerWebSocketContext> UpgradeWebSocketRequest(HttpServerRequestMessage request, string selectedSubProtocol = null, Dictionary<string, List<string>> httpHeaders = null)
         {
-            if (!ValidateWebSocketUpgradeRequest(request))
-            {
-                return null;
-            }
-
-            SHA1 sha1 = SHA1.Create();
-            string swk = Convert.ToBase64String(sha1.ComputeHash(Encoding.UTF8.GetBytes(request.Headers.GetValues("Sec-WebSocket-Key").Single() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")));
-            sha1.Dispose();
-
             if (httpHeaders is null)
             {
                 httpHeaders = new Dictionary<string, List<string>>();
@@ -55,10 +47,39 @@ namespace StreamActions.HttpServer
                 _ = httpHeaders.Remove("Connection");
                 _ = httpHeaders.Remove("Upgrade");
                 _ = httpHeaders.Remove("Sec-WebSocket-Accept");
+                _ = httpHeaders.Remove("Sec-WebSocket-Protocol");
             }
+
+            if (!ValidateWebSocketUpgradeRequest(request))
+            {
+                httpHeaders.Clear();
+                HttpStatusCode statusCode = HttpStatusCode.BadRequest;
+
+                if (HttpServer.IsWebSocketUpgradeRequest(request) && request.Headers.Contains("Sec-WebSocket-Version") && request.Headers.GetValues("Sec-WebSocket-Version").Count() == 1
+                        && request.Headers.GetValues("Sec-WebSocket-Version").Single() != "13")
+                {
+                    statusCode = HttpStatusCode.UpgradeRequired;
+                    httpHeaders.Add("Sec-WebSocket-Version", new List<string> { "13" });
+                }
+
+                await HttpServer.SendHTTPResponseAsync(request.TcpClient, request.Stream, statusCode, Array.Empty<byte>(), httpHeaders).ConfigureAwait(false);
+                request.Dispose();
+
+                return null;
+            }
+
+            SHA1 sha1 = SHA1.Create();
+            string swk = Convert.ToBase64String(sha1.ComputeHash(Encoding.UTF8.GetBytes(request.Headers.GetValues("Sec-WebSocket-Key").Single() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")));
+            sha1.Dispose();
+
             httpHeaders.Add("Connection", new List<string> { "Upgrade" });
             httpHeaders.Add("Upgrade", new List<string> { "websocket" });
             httpHeaders.Add("Sec-WebSocket-Accept", new List<string> { swk });
+
+            if (!(selectedSubProtocol is null))
+            {
+                httpHeaders.Add("Sec-WebSocket-Protocol", new List<string> { selectedSubProtocol });
+            }
 
             await HttpServer.SendHTTPResponseAsync(request.TcpClient, request.Stream, HttpStatusCode.SwitchingProtocols, Array.Empty<byte>(), httpHeaders, false).ConfigureAwait(false);
 
@@ -74,8 +95,12 @@ namespace StreamActions.HttpServer
                 }
             }
 
-            HttpServerWebSocketContext context = new HttpServerWebSocketContext(request.RequestUri, requestHeaders, request.CookieCollection, request.User, request.User.Identity.IsAuthenticated,
-                request.TcpClient.Client.RemoteEndPoint.AddressFamily);
+            IPEndPoint remoteEndpoint = (IPEndPoint)request.TcpClient.Client.RemoteEndPoint;
+            IPEndPoint localEndpoint = (IPEndPoint)request.TcpClient.Client.LocalEndPoint;
+
+            return new HttpServerWebSocketContext(request.RequestUri, requestHeaders, request.CookieCollection, request.User, request.User.Identity.IsAuthenticated,
+                localEndpoint.Address.Equals(remoteEndpoint.Address), request.Stream is SslStream, requestHeaders.Get("Origin"),
+                requestHeaders.Get("Sec-WebSocket-Protocol").Split(',').Select(s => s.Trim()), "13", requestHeaders.Get("Sec-WebSocket-Key"), webSocket, request.TcpClient);
         }
 
         internal static bool ValidateWebSocketUpgradeRequest(HttpServerRequestMessage request) => request.Method == HttpMethod.Get && request.Headers.Contains("Upgrade")

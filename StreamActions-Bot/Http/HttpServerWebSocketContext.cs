@@ -18,15 +18,19 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Net;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Security.Principal;
+using System.Threading;
 
-namespace StreamActions.HttpServer
+namespace StreamActions.Http
 {
-    internal class HttpServerWebSocketContext : WebSocketContext
+    public class HttpServerWebSocketContext : WebSocketContext
     {
         #region Public Properties
 
+        public CancellationToken CancellationToken { get; set; }
+        public CancellationTokenSource CancellationTokenSource { get; set; }
         public override CookieCollection CookieCollection => this._cookieCollection;
         public override NameValueCollection Headers => this._headers;
         public override bool IsAuthenticated => this._isAuthenticated;
@@ -37,6 +41,7 @@ namespace StreamActions.HttpServer
         public override string SecWebSocketKey => this._secWebSocketKey;
         public override IEnumerable<string> SecWebSocketProtocols => this._secWebSocketProtocols;
         public override string SecWebSocketVersion => this._secWebSocketVersion;
+        public TcpClient TcpClient => this._tcpClient;
         public override IPrincipal User => this._user;
         public override WebSocket WebSocket => this._webSocket;
 
@@ -66,6 +71,11 @@ namespace StreamActions.HttpServer
             this._webSocket = webSocket;
         }
 
+        internal HttpServerWebSocketContext(Uri requestUri, NameValueCollection headers, CookieCollection cookieCollection, IPrincipal user, bool isAuthenticated,
+            bool isLocal, bool isSecureConnection, string origin, IEnumerable<string> secWebSocketProtocols, string secWebSocketVersion, string secWebSocketKey, WebSocket webSocket,
+            TcpClient client) : this(requestUri, headers, cookieCollection, user, isAuthenticated, isLocal, isSecureConnection, origin, secWebSocketProtocols, secWebSocketVersion, secWebSocketKey,
+            webSocket) => this._tcpClient = client;
+
         #endregion Internal Constructors
 
         #region Private Fields
@@ -80,6 +90,7 @@ namespace StreamActions.HttpServer
         private readonly string _secWebSocketKey;
         private readonly IEnumerable<string> _secWebSocketProtocols;
         private readonly string _secWebSocketVersion;
+        private readonly TcpClient _tcpClient;
         private readonly IPrincipal _user;
         private readonly WebSocket _webSocket;
 

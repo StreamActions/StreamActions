@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-using System.Net;
+using StreamActions.Http;
+using System;
 
 namespace StreamActions.EventArgs
 {
@@ -36,9 +37,9 @@ namespace StreamActions.EventArgs
         public string Path { get; set; }
 
         /// <summary>
-        /// The HttpListenerRequest used to open the connection.
+        /// A WeakReference to the <see cref="HttpServerRequestMessage"/> used to open the connection.
         /// </summary>
-        public HttpListenerRequest Request { get; set; }
+        public WeakReference<HttpServerRequestMessage> Request { get; internal set; }
 
         #endregion Public Properties
     }

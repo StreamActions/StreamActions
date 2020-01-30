@@ -101,9 +101,14 @@ namespace StreamActions.JsonDocuments
         internal int WSListenPort { get; set; }
 
         /// <summary>
+        /// Path to the SSL certificate for the WS Server, if used.
+        /// </summary>
+        internal string WSSslCert { get; set; }
+
+        /// <summary>
         /// Whether the WebSocket server should use SSL.
         /// </summary>
-        internal bool WSUseSSL { get; set; }
+        internal bool WSUseSsl { get; set; }
 
         #endregion Internal Properties
     }

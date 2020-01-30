@@ -29,7 +29,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace StreamActions.HttpServer
+namespace StreamActions.Http
 {
     /// <summary>
     /// An HTTP Server. Currently only supports Authorization headers and WwebSocket Upgrade.
@@ -170,6 +170,7 @@ namespace StreamActions.HttpServer
             {
                 if (disposing)
                 {
+                    this.Stop();
                     this._certificate.Dispose();
                 }
 
@@ -334,6 +335,7 @@ namespace StreamActions.HttpServer
                 if (!_headerRegex.IsMatch(line))
                 {
                     await SendHTTPResponseAsync(client, stream, HttpStatusCode.BadRequest, Array.Empty<byte>()).ConfigureAwait(false);
+                    requestMessage.Dispose();
                     return null;
                 }
 
@@ -345,6 +347,7 @@ namespace StreamActions.HttpServer
             if (requestMessage.Headers.Host is null)
             {
                 await SendHTTPResponseAsync(client, stream, HttpStatusCode.BadRequest, Array.Empty<byte>()).ConfigureAwait(false);
+                requestMessage.Dispose();
                 return null;
             }
 

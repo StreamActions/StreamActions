@@ -14,21 +14,39 @@
  * limitations under the License.
  */
 
+using System;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Security.Principal;
 
-namespace StreamActions.HttpServer
+namespace StreamActions.Http
 {
-    internal class HttpServerBasicIdentity : GenericIdentity
+    public class HttpServerRequestMessage : HttpRequestMessage
     {
         #region Internal Constructors
 
-        internal HttpServerBasicIdentity(string username, string password) : base(username, "Basic") => this.Password = password;
+        internal HttpServerRequestMessage() : base()
+        {
+        }
+
+        internal HttpServerRequestMessage(HttpMethod method, string requestUri) : base(method, requestUri)
+        {
+        }
+
+        internal HttpServerRequestMessage(HttpMethod method, Uri requestUri) : base(method, requestUri)
+        {
+        }
 
         #endregion Internal Constructors
 
         #region Internal Properties
 
-        internal string Password { get; }
+        internal CookieCollection CookieCollection { get; set; }
+        internal Stream Stream { get; set; }
+        internal TcpClient TcpClient { get; set; }
+        internal IPrincipal User { get; set; }
 
         #endregion Internal Properties
     }

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+using StreamActions.Http;
+using System;
 using System.Text;
 
 namespace StreamActions.EventArgs
@@ -24,6 +26,11 @@ namespace StreamActions.EventArgs
     public class OnWebSocketMessageReceivedArgs
     {
         #region Public Properties
+
+        /// <summary>
+        /// A WeakReference to the <see cref="HttpServerWebSocketContext"/> of the client.
+        /// </summary>
+        public WeakReference<HttpServerWebSocketContext> Context { get; internal set; }
 
         /// <summary>
         /// The raw data received by the WebSocket.

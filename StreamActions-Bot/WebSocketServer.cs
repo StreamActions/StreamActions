@@ -15,12 +15,15 @@
  */
 
 using StreamActions.EventArgs;
+using StreamActions.Http;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.WebSockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace StreamActions
@@ -71,11 +74,20 @@ namespace StreamActions
         /// Forcefully disconnect a client.
         /// </summary>
         /// <param name="ipPort">IP:port of the client.</param>
-        public void DisconnectClient(string ipPort) => this._wsServer.DisconnectClient(ipPort);
+        public async void DisconnectClient(string ipPort, WebSocketCloseStatus closeStatus = WebSocketCloseStatus.NormalClosure, string closeReason = "Goodbye")
+        {
+            if (this._clients.ContainsKey(ipPort))
+            {
+                CancellationTokenSource tokenSource = new CancellationTokenSource();
+                await this._clients[ipPort].WebSocket.CloseAsync(closeStatus, closeReason, tokenSource.Token).ConfigureAwait(false);
+                this._clients[ipPort].CancellationTokenSource.Cancel();
+                tokenSource.Dispose();
+                this._clients[ipPort].WebSocket.Dispose();
+                this._clients[ipPort].TcpClient.Dispose();
+                _ = this._clients.TryRemove(ipPort, out _);
+            }
+        }
 
-        /// <summary>
-        /// Disposes of the <see cref="WatsonWsServer"/>.
-        /// </summary>
         public void Dispose()
         {
             this.Dispose(true);
@@ -87,7 +99,7 @@ namespace StreamActions
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
-        public bool IsClientConnected(string ipPort) => this._wsServer.IsClientConnected(ipPort);
+        public bool IsClientConnected(string ipPort) => this._clients.ContainsKey(ipPort) && this._clients[ipPort].WebSocket.State == WebSocketState.Open;
 
         /// <summary>
         /// Determine whether or not the specified client is connected to the server on the specified URI path.
@@ -95,23 +107,69 @@ namespace StreamActions
         /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="path">The URI path to check.</param>
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
-        public bool IsClientConnected(string ipPort, string path) => this.IsClientConnected(ipPort) && this._connectionPaths.GetValueOrDefault(ipPort, "/") == path;
+        public bool IsClientConnected(string ipPort, string path) => this.IsClientConnected(ipPort) && this._clients[ipPort].RequestUri.OriginalString.StartsWith(path, StringComparison.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Send data to the specified client, asynchronously.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="data">String containing data.</param>
-        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string ipPort, string data) => await this._wsServer.SendAsync(ipPort, Encoding.UTF8.GetBytes(data), WebSocketMessageType.Text).ConfigureAwait(false);
+        public async Task SendAsync(string ipPort, string data)
+        {
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            await this.SendAsync(ipPort, Encoding.UTF8.GetBytes(data), WebSocketMessageType.Text, true, tokenSource.Token).ConfigureAwait(false);
+            tokenSource.Dispose();
+        }
 
         /// <summary>
         /// Send data to the specified client, asynchronously.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="data">Byte array containing data.</param>
-        /// <returns>Task with Boolean indicating if the message was sent successfully.</returns>
-        public async Task<bool> SendAsync(string ipPort, byte[] data) => await this._wsServer.SendAsync(ipPort, data, WebSocketMessageType.Binary).ConfigureAwait(false);
+        public async Task SendAsync(string ipPort, byte[] data)
+        {
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            await this.SendAsync(ipPort, data, WebSocketMessageType.Binary, true, tokenSource.Token).ConfigureAwait(false);
+            tokenSource.Dispose();
+        }
+
+        /// <summary>
+        /// Send data to the specified client, asynchronously.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="buffer">The buffer to be sent over the connection.</param>
+        /// <param name="messageType">Indicates whether the application is sending a binary or text message.</param>
+        /// <param name="endOfmessage">Indicates whether the data in <paramref name="buffer"/> is the last part of a message.</param>
+        /// <param name="cancellationToken">The token that propagates the notification that operations should be canceled.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task SendAsync(string ipPort, ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfmessage, CancellationToken cancellationToken)
+        {
+            if (!this.IsClientConnected(ipPort))
+            {
+                return;
+            }
+
+            await this._clients[ipPort].WebSocket.SendAsync(buffer, messageType, endOfmessage, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Send data to the specified client, asynchronously.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="buffer">The buffer to be sent over the connection.</param>
+        /// <param name="messageType">Indicates whether the application is sending a binary or text message.</param>
+        /// <param name="endOfmessage">Indicates whether the data in <paramref name="buffer"/> is the last part of a message.</param>
+        /// <param name="cancellationToken">The token that propagates the notification that operations should be canceled.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task SendAsync(string ipPort, ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType, bool endOfmessage, CancellationToken cancellationToken)
+        {
+            if (!this.IsClientConnected(ipPort))
+            {
+                return;
+            }
+
+            await this._clients[ipPort].WebSocket.SendAsync(buffer, messageType, endOfmessage, cancellationToken).ConfigureAwait(false);
+        }
 
         /// <summary>
         /// Attempts to subscribe the provided Delegate to ClientConnected events for the designated URI path.
@@ -209,7 +267,9 @@ namespace StreamActions
         {
             if (disposing)
             {
-                this._wsServer.Dispose();
+                this._server.Stop();
+                this._server.Dispose();
+                this._tokenSource.Cancel();
             }
         }
 
@@ -218,9 +278,9 @@ namespace StreamActions
         #region Internal Methods
 
         /// <summary>
-        /// Starts the <see cref="WatsonWsServer"/>.
+        /// Starts the server.
         /// </summary>
-        internal void Start() => this._wsServer.Start();
+        internal void Start() => Task.Run(this.AcceptConnections, this._token);
 
         #endregion Internal Methods
 
@@ -231,15 +291,12 @@ namespace StreamActions
         /// </summary>
         private static readonly Lazy<WebSocketServer> _instance = new Lazy<WebSocketServer>(() => new WebSocketServer());
 
+        private readonly ConcurrentDictionary<string, HttpServerWebSocketContext> _clients = new ConcurrentDictionary<string, HttpServerWebSocketContext>();
+
         /// <summary>
         /// A Dictionary of event handlers for newly connected clients requesting authorization. Key is URI path; value is List of <see cref="WebSocketClientConnectedEventHandler"/>.
         /// </summary>
         private readonly ConcurrentDictionary<string, List<WebSocketClientConnectedEventHandler>> _connectedEventHandlers = new ConcurrentDictionary<string, List<WebSocketClientConnectedEventHandler>>();
-
-        /// <summary>
-        /// A dictionary mapping connections to the URI paths they are accessing. Key is IP:Port; value is URI path.
-        /// </summary>
-        private readonly ConcurrentDictionary<string, string> _connectionPaths = new ConcurrentDictionary<string, string>();
 
         /// <summary>
         /// A Dictionary of event handlers for disconnecting clients. Key is URI path; value is List of <see cref="WebSocketClientDisconnectedEventHandler"/>.
@@ -251,18 +308,39 @@ namespace StreamActions
         /// </summary>
         private readonly ConcurrentDictionary<string, List<WebSocketMessageReceivedEventHandler>> _messageEventHandlers = new ConcurrentDictionary<string, List<WebSocketMessageReceivedEventHandler>>();
 
+        /// <summary>
+        /// The <see cref="HttpServer"/> that handles incoming connections.
+        /// </summary>
+        private readonly HttpServer _server;
+
+        /// <summary>
+        /// A CancellationToken for shutting down the Accept loop.
+        /// </summary>
+        private readonly CancellationToken _token;
+
+        /// <summary>
+        /// A CancellationTokenSource for shutting down the Accept loop.
+        /// </summary>
+        private readonly CancellationTokenSource _tokenSource;
+
         #endregion Private Fields
 
         #region Private Constructors
 
         /// <summary>
-        /// Constructor. Sets up the <see cref="WatsonWsServer"/>.
+        /// Constructor. Sets up the <see cref="HttpServer"/>.
         /// </summary>
         private WebSocketServer()
         {
             string listenerIp = Program.Settings.WSListenIp ?? "*";
-            bool useSsl = Program.Settings.WSUseSSL;
+            bool useSsl = Program.Settings.WSUseSsl;
             int listenerPort = Program.Settings.WSListenPort > 0 ? Program.Settings.WSListenPort : (useSsl ? 443 : 80);
+            string sslCertFile = useSsl ? Program.Settings.WSSslCert : null;
+
+            this._server = new HttpServer(listenerIp, listenerPort, useSsl, sslCertFile);
+
+            this._tokenSource = new CancellationTokenSource();
+            this._token = this._tokenSource.Token;
         }
 
         #endregion Private Constructors
@@ -270,25 +348,105 @@ namespace StreamActions
         #region Private Methods
 
         /// <summary>
-        /// Callback for when <see cref="WebSocketServer._wsServer"/> has an incoming connection.
+        /// Accepts connections from <see cref="_server"/>.
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Disposed in task and disconnect members")]
+        private async void AcceptConnections()
+        {
+            try
+            {
+                this._server.Start();
+
+                while (!this._token.IsCancellationRequested)
+                {
+                    HttpServerRequestMessage request = await this._server.WaitForRequestAsync().ConfigureAwait(false);
+
+                    if (!HttpServer.IsWebSocketUpgradeRequest(request))
+                    {
+                        await HttpServer.SendHTTPResponseAsync(request.TcpClient, request.Stream, HttpStatusCode.NotFound, Array.Empty<byte>()).ConfigureAwait(false);
+                        request.Dispose();
+                        continue;
+                    }
+
+                    IPEndPoint remoteEndpoint = (IPEndPoint)request.TcpClient.Client.RemoteEndPoint;
+                    string ipPort = remoteEndpoint.Address.ToString() + ":" + remoteEndpoint.Port;
+
+                    CancellationTokenSource killTokenSource = new CancellationTokenSource();
+                    CancellationToken killToken = killTokenSource.Token;
+
+                    _ = Task.Run(() => _ = Task.Run(async () =>
+                    {
+                        if (!await this.ClientConnected(ipPort, request).ConfigureAwait(false))
+                        {
+                            if (request.Stream.CanWrite)
+                            {
+                                await HttpServer.SendHTTPResponseAsync(request.TcpClient, request.Stream, HttpStatusCode.Forbidden, Array.Empty<byte>()).ConfigureAwait(false);
+                            }
+                            request.Dispose();
+                            return;
+                        }
+
+                        HttpServerWebSocketContext context = await WebSocketUpgradeHandler.UpgradeWebSocketRequest(request).ConfigureAwait(false);
+                        context.CancellationTokenSource = killTokenSource;
+                        context.CancellationToken = killToken;
+
+                        if (context == null)
+                        {
+                            request.Dispose();
+                            killTokenSource.Dispose();
+                            return;
+                        }
+
+                        if (!this._clients.TryAdd(ipPort, context))
+                        {
+                            CancellationTokenSource tokenSource = new CancellationTokenSource();
+                            await context.WebSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Unable to store client context", tokenSource.Token).ConfigureAwait(false);
+                            tokenSource.Dispose();
+                            context.WebSocket.Dispose();
+                            context.TcpClient.Dispose();
+                            killTokenSource.Dispose();
+                            return;
+                        }
+
+                        await this.DataReceiver(ipPort, context, killToken).ConfigureAwait(false);
+
+                        await this.ClientDisconnected(ipPort).ConfigureAwait(false);
+                        this._clients[ipPort].WebSocket.Dispose();
+                        this._clients[ipPort].TcpClient.Dispose();
+                        _ = this._clients.TryRemove(ipPort, out _);
+                        killTokenSource.Dispose();
+                    }, killToken), this._token);
+                }
+            }
+            finally
+            {
+                foreach (string ipPort in this._clients.Keys)
+                {
+                    this.DisconnectClient(ipPort, WebSocketCloseStatus.EndpointUnavailable, "Server shutting down");
+                }
+
+                this._server.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Callback for when the server has an incoming connection.
         /// </summary>
         /// <param name="ipPort">The remote <c>IP:Port</c> that is connecting to the server.</param>
-        /// <param name="request">The HttpListenerRequest used to open the connection.</param>
+        /// <param name="request">The <see cref="HttpServerRequestMessage"/> used to open the connection.</param>
         /// <returns>A bool indicating if the connection should be accepted.</returns>
-        private async Task<bool> ClientConnected(string ipPort, HttpListenerRequest request) => await Task.Run(() =>
+        private async Task<bool> ClientConnected(string ipPort, HttpServerRequestMessage request) => await Task.Run(() =>
         {
             bool authorized = false;
-
-            string path = request.Url.AbsolutePath;
 
             OnWebSocketClientConnectedArgs e = new OnWebSocketClientConnectedArgs
             {
                 IpPort = ipPort,
-                Path = path,
-                Request = request
+                Path = request.RequestUri.AbsolutePath,
+                Request = new WeakReference<HttpServerRequestMessage>(request)
             };
 
-            foreach (WebSocketClientConnectedEventHandler d in this._connectedEventHandlers.GetValueOrDefault(path, new List<WebSocketClientConnectedEventHandler>()))
+            foreach (WebSocketClientConnectedEventHandler d in this._connectedEventHandlers.GetValueOrDefault(request.RequestUri.AbsolutePath, new List<WebSocketClientConnectedEventHandler>()))
             {
                 if (d.Invoke(this, e))
                 {
@@ -296,57 +454,109 @@ namespace StreamActions
                 }
             }
 
-            if (authorized)
-            {
-                _ = this._connectionPaths.TryAdd(ipPort, path);
-            }
-
             return authorized;
         }).ConfigureAwait(false);
 
         /// <summary>
-        /// Callback for when a client disconnects from <see cref="WebSocketServer._wsServer"/>.
+        /// Callback for when a client disconnects from the server.
         /// </summary>
         /// <param name="ipPort">The remote <c>IP:Port</c> that is disconnecting from the server.</param>
-        /// <returns></returns>
+        /// <returns>A Task that can be awaited.</returns>
         private async Task ClientDisconnected(string ipPort) => await Task.Run(() =>
         {
-            string path = this._connectionPaths.GetValueOrDefault(ipPort, "/");
-
-            OnWebSocketClientDisconnectedArgs e = new OnWebSocketClientDisconnectedArgs
+            if (this._clients.ContainsKey(ipPort))
             {
-                IpPort = ipPort,
-                Path = path
-            };
+                OnWebSocketClientDisconnectedArgs e = new OnWebSocketClientDisconnectedArgs
+                {
+                    IpPort = ipPort,
+                    Path = this._clients[ipPort].RequestUri.AbsolutePath
+                };
 
-            foreach (WebSocketClientDisconnectedEventHandler d in this._disconnectedEventHandlers.GetValueOrDefault(path, new List<WebSocketClientDisconnectedEventHandler>()))
-            {
-                d.Invoke(this, e);
+                foreach (WebSocketClientDisconnectedEventHandler d in this._disconnectedEventHandlers.GetValueOrDefault(this._clients[ipPort].RequestUri.AbsolutePath,
+                    new List<WebSocketClientDisconnectedEventHandler>()))
+                {
+                    d.Invoke(this, e);
+                }
+
+                _ = this._clients.TryRemove(ipPort, out _);
             }
-
-            _ = this._connectionPaths.TryRemove(ipPort, out _);
         }).ConfigureAwait(false);
 
         /// <summary>
-        /// Callback for when a client sends data to <see cref="WebSocketServer._wsServer"/>.
+        /// Receive loop for a client.
+        /// </summary>
+        /// <param name="ipPort">The remote <c>IP:Port</c> of the client.</param>
+        /// <param name="context">The <see cref="HttpServerWebSocketContext"/> of the client.</param>
+        /// <param name="cancellationToken">A CancellationToken for shutting down the event loop.</param>
+        /// <returns>A Task that can be awaited.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "As designed by Microsoft")]
+        private async Task DataReceiver(string ipPort, HttpServerWebSocketContext context, CancellationToken cancellationToken)
+        {
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    byte[] message;
+                    using (MemoryStream dataStream = new MemoryStream())
+                    {
+                        byte[] buffer = new byte[16384];
+                        ArraySegment<byte> segment = new ArraySegment<byte>(buffer);
+                        while (context.WebSocket.State == WebSocketState.Open)
+                        {
+                            WebSocketReceiveResult result = await context.WebSocket.ReceiveAsync(segment, cancellationToken).ConfigureAwait(false);
+
+                            if (result.MessageType == WebSocketMessageType.Close)
+                            {
+                                return;
+                            }
+
+                            dataStream.Write(buffer, 0, result.Count);
+
+                            if (result.EndOfMessage)
+                            {
+                                break;
+                            }
+                        }
+
+                        message = dataStream.ToArray();
+                    }
+
+                    if (message.Length > 0)
+                    {
+                        _ = Task.Run(() => this.MessageReceived(ipPort, message));
+                    }
+                    else
+                    {
+                        await Task.Delay(30, cancellationToken).ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+        }
+
+        /// <summary>
+        /// Callback for when a client sends data to the server.
         /// </summary>
         /// <param name="ipPort">The remote <c>IP:Port</c> that has sent the message.</param>
         /// <param name="data">The data that was received.</param>
-        /// <returns></returns>
+        /// <returns>A Task that can be awaited.</returns>
         private async Task MessageReceived(string ipPort, byte[] data) => await Task.Run(() =>
         {
-            string path = this._connectionPaths.GetValueOrDefault(ipPort, "/");
-
-            OnWebSocketMessageReceivedArgs e = new OnWebSocketMessageReceivedArgs
+            if (this._clients.ContainsKey(ipPort))
             {
-                IpPort = ipPort,
-                Path = path,
-                Data = (byte[])data.Clone()
-            };
+                OnWebSocketMessageReceivedArgs e = new OnWebSocketMessageReceivedArgs
+                {
+                    IpPort = ipPort,
+                    Path = this._clients[ipPort].RequestUri.AbsolutePath,
+                    Data = (byte[])data.Clone(),
+                    Context = new WeakReference<HttpServerWebSocketContext>(this._clients[ipPort])
+                };
 
-            foreach (WebSocketMessageReceivedEventHandler d in this._messageEventHandlers.GetValueOrDefault(path, new List<WebSocketMessageReceivedEventHandler>()))
-            {
-                d.Invoke(this, e);
+                foreach (WebSocketMessageReceivedEventHandler d in this._messageEventHandlers.GetValueOrDefault(this._clients[ipPort].RequestUri.AbsolutePath,
+                    new List<WebSocketMessageReceivedEventHandler>()))
+                {
+                    d.Invoke(this, e);
+                }
             }
         }).ConfigureAwait(false);
 
