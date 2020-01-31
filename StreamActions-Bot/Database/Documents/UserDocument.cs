@@ -45,6 +45,13 @@ namespace StreamActions.Database.Documents
         public TwitchBroadcaster BroadcasterType { get; set; }
 
         /// <summary>
+        /// The users current culture.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string CurrentCulture { get; set; }
+
+        /// <summary>
         /// The users Display Name on Twitch, if set.
         /// </summary>
         [BsonElement]

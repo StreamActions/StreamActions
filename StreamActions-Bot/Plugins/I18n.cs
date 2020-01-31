@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+using MongoDB.Driver;
+using StreamActions.Database.Documents;
 using StreamActions.EventArgs;
 using StreamActions.JsonDocuments;
 using StreamActions.Plugin;
@@ -22,8 +24,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace StreamActions.Plugins
@@ -66,24 +70,6 @@ namespace StreamActions.Plugins
 
         public bool AlwaysEnabled => true;
 
-        /// <summary>
-        /// Provides the currently active culture of each channel, by id.
-        /// </summary>
-        public Dictionary<string, WeakReference<CultureInfo>> CurrentCulture
-        {
-            get
-            {
-                Dictionary<string, WeakReference<CultureInfo>> value = new Dictionary<string, WeakReference<CultureInfo>>();
-
-                foreach (KeyValuePair<string, CultureInfo> kvp in this._currentCulture)
-                {
-                    value.Add(kvp.Key, new WeakReference<CultureInfo>(kvp.Value));
-                }
-
-                return value;
-            }
-        }
-
         public CultureInfo GlobalCulture => this._globalCulture;
 
         public string PluginAuthor => "StreamActions Team";
@@ -102,6 +88,58 @@ namespace StreamActions.Plugins
         #region Public Methods
 
         /// <summary>
+        /// Formats a string with the provided replacements.
+        /// </summary>
+        /// <param name="format">A standard format string, as used with <c>string.Format</c>, except named replacements (eg. <c>{MyValue}</c>) are valid.</param>
+        /// <param name="provider">An object that supplies culture-specific formatting information.</param>
+        /// <param name="source">A type that provides the replacement values. Can be <c>Dictionary&lt;string, string&gt;</c>, <c>List&lt;string&gt;</c>, or an anonymous type (eg. <c>new { MyValue = "hello!" }</c>).</param>
+        /// <returns>A copy of <paramref name="format"/> in which the format items have been replaced by the string representation of the corresponding objects in <paramref name="source"/>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="format"/> or <paramref name="source"/> is null.</exception>
+        public static string FormatWith(string format, IFormatProvider provider, object source)
+        {
+            if (format is null)
+            {
+                throw new ArgumentNullException(nameof(format));
+            }
+
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            List<object> values = new List<object>();
+            Dictionary<string, object> dsource;
+
+            if (source is Dictionary<string, string>)
+            {
+                dsource = ((Dictionary<string, string>)source).ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value);
+            }
+            else if (source is List<string>)
+            {
+                int i = 0;
+                dsource = ((List<string>)source).ToDictionary(_ => i++.ToString(CultureInfo.InvariantCulture), s => (object)s);
+            }
+            else
+            {
+                dsource = source.GetType().GetProperties().ToDictionary(p => p.Name, p => p.GetValue(source, null));
+            }
+
+            string rewrittenFormat = _formatWithRegex.Replace(format, (m) =>
+            {
+                Group startGroup = m.Groups["start"];
+                Group propertyGroup = m.Groups["property"];
+                Group formatGroup = m.Groups["format"];
+                Group endGroup = m.Groups["end"];
+
+                values.Add(dsource.ContainsKey(propertyGroup.Value) ? dsource[propertyGroup.Value] : "{" + propertyGroup.Value + "}");
+
+                return new string('{', startGroup.Captures.Count) + (values.Count - 1) + formatGroup.Value + new string('}', endGroup.Captures.Count);
+            });
+
+            return string.Format(provider, rewrittenFormat, values.ToArray());
+        }
+
+        /// <summary>
         /// Attempts to retrieve the specified i18n replacement string.
         /// </summary>
         /// <param name="category">The category to select from.</param>
@@ -109,6 +147,7 @@ namespace StreamActions.Plugins
         /// <param name="document">The <see cref="I18nDocument"/> to use.</param>
         /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="document"/> is null.</exception>
         public static string Get(string category, string key, I18nDocument document, string defVal = null)
         {
             if (document is null)
@@ -126,6 +165,19 @@ namespace StreamActions.Plugins
 
             return defVal;
         }
+
+        /// <summary>
+        /// Attempts to retrieve the specified i18n replacement string, and then formats it.
+        /// </summary>
+        /// <param name="category">The category to select from.</param>
+        /// <param name="key">The string key to select.</param>
+        /// <param name="document">The <see cref="I18nDocument"/> to use.</param>
+        /// <param name="source">A type that provides the replacement values. Can be <c>Dictionary&lt;string, string&gt;</c>, <c>List&lt;string&gt;</c>, or an anonymous type (eg. <c>new { MyValue = "hello!" }</c>).</param>
+        /// <param name="culture">The culture to use.</param>
+        /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
+        /// <returns>A copy of the i18n replacement string (or <paramref name="defVal"/> if it is not found) in which the format items have been replaced by the string representation of the corresponding objects in <paramref name="source"/>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="document"/> is null.</exception>
+        public static string GetAndFormatWith(string category, string key, I18nDocument document, object source, CultureInfo culture, string defVal = null) => FormatWith(Get(category, key, document, defVal), culture, source);
 
         /// <summary>
         /// Loads the i18n files for the specified culture and merges it all into a single <see cref="I18nDocument"/>.
@@ -168,7 +220,7 @@ namespace StreamActions.Plugins
         {
         }
 
-        public void Enabled() => this.ChangeGlobalCulture(Program.Settings.GlobalCulture);
+        public void Enabled() => this.ChangeGlobalCultureAsync(Program.Settings.GlobalCulture);
 
         /// <summary>
         /// Attempts to retrieve the specified i18n replacement string.
@@ -178,6 +230,7 @@ namespace StreamActions.Plugins
         /// <param name="culture">The CultureInfo that should be used.</param>
         /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="culture"/> is null.</exception>
         public string Get(string category, string key, CultureInfo culture, string defVal = null)
         {
             if (culture is null)
@@ -189,21 +242,116 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
+        /// Attempts to retrieve the specified i18n replacement string, and then formats it.
+        /// </summary>
+        /// <param name="category">The category to select from.</param>
+        /// <param name="key">The string key to select.</param>
+        /// <param name="culture">The CultureInfo that should be used.</param>
+        /// <param name="source">A type that provides the replacement values. Can be <c>Dictionary&lt;string, string&gt;</c>, <c>List&lt;string&gt;</c>, or an anonymous type (eg. <c>new { MyValue = "hello!" }</c>).</param>
+        /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
+        /// <returns>A copy of the i18n replacement string (or <paramref name="defVal"/> if it is not found) in which the format items have been replaced by the string representation of the corresponding objects in <paramref name="source"/>.</returns>
+        public string GetAndFormatWith(string category, string key, CultureInfo culture, object source, string defVal = null) => FormatWith(this.Get(category, key, culture, defVal), culture, source);
+
+        /// <summary>
+        /// Attempts to retrieve the specified i18n replacement string, and then formats it.
+        /// </summary>
+        /// <param name="category">The category to select from.</param>
+        /// <param name="key">The string key to select.</param>
+        /// <param name="channelId">The channelId whose CurrentCulture should be used.</param>
+        /// <param name="source">A type that provides the replacement values. Can be <c>Dictionary&lt;string, string&gt;</c>, <c>List&lt;string&gt;</c>, or an anonymous type (eg. <c>new { MyValue = "hello!" }</c>).</param>
+        /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
+        /// <returns>A copy of the i18n replacement string (or <paramref name="defVal"/> if it is not found) in which the format items have been replaced by the string representation of the corresponding objects in <paramref name="source"/>.</returns>
+        public async Task<string> GetAndFormatWithAsync(string category, string key, string channelId, object source, string defVal = null) => FormatWith(await this.GetAsync(category, key, channelId, defVal).ConfigureAwait(false), await this.GetCurrentCultureAsync(channelId).ConfigureAwait(false), source);
+
+        /// <summary>
         /// Attempts to retrieve the specified i18n replacement string.
         /// </summary>
         /// <param name="category">The category to select from.</param>
         /// <param name="key">The string key to select.</param>
-        /// <param name="channel">The channel id whose CurrentCulture should be used.</param>
+        /// <param name="channelId">The channelId whose CurrentCulture should be used.</param>
         /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
-        public string Get(string category, string key, string channel, string defVal = null)
+        /// <exception cref="ArgumentNullException"><paramref name="channelId"/> is null.</exception>
+        public async Task<string> GetAsync(string category, string key, string channelId, string defVal = null)
         {
-            if (channel is null)
+            if (channelId is null)
             {
-                throw new ArgumentNullException(nameof(channel));
+                throw new ArgumentNullException(nameof(channelId));
             }
 
-            return Get(category, key, this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", false)).Name, I18nDocument.Empty), defVal);
+            return this.Get(category, key, await this.GetCurrentCultureAsync(channelId).ConfigureAwait(false), defVal);
+        }
+
+        /// <summary>
+        /// Gets the current CultureInfo of the specified channelId, and ensures the cultures I18n data is loaded.
+        /// </summary>
+        /// <param name="channelId">The channelId to check.</param>
+        /// <returns>The current CultureInfo of the channel; <see cref="GlobalCulture"/> if the channel is not found or hasn't set a culture.</returns>
+        public async Task<CultureInfo> GetCurrentCultureAsync(string channelId)
+        {
+            string currentCulture = await this.GetCurrentCultureNameAsync(channelId).ConfigureAwait(false) ?? this.GlobalCulture.Name;
+
+            await this.LoadCultureIfNeededAsync(currentCulture).ConfigureAwait(false);
+
+            return this._loadedCultures[currentCulture];
+        }
+
+        /// <summary>
+        /// Gets the name of the current culture for the specified channel.
+        /// </summary>
+        /// <param name="channelId">The channelId to check.</param>
+        /// <returns>The name of the current culture; <see cref="GlobalCulture"/> if the channel is not found or hasn't set a culture.</returns>
+        public async Task<string> GetCurrentCultureNameAsync(string channelId)
+        {
+            IMongoCollection<UserDocument> users = Database.Database.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.Id == channelId);
+            using IAsyncCursor<UserDocument> cursor = await users.FindAsync(filter).ConfigureAwait(false);
+
+            return (await cursor.FirstAsync().ConfigureAwait(false))?.CurrentCulture ?? this.GlobalCulture.Name;
+        }
+
+        /// <summary>
+        /// Loads the specified culture and it's I18n data into memory, if needed.
+        /// </summary>
+        /// <param name="newCulture">The CultureInfo to load.</param>
+        /// <returns>A Task that can be awaited</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="newCulture"/> is null.</exception>
+        public async Task LoadCultureIfNeededAsync(CultureInfo newCulture)
+        {
+            if (newCulture is null)
+            {
+                throw new ArgumentNullException(nameof(newCulture));
+            }
+
+            if (!this._loadedCultures.ContainsKey(newCulture.Name))
+            {
+                _ = this._loadedCultures.TryAdd(newCulture.Name, newCulture);
+            }
+
+            if (!this._i18nDocuments.ContainsKey(newCulture.Name))
+            {
+                _ = this._i18nDocuments.TryAdd(newCulture.Name, await LoadCultureAsync(newCulture).ConfigureAwait(false));
+            }
+        }
+
+        /// <summary>
+        /// Loads the specified culture and it's I18n data into memory, if needed.
+        /// </summary>
+        /// <param name="culture">The name of the culture to load.</param>
+        /// <param name="useUseroverride">A bool that denotes whether to use the user-selected culture settings (<c>true</c>) or the default culture settings (<c>false</c>).</param>
+        /// <returns>A Task that can be awaited</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="culture"/> is null.</exception>
+        /// <exception cref="CultureNotFoundException"><paramref name="culture"/> is not a valid culture name.</exception>
+        public async Task LoadCultureIfNeededAsync(string culture, bool useUserOverride = false)
+        {
+            if (culture is null)
+            {
+                throw new ArgumentNullException(nameof(culture));
+            }
+
+            CultureInfo newCulture = new CultureInfo(culture, useUserOverride);
+
+            await this.LoadCultureIfNeededAsync(newCulture).ConfigureAwait(false);
         }
 
         #endregion Public Methods
@@ -211,15 +359,23 @@ namespace StreamActions.Plugins
         #region Private Fields
 
         /// <summary>
-        /// Field that backs the <see cref="CurrentCulture"/> property.
+        /// Regex for <see cref="FormatWith(string, IFormatProvider, dynamic)"/>.
         /// </summary>
-        private readonly ConcurrentDictionary<string, CultureInfo> _currentCulture = new ConcurrentDictionary<string, CultureInfo>();
+        private static readonly Regex _formatWithRegex = new System.Text.RegularExpressions.Regex(@"(?<start>\{)+(?<property>[\w\.\[\]]+)(?<format>:[^}]+)?(?<end>\})+", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
         /// <summary>
         /// An <see cref="I18nDocument"/> containing all currently loaded i18n data.
         /// </summary>
         private readonly ConcurrentDictionary<string, I18nDocument> _i18nDocuments = new ConcurrentDictionary<string, I18nDocument>();
 
+        /// <summary>
+        /// Contains loaded cultures.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, CultureInfo> _loadedCultures = new ConcurrentDictionary<string, CultureInfo>();
+
+        /// <summary>
+        /// Field that backs <see cref="GlobalCulture"/>.
+        /// </summary>
         private CultureInfo _globalCulture = new CultureInfo("en-US", false);
 
         #endregion Private Fields
@@ -229,19 +385,19 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Changes the current culture to the specified one.
         /// </summary>
-        /// <param name="channel">The channel id whose culture should be changed.</param>
+        /// <param name="channelId">The channelId whose culture should be changed.</param>
         /// <param name="culture">The <c>languagecode2-country/regioncode2</c> name of the new culture to load.</param>
-        /// <param name="useUseroverride">A Boolean that denotes whether to use the user-selected culture settings (<c>true</c>) or the default culture settings (<c>false</c>).</param>
+        /// <param name="useUseroverride">A bool that denotes whether to use the user-selected culture settings (<c>true</c>) or the default culture settings (<c>false</c>).</param>
         /// <exception cref="CultureNotFoundException"><paramref name="culture"/> is not a valid culture name.</exception>
-        private async void ChangeCulture(string channel, string culture, bool useUserOverride = false)
+        private async void ChangeCultureAsync(string channelId, string culture, bool useUserOverride = false)
         {
             CultureInfo newCulture = new CultureInfo(culture, useUserOverride);
-            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUserOverride)).Name, I18nDocument.Empty);
+            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(await this.GetCurrentCultureNameAsync(channelId).ConfigureAwait(false), I18nDocument.Empty);
 
             OnCultureChangedArgs args = new OnCultureChangedArgs
             {
-                Channel = channel,
-                OldCulture = this._currentCulture.GetValueOrDefault(channel, new CultureInfo("en-US", useUserOverride)),
+                Channel = channelId,
+                OldCulture = await this.GetCurrentCultureAsync(channelId).ConfigureAwait(false),
                 OldI18nDocument = new WeakReference<I18nDocument>(oldDocument)
             };
 
@@ -250,13 +406,26 @@ namespace StreamActions.Plugins
                 _ = this._i18nDocuments.TryAdd(newCulture.Name, await LoadCultureAsync(newCulture).ConfigureAwait(false));
             }
 
-            _ = this._currentCulture.TryRemove(channel, out _);
-            _ = this._currentCulture.TryAdd(channel, newCulture);
+            if (!this._loadedCultures.ContainsKey(newCulture.Name))
+            {
+                _ = this._loadedCultures.TryAdd(newCulture.Name, newCulture);
+            }
+
+            IMongoCollection<UserDocument> users = Database.Database.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            UpdateDefinition<UserDocument> userUpdate = Builders<UserDocument>.Update.Set(u => u.CurrentCulture, newCulture.Name);
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.Id == channelId);
+            _ = await users.UpdateOneAsync(filter, userUpdate).ConfigureAwait(false);
 
             OnCultureChanged?.Invoke(this, args);
         }
 
-        private async void ChangeGlobalCulture(string culture, bool useUserOverride = false)
+        /// <summary>
+        /// Changes the current global culture to the specified one.
+        /// </summary>
+        /// <param name="culture">The <c>languagecode2-country/regioncode2</c> name of the new culture to load.</param>
+        /// <param name="useUseroverride">A bool that denotes whether to use the user-selected culture settings (<c>true</c>) or the default culture settings (<c>false</c>).</param>
+        /// <exception cref="CultureNotFoundException"><paramref name="culture"/> is not a valid culture name.</exception>
+        private async void ChangeGlobalCultureAsync(string culture, bool useUserOverride = false)
         {
             CultureInfo newCulture = new CultureInfo(culture, useUserOverride);
             I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._globalCulture.Name, I18nDocument.Empty);
@@ -273,11 +442,13 @@ namespace StreamActions.Plugins
                 _ = this._i18nDocuments.TryAdd(newCulture.Name, await LoadCultureAsync(newCulture).ConfigureAwait(false));
             }
 
+            await this.LoadCultureIfNeededAsync(newCulture).ConfigureAwait(false);
+
             this._globalCulture = newCulture;
 
             OnCultureChanged?.Invoke(this, args);
         }
-    }
 
-    #endregion Private Methods
+        #endregion Private Methods
+    }
 }
