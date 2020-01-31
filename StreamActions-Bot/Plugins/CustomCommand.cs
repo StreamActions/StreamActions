@@ -271,18 +271,17 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="tag">One of the user level tags below.</param>
         /// <returns>The user level.</returns>
-        private UserLevel GetUserLevelFromTag(string tag) =>
-            tag switch
-            {
-                "-b" => UserLevel.Broadcaster,
-                "-tf" => UserLevel.TwitchStaff,
-                "-ta" => UserLevel.TwitchAdmin,
-                "-m" => UserLevel.Moderator,
-                "-s" => UserLevel.Subscriber,
-                "-v" => UserLevel.VIP,
-                "-c" => UserLevel.Custom,
-                _ => UserLevel.Viewer
-            };
+        private UserLevel GetUserLevelFromTag(string tag) => tag switch
+        {
+            "-b" => UserLevel.Broadcaster,
+            "-tf" => UserLevel.TwitchStaff,
+            "-ta" => UserLevel.TwitchAdmin,
+            "-m" => UserLevel.Moderator,
+            "-s" => UserLevel.Subscriber,
+            "-v" => UserLevel.VIP,
+            "-c" => UserLevel.Custom,
+            _ => UserLevel.Viewer
+        };
 
         #endregion Private Methods
     }
