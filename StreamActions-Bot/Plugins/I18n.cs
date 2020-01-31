@@ -93,7 +93,7 @@ namespace StreamActions.Plugins
         public Guid PluginId => typeof(I18n).GUID;
         public string PluginName => "I18n";
 
-        public Uri PluginUri => throw new NotImplementedException();
+        public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
 
         public string PluginVersion => "1.0.0";
 

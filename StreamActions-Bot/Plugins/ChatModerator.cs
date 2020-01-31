@@ -44,7 +44,7 @@ namespace StreamActions.Plugins
 
         #region Public Properties
 
-        public bool AlwaysEnabled => false;
+        public bool AlwaysEnabled => true;
 
         public string PluginAuthor => "StreamActions Team";
 
@@ -54,7 +54,7 @@ namespace StreamActions.Plugins
 
         public string PluginName => "ChatModerator";
 
-        public Uri PluginUri => throw new NotImplementedException();
+        public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
 
         public string PluginVersion => "1.0.0";
 

@@ -23,6 +23,8 @@ using System.Runtime.InteropServices;
 using TwitchLib.Client.Events;
 using StreamActions.Enums;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace StreamActions.Plugins
 {
@@ -34,7 +36,7 @@ namespace StreamActions.Plugins
     {
         #region Public Properties
 
-        public bool AlwaysEnabled => false;
+        public bool AlwaysEnabled => true;
 
         public string PluginAuthor => "StreamActions Team";
 
@@ -44,7 +46,7 @@ namespace StreamActions.Plugins
 
         public string PluginName => "CustomCommand";
 
-        public Uri PluginUri => throw new NotImplementedException();
+        public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
 
         public string PluginVersion => "1.0.0";
 
@@ -52,29 +54,42 @@ namespace StreamActions.Plugins
 
         #region Public Methods
 
+        /// <summary>
+        /// Looks up the <see cref="CommandDocument"/> for the given command.
+        /// </summary>
+        /// <param name="channelId">The channelId the command is registered to.</param>
+        /// <param name="command">The command to lookup.</param>
+        /// <returns>The <see cref="CommandDocument"/> for the command, if it exists; <c>null</c> otherwise.</returns>
+        public static async Task<CommandDocument> GetCustomCommandAsync(string channelId, string command)
+        {
+            IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+
+            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command.ToLowerInvariant());
+            using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
+
+            return await cursor.FirstAsync().ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Looks up the <see cref="CommandDocument"/> for all commands registered to a given channel.
+        /// </summary>
+        /// <param name="channelId">The channelId the commands are registered to.</param>
+        /// <returns>A List of <see cref="CommandDocument"/>.</returns>
+        public static async Task<List<CommandDocument>> ListCustomCommandsAsync(string channelId)
+        {
+            IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+
+            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId);
+            using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
+
+            return await cursor.ToListAsync().ConfigureAwait(false);
+        }
+
         public void Disabled()
         {
-            IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
-
-            foreach (CommandDocument command in commands.Find(_ => true).ToList())
-            {
-                PluginManager.Instance.UnregisterCustomChatCommand(command.ChannelId, command.Command);
-                _ = PluginManager.Instance.UnsubscribeCustomChatCommand(command.ChannelId, command.Command);
-            }
         }
 
-        public void Enabled()
-        {
-            IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
-
-            foreach (CommandDocument command in commands.Find(_ => true).ToList())
-            {
-                if (PluginManager.Instance.RegisterCustomChatCommand(command.ChannelId, command.Command))
-                {
-                    _ = PluginManager.Instance.SubscribeCustomChatCommand(command.ChannelId, command.Command, (sender, e) => this.CustomCommand_OnCustomCommand(e));
-                }
-            }
-        }
+        public void Enabled() => PluginManager.Instance.OnChatCommandReceived += this.CustomCommand_OnCustomCommand;
 
         #endregion Public Methods
 
@@ -107,9 +122,9 @@ namespace StreamActions.Plugins
 
             if (commandMatch.Success)
             {
-                if (!PluginManager.Instance.DoesCustomChatCommandExist(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value))
+                if (!await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value).ConfigureAwait(false))
                 {
-                    UserLevel userLevel = UserLevel.Viewer;
+                    UserLevel userLevel;
                     string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
                     string response = commandMatch.Groups["response"].Value;
 
@@ -160,11 +175,9 @@ namespace StreamActions.Plugins
                         GlobalCooldown = 5
                     };
 
-                    if (PluginManager.Instance.RegisterCustomChatCommand(e.Command.ChatMessage.RoomId, command))
+                    if (!await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                     {
                         await commands.InsertOneAsync(commandDocument).ConfigureAwait(false);
-
-                        _ = PluginManager.Instance.SubscribeCustomChatCommand(e.Command.ChatMessage.RoomId, command, (sender, e) => this.CustomCommand_OnCustomCommand(e));
                     }
 
                     // Command added.
@@ -183,13 +196,11 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Method called when someone executes a custom command.
         /// </summary>
+        /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        private void CustomCommand_OnCustomCommand(OnChatCommandReceivedArgs e)
+        private async void CustomCommand_OnCustomCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
-
-            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == e.Command.CommandText);
-            CommandDocument commandDocument = commands.Find(filter).First();
+            CommandDocument commandDocument = await GetCustomCommandAsync(e.Command.ChatMessage.RoomId, e.Command.CommandText).ConfigureAwait(false);
 
             if (!(commandDocument is null))
             {
@@ -210,7 +221,7 @@ namespace StreamActions.Plugins
 
             if (commandMatch.Success)
             {
-                if (PluginManager.Instance.DoesCustomChatCommandExist(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value))
+                if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value).ConfigureAwait(false))
                 {
                     UserLevel userLevel = UserLevel.Viewer;
                     string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
@@ -291,7 +302,7 @@ namespace StreamActions.Plugins
 
             if (commandMatch.Success)
             {
-                if (PluginManager.Instance.DoesCustomChatCommandExist(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value))
+                if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value).ConfigureAwait(false))
                 {
                     string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
 
@@ -300,8 +311,7 @@ namespace StreamActions.Plugins
                     FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == command);
 
                     _ = await commands.DeleteOneAsync(filter).ConfigureAwait(false);
-                    PluginManager.Instance.UnregisterCustomChatCommand(e.Command.ChatMessage.RoomId, command);
-                    _ = PluginManager.Instance.UnsubscribeCustomChatCommand(e.Command.ChatMessage.RoomId, command);
+                    //TODO: Unregister custom permission
 
                     // Command removed.
                 }
