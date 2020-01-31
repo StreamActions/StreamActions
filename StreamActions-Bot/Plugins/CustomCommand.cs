@@ -124,44 +124,14 @@ namespace StreamActions.Plugins
             {
                 if (!await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value).ConfigureAwait(false))
                 {
-                    UserLevel userLevel;
+                    UserLevel userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
                     string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
                     string response = commandMatch.Groups["response"].Value;
 
-                    switch (commandMatch.Groups["userlevel"].Value)
+                    // TODO: Register the custom role.
+                    if (userLevel == UserLevel.Custom)
                     {
-                        case "-b":
-                            userLevel = UserLevel.Broadcaster;
-                            break;
-
-                        case "-ts":
-                            userLevel = UserLevel.TwitchStaff;
-                            break;
-
-                        case "-ta":
-                            userLevel = UserLevel.TwitchAdmin;
-                            break;
-
-                        case "-m":
-                            userLevel = UserLevel.Moderator;
-                            break;
-
-                        case "-s":
-                            userLevel = UserLevel.Subscriber;
-                            break;
-
-                        case "-c":
-                            // TODO: Register the permission.
-                            userLevel = UserLevel.Custom;
-                            break;
-
-                        case "-v":
-                            userLevel = UserLevel.VIP;
-                            break;
-
-                        default:
-                            userLevel = UserLevel.Viewer;
-                            break;
+                        // Do something.
                     }
 
                     IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
@@ -223,44 +193,14 @@ namespace StreamActions.Plugins
             {
                 if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value).ConfigureAwait(false))
                 {
-                    UserLevel userLevel = UserLevel.Viewer;
+                    UserLevel userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
                     string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
                     string response = commandMatch.Groups["response"].Value;
 
-                    switch (commandMatch.Groups["userlevel"].Value)
+                    // TODO: Register the custom role.
+                    if (userLevel == UserLevel.Custom)
                     {
-                        case "-b":
-                            userLevel = UserLevel.Broadcaster;
-                            break;
-
-                        case "-ts":
-                            userLevel = UserLevel.TwitchStaff;
-                            break;
-
-                        case "-ta":
-                            userLevel = UserLevel.TwitchAdmin;
-                            break;
-
-                        case "-m":
-                            userLevel = UserLevel.Moderator;
-                            break;
-
-                        case "-s":
-                            userLevel = UserLevel.Subscriber;
-                            break;
-
-                        case "-c":
-                            // TODO: Register the permission.
-                            userLevel = UserLevel.Custom;
-                            break;
-
-                        case "-v":
-                            userLevel = UserLevel.VIP;
-                            break;
-
-                        default:
-                            userLevel = UserLevel.Viewer;
-                            break;
+                        // Do something.
                     }
 
                     IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
@@ -325,6 +265,24 @@ namespace StreamActions.Plugins
                 // Show usage.
             }
         }
+
+        /// <summary>
+        /// Gets the user level from the argument in the command.
+        /// </summary>
+        /// <param name="tag">One of the user level tags below.</param>
+        /// <returns>The user level.</returns>
+        private UserLevel GetUserLevelFromTag(string tag) =>
+            tag switch
+            {
+                "-b" => UserLevel.Broadcaster,
+                "-tf" => UserLevel.TwitchStaff,
+                "-ta" => UserLevel.TwitchAdmin,
+                "-m" => UserLevel.Moderator,
+                "-s" => UserLevel.Subscriber,
+                "-v" => UserLevel.VIP,
+                "-c" => UserLevel.Custom,
+                _ => UserLevel.Viewer
+            };
 
         #endregion Private Methods
     }
