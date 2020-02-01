@@ -454,7 +454,7 @@ namespace StreamActions.Plugins
         [BotnameChatCommand("culture")]
         private async void I18n_OnI18nCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            if (e.Command.ArgumentsAsList.Count == 1 || !e.Command.ArgumentsAsList[1].Equals("set", StringComparison.InvariantCultureIgnoreCase))
+            if (e.Command.ArgumentsAsList.Count < 3 || !e.Command.ArgumentsAsList[1].Equals("set", StringComparison.InvariantCultureIgnoreCase))
             {
                 TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await this.GetAndFormatWithAsync("I18n", "CurrentCultureUsage", e.Command.ChatMessage.RoomId,
                     new { CurrentCulture = await this.GetCurrentCultureNameAsync(e.Command.ChatMessage.RoomId).ConfigureAwait(false), BotName = Program.Settings.BotLogin },
