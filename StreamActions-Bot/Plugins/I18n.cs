@@ -15,6 +15,7 @@
  */
 
 using MongoDB.Driver;
+using StreamActions.Attributes;
 using StreamActions.Database.Documents;
 using StreamActions.EventArgs;
 using StreamActions.JsonDocuments;
@@ -29,6 +30,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TwitchLib.Client.Events;
 
 namespace StreamActions.Plugins
 {
@@ -447,6 +449,33 @@ namespace StreamActions.Plugins
             this._globalCulture = newCulture;
 
             OnCultureChanged?.Invoke(this, args);
+        }
+
+        [BotnameChatCommand("culture")]
+        private async void I18n_OnI18nCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (e.Command.ArgumentsAsList.Count == 1 || !e.Command.ArgumentsAsList[1].Equals("set", StringComparison.InvariantCultureIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await this.GetAndFormatWithAsync("I18n", "CurrentCultureUsage", e.Command.ChatMessage.RoomId,
+                    new { CurrentCulture = await this.GetCurrentCultureNameAsync(e.Command.ChatMessage.RoomId).ConfigureAwait(false), BotName = Program.Settings.BotLogin },
+                    "The current culture is set to {CurrentCulture}. You can change it with !{BotName} culture set (CultureName)").ConfigureAwait(false));
+            }
+            else
+            {
+                try
+                {
+                    this.ChangeCultureAsync(e.Command.ChatMessage.RoomId, e.Command.ArgumentsAsList[2]);
+
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await this.GetAndFormatWithAsync("I18n", "CurrentCultureChanged", e.Command.ChatMessage.RoomId,
+                    new { CurrentCulture = await this.GetCurrentCultureNameAsync(e.Command.ChatMessage.RoomId).ConfigureAwait(false) },
+                    "The current culture was changed to {CurrentCulture}").ConfigureAwait(false));
+                }
+                catch (CultureNotFoundException)
+                {
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await this.GetAsync("I18n", "CurrentCultureChangeFailed", e.Command.ChatMessage.RoomId,
+                    "The specified culture name is invalid in the current operating system environment").ConfigureAwait(false));
+                }
+            }
         }
 
         #endregion Private Methods

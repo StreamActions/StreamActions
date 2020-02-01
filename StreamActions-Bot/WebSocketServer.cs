@@ -489,7 +489,6 @@ namespace StreamActions
         /// <param name="context">The <see cref="HttpServerWebSocketContext"/> of the client.</param>
         /// <param name="cancellationToken">A CancellationToken for shutting down the event loop.</param>
         /// <returns>A Task that can be awaited.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "As designed by Microsoft")]
         private async Task DataReceiver(string ipPort, HttpServerWebSocketContext context, CancellationToken cancellationToken)
         {
             try

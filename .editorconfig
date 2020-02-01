@@ -245,9 +245,3 @@ dotnet_naming_style.camel_case_with__.required_prefix = _
 dotnet_naming_style.camel_case_with__.required_suffix =
 dotnet_naming_style.camel_case_with__.word_separator =
 dotnet_naming_style.camel_case_with__.capitalization = camel_case
-
-# IDE0047: Remove unnecessary parentheses
-dotnet_diagnostic.IDE0047.severity = none
-
-# CA1308: Normalize strings to uppercase
-dotnet_diagnostic.CA1308.severity = silent

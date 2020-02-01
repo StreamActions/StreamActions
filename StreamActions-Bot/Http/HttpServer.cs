@@ -129,7 +129,6 @@ namespace StreamActions.Http
 
         internal void Stop() => this._server.Stop();
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "As designed by Microsoft")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Closed by SendHTTPResponseAsync")]
         internal async Task<HttpServerRequestMessage> WaitForRequestAsync()
         {

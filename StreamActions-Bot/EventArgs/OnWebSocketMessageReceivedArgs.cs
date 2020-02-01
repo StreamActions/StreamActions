@@ -35,7 +35,6 @@ namespace StreamActions.EventArgs
         /// <summary>
         /// The raw data received by the WebSocket.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "FxCopAnalyzers Bug")]
         public byte[] Data { get; set; }
 
         /// <summary>
