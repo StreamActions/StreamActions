@@ -178,7 +178,7 @@ namespace StreamActions.Plugin
             //TODO: check if plugin is currently enabled in user settings
             this._plugins[typeName].Enabled();
 
-            foreach (MethodInfo mInfo in this._plugins[typeName].GetType().GetMethods())
+            foreach (MethodInfo mInfo in this._plugins[typeName].GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
             {
                 foreach (CommandAttribute attr in Attribute.GetCustomAttributes(mInfo, typeof(CommandAttribute)))
                 {
