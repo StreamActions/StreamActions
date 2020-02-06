@@ -24,6 +24,7 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
+using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -321,7 +322,8 @@ namespace StreamActions.Http
             {
                 Version = HttpVersion.Version11,
                 TcpClient = client,
-                Stream = stream
+                Stream = stream,
+                CookieCollection = new CookieCollection()
             };
 
             foreach (string line in lines)
@@ -348,6 +350,45 @@ namespace StreamActions.Http
                 await SendHTTPResponseAsync(client, stream, HttpStatusCode.BadRequest, Array.Empty<byte>()).ConfigureAwait(false);
                 requestMessage.Dispose();
                 return null;
+            }
+
+            if (requestMessage.Headers.Contains("Authorization"))
+            {
+                string[] authorization = requestMessage.Headers.GetValues("Authorization").First().Split(' ');
+
+                switch (authorization[0].Trim())
+                {
+                    case "Basic":
+                        string[] userpass = Encoding.UTF8.GetString(Convert.FromBase64String(authorization[1].Trim())).Split(':', 2);
+                        requestMessage.User = new ClaimsPrincipal(new HttpServerBasicIdentity(userpass[0], userpass[1]));
+                        break;
+
+                    case "Bearer":
+                        requestMessage.User = new ClaimsPrincipal(new HttpServerBearerIdentity(Encoding.UTF8.GetString(Convert.FromBase64String(authorization[1].Trim()))));
+                        break;
+                }
+            }
+
+            if (requestMessage.Headers.Contains("Cookie"))
+            {
+                foreach (string hcookie in requestMessage.Headers.GetValues("Cookie"))
+                {
+                    if (hcookie.Contains("; ", StringComparison.InvariantCulture))
+                    {
+                        string[] cookies = hcookie.Split("; ");
+
+                        foreach (string scookie in cookies)
+                        {
+                            string[] cookie = scookie.Split('=', 2);
+                            requestMessage.CookieCollection.Add(new Cookie(cookie[0], cookie[1]));
+                        }
+                    }
+                    else
+                    {
+                        string[] cookie = hcookie.Split('=', 2);
+                        requestMessage.CookieCollection.Add(new Cookie(cookie[0], cookie[1]));
+                    }
+                }
             }
 
             if (requestMessage.Headers.Contains("Content-Length") && int.TryParse(requestMessage.Headers.GetValues("Content-Length").First(), out int contentLength))

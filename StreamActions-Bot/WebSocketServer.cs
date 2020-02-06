@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
+using Microsoft.IdentityModel.Tokens;
 using StreamActions.EventArgs;
 using StreamActions.Http;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Net;
 using System.Net.WebSockets;
+using System.Security.Claims;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -276,6 +280,24 @@ namespace StreamActions
         #endregion Protected Methods
 
         #region Internal Methods
+
+        /// <summary>
+        /// Generates a JWT Bearer token.
+        /// </summary>
+        /// <param name="principal">A ClaimsPrincipal representing the user.</param>
+        /// <param name="notBefore">The validity start timestamp.</param>
+        /// <param name="expires">The validity expiration timestamp.</param>
+        /// <param name="signingCredentials">Credentials for signing the token.</param>
+        /// <returns>A JWT token.</returns>
+        internal static string GenerateBearer(ClaimsPrincipal principal, DateTime? notBefore = null, DateTime? expires = null, SigningCredentials signingCredentials = null)
+        {
+            JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
+            JwtPayload payload = new JwtPayload(typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString(),
+                Program.Settings.BotLogin, principal.Claims, notBefore, expires);
+            JwtHeader header = new JwtHeader(signingCredentials);
+            JwtSecurityToken token = new JwtSecurityToken(header, payload);
+            return tokenHandler.WriteToken(token);
+        }
 
         /// <summary>
         /// Starts the server.

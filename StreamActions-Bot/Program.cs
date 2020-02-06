@@ -65,8 +65,9 @@ namespace StreamActions
             _settings = await JsonSerializer.DeserializeAsync<SettingsDocument>(fs, options);
 
             _twitchApi = new TwitchAPI();
-            _twitchApi.Settings.ClientId = _settings.TwitchClientId;
+            _twitchApi.Settings.ClientId = _settings.TwitchApiClientId;
             _twitchApi.Settings.AccessToken = _settings.BotOAuth;
+            _twitchApi.Settings.Secret = _settings.TwitchApiSecret;
         }
 
         #endregion Private Methods

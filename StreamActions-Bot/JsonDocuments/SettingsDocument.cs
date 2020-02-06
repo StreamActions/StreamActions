@@ -15,6 +15,8 @@
  */
 
 using System.Collections.Generic;
+using System.Security.Claims;
+using System.Security.Principal;
 
 namespace StreamActions.JsonDocuments
 {
@@ -83,7 +85,12 @@ namespace StreamActions.JsonDocuments
         /// <summary>
         /// The Client ID for the Twitch developer app.
         /// </summary>
-        internal string TwitchClientId { get; set; }
+        internal string TwitchApiClientId { get; set; }
+
+        /// <summary>
+        /// The secret for the Twitch developer app.
+        /// </summary>
+        internal string TwitchApiSecret { get; set; }
 
         /// <summary>
         /// The prefix character that identifies whisper commands. <c>(char)0</c> to use the default.
@@ -104,6 +111,11 @@ namespace StreamActions.JsonDocuments
         /// Path to the SSL certificate for the WS Server, if used.
         /// </summary>
         internal string WSSslCert { get; set; }
+
+        /// <summary>
+        /// The super admin bearer token for the WS Server.
+        /// </summary>
+        internal string WSSuperadminBearer { get; set; } = WebSocketServer.GenerateBearer(new ClaimsPrincipal(new GenericIdentity("superadmin", "GlobalToken")));
 
         /// <summary>
         /// Whether the WebSocket server should use SSL.
