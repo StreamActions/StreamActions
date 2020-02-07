@@ -34,6 +34,17 @@ namespace StreamActions.Plugins
     [Guid("96FBAB20-3348-47F9-8222-525FB0BEEF70")]
     public class CustomCommand : IPlugin
     {
+        #region Public Constructors
+
+        /// <summary>
+        /// Class constructor.
+        /// </summary>
+        public CustomCommand()
+        {
+        }
+
+        #endregion Public Constructors
+
         #region Public Properties
 
         public bool AlwaysEnabled => true;
@@ -122,10 +133,11 @@ namespace StreamActions.Plugins
 
             if (commandMatch.Success)
             {
-                if (!await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value).ConfigureAwait(false))
+                string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
+
+                if (!await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                 {
                     UserLevel userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
-                    string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
                     string response = commandMatch.Groups["response"].Value;
 
                     // TODO: Register the custom role.
@@ -141,25 +153,33 @@ namespace StreamActions.Plugins
                         ChannelId = e.Command.ChatMessage.RoomId,
                         Command = command,
                         Response = response,
-                        UserLevel = userLevel,
-                        GlobalCooldown = 5
+                        UserLevel = userLevel
                     };
 
-                    if (!await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
-                    {
-                        await commands.InsertOneAsync(commandDocument).ConfigureAwait(false);
-                    }
+                    await commands.InsertOneAsync(commandDocument).ConfigureAwait(false);
 
                     // Command added.
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
+                        await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "AddSuccess", e.Command.ChatMessage.RoomId,
+                        new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command, Response = response },
+                        "The command {CommandPrefix}{Command} has been added with the response: {Response}").ConfigureAwait(false));
                 }
                 else
                 {
                     // Command exists.
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
+                        await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "AddAlreadyExists", e.Command.ChatMessage.RoomId,
+                        new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command },
+                        "The command {CommandPrefix}{Command} cannot be added as it already exists.").ConfigureAwait(false));
                 }
             }
             else
             {
-                // Show usage.
+                // Wrong syntax.
+                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
+                    await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "AddUsage", e.Command.ChatMessage.RoomId,
+                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier },
+                    "Add command usage: !command add {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
             }
         }
 
@@ -191,10 +211,11 @@ namespace StreamActions.Plugins
 
             if (commandMatch.Success)
             {
-                if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value).ConfigureAwait(false))
+                string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
+
+                if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                 {
                     UserLevel userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
-                    string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
                     string response = commandMatch.Groups["response"].Value;
 
                     // TODO: Register the custom role.
@@ -218,15 +239,27 @@ namespace StreamActions.Plugins
                     _ = await commands.UpdateOneAsync(filter, commandUpdate).ConfigureAwait(false);
 
                     // Command modified.
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
+                    await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "ModifySuccess", e.Command.ChatMessage.RoomId,
+                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command, Response = response },
+                    "The command {CommandPrefix}{Command} has been modified with the response: {Response}").ConfigureAwait(false));
                 }
                 else
                 {
                     // Command does not exist.
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
+                        await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "ModifyNotExists", e.Command.ChatMessage.RoomId,
+                        new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command },
+                        "The command {CommandPrefix}{Command} cannot be modified as it doesn't exist.").ConfigureAwait(false));
                 }
             }
             else
             {
-                // Show usage + current permission and response.
+                // Wrong syntax.
+                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
+                    await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "ModifyUsage", e.Command.ChatMessage.RoomId,
+                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier },
+                    "Modify command usage: !command modify {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
             }
         }
 
@@ -242,10 +275,10 @@ namespace StreamActions.Plugins
 
             if (commandMatch.Success)
             {
-                if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, commandMatch.Groups["command"].Value).ConfigureAwait(false))
-                {
-                    string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
+                string command = commandMatch.Groups["command"].Value.ToLowerInvariant();
 
+                if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
+                {
                     IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
                     FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == command);
@@ -254,15 +287,27 @@ namespace StreamActions.Plugins
                     //TODO: Unregister custom permission
 
                     // Command removed.
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
+                    await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "RemoveSuccess", e.Command.ChatMessage.RoomId,
+                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command },
+                    "The command {CommandPrefix}{Command} has been removed.").ConfigureAwait(false));
                 }
                 else
                 {
                     // Command doesn't exist.
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
+                        await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "RemoveNotExists", e.Command.ChatMessage.RoomId,
+                        new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command },
+                        "The command {CommandPrefix}{Command} cannot be removed as it doesn't exist.").ConfigureAwait(false));
                 }
             }
             else
             {
-                // Show usage.
+                // Wrong syntax.
+                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
+                    await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "RemoveUsage", e.Command.ChatMessage.RoomId,
+                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier },
+                    "Remove command usage: !command remove {CommandPrefix}[command]").ConfigureAwait(false));
             }
         }
 

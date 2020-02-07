@@ -75,6 +75,7 @@ namespace StreamActions.Database.Documents
         /// Global cooldown for the command.
         /// </summary>
         [BsonElement]
+        [BsonDefaultValue(5)]
         [BsonRequired]
         public uint GlobalCooldown { get; set; }
 
