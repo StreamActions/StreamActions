@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+using StreamActions.Enums;
 using System;
 
 namespace StreamActions.Attributes
@@ -30,17 +31,24 @@ namespace StreamActions.Attributes
         /// Marks the method as being the handler for a <c>!command</c>.
         /// </summary>
         /// <param name="command">The command to detect, without the <c>!</c>.</param>
-        public CommandAttribute(string command) => this.Command = command;
+        /// <param name="permission">The default permission required to use the command.</param>
+        public CommandAttribute(string command, UserLevel permission)
+        {
+            this.Command = command;
+            this.Permission = permission;
+        }
 
         /// <summary>
         /// Marks the method as being the handler for a <c>!command subcommand</c>.
         /// </summary>
         /// <param name="command">The command to detect, without the <c>!</c>.</param>
         /// <param name="subcommand">The subcommand to detect.</param>
-        public CommandAttribute(string command, string subcommand)
+        /// <param name="permission">The default permission required to use the subcommand.</param>
+        public CommandAttribute(string command, string subcommand, UserLevel permission)
         {
             this.Command = command;
             this.SubCommand = subcommand;
+            this.Permission = permission;
         }
 
         #endregion Public Constructors
@@ -51,6 +59,11 @@ namespace StreamActions.Attributes
         /// The command the marked method will handle.
         /// </summary>
         public string Command { get; }
+
+        /// <summary>
+        /// The default permission required to use the main command.
+        /// </summary>
+        public UserLevel Permission { get; }
 
         /// <summary>
         /// The subcommand the marked method will handle. <c>null</c> if handling the main command.

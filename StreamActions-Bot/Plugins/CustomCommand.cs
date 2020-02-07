@@ -126,7 +126,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        [ChatCommand("command", "add")]
+        [ChatCommand("command", "add", UserLevel.Moderator)]
         private async void CustomCommand_OnAddCommand(object sender, OnChatCommandReceivedArgs e)
         {
             Match commandMatch = this._commandAddEditRegex.Match(e.Command.ArgumentsAsString);
@@ -204,7 +204,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        [ChatCommand("command", "modify")]
+        [ChatCommand("command", "modify", UserLevel.Moderator)]
         private async void CustomCommand_OnEditCommand(object sender, OnChatCommandReceivedArgs e)
         {
             Match commandMatch = this._commandAddEditRegex.Match(e.Command.ArgumentsAsString);
@@ -268,7 +268,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        [ChatCommand("command", "remove")]
+        [ChatCommand("command", "remove", UserLevel.Moderator)]
         private async void CustomCommand_OnRemoveCommand(object sender, OnChatCommandReceivedArgs e)
         {
             Match commandMatch = this._commandRemoveRegex.Match(e.Command.ArgumentsAsString);

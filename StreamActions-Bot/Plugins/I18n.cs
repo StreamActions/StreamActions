@@ -17,6 +17,7 @@
 using MongoDB.Driver;
 using StreamActions.Attributes;
 using StreamActions.Database.Documents;
+using StreamActions.Enums;
 using StreamActions.EventArgs;
 using StreamActions.JsonDocuments;
 using StreamActions.Plugin;
@@ -451,7 +452,7 @@ namespace StreamActions.Plugins
             OnCultureChanged?.Invoke(this, args);
         }
 
-        [BotnameChatCommand("culture")]
+        [BotnameChatCommand("culture", UserLevel.Broadcaster)]
         private async void I18n_OnI18nCommand(object sender, OnChatCommandReceivedArgs e)
         {
             if (e.Command.ArgumentsAsList.Count < 3 || !e.Command.ArgumentsAsList[1].Equals("set", StringComparison.InvariantCultureIgnoreCase))

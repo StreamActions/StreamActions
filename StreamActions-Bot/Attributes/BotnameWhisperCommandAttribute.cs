@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+using StreamActions.Enums;
 using System;
 
 namespace StreamActions.Attributes
@@ -30,7 +31,8 @@ namespace StreamActions.Attributes
         /// Marks the method as being the whisper handler for a <c>!botname command</c>.
         /// </summary>
         /// <param name="command">The command to detect.</param>
-        public BotnameWhisperCommandAttribute(string command) : base(command)
+        /// <param name="permission">The default permission required to use the command.</param>
+        public BotnameWhisperCommandAttribute(string command, UserLevel permission) : base(command, permission)
         {
         }
 
@@ -39,7 +41,8 @@ namespace StreamActions.Attributes
         /// </summary>
         /// <param name="command">The command to detect.</param>
         /// <param name="subcommand">The subcommand to detect.</param>
-        public BotnameWhisperCommandAttribute(string command, string subcommand) : base(command, subcommand)
+        /// <param name="permission">The default permission required to use the subcommand.</param>
+        public BotnameWhisperCommandAttribute(string command, string subcommand, UserLevel permission) : base(command, subcommand, permission)
         {
         }
 
