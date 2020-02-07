@@ -53,7 +53,7 @@
     <Rule Id="CA1304" Action="Warning" />
     <Rule Id="CA1305" Action="Warning" />
     <Rule Id="CA1307" Action="Warning" />
-    <Rule Id="CA1308" Action="Silent" />
+    <Rule Id="CA1308" Action="None" />
     <Rule Id="CA1309" Action="None" />
     <Rule Id="CA1401" Action="Warning" />
     <Rule Id="CA1501" Action="None" />
