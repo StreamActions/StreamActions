@@ -15,38 +15,39 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using StreamActions.GraphQL.Connections;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Permissions
 {
     /// <summary>
-    /// A document containing authentication information for a Twitch user.
+    /// Represents a permission assigned to a <see cref="PermissionGroupDocument"/>.
     /// </summary>
-    public class AuthenticationDocument
+    public class PermissionDocument : ICursorable
     {
         #region Public Properties
 
         /// <summary>
-        /// A bearer token that authenticates this user on the GraphQL WebSocket server.
+        /// If <c>true</c>, permission is explicitly denied; otherwise, permission is allowed.
         /// </summary>
         [BsonElement]
-        [BsonIgnoreIfNull]
-        public string GraphQLBearer { get; set; }
+        [BsonRequired]
+        [BsonDefaultValue(false)]
+        public bool IsDenied { get; set; }
 
         /// <summary>
-        /// A <see cref="TwitchTokenDocument"/> containing the user's Twitch Connect token.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public TwitchTokenDocument TwitchToken { get; set; }
-
-        /// <summary>
-        /// The <see cref="UserDocument.Id"/> of the user whose authentication information is expressed in this document.
+        /// The unique permission name that is being represented.
         /// </summary>
         [BsonElement]
         [BsonRequired]
         [BsonId]
-        public string UserId { get; set; }
+        public string PermissionName { get; set; }
 
         #endregion Public Properties
+
+        #region Public Methods
+
+        public string GetCursor() => this.PermissionName;
+
+        #endregion Public Methods
     }
 }

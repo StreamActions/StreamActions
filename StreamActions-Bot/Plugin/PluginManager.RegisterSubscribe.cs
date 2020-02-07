@@ -95,7 +95,7 @@ namespace StreamActions.Plugin
                     _ = this._registeredBotnameChatCommands.TryAdd(typeName, new List<string>());
                 }
 
-                this._registeredBotnameChatCommands[typeName].Add(command);
+                this._registeredBotnameChatCommands[typeName].Add(command.ToLowerInvariant());
 
                 return true;
             }
@@ -153,7 +153,7 @@ namespace StreamActions.Plugin
                     _ = this._registeredBotnameWhisperCommands.TryAdd(typeName, new List<string>());
                 }
 
-                this._registeredBotnameWhisperCommands[typeName].Add(command);
+                this._registeredBotnameWhisperCommands[typeName].Add(command.ToLowerInvariant());
 
                 return true;
             }
@@ -211,7 +211,7 @@ namespace StreamActions.Plugin
                     _ = this._registeredChatCommands.TryAdd(typeName, new List<string>());
                 }
 
-                this._registeredChatCommands[typeName].Add(command);
+                this._registeredChatCommands[typeName].Add(command.ToLowerInvariant());
 
                 return true;
             }
@@ -269,7 +269,7 @@ namespace StreamActions.Plugin
                     _ = this._registeredWhisperCommands.TryAdd(typeName, new List<string>());
                 }
 
-                this._registeredWhisperCommands[typeName].Add(command);
+                this._registeredWhisperCommands[typeName].Add(command.ToLowerInvariant());
 
                 return true;
             }
@@ -308,7 +308,7 @@ namespace StreamActions.Plugin
         /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool SubscribeBotnameChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._botnameChatCommandEventHandlers.TryAdd(command, handler);
+        public bool SubscribeBotnameChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._botnameChatCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
 
         /// <summary>
         /// Attempts to subscribe the provided Delegate to the designated whisper <c>!botname command</c>.
@@ -317,7 +317,7 @@ namespace StreamActions.Plugin
         /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool SubscribeBotnameWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._botnameWhisperCommandEventHandlers.TryAdd(command, handler);
+        public bool SubscribeBotnameWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._botnameWhisperCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
 
         /// <summary>
         /// Attempts to subscribe the provided Delegate to the designated chat <c>!command</c>.
@@ -326,7 +326,7 @@ namespace StreamActions.Plugin
         /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool SubscribeChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._chatCommandEventHandlers.TryAdd(command, handler);
+        public bool SubscribeChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._chatCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
 
         /// <summary>
         /// Attempts to subscribe the provided Delegate to the designated whisper <c>!command</c>.
@@ -335,7 +335,7 @@ namespace StreamActions.Plugin
         /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool SubscribeWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._whisperCommandEventHandlers.TryAdd(command, handler);
+        public bool SubscribeWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._whisperCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
 
         /// <summary>
         /// Unregisters all <c>!botname</c> chat commands from a Type.
@@ -417,7 +417,7 @@ namespace StreamActions.Plugin
 
             if (this._registeredBotnameChatCommands.ContainsKey(typeName))
             {
-                _ = this._registeredBotnameChatCommands[typeName].Remove(command);
+                _ = this._registeredBotnameChatCommands[typeName].Remove(command.ToLowerInvariant());
             }
         }
 
@@ -441,7 +441,7 @@ namespace StreamActions.Plugin
 
             if (this._registeredBotnameWhisperCommands.ContainsKey(typeName))
             {
-                _ = this._registeredBotnameWhisperCommands[typeName].Remove(command);
+                _ = this._registeredBotnameWhisperCommands[typeName].Remove(command.ToLowerInvariant());
             }
         }
 
@@ -465,7 +465,7 @@ namespace StreamActions.Plugin
 
             if (this._registeredChatCommands.ContainsKey(typeName))
             {
-                _ = this._registeredChatCommands[typeName].Remove(command);
+                _ = this._registeredChatCommands[typeName].Remove(command.ToLowerInvariant());
             }
         }
 
@@ -489,7 +489,7 @@ namespace StreamActions.Plugin
 
             if (this._registeredWhisperCommands.ContainsKey(typeName))
             {
-                _ = this._registeredWhisperCommands[typeName].Remove(command);
+                _ = this._registeredWhisperCommands[typeName].Remove(command.ToLowerInvariant());
             }
         }
 
@@ -499,7 +499,7 @@ namespace StreamActions.Plugin
         /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
         /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool UnsubscribeBotnameChatCommand(string command) => this._botnameChatCommandEventHandlers.TryRemove(command, out _);
+        public bool UnsubscribeBotnameChatCommand(string command) => this._botnameChatCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
 
         /// <summary>
         /// Attempts to unsubscribe the designated whisper <c>!botname command</c>.
@@ -507,7 +507,7 @@ namespace StreamActions.Plugin
         /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
         /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool UnsubscribeBotnameWhisperCommand(string command) => this._botnameWhisperCommandEventHandlers.TryRemove(command, out _);
+        public bool UnsubscribeBotnameWhisperCommand(string command) => this._botnameWhisperCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
 
         /// <summary>
         /// Attempts to unsubscribe the designated chat <c>!command</c>.
@@ -515,7 +515,7 @@ namespace StreamActions.Plugin
         /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
         /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool UnsubscribeChatCommand(string command) => this._chatCommandEventHandlers.TryRemove(command, out _);
+        public bool UnsubscribeChatCommand(string command) => this._chatCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
 
         /// <summary>
         /// Attempts to unsubscribe the designated whisper <c>!command</c>.
@@ -523,7 +523,7 @@ namespace StreamActions.Plugin
         /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
         /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool UnsubscribeWhisperCommand(string command) => this._whisperCommandEventHandlers.TryRemove(command, out _);
+        public bool UnsubscribeWhisperCommand(string command) => this._whisperCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
 
         /// <summary>
         /// Updates the subscribed chat <c>!botname command</c> names.
@@ -539,9 +539,9 @@ namespace StreamActions.Plugin
 
             foreach (KeyValuePair<string, string> kvp in commandMap)
             {
-                if (this._botnameChatCommandEventHandlers.TryRemove(kvp.Key, out ChatCommandReceivedEventHandler handler))
+                if (this._botnameChatCommandEventHandlers.TryRemove(kvp.Key.ToLowerInvariant(), out ChatCommandReceivedEventHandler handler))
                 {
-                    _ = this._botnameChatCommandEventHandlers.TryAdd(kvp.Value, handler);
+                    _ = this._botnameChatCommandEventHandlers.TryAdd(kvp.Value.ToLowerInvariant(), handler);
                 }
             }
         }
@@ -560,9 +560,9 @@ namespace StreamActions.Plugin
 
             foreach (KeyValuePair<string, string> kvp in commandMap)
             {
-                if (this._botnameWhisperCommandEventHandlers.TryRemove(kvp.Key, out WhisperCommandReceivedEventHandler handler))
+                if (this._botnameWhisperCommandEventHandlers.TryRemove(kvp.Key.ToLowerInvariant(), out WhisperCommandReceivedEventHandler handler))
                 {
-                    _ = this._botnameWhisperCommandEventHandlers.TryAdd(kvp.Value, handler);
+                    _ = this._botnameWhisperCommandEventHandlers.TryAdd(kvp.Value.ToLowerInvariant(), handler);
                 }
             }
         }
@@ -581,9 +581,9 @@ namespace StreamActions.Plugin
 
             foreach (KeyValuePair<string, string> kvp in commandMap)
             {
-                if (this._chatCommandEventHandlers.TryRemove(kvp.Key, out ChatCommandReceivedEventHandler handler))
+                if (this._chatCommandEventHandlers.TryRemove(kvp.Key.ToLowerInvariant(), out ChatCommandReceivedEventHandler handler))
                 {
-                    _ = this._chatCommandEventHandlers.TryAdd(kvp.Value, handler);
+                    _ = this._chatCommandEventHandlers.TryAdd(kvp.Value.ToLowerInvariant(), handler);
                 }
             }
         }
@@ -602,9 +602,9 @@ namespace StreamActions.Plugin
 
             foreach (KeyValuePair<string, string> kvp in commandMap)
             {
-                if (this._whisperCommandEventHandlers.TryRemove(kvp.Key, out WhisperCommandReceivedEventHandler handler))
+                if (this._whisperCommandEventHandlers.TryRemove(kvp.Key.ToLowerInvariant(), out WhisperCommandReceivedEventHandler handler))
                 {
-                    _ = this._whisperCommandEventHandlers.TryAdd(kvp.Value, handler);
+                    _ = this._whisperCommandEventHandlers.TryAdd(kvp.Value.ToLowerInvariant(), handler);
                 }
             }
         }

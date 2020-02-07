@@ -15,9 +15,9 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using StreamActions.Database.Documents.Users;
 using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
-using StreamActions.MemoryDocuments;
 using System;
 using System.Globalization;
 
@@ -34,6 +34,7 @@ namespace StreamActions.Database.Documents
         /// When is this command available to be used.
         /// </summary>
         [BsonElement]
+        [BsonIgnoreIfDefault]
         [BsonDefaultValue(StreamStatus.Offline | StreamStatus.Online)]
         public StreamStatus AvailableWhen { get; set; }
 
@@ -52,31 +53,27 @@ namespace StreamActions.Database.Documents
         public string Command { get; set; }
 
         /// <summary>
-        /// Contains information about the commands cooldowns.
-        /// </summary>
-        [BsonIgnore]
-        public CommandCooldownDocument CommandCooldown => this._commandCooldown;
-
-        /// <summary>
-        /// Cost of the command if set.
+        /// Cost of the command.
         /// </summary>
         [BsonElement]
-        [BsonIgnoreIfNull]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(0)]
         public uint Cost { get; set; }
 
         /// <summary>
         /// The number of times the command has been ran.
         /// </summary>
         [BsonElement]
-        [BsonIgnoreIfNull]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(0)]
         public uint Count { get; set; }
 
         /// <summary>
         /// Global cooldown for the command.
         /// </summary>
         [BsonElement]
+        [BsonIgnoreIfDefault]
         [BsonDefaultValue(5)]
-        [BsonRequired]
         public uint GlobalCooldown { get; set; }
 
         /// <summary>
@@ -91,6 +88,7 @@ namespace StreamActions.Database.Documents
         /// If the command is enabled or not.
         /// </summary>
         [BsonElement]
+        [BsonIgnoreIfDefault]
         [BsonDefaultValue(true)]
         public bool IsEnabled { get; set; }
 
@@ -98,6 +96,7 @@ namespace StreamActions.Database.Documents
         /// If the command should be shown in the command list.
         /// </summary>
         [BsonElement]
+        [BsonIgnoreIfDefault]
         [BsonDefaultValue(true)]
         public bool IsVisible { get; set; }
 
@@ -105,21 +104,21 @@ namespace StreamActions.Database.Documents
         /// The response for this command.
         /// </summary>
         [BsonElement]
-        [BsonRequired]
+        [BsonIgnoreIfNull]
         public string Response { get; set; }
 
         /// <summary>
         /// Per-user cooldown of the command.
         /// </summary>
         [BsonElement]
-        [BsonIgnoreIfNull]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(0)]
         public uint UserCooldown { get; set; }
 
         /// <summary>
         /// Permission required to run this command.
         /// </summary>
         [BsonElement]
-        [BsonDefaultValue(UserLevel.Viewer)]
         [BsonRequired]
         public UserLevel UserLevel { get; set; }
 
@@ -130,14 +129,5 @@ namespace StreamActions.Database.Documents
         public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
 
         #endregion Public Methods
-
-        #region Private Fields
-
-        /// <summary>
-        /// Field that backs the <see cref="CommandCooldown"/> property.
-        /// </summary>
-        private readonly CommandCooldownDocument _commandCooldown = new CommandCooldownDocument();
-
-        #endregion Private Fields
     }
 }

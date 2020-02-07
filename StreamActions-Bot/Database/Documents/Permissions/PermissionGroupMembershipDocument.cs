@@ -15,11 +15,12 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using StreamActions.Database.Documents.Users;
 using StreamActions.GraphQL.Connections;
 using System;
 using System.Globalization;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Permissions
 {
     /// <summary>
     /// Represents a users membership in a permission group.

@@ -76,6 +76,12 @@ namespace StreamActions.Plugins
             IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
             FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command.ToLowerInvariant());
+
+            if (await commands.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+            {
+                return null;
+            }
+
             using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
 
             return await cursor.FirstAsync().ConfigureAwait(false);

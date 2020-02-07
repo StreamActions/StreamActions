@@ -19,7 +19,7 @@ using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
 using System;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Users
 {
     /// <summary>
     /// A document representing subscription information, stored in a <see cref="UserRelationshipDocument"/>.

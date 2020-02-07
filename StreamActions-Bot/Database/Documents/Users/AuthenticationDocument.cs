@@ -15,28 +15,37 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using TwitchLib.Api.Core.Enums;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Users
 {
     /// <summary>
-    /// A document containing Twitch Connect token information, stored in a <see cref="AuthenticationDocument"/>.
+    /// A document containing authentication information for a Twitch user.
     /// </summary>
-    public class TwitchTokenDocument
+    public class AuthenticationDocument
     {
         #region Public Properties
 
+        /// <summary>
+        /// A bearer token that authenticates this user on the GraphQL WebSocket server.
+        /// </summary>
         [BsonElement]
-        [BsonRequired]
-        public string Refresh { get; set; }
+        [BsonIgnoreIfNull]
+        public string GraphQLBearer { get; set; }
 
+        /// <summary>
+        /// A <see cref="TwitchTokenDocument"/> containing the user's Twitch Connect token.
+        /// </summary>
         [BsonElement]
-        [BsonRequired]
-        public AuthScopes Scopes { get; set; }
+        [BsonIgnoreIfNull]
+        public TwitchTokenDocument TwitchToken { get; set; }
 
+        /// <summary>
+        /// The <see cref="UserDocument.Id"/> of the user whose authentication information is expressed in this document.
+        /// </summary>
         [BsonElement]
         [BsonRequired]
-        public string Token { get; set; }
+        [BsonId]
+        public string UserId { get; set; }
 
         #endregion Public Properties
     }

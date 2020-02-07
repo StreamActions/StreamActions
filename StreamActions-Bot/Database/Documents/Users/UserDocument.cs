@@ -15,11 +15,12 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using StreamActions.Database.Documents.Permissions;
 using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
 using System.Collections.Generic;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Users
 {
     /// <summary>
     /// A document representing a Twitch user.
@@ -29,7 +30,7 @@ namespace StreamActions.Database.Documents
         #region Public Properties
 
         /// <summary>
-        /// The users <see cref="StreamActions.Enums.BotGlobal"/>.
+        /// The users <see cref="BotGlobal"/>.
         /// </summary>
         [BsonElement]
         [BsonDefaultValue(BotGlobal.None)]
@@ -37,7 +38,7 @@ namespace StreamActions.Database.Documents
         public BotGlobal BotGlobalPermission { get; set; }
 
         /// <summary>
-        /// The users <see cref="StreamActions.Enums.TwitchBroadcaster"/>.
+        /// The users <see cref="TwitchBroadcaster"/>.
         /// </summary>
         [BsonElement]
         [BsonDefaultValue(TwitchBroadcaster.None)]
@@ -89,7 +90,7 @@ namespace StreamActions.Database.Documents
         public List<PermissionGroupMembershipDocument> PermissionGroupMembership { get; } = new List<PermissionGroupMembershipDocument>();
 
         /// <summary>
-        /// The users <see cref="StreamActions.Enums.TwitchStaff"/>.
+        /// The users <see cref="TwitchStaff"/>.
         /// </summary>
         [BsonElement]
         [BsonDefaultValue(TwitchStaff.None)]

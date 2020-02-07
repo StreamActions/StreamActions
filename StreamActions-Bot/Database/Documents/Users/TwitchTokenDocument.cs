@@ -15,39 +15,29 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using StreamActions.GraphQL.Connections;
+using TwitchLib.Api.Core.Enums;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Users
 {
     /// <summary>
-    /// Represents a permission assigned to a <see cref="PermissionGroupDocument"/>.
+    /// A document containing Twitch Connect token information, stored in a <see cref="AuthenticationDocument"/>.
     /// </summary>
-    public class PermissionDocument : ICursorable
+    public class TwitchTokenDocument
     {
         #region Public Properties
 
-        /// <summary>
-        /// If <c>true</c>, permission is explicitly denied; otherwise, permission is allowed.
-        /// </summary>
         [BsonElement]
         [BsonRequired]
-        [BsonDefaultValue(false)]
-        public bool IsDenied { get; set; }
+        public string Refresh { get; set; }
 
-        /// <summary>
-        /// The unique permission name that is being represented.
-        /// </summary>
         [BsonElement]
         [BsonRequired]
-        [BsonId]
-        public string PermissionName { get; set; }
+        public AuthScopes Scopes { get; set; }
+
+        [BsonElement]
+        [BsonRequired]
+        public string Token { get; set; }
 
         #endregion Public Properties
-
-        #region Public Methods
-
-        public string GetCursor() => this.PermissionName;
-
-        #endregion Public Methods
     }
 }

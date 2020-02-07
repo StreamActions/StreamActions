@@ -18,7 +18,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.GraphQL.Connections;
 using System;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Users
 {
     /// <summary>
     /// A Document representing follower information, stored in <see cref="UserRelationshipDocument"/>.

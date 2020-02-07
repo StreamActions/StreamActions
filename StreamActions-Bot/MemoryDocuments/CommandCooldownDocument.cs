@@ -27,7 +27,27 @@ namespace StreamActions.MemoryDocuments
     /// </summary>
     public class CommandCooldownDocument
     {
+        #region Public Constructors
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="globalCooldown">The default global cooldown time to use for this command, in seconds.</param>
+        /// <param name="userCooldown">The default user cooldown time to use for this command, in seconds.</param>
+        public CommandCooldownDocument(uint globalCooldown, uint userCooldown)
+        {
+            this.GlobalCooldown = globalCooldown;
+            this.UserCooldown = userCooldown;
+        }
+
+        #endregion Public Constructors
+
         #region Public Properties
+
+        /// <summary>
+        /// The global cooldown time for this command, in seconds.
+        /// </summary>
+        public uint GlobalCooldown { get; set; }
 
         /// <summary>
         /// Indicates when the global cooldown will expire.
@@ -43,6 +63,11 @@ namespace StreamActions.MemoryDocuments
         /// Indicates whether the command is currently on global cooldown.
         /// </summary>
         public bool IsOnGlobalCooldown => DateTime.Now.CompareTo(this.GlobalCooldownExpires) < 0;
+
+        /// <summary>
+        /// The user cooldown time for this command, in seconds.
+        /// </summary>
+        public uint UserCooldown { get; set; }
 
         /// <summary>
         /// Indicates when the cooldown for a user Id expires.
@@ -97,6 +122,13 @@ namespace StreamActions.MemoryDocuments
         }
 
         /// <summary>
+        /// Indicates if either the specified user Id or the command itself is currently on cooldown.
+        /// </summary>
+        /// <param name="userId">The user Id to check.</param>
+        /// <returns><c>true</c> if the user or command is on cooldown.</returns>
+        public bool IsOnCooldown(string userId) => this.IsOnGlobalCooldown || this.IsUserOnCooldown(userId);
+
+        /// <summary>
         /// Indicates if the specified user Id is currently on cooldown for this command.
         /// </summary>
         /// <param name="userId">The user Id to check.</param>
@@ -119,16 +151,40 @@ namespace StreamActions.MemoryDocuments
         }
 
         /// <summary>
+        /// Starts both the global cooldown and the user cooldown for the times specified in the appropriate properties.
+        /// </summary>
+        /// <param name="userId">The user Id to cooldown.</param>
+        public void StartCooldown(string userId) => this.StartCooldown(TimeSpan.FromSeconds(this.GlobalCooldown), userId, TimeSpan.FromSeconds(this.UserCooldown));
+
+        /// <summary>
+        /// Starts both the global cooldown and the user cooldown for the specified times.
+        /// </summary>
+        /// <param name="globalTime">A TimeSpan representing the amount of time the global cooldown will last.</param>
+        /// <param name="userId">The user Id to cooldown.</param>
+        /// <param name="userTime">A TimeSpan representing the amount of time the user cooldown will last.</param>
+        public void StartCooldown(TimeSpan globalTime, string userId, TimeSpan userTime)
+        {
+            if (globalTime.TotalMilliseconds > 0)
+            {
+                this.StartGlobalCooldown(globalTime);
+            }
+
+            if (!(userId is null) && userId.Length > 0 && userTime.TotalMilliseconds > 0)
+            {
+                this.StartUserCooldown(userId, userTime);
+            }
+        }
+
+        /// <summary>
         /// Starts the global cooldown for the specified time.
         /// </summary>
         /// <param name="time">A TimeSpan representing the amount of time the cooldown will last.</param>
         public void StartGlobalCooldown(TimeSpan time) => this.GlobalCooldownExpires = DateTime.Now.Add(time);
 
         /// <summary>
-        /// Starts the global cooldown for the specified time.
+        /// Starts the global cooldown for <see cref="GlobalCooldown"/> seconds.
         /// </summary>
-        /// <param name="seconds">The number of seconds the cooldown will last.</param>
-        public void StartGlobalCooldown(int seconds) => this.StartGlobalCooldown(TimeSpan.FromSeconds(seconds));
+        public void StartGlobalCooldown() => this.StartGlobalCooldown(TimeSpan.FromSeconds(this.GlobalCooldown));
 
         /// <summary>
         /// Starts or restarts the cooldown for the specified user Id on this command.
@@ -139,14 +195,15 @@ namespace StreamActions.MemoryDocuments
         {
             _ = this._userCooldownExpires.TryRemove(userId, out _);
             _ = this._userCooldownExpires.TryAdd(userId, new CommandUserCooldownDocument { UserId = userId, CooldownExpires = DateTime.Now.Add(time) });
+
+            _ = Task.Run(async () => await this.WaitForUserCooldownAsync(userId).ConfigureAwait(false));
         }
 
         /// <summary>
-        /// Starts or restarts the cooldown for the specified user Id on this command.
+        /// Starts or restarts the cooldown for the specified user Id on this command for <see cref="UserCooldown"/> seconds.
         /// </summary>
         /// <param name="userId">The user Id to place on cooldown.</param>
-        /// <param name="seconds">The number of seconds the cooldown will last.</param>
-        public void StartUserCooldown(string userId, int seconds) => this.StartUserCooldown(userId, TimeSpan.FromSeconds(seconds));
+        public void StartUserCooldown(string userId) => this.StartUserCooldown(userId, TimeSpan.FromSeconds(this.UserCooldown));
 
         /// <summary>
         /// Indicates the remaining time until the user Ids cooldown expires.
@@ -159,19 +216,31 @@ namespace StreamActions.MemoryDocuments
         /// Awaits the expiration of this commands global cooldown.
         /// </summary>
         /// <returns>A Task that can be awaited.</returns>
-        public async Task WaitForGlobalCooldown() => await Task.Delay((int)this.GlobalCooldownTimeRemaining.TotalMilliseconds).ConfigureAwait(false);
+        public async Task WaitForGlobalCooldownAsync() => await Task.Delay((int)this.GlobalCooldownTimeRemaining.TotalMilliseconds).ConfigureAwait(false);
 
         /// <summary>
         /// Awaits the expiration of the specified user Ids cooldown.
         /// </summary>
         /// <param name="userId">The user Id to await.</param>
+        /// <param name="loop">If <c>true</c> loop until cooldown expires (in case cooldown was refreshed).</param>
         /// <returns>A Task that can be awaited.</returns>
-        public async Task WaitForUserCooldown(string userId)
+        public async Task WaitForUserCooldownAsync(string userId, bool loop = false)
         {
             if (this.IsUserOnCooldown(userId))
             {
-                await Task.Delay((int)this.UserCooldownTimeRemaining(userId).TotalMilliseconds).ConfigureAwait(false);
-                _ = this._userCooldownExpires.TryRemove(userId, out _);
+                while (this.UserCooldownTimeRemaining(userId).TotalMilliseconds > 0)
+                {
+                    await Task.Delay((int)this.UserCooldownTimeRemaining(userId).TotalMilliseconds + 50).ConfigureAwait(false);
+
+                    if (!loop)
+                    {
+                        break;
+                    }
+                }
+                if (this.UserCooldownTimeRemaining(userId).TotalMilliseconds == 0)
+                {
+                    _ = this._userCooldownExpires.TryRemove(userId, out _);
+                }
             }
         }
 

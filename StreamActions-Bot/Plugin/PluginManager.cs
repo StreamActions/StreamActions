@@ -24,6 +24,10 @@ using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using StreamActions.Attributes;
 using System.Threading.Tasks;
+using StreamActions.MemoryDocuments;
+using StreamActions.Database.Documents;
+using MongoDB.Driver;
+using StreamActions.Enums;
 
 namespace StreamActions.Plugin
 {
@@ -151,19 +155,19 @@ namespace StreamActions.Plugin
                 {
                     if (attr is BotnameChatCommandAttribute bchatAttr)
                     {
-                        _ = this._botnameChatCommandEventHandlers.TryRemove(bchatAttr.Command + (bchatAttr.SubCommand ?? " " + bchatAttr.SubCommand), out _);
+                        _ = this._botnameChatCommandEventHandlers.TryRemove((bchatAttr.Command + (bchatAttr.SubCommand ?? " " + bchatAttr.SubCommand)).ToLowerInvariant(), out _);
                     }
                     else if (attr is ChatCommandAttribute chatAttr)
                     {
-                        _ = this._chatCommandEventHandlers.TryRemove(chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand), out _);
+                        _ = this._chatCommandEventHandlers.TryRemove((chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand)).ToLowerInvariant(), out _);
                     }
                     else if (attr is BotnameWhisperCommandAttribute bwhisperAttr)
                     {
-                        _ = this._botnameWhisperCommandEventHandlers.TryRemove(bwhisperAttr.Command + (bwhisperAttr.SubCommand ?? " " + bwhisperAttr.SubCommand), out _);
+                        _ = this._botnameWhisperCommandEventHandlers.TryRemove((bwhisperAttr.Command + (bwhisperAttr.SubCommand ?? " " + bwhisperAttr.SubCommand)).ToLowerInvariant(), out _);
                     }
                     else if (attr is WhisperCommandAttribute whisperAttr)
                     {
-                        _ = this._whisperCommandEventHandlers.TryRemove(whisperAttr.Command + (whisperAttr.SubCommand ?? " " + whisperAttr.SubCommand), out _);
+                        _ = this._whisperCommandEventHandlers.TryRemove((whisperAttr.Command + (whisperAttr.SubCommand ?? " " + whisperAttr.SubCommand)).ToLowerInvariant(), out _);
                     }
                 }
             }
@@ -184,23 +188,25 @@ namespace StreamActions.Plugin
                 {
                     if (attr is BotnameChatCommandAttribute bchatAttr)
                     {
-                        _ = this._botnameChatCommandEventHandlers.TryAdd(bchatAttr.Command + (bchatAttr.SubCommand ?? " " + bchatAttr.SubCommand), (ChatCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(ChatCommandReceivedEventHandler), mInfo));
-                        _ = this.RegisterBotnameChatCommand(typeName, bchatAttr.Command);
+                        _ = this._botnameChatCommandEventHandlers.TryAdd((bchatAttr.Command + (bchatAttr.SubCommand ?? " " + bchatAttr.SubCommand)).ToLowerInvariant(), (ChatCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(ChatCommandReceivedEventHandler), mInfo));
+                        _ = this._defaultCommandPermissions.TryAdd((Program.Settings.BotLogin + " " + bchatAttr.Command + (bchatAttr.SubCommand ?? " " + bchatAttr.SubCommand)).ToLowerInvariant(), bchatAttr.Permission);
+                        _ = this.RegisterBotnameChatCommand(typeName, bchatAttr.Command.ToLowerInvariant());
                     }
                     else if (attr is ChatCommandAttribute chatAttr)
                     {
-                        _ = this._chatCommandEventHandlers.TryAdd(chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand), (ChatCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(ChatCommandReceivedEventHandler), mInfo));
-                        _ = this.RegisterChatCommand(typeName, chatAttr.Command);
+                        _ = this._chatCommandEventHandlers.TryAdd((chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand)).ToLowerInvariant(), (ChatCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(ChatCommandReceivedEventHandler), mInfo));
+                        _ = this._defaultCommandPermissions.TryAdd((chatAttr.Command + (chatAttr.SubCommand ?? " " + chatAttr.SubCommand)).ToLowerInvariant(), chatAttr.Permission);
+                        _ = this.RegisterChatCommand(typeName, chatAttr.Command.ToLowerInvariant());
                     }
                     else if (attr is BotnameWhisperCommandAttribute bwhisperAttr)
                     {
-                        _ = this._botnameWhisperCommandEventHandlers.TryAdd(bwhisperAttr.Command + (bwhisperAttr.SubCommand ?? " " + bwhisperAttr.SubCommand), (WhisperCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(WhisperCommandReceivedEventHandler), mInfo));
-                        _ = this.RegisterBotnameWhisperCommand(typeName, bwhisperAttr.Command);
+                        _ = this._botnameWhisperCommandEventHandlers.TryAdd((bwhisperAttr.Command + (bwhisperAttr.SubCommand ?? " " + bwhisperAttr.SubCommand)).ToLowerInvariant(), (WhisperCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(WhisperCommandReceivedEventHandler), mInfo));
+                        _ = this.RegisterBotnameWhisperCommand(typeName, bwhisperAttr.Command.ToLowerInvariant());
                     }
                     else if (attr is WhisperCommandAttribute whisperAttr)
                     {
-                        _ = this._whisperCommandEventHandlers.TryAdd(whisperAttr.Command + (whisperAttr.SubCommand ?? " " + whisperAttr.SubCommand), (WhisperCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(WhisperCommandReceivedEventHandler), mInfo));
-                        _ = this.RegisterWhisperCommand(typeName, whisperAttr.Command);
+                        _ = this._whisperCommandEventHandlers.TryAdd((whisperAttr.Command + (whisperAttr.SubCommand ?? " " + whisperAttr.SubCommand)).ToLowerInvariant(), (WhisperCommandReceivedEventHandler)Delegate.CreateDelegate(typeof(WhisperCommandReceivedEventHandler), mInfo));
+                        _ = this.RegisterWhisperCommand(typeName, whisperAttr.Command.ToLowerInvariant());
                     }
                 }
             }
@@ -323,6 +329,16 @@ namespace StreamActions.Plugin
         private readonly ConcurrentDictionary<string, ChatCommandReceivedEventHandler> _chatCommandEventHandlers = new ConcurrentDictionary<string, ChatCommandReceivedEventHandler>();
 
         /// <summary>
+        /// Stores the <see cref="CommandCooldownDocument"/> of each command.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, CommandCooldownDocument>> _commandCooldowns = new ConcurrentDictionary<string, ConcurrentDictionary<string, CommandCooldownDocument>>();
+
+        /// <summary>
+        /// Stores the provided default permissions of pre-registered commands.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, UserLevel> _defaultCommandPermissions = new ConcurrentDictionary<string, UserLevel>();
+
+        /// <summary>
         /// ConcurrentDictionary of currently loaded plugins.
         /// </summary>
         private readonly ConcurrentDictionary<string, IPlugin> _plugins = new ConcurrentDictionary<string, IPlugin>();
@@ -376,6 +392,37 @@ namespace StreamActions.Plugin
 
         #region Private Methods
 
+        private async Task<CommandCooldownDocument> LoadCooldownAsync(string channelId, string command)
+        {
+            if (!this._commandCooldowns.ContainsKey(channelId))
+            {
+                _ = this._commandCooldowns.TryAdd(channelId, new ConcurrentDictionary<string, CommandCooldownDocument>());
+            }
+
+            if (!this._commandCooldowns[channelId].ContainsKey(command))
+            {
+                IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+
+                FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command);
+
+                if (await commands.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+                {
+                    await commands.InsertOneAsync(new CommandDocument
+                    {
+                        ChannelId = channelId,
+                        Command = command,
+                        UserLevel = this._defaultCommandPermissions[command]
+                    }).ConfigureAwait(false);
+                }
+
+                using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
+                CommandDocument commandDocument = await cursor.FirstAsync().ConfigureAwait(false);
+                _ = this._commandCooldowns[channelId].TryAdd(command, new CommandCooldownDocument(commandDocument.GlobalCooldown, commandDocument.UserCooldown));
+            }
+
+            return this._commandCooldowns[channelId][command];
+        }
+
         /// <summary>
         /// Passes <see cref="OnMessageReceivedArgs"/> on to subscribers of <see cref="OnMessageModeration"/> to determine if a moderation action should be taken.
         /// If the message passes moderation, passes it on to subscribers of <see cref="OnMessageReceived"/> and <see cref="ChatCommandReceivedEventHandler"/> handlers, otherwise,
@@ -405,11 +452,31 @@ namespace StreamActions.Plugin
                  }
              }).ConfigureAwait(false);
 
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 if (harshestModeration.ShouldModerate)
                 {
-                    //TODO: Take the moderation action and send the ModerationMessage to chat if not InLockdown
+                    if (harshestModeration.ShouldBan)
+                    {
+                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".ban " + e.ChatMessage.Username + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
+                    }
+                    else if (harshestModeration.ShouldDelete)
+                    {
+                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".delete " + e.ChatMessage.Username);
+                    }
+                    else if (harshestModeration.ShouldPurge)
+                    {
+                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".timeout " + e.ChatMessage.Username + " 1" + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
+                    }
+                    else if (harshestModeration.ShouldTimeout)
+                    {
+                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".timeout " + e.ChatMessage.Username + " " + harshestModeration.TimeoutSeconds + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
+                    }
+
+                    if (!(harshestModeration.ModerationMessage is null) && !this.InLockdown)
+                    {
+                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, harshestModeration.ModerationMessage);
+                    }
                 }
                 else
                 {
@@ -420,26 +487,50 @@ namespace StreamActions.Plugin
                         ChatCommand chatCommand = new ChatCommand(e.ChatMessage);
                         ChatCommandReceivedEventHandler eventHandler;
 
-                        if (string.Equals(chatCommand.CommandText, Program.Settings.BotLogin, StringComparison.InvariantCultureIgnoreCase))
+                        if (string.Equals(chatCommand.CommandText, Program.Settings.BotLogin, StringComparison.InvariantCultureIgnoreCase) && chatCommand.ArgumentsAsList.Count > 0)
                         {
-                            if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1], out eventHandler))
+                            if (chatCommand.ArgumentsAsList.Count > 1 && this._botnameChatCommandEventHandlers.TryGetValue((chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1]).ToLowerInvariant(), out eventHandler))
                             {
-                                eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                                CommandCooldownDocument cooldownDocument = await this.LoadCooldownAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1]).ToLowerInvariant()).ConfigureAwait(false);
+
+                                if (!cooldownDocument.IsOnCooldown(e.ChatMessage.UserId))
+                                {
+                                    eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                                    cooldownDocument.StartCooldown(e.ChatMessage.UserId);
+                                }
                             }
-                            else if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0], out eventHandler))
+                            else if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0].ToLowerInvariant(), out eventHandler))
                             {
-                                eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                                CommandCooldownDocument cooldownDocument = await this.LoadCooldownAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
+
+                                if (!cooldownDocument.IsOnCooldown(e.ChatMessage.UserId))
+                                {
+                                    eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                                    cooldownDocument.StartCooldown(e.ChatMessage.UserId);
+                                }
                             }
                         }
                         else
                         {
-                            if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0], out eventHandler))
+                            if (chatCommand.ArgumentsAsList.Count > 1 && this._chatCommandEventHandlers.TryGetValue((chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant(), out eventHandler))
                             {
-                                eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                                CommandCooldownDocument cooldownDocument = await this.LoadCooldownAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
+
+                                if (!cooldownDocument.IsOnCooldown(e.ChatMessage.UserId))
+                                {
+                                    eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                                    cooldownDocument.StartCooldown(e.ChatMessage.UserId);
+                                }
                             }
-                            else if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText, out eventHandler))
+                            else if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText.ToLowerInvariant(), out eventHandler))
                             {
-                                eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                                CommandCooldownDocument cooldownDocument = await this.LoadCooldownAsync(e.ChatMessage.RoomId, chatCommand.CommandText.ToLowerInvariant()).ConfigureAwait(false);
+
+                                if (!cooldownDocument.IsOnCooldown(e.ChatMessage.UserId))
+                                {
+                                    eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
+                                    cooldownDocument.StartCooldown(e.ChatMessage.UserId);
+                                }
                             }
                             else
                             {

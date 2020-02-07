@@ -15,56 +15,40 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using StreamActions.GraphQL.Connections;
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Users
 {
     /// <summary>
-    /// A document representing a permission group.
+    /// A document representing user relationships, such as follows.
     /// </summary>
-    public class PermissionGroupDocument : ICursorable
+    public class UserRelationshipDocument
     {
         #region Public Properties
 
         /// <summary>
-        /// The <see cref="UserDocument.Id"/> of the channel this permission group belongs to.
-        /// </summary>
-        [BsonElement]
-        [BsonRequired]
-        public string ChannelId { get; set; }
-
-        /// <summary>
-        /// The name of the permission group.
-        /// </summary>
-        [BsonElement]
-        [BsonRequired]
-        public string GroupName { get; set; }
-
-        /// <summary>
-        /// The Guid for referencing this group in the database.
+        /// The <see cref="UserDocument.Id"/> of the channel whose relationships are expressed in this document.
         /// </summary>
         [BsonElement]
         [BsonRequired]
         [BsonId]
-        public Guid Id { get; set; }
+        public string ChannelId { get; set; }
 
         /// <summary>
-        /// A List of permissions assigned to this group. Permissions not present in the List inherit from other assigned groups,
-        /// and default to implicit deny if no assigned groups allow it.
+        /// A List of known followers. This List may include users who have unfollowed the channel, unless the bot checks and deletes those entries.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public List<PermissionDocument> Permissions { get; } = new List<PermissionDocument>();
+        public List<FollowerDocument> Followers { get; } = new List<FollowerDocument>();
+
+        /// <summary>
+        /// A List of known subscribers. This List may include users who have unsubscribed from the channel or allowed their subscription to lapse, unless the bot
+        /// checks and deletes those entries.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public List<SubscriberDocument> Subscribers { get; } = new List<SubscriberDocument>();
 
         #endregion Public Properties
-
-        #region Public Methods
-
-        public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
-
-        #endregion Public Methods
     }
 }
