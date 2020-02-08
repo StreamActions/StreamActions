@@ -53,7 +53,7 @@ namespace StreamActions.Enums
         Subscriber,
 
         /// <summary>
-        /// Twitch default permissions, nothing a viewer.
+        /// Twitch default permission, nothing a viewer.
         /// </summary>
         Viewer,
 

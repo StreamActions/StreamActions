@@ -15,13 +15,15 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using StreamActions.Enums;
 using System;
+using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents
 {
     public class ModerationDocument
     {
-        #region Public Properties
+        #region Main document Properties
 
         /// <summary>
         /// Id of the channel these settings belong too.
@@ -38,6 +40,108 @@ namespace StreamActions.Database.Documents
         [BsonId]
         public Guid Id { get; set; }
 
-        #endregion Public Properties
+        #endregion Main document Properties
+
+        #region Link Moderation Properties
+
+        /// <summary>
+        /// If users should be able to post clips for this channel even when link moderation is enabled.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool LinkAllowChannelClips { get; set; }
+
+        /// <summary>
+        /// Which roles are excluded from link moderations, note that moderators and above are always excluded.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public UserLevel LinkExcludedLevels { get; set; }
+
+        /// <summary>
+        /// How long a user will be permited to post a link.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(30)]
+        public uint LinkPermitTimeSeconds { get; set; }
+
+        /// <summary>
+        /// If we should moderate links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool LinkStatus { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's second and last offence for using links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string LinkTimeoutMessage { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user second and last offence for using links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment LinkTimeoutPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's second and last offence for using links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string LinkTimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their second and last offence for using links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
+        public uint LinkTimeoutTimeSeconds { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's first offence for using links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string LinkWarningMessage { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user's first offence for using links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment LinkWarningPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's first offence for using links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string LinkWarningReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their first offence for using links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
+        public uint LinkWarningTimeSeconds { get; set; }
+
+        /// <summary>
+        /// List to store all of the whitelists.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public List<string> LinkWhitelist { get; set; }
+
+        #endregion Link Moderation Properties
     }
 }

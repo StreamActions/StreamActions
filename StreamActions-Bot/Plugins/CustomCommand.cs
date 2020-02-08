@@ -115,7 +115,7 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Regular expression used to detect the command format for when adding or editing commands.
         /// </summary>
-        private readonly Regex _commandAddEditRegex = new Regex("(?<command>" + PluginManager.Instance.ChatCommandIdentifier + "\\S{1,})\\s((?<userlevel>(-b|-m|ts|ta|-s|-v|-c))\\s)?(?<response>[\\w\\W]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private readonly Regex _commandAddEditRegex = new Regex("(?<command>" + PluginManager.Instance.ChatCommandIdentifier + "\\S{1,})\\s((?<userlevel>(-b|-m|-ts|-ta|-s|-v|-c))\\s)?(?<response>[\\w\\W]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         /// <summary>
         /// Regular expression used to detect the command format for when removing a command.
