@@ -32,7 +32,7 @@ namespace StreamActions.Attributes
         /// </summary>
         /// <param name="command">The command to detect.</param>
         /// <param name="permission">The default permission required to use the command.</param>
-        public ChatCommandAttribute(string command, UserLevel permission) : base(command, permission)
+        public ChatCommandAttribute(string command, UserLevels permission) : base(command, permission)
         {
         }
 
@@ -42,7 +42,7 @@ namespace StreamActions.Attributes
         /// <param name="command">The command to detect.</param>
         /// <param name="subcommand">The subcommand to detect.</param>
         /// <param name="permission">The default permission required to use the subcommand.</param>
-        public ChatCommandAttribute(string command, string subcommand, UserLevel permission) : base(command, subcommand, permission)
+        public ChatCommandAttribute(string command, string subcommand, UserLevels permission) : base(command, subcommand, permission)
         {
         }
 

@@ -111,7 +111,7 @@ namespace StreamActions
         /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="path">The URI path to check.</param>
         /// <returns>Boolean indicating if the client is connected to the server.</returns>
-        public bool IsClientConnected(string ipPort, string path) => this.IsClientConnected(ipPort) && this._clients[ipPort].RequestUri.OriginalString.StartsWith(path, StringComparison.InvariantCultureIgnoreCase);
+        public bool IsClientConnected(string ipPort, string path) => this.IsClientConnected(ipPort) && this._clients[ipPort].RequestUri.OriginalString.StartsWith(path, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Send data to the specified client, asynchronously.

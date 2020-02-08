@@ -336,7 +336,7 @@ namespace StreamActions.Plugin
         /// <summary>
         /// Stores the provided default permissions of pre-registered commands.
         /// </summary>
-        private readonly ConcurrentDictionary<string, UserLevel> _defaultCommandPermissions = new ConcurrentDictionary<string, UserLevel>();
+        private readonly ConcurrentDictionary<string, UserLevels> _defaultCommandPermissions = new ConcurrentDictionary<string, UserLevels>();
 
         /// <summary>
         /// ConcurrentDictionary of currently loaded plugins.
@@ -487,7 +487,7 @@ namespace StreamActions.Plugin
                         ChatCommand chatCommand = new ChatCommand(e.ChatMessage);
                         ChatCommandReceivedEventHandler eventHandler;
 
-                        if (string.Equals(chatCommand.CommandText, Program.Settings.BotLogin, StringComparison.InvariantCultureIgnoreCase) && chatCommand.ArgumentsAsList.Count > 0)
+                        if (string.Equals(chatCommand.CommandText, Program.Settings.BotLogin, StringComparison.OrdinalIgnoreCase) && chatCommand.ArgumentsAsList.Count > 0)
                         {
                             if (chatCommand.ArgumentsAsList.Count > 1 && this._botnameChatCommandEventHandlers.TryGetValue((chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1]).ToLowerInvariant(), out eventHandler))
                             {
@@ -556,7 +556,7 @@ namespace StreamActions.Plugin
                                                                                                      WhisperCommand whisperCommand = new WhisperCommand(e.WhisperMessage);
                                                                                                      WhisperCommandReceivedEventHandler eventHandler;
 
-                                                                                                     if (string.Equals(whisperCommand.CommandText, Program.Settings.BotLogin, StringComparison.InvariantCultureIgnoreCase))
+                                                                                                     if (string.Equals(whisperCommand.CommandText, Program.Settings.BotLogin, StringComparison.OrdinalIgnoreCase))
                                                                                                      {
                                                                                                          if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0] + " " + whisperCommand.ArgumentsAsList[1], out eventHandler))
                                                                                                          {

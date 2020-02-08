@@ -23,46 +23,46 @@ namespace StreamActions.Enums
     /// This can either be from Twitch or custom made by the user.
     /// </summary>
     [Flags]
-    public enum UserLevel
+    public enum UserLevels
     {
         /// <summary>
         /// Twitch Broadcaster.
         /// </summary>
-        Broadcaster,
+        Broadcaster = 1,
 
         /// <summary>
         /// Twitch Staff.
         /// </summary>
-        TwitchStaff,
+        TwitchStaff = 2,
 
         /// <summary>
         /// Twitch Admin.
         /// </summary>
-        TwitchAdmin,
+        TwitchAdmin = 4,
 
         /// <summary>
         /// Twitch Moderator
         /// </summary>
-        Moderator,
+        Moderator = 8,
 
         /// <summary>
         /// Twitch VIP.
         /// </summary>
-        VIP,
+        VIP = 16,
 
         /// <summary>
         /// Twitch Subscriber.
         /// </summary>
-        Subscriber,
+        Subscriber = 32,
 
         /// <summary>
         /// Twitch default permissions, nothing a viewer.
         /// </summary>
-        Viewer,
+        Viewer = 64,
 
         /// <summary>
         /// Custom level added by the bot user.
         /// </summary>
-        Custom
+        Custom = 128
     }
 }

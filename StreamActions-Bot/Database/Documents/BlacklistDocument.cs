@@ -16,6 +16,7 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.Enums;
+using StreamActions.GraphQL.Connections;
 using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -25,12 +26,12 @@ namespace StreamActions.Database.Documents
     /// <summary>
     /// Used for moderation blacklists.
     /// </summary>
-    public class BlacklistDocument
+    public class BlacklistDocument : ICursorable
     {
         #region Public Properties
 
         /// <summary>
-        /// If of this blacklist.
+        /// Id of this blacklist.
         /// </summary>
         [BsonId]
         [BsonElement]

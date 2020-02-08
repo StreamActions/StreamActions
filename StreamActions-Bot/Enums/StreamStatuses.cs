@@ -22,16 +22,16 @@ namespace StreamActions.Enums
     /// Type of stream status possible
     /// </summary>
     [Flags]
-    public enum StreamStatus
+    public enum StreamStatuses
     {
         /// <summary>
         /// Stream is online.
         /// </summary>
-        Online,
+        Online = 0,
 
         /// <summary>
         /// Stream is offline.
         /// </summary>
-        Offline
+        Offline = 1
     }
 }
