@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace StreamActions.Enums
 {
     /// <summary>
     /// An enum set representing all the different levels of permissions a user can have.
     /// This can either be from Twitch or custom made by the user.
     /// </summary>
+    [Flags]
     public enum UserLevel
     {
         /// <summary>

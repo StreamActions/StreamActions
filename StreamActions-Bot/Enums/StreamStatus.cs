@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace StreamActions.Enums
 {
     /// <summary>
     /// Type of stream status possible
     /// </summary>
+    [Flags]
     public enum StreamStatus
     {
         /// <summary>
