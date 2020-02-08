@@ -46,28 +46,28 @@ namespace StreamActions.Plugin
         /// </summary>
         /// <param name="command">The command name to test.</param>
         /// <returns><c>true</c> if that command already exists under the <c>!botname</c> tree.</returns>
-        public bool DoesBotnameChatCommandExist(string command) => this._registeredBotnameChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+        public bool DoesBotnameChatCommandExist(string command) => this._registeredBotnameChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.OrdinalIgnoreCase)));
 
         /// <summary>
         /// Indicates if the <c>!botname</c> tree already has the provided whisper command registered.
         /// </summary>
         /// <param name="command">The command name to test.</param>
         /// <returns><c>true</c> if that command already exists under the <c>!botname</c> tree.</returns>
-        public bool DoesBotnameWhisperCommandExist(string command) => this._registeredBotnameWhisperCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+        public bool DoesBotnameWhisperCommandExist(string command) => this._registeredBotnameWhisperCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.OrdinalIgnoreCase)));
 
         /// <summary>
         /// Indicates if the provided chat command is already registered.
         /// </summary>
         /// <param name="command">The command name to test.</param>
         /// <returns><c>true</c> if that command already exists.</returns>
-        public bool DoesChatCommandExist(string command) => this._registeredChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+        public bool DoesChatCommandExist(string command) => this._registeredChatCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.OrdinalIgnoreCase)));
 
         /// <summary>
         /// Indicates if the provided whisper command is already registered.
         /// </summary>
         /// <param name="command">The command name to test.</param>
         /// <returns><c>true</c> if that command already exists.</returns>
-        public bool DoesWhisperCommandExist(string command) => this._registeredWhisperCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.InvariantCultureIgnoreCase)));
+        public bool DoesWhisperCommandExist(string command) => this._registeredWhisperCommands.Any(l => l.Value.Any<string>(c => string.Equals(c, command, StringComparison.OrdinalIgnoreCase)));
 
         /// <summary>
         /// Registers a <c>!botname</c> chat command.

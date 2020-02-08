@@ -15,9 +15,9 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using StreamActions.Database.Documents.Permissions;
 using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
+using System;
 using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents.Users
@@ -82,12 +82,11 @@ namespace StreamActions.Database.Documents.Users
         public string Login { get; set; }
 
         /// <summary>
-        /// A Dictionary List of permission group memberships. Key is the channel <see cref="Id"/> where the membership applies; value is a List of <see cref="PermissionGroupDocument.Id"/>
-        /// denoting the groups the users is a member of in that channel.
+        /// A List of permission group memberships.
         /// </summary>
         [BsonElement]
-        [BsonIgnoreIfNull]
-        public List<PermissionGroupMembershipDocument> PermissionGroupMembership { get; } = new List<PermissionGroupMembershipDocument>();
+        [BsonIgnoreIfDefault]
+        public List<Guid> PermissionGroupMembership { get; } = new List<Guid>();
 
         /// <summary>
         /// The users <see cref="TwitchStaff"/>.
@@ -96,6 +95,14 @@ namespace StreamActions.Database.Documents.Users
         [BsonDefaultValue(TwitchStaff.None)]
         [BsonIgnoreIfDefault]
         public TwitchStaff StaffType { get; set; }
+
+        /// <summary>
+        /// The users <see cref="UserLevels"/>.
+        /// </summary>
+        [BsonElement]
+        [BsonDefaultValue(UserLevels.Viewer)]
+        [BsonIgnoreIfDefault]
+        public UserLevels UserLevels { get; set; }
 
         #endregion Public Properties
 

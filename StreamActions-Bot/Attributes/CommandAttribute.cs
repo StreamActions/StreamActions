@@ -32,7 +32,7 @@ namespace StreamActions.Attributes
         /// </summary>
         /// <param name="command">The command to detect, without the <c>!</c>.</param>
         /// <param name="permission">The default permission required to use the command.</param>
-        public CommandAttribute(string command, UserLevel permission)
+        public CommandAttribute(string command, UserLevels permission)
         {
             this.Command = command;
             this.Permission = permission;
@@ -44,7 +44,7 @@ namespace StreamActions.Attributes
         /// <param name="command">The command to detect, without the <c>!</c>.</param>
         /// <param name="subcommand">The subcommand to detect.</param>
         /// <param name="permission">The default permission required to use the subcommand.</param>
-        public CommandAttribute(string command, string subcommand, UserLevel permission)
+        public CommandAttribute(string command, string subcommand, UserLevels permission)
         {
             this.Command = command;
             this.SubCommand = subcommand;
@@ -63,7 +63,7 @@ namespace StreamActions.Attributes
         /// <summary>
         /// The default permission required to use the main command.
         /// </summary>
-        public UserLevel Permission { get; }
+        public UserLevels Permission { get; }
 
         /// <summary>
         /// The subcommand the marked method will handle. <c>null</c> if handling the main command.

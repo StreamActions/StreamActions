@@ -14,21 +14,24 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace StreamActions.Enums
 {
     /// <summary>
     /// Type of stream status possible
     /// </summary>
-    public enum StreamStatus
+    [Flags]
+    public enum StreamStatuses
     {
         /// <summary>
         /// Stream is online.
         /// </summary>
-        Online,
+        Online = 0,
 
         /// <summary>
         /// Stream is offline.
         /// </summary>
-        Offline
+        Offline = 1
     }
 }

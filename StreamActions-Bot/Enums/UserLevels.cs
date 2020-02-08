@@ -14,52 +14,55 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace StreamActions.Enums
 {
     /// <summary>
     /// An enum set representing all the different levels of permissions a user can have.
     /// This can either be from Twitch or custom made by the user.
     /// </summary>
-    public enum UserLevel
+    [Flags]
+    public enum UserLevels
     {
         /// <summary>
         /// Twitch Broadcaster.
         /// </summary>
-        Broadcaster,
+        Broadcaster = 1,
 
         /// <summary>
         /// Twitch Staff.
         /// </summary>
-        TwitchStaff,
+        TwitchStaff = 2,
 
         /// <summary>
         /// Twitch Admin.
         /// </summary>
-        TwitchAdmin,
+        TwitchAdmin = 4,
 
         /// <summary>
         /// Twitch Moderator
         /// </summary>
-        Moderator,
+        Moderator = 8,
 
         /// <summary>
         /// Twitch VIP.
         /// </summary>
-        VIP,
+        VIP = 16,
 
         /// <summary>
         /// Twitch Subscriber.
         /// </summary>
-        Subscriber,
+        Subscriber = 32,
 
         /// <summary>
         /// Twitch default permission, nothing a viewer.
         /// </summary>
-        Viewer,
+        Viewer = 64,
 
         /// <summary>
         /// Custom level added by the bot user.
         /// </summary>
-        Custom
+        Custom = 128
     }
 }

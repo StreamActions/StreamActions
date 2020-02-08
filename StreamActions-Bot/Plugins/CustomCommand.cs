@@ -132,7 +132,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        [ChatCommand("command", "add", UserLevel.Moderator)]
+        [ChatCommand("command", "add", UserLevels.Moderator)]
         private async void CustomCommand_OnAddCommand(object sender, OnChatCommandReceivedArgs e)
         {
             Match commandMatch = this._commandAddEditRegex.Match(e.Command.ArgumentsAsString);
@@ -143,11 +143,11 @@ namespace StreamActions.Plugins
 
                 if (!await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                 {
-                    UserLevel userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
+                    UserLevels userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
                     string response = commandMatch.Groups["response"].Value;
 
                     // TODO: Register the custom role.
-                    if (userLevel == UserLevel.Custom)
+                    if (userLevel == UserLevels.Custom)
                     {
                         // Do something.
                     }
@@ -210,7 +210,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        [ChatCommand("command", "modify", UserLevel.Moderator)]
+        [ChatCommand("command", "modify", UserLevels.Moderator)]
         private async void CustomCommand_OnEditCommand(object sender, OnChatCommandReceivedArgs e)
         {
             Match commandMatch = this._commandAddEditRegex.Match(e.Command.ArgumentsAsString);
@@ -221,11 +221,11 @@ namespace StreamActions.Plugins
 
                 if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                 {
-                    UserLevel userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
+                    UserLevels userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
                     string response = commandMatch.Groups["response"].Value;
 
                     // TODO: Register the custom role.
-                    if (userLevel == UserLevel.Custom)
+                    if (userLevel == UserLevels.Custom)
                     {
                         // Do something.
                     }
@@ -274,7 +274,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
-        [ChatCommand("command", "remove", UserLevel.Moderator)]
+        [ChatCommand("command", "remove", UserLevels.Moderator)]
         private async void CustomCommand_OnRemoveCommand(object sender, OnChatCommandReceivedArgs e)
         {
             Match commandMatch = this._commandRemoveRegex.Match(e.Command.ArgumentsAsString);
@@ -322,16 +322,16 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="tag">One of the user level tags below.</param>
         /// <returns>The user level.</returns>
-        private UserLevel GetUserLevelFromTag(string tag) => tag switch
+        private UserLevels GetUserLevelFromTag(string tag) => tag switch
         {
-            "-b" => UserLevel.Broadcaster,
-            "-tf" => UserLevel.TwitchStaff,
-            "-ta" => UserLevel.TwitchAdmin,
-            "-m" => UserLevel.Moderator,
-            "-s" => UserLevel.Subscriber,
-            "-v" => UserLevel.VIP,
-            "-c" => UserLevel.Custom,
-            _ => UserLevel.Viewer
+            "-b" => UserLevels.Broadcaster,
+            "-tf" => UserLevels.TwitchStaff,
+            "-ta" => UserLevels.TwitchAdmin,
+            "-m" => UserLevels.Moderator,
+            "-s" => UserLevels.Subscriber,
+            "-v" => UserLevels.VIP,
+            "-c" => UserLevels.Custom,
+            _ => UserLevels.Viewer
         };
 
         #endregion Private Methods

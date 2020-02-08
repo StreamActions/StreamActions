@@ -35,8 +35,8 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
-        [BsonDefaultValue(StreamStatus.Offline | StreamStatus.Online)]
-        public StreamStatus AvailableWhen { get; set; }
+        [BsonDefaultValue(StreamStatuses.Offline | StreamStatuses.Online)]
+        public StreamStatuses AvailableWhen { get; set; }
 
         /// <summary>
         /// The <see cref="UserDocument.Id"/> of the channel this command belongs to.
@@ -120,7 +120,7 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonRequired]
-        public UserLevel UserLevel { get; set; }
+        public UserLevels UserLevel { get; set; }
 
         #endregion Public Properties
 
