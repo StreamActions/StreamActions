@@ -57,7 +57,7 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public UserLevel LinkExcludedLevels { get; set; }
+        public UserLevels LinkExcludedLevels { get; set; }
 
         /// <summary>
         /// How long a user will be permited to post a link.
