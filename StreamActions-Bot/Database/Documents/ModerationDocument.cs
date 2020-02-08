@@ -42,6 +42,17 @@ namespace StreamActions.Database.Documents
 
         #endregion Main document Properties
 
+        #region Blacklist Moderation Properties
+
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        /// <summary>
+        /// Where all channel blacklists are stored.
+        /// </summary>
+        public List<BlacklistDocument> Blacklist { get; set; }
+
+        #endregion Blacklist Moderation Properties
+
         #region Link Moderation Properties
 
         /// <summary>
