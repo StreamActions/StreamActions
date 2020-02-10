@@ -436,7 +436,6 @@ namespace StreamActions.Plugin
 
             await Task.Run(() =>
              {
-                 int numModeration = 0;
                  if (OnMessageModeration != null)
                  {
                      foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
@@ -447,8 +446,6 @@ namespace StreamActions.Plugin
                              harshestModeration = rs;
                          }
                      }
-
-                     numModeration = OnMessageModeration.GetInvocationList().Length;
                  }
              }).ConfigureAwait(false);
 
@@ -462,7 +459,7 @@ namespace StreamActions.Plugin
                     }
                     else if (harshestModeration.ShouldDelete)
                     {
-                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".delete " + e.ChatMessage.Username);
+                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".delete " + e.ChatMessage.Id);
                     }
                     else if (harshestModeration.ShouldPurge)
                     {
