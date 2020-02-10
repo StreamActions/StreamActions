@@ -100,28 +100,39 @@ namespace StreamActions.Plugins
 
         /// <summary>
         /// Regular expression that is used for getting the number of capital letters in a string.
+        /// Example: I AM YELLING!
         /// </summary>
         private readonly Regex _capsRegex = new Regex(@"[A-Z]", RegexOptions.Compiled);
 
         /// <summary>
+        /// Regular expression that is used to getting the number of repeating characters in a string.
+        /// Example: aaaaaaaaaaaaaaaaaaaaaaaa
+        /// </summary>
+        private readonly Regex _characterRepetitionRegex = new Regex(@"(\S)\1+", RegexOptions.Compiled);
+
+        /// <summary>
         /// Regular expression that is used for getting the amount of grouped symbols in a string.
+        /// Example: #$#$#$#$#$#$#$#$#$#$$#$#$$##### how are you ???????????????
         /// </summary>
         private readonly Regex _groupedSymbolsRegex = new Regex(@"([-!$%#^&*()_+|~=`{}\[\]:'<>?,.\/\\;""])\1+", RegexOptions.Compiled);
 
         /// <summary>
         /// Regular expression that is for finding URLs in a string.
+        /// Example: google.com
         /// </summary>
         private readonly Regex _linkRegex = new Regex(@"((?:(http|https|rtsp):\/\/(?:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,64}(?:\:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,25})?\@)?)?((?:(?:[a-z0-9][a-z0-9\-]{0,64}\.)+(?:(?:aero|a[cdefgilmnoqrstuwxz])|(?:biz|bike|bot|b[abdefghijmnorstvwyz])|(?:com|c[acdfghiklmnoruvxyz])|d[ejkmoz]|(?:edu|e[cegrstu])|(?:fyi|f[ijkmor])|(?:gov|g[abdefghilmnpqrstuwy])|(?:how|h[kmnrtu])|(?:info|i[delmnoqrst])|(?:jobs|j[emop])|k[eghimnrwyz]|l[abcikrstuvy]|(?:mil|mobi|moe|m[acdeghklmnopqrstuvwxyz])|(?:name|net|n[acefgilopruz])|(?:org|om)|(?:pro|p[aefghklmnrstwy])|qa|(?:r[eouw])|(?:s[abcdeghijklmnortuvyz])|(?:t[cdfghjklmnoprtvwz])|u[agkmsyz]|(?:vote|v[ceginu])|(?:xxx)|(?:watch|w[fs])|y[etu]|z[amw]))|(?:(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])))(?:\:\d{1,5})?)(\/(?:(?:[a-z0-9\;\/\?\:\@\&\=\#\~\-\.\+\!\*\\\'\(\)\,\_])|(?:\%[a-fA-F0-9]{2}))*)?(?:\b|$)|(\.[a-z]+\/|magnet:\/\/|mailto:\/\/|ed2k:\/\/|irc:\/\/|ircs:\/\/|skype:\/\/|ymsgr:\/\/|xfire:\/\/|steam:\/\/|aim:\/\/|spotify:\/\/)", RegexOptions.Compiled);
 
         /// <summary>
-        /// Regular expression that is used to getting the number of repeating characters or words in a string.
-        /// </summary>
-        private readonly Regex _repetitionRegex = new Regex(@"(\S+\s*)\1+", RegexOptions.Compiled);
-
-        /// <summary>
         /// Regular expression that is used for getting the number of symbols in a string.
+        /// Example: ^^^^#%#%#^#^##*#
         /// </summary>
         private readonly Regex _symbolsRegex = new Regex(@"[-!$%#^&*()_+|~=`{}\[\]:'<>?,.\/\\;""]", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regular expression that is used to getting the number of repeating words in a string.
+        /// Example: hi hi hi hi hi hi hi
+        /// </summary>
+        private readonly Regex _wordRepetitionRegex = new Regex(@"(\S+\s)\1+", RegexOptions.Compiled);
 
         /// <summary>
         /// Regular expression that is used for getting the number of zalgo/boxed/disruptive symbols in a string.
@@ -133,18 +144,25 @@ namespace StreamActions.Plugins
         #region Filter check methods
 
         /// <summary>
-        /// Method that will return the longest sequence amount of repeating characters or words in the message.
+        /// Method that will return the longest sequence amount of repeating characters in the message.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
-        /// <returns>Length of longest sequence repeating characters and words in the message.</returns>
-        private int GetLongestSequenceOfRepeatingCharacters(string message) => this._repetitionRegex.Matches(message).Max(m => m.Length);
+        /// <returns>Length of longest sequence repeating characters in the message.</returns>
+        private int GetLongestSequenceOfRepeatingCharacters(string message) => this._characterRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m == null ? 0 : m.Length));
 
         /// <summary>
         /// Method that will return the longest sequence amount of repeating symbol in the message.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>Length of longest sequence repeating symbols in the message.</returns>
-        private int GetLongestSequenceOfRepeatingSymbols(string message) => this._groupedSymbolsRegex.Matches(message).Max(m => m.Length);
+        private int GetLongestSequenceOfRepeatingSymbols(string message) => this._groupedSymbolsRegex.Matches(message).DefaultIfEmpty().Max(m => (m == null ? 0 : m.Length));
+
+        /// <summary>
+        /// Method that will return the longest sequence amount of repeating wrods in the message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Length of longest sequence repeating words in the message.</returns>
+        private int GetLongestSequenceOfRepeatingWords(string message) => this._wordRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m == null ? 0 : m.Value.Split(' ').Length));
 
         /// <summary>
         /// Method that gets the length of a message
@@ -158,7 +176,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>Number of caps in the message.</returns>
-        private int GetNumberOfCaps(string message) => this._capsRegex.Matches(message).Sum(m => m.Length);
+        private int GetNumberOfCaps(string message) => this._capsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m == null ? 0 : m.Length));
 
         /// <summary>
         /// Method that gets the number of emotes in a message.
@@ -172,7 +190,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>Number of symbols in the message.</returns>
-        private int GetNumberOfSymbols(string message) => this._symbolsRegex.Matches(message).Sum(m => m.Length);
+        private int GetNumberOfSymbols(string message) => this._symbolsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m == null ? 0 : m.Length));
 
         /// <summary>
         /// Method that checks if the message has a fake purge.

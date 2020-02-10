@@ -53,6 +53,18 @@ namespace StreamActions.Database.Documents
 
         #endregion Blacklist Moderation Properties
 
+        #region Global Moderation Properties
+
+        /// <summary>
+        /// The cooldown time in seconds for moderation message to be said in chat. Min: 15s
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(30)]
+        public uint ModerationMessageCooldownSeconds { get; set; }
+
+        #endregion Global Moderation Properties
+
         #region Link Moderation Properties
 
         /// <summary>
@@ -94,6 +106,14 @@ namespace StreamActions.Database.Documents
         public string LinkTimeoutMessage { get; set; }
 
         /// <summary>
+        /// If a warning message should be said on a user's second and last offence for links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool LinkTimeoutMessageStatus { get; set; }
+
+        /// <summary>
         /// Type of punishment given for a user second and last offence for using links.
         /// </summary>
         [BsonElement]
@@ -122,6 +142,14 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfNull]
         public string LinkWarningMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's first offence for links.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool LinkWarningMessageStatus { get; set; }
 
         /// <summary>
         /// Type of punishment given for a user's first offence for using links.
@@ -154,5 +182,235 @@ namespace StreamActions.Database.Documents
         public List<string> LinkWhitelist { get; set; }
 
         #endregion Link Moderation Properties
+
+        #region Cap Moderation Properties
+
+        /// <summary>
+        /// Which roles are excluded from caps moderations, note that moderators and above are always excluded.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public UserLevels CapExcludedLevels { get; set; }
+
+        /// <summary>
+        /// The maximum percentage of caps allowed in a message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(50)]
+        public uint CapMaximumPercentage { get; set; }
+
+        /// <summary>
+        /// How many characters are required before checking a message for caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(15)]
+        public uint CapMinimumMessageLength { get; set; }
+
+        /// <summary>
+        /// If we should moderate caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool CapStatus { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's second and last offence for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string CapTimeoutMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's second and last offence for caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool CapTimeoutMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user second and last offence for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment CapTimeoutPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's second and last offence for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string CapTimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their second and last offence for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
+        public uint CapTimeoutTimeSeconds { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's first offence for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string CapWarningMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's first offence for caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool CapWarningMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user's first offence for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment CapWarningPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's first offence for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string CapWarningReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their first offence for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
+        public uint CapWarningTimeSeconds { get; set; }
+
+        #endregion Cap Moderation Properties
+
+        #region Repetition Moderation Properties
+
+        /// <summary>
+        /// Maximum number of allowed repeating characters in a message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(10)]
+        public uint RepetionMaximumRepeatingCharacters { get; set; }
+
+        /// <summary>
+        /// Maximum number of allowed repeating words next to each other.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
+        public uint RepetionMaximumRepeatingWords { get; set; }
+
+        /// <summary>
+        /// Which roles are excluded from repetition moderations, note that moderators and above are always excluded.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public UserLevels RepetitionExcludedLevels { get; set; }
+
+        /// <summary>
+        /// Minimum message length before checking for repetition.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(15)]
+        public uint RepetitionMinimumMessageLength { get; set; }
+
+        /// <summary>
+        /// If we should moderate repetition.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool RepetitionStatus { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's second and last offence for repetition in the message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string RepetitionTimeoutMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's second and last offence for repetition.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool RepetitionTimeoutMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user second and last offence for repetition in the message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment RepetitionTimeoutPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's second and last offence for repetition in the message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string RepetitionTimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their second and last offence for repetition in the message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
+        public uint RepetitionTimeoutTimeSeconds { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's first offence for repetition in the message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string RepetitionWarningMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's first offence for repetition.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool RepetitionWarningMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user's first offence for repetition in the message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment RepetitionWarningPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's first offence for repetition in the message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string RepetitionWarningReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their first offence for repetition in the message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
+        public uint RepetitionWarningTimeSeconds { get; set; }
+
+        #endregion Repetition Moderation Properties
     }
 }

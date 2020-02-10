@@ -31,6 +31,58 @@ namespace StreamActions.Database.Documents
         #region Public Properties
 
         /// <summary>
+        /// Message said in chat when the user uses the blacklisted phrase.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string BlacklistMessage { get; set; }
+
+        /// <summary>
+        /// If a message should be said in chat when someone uses the blacklist.
+        /// </summary>
+        [BsonElement]
+        [BsonDefaultValue(true)]
+        [BsonIgnoreIfDefault]
+        public bool BlacklistMessageStatus { get; set; }
+
+        /// <summary>
+        /// Phrase that is blacklisted, is null when IsRegex is true.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string BlacklistPhrase { get; set; }
+
+        /// <summary>
+        /// Type of punishment given when using this phrase.
+        /// </summary>
+        [BsonElement]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        [BsonIgnoreIfDefault]
+        public ModerationPunishment BlacklistPunishment { get; set; }
+
+        /// <summary>
+        /// Regex phrase that is blacklisted, is null when IsRegex is false.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public Regex BlacklistRegexPhrase { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string BlacklistTimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long the user should be timed-out for when using this phrase, this is null when the punishment is <see cref="ModerationPunishment.Delete"/> or <see cref="ModerationPunishment.Ban"/>.
+        /// </summary>
+        [BsonElement]
+        [BsonDefaultValue(600)]
+        [BsonIgnoreIfDefault]
+        public uint BlacklistTimeoutTimeSeconds { get; set; }
+
+        /// <summary>
         /// Id of this blacklist.
         /// </summary>
         [BsonId]
@@ -45,35 +97,6 @@ namespace StreamActions.Database.Documents
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(false)]
         public bool IsRegex { get; set; }
-
-        /// <summary>
-        /// Phrase that is blacklisted, is null when IsRegex is true.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string Phrase { get; set; }
-
-        /// <summary>
-        /// Type of punishment given when using this phrase.
-        /// </summary>
-        [BsonElement]
-        [BsonRequired]
-        public ModerationPunishment Punishment { get; set; }
-
-        /// <summary>
-        /// Regex phrase that is blacklisted, is null when IsRegex is false.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public Regex RegexPhrase { get; set; }
-
-        /// <summary>
-        /// How long the user should be timed-out for when using this phrase, this is null when the punishment is <see cref="ModerationPunishment.Delete"/> or <see cref="ModerationPunishment.Ban"/>.
-        /// </summary>
-        [BsonElement]
-        [BsonDefaultValue(600)]
-        [BsonIgnoreIfDefault]
-        public uint TimeoutTimeSeconds { get; set; }
 
         #endregion Public Properties
 
