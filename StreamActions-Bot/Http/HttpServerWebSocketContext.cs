@@ -100,7 +100,7 @@ namespace StreamActions.Http
 
         private static IPrincipal CopyPrincipal(IPrincipal user)
         {
-            if (user != null)
+            if (!(user is null))
             {
                 if (user is GenericPrincipal)
                 {

@@ -40,7 +40,7 @@ namespace StreamActions.Plugin
         {
             string assemblyPath = this._resolver.ResolveAssemblyToPath(assemblyName);
 
-            return assemblyPath != null ? this.LoadFromAssemblyPath(assemblyPath) : null;
+            return !(assemblyPath is null) ? this.LoadFromAssemblyPath(assemblyPath) : null;
         }
 
         #endregion Protected Methods

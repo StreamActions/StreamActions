@@ -235,7 +235,7 @@ namespace StreamActions.Plugin
 
             List<string> lockdownPlugins = new List<string>();
 
-            if (OnMessageModeration != null)
+            if (!(OnMessageModeration is null))
             {
                 foreach (Delegate d in OnMessageModeration.GetInvocationList())
                 {
@@ -444,7 +444,7 @@ namespace StreamActions.Plugin
 
             await Task.Run(() =>
              {
-                 if (OnMessageModeration != null)
+                 if (!(OnMessageModeration is null))
                  {
                      foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
                      {

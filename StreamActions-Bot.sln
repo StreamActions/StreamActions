@@ -8,6 +8,30 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FACD7079-AFA7-4323-8616-47C32618F81B}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		CODE_OF_CONDUCT.md = CODE_OF_CONDUCT.md
+		CONTRIBUTING.md = CONTRIBUTING.md
+		LICENSE = LICENSE
+		README.md = README.md
+		SECURITY.md = SECURITY.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{053F4217-0F28-42B3-82C0-9DF0A45FC07B}"
+	ProjectSection(SolutionItems) = preProject
+		.github\pull_request_template.md = .github\pull_request_template.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ISSUE_TEMPLATE", "ISSUE_TEMPLATE", "{1DD9B026-7091-40A7-A894-30AB112B0BAB}"
+	ProjectSection(SolutionItems) = preProject
+		.github\ISSUE_TEMPLATE\bug_report.md = .github\ISSUE_TEMPLATE\bug_report.md
+		.github\ISSUE_TEMPLATE\feature_request.md = .github\ISSUE_TEMPLATE\feature_request.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PULL_REQUEST_TEMPLATE", "PULL_REQUEST_TEMPLATE", "{6B032988-4562-4B7D-9C3B-4126CAB7814A}"
+	ProjectSection(SolutionItems) = preProject
+		.github\PULL_REQUEST_TEMPLATE\bug_fix.md = .github\PULL_REQUEST_TEMPLATE\bug_fix.md
+		.github\PULL_REQUEST_TEMPLATE\documentation.md = .github\PULL_REQUEST_TEMPLATE\documentation.md
+		.github\PULL_REQUEST_TEMPLATE\feature_change.md = .github\PULL_REQUEST_TEMPLATE\feature_change.md
+		.github\PULL_REQUEST_TEMPLATE\performance_improvement.md = .github\PULL_REQUEST_TEMPLATE\performance_improvement.md
 	EndProjectSection
 EndProject
 Global
@@ -23,6 +47,11 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{053F4217-0F28-42B3-82C0-9DF0A45FC07B} = {FACD7079-AFA7-4323-8616-47C32618F81B}
+		{1DD9B026-7091-40A7-A894-30AB112B0BAB} = {053F4217-0F28-42B3-82C0-9DF0A45FC07B}
+		{6B032988-4562-4B7D-9C3B-4126CAB7814A} = {053F4217-0F28-42B3-82C0-9DF0A45FC07B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D82579FF-6BEE-4F68-B17C-C4635780B6AF}

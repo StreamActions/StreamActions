@@ -19,6 +19,7 @@ The following is a set of guidelines and rules for contributing to StreamActions
 [Styleguides](#styleguides)
   * [Git Commit Messages](#git-commit-messages)
   * [C# Styleguide](#c-styleguide)
+  * [MongoDB Styleguide](#mongodb-styleguide)
 
 [Additional Notes](#additional-notes)
   * [Issue and Pull Request Labels](#issue-and-pull-request-labels)
@@ -203,6 +204,9 @@ All C# must adhere to [Microsoft .NET Framework Design Guidelines](https://docs.
 * Use `is null` for reference equality checks
 * Prefer `readonly` fields
 * Avoid unused parameters
+* Only suppress warnings when absolutely necessary
+* Use the _Attribute (in source)_ method for suppression unless there is a really good reason to globally suppress the issue
+* All suppressions must have valid justification provided in the _Justification_ parameter of the attribute
 
 #### Spacing, Indenting, New Lines
 * No trailing whitespace
@@ -246,6 +250,13 @@ To make following the C# styleguide easier, we recommend using [Visual Studio 20
  
  NOTE: Our CodeMaid config will only regionize and then re-order regions the first time the file is saved. You must use the _Remove All Regions (CTRL+M, R)_ feature to remove regions, then re-save to have it run again.
  
+### MongoDB Styleguide
+* Collection names should be the plural name of the document in camelCase, with the word _Document_ removed (eg. The collection for _PermissionGroupDocument_ is named _permissionGroups_)
+* Index names should be in the format of _DocumentName\_indexType\_Field1-Field2-etc_ (eg. _PermissionGroupDocument\_unique\_ChannelId-GroupName_)
+* If the document can only exist once for a given user or channel, make the _id_ field _string UserId_, otherwise, make the _id_ field _Guid Id_ and then have a separate _string UserId_ field with a unique index on it
+    * Exact naming of the _string UserId_ field can be chosen based on context, such as _ChannelId_ for a channel context or _FollowerId_ for a follower context
+* Only create indexes across fields that will regularly be used in the _WHERE_, _SORT_, or _GROUP BY_ clauses
+
 ## Additional Notes
 
 ### Issue and Pull Request Labels
@@ -265,6 +276,7 @@ This section lists the labels we use to help us track and manage issues and pull
 | `help wanted` | [search][search-streamactions-repo-label-help-wanted] | Extra attention is needed |
 | `invalid` | [search][search-streamactions-repo-label-invalid] | This doesn't seem right |
 | `question` | [search][search-streamactions-repo-label-question] | Further information is requested |
+| `performance` | [search][search-streamactions-repo-label-performance] | Something is too slow or wasting resources |
 | `refactor` | [search][search-streamactions-repo-label-refactor] | Time to rewrite it |
 | `testing` | [search][search-streamactions-repo-label-testing] | Something needs testing |
 | `wontfix` | [search][search-streamactions-repo-label-wontfix] | This will not be worked on |
@@ -279,6 +291,7 @@ The formatting and text of portions of this _CONTRIBUTING_ document have been co
 [search-streamactions-repo-label-help-wanted]: https://github.com/search?q=is%3Aopen+is%3Aissue+repo%3AStreamActions%2FStreamActions-Bot+label%3Ahelp%20wanted
 [search-streamactions-repo-label-invalid]: https://github.com/search?q=is%3Aopen+is%3Aissue+repo%3AStreamActions%2FStreamActions-Bot+label%3Ainvalid
 [search-streamactions-repo-label-question]: https://github.com/search?q=is%3Aopen+is%3Aissue+repo%3AStreamActions%2FStreamActions-Bot+label%3Aquestion
+[search-streamactions-repo-label-performance]: https://github.com/search?q=is%3Aopen+is%3Aissue+repo%3AStreamActions%2FStreamActions-Bot+label%3Aperformance
 [search-streamactions-repo-label-refactor]: https://github.com/search?q=is%3Aopen+is%3Aissue+repo%3AStreamActions%2FStreamActions-Bot+label%3Arefactor
 [search-streamactions-repo-label-testing]: https://github.com/search?q=is%3Aopen+is%3Aissue+repo%3AStreamActions%2FStreamActions-Bot+label%3Atesting
 [search-streamactions-repo-label-wontfix]: https://github.com/search?q=is%3Aopen+is%3Aissue+repo%3AStreamActions%2FStreamActions-Bot+label%3Awontfix

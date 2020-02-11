@@ -148,21 +148,21 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>Length of longest sequence repeating characters in the message.</returns>
-        private int GetLongestSequenceOfRepeatingCharacters(string message) => this._characterRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m == null ? 0 : m.Length));
+        private int GetLongestSequenceOfRepeatingCharacters(string message) => this._characterRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Length));
 
         /// <summary>
         /// Method that will return the longest sequence amount of repeating symbol in the message.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>Length of longest sequence repeating symbols in the message.</returns>
-        private int GetLongestSequenceOfRepeatingSymbols(string message) => this._groupedSymbolsRegex.Matches(message).DefaultIfEmpty().Max(m => (m == null ? 0 : m.Length));
+        private int GetLongestSequenceOfRepeatingSymbols(string message) => this._groupedSymbolsRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Length));
 
         /// <summary>
         /// Method that will return the longest sequence amount of repeating wrods in the message.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>Length of longest sequence repeating words in the message.</returns>
-        private int GetLongestSequenceOfRepeatingWords(string message) => this._wordRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m == null ? 0 : m.Value.Split(' ').Length));
+        private int GetLongestSequenceOfRepeatingWords(string message) => this._wordRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Value.Split(' ').Length));
 
         /// <summary>
         /// Method that gets the length of a message
@@ -176,7 +176,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>Number of caps in the message.</returns>
-        private int GetNumberOfCaps(string message) => this._capsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m == null ? 0 : m.Length));
+        private int GetNumberOfCaps(string message) => this._capsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m is null ? 0 : m.Length));
 
         /// <summary>
         /// Method that gets the number of emotes in a message.
@@ -190,7 +190,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>Number of symbols in the message.</returns>
-        private int GetNumberOfSymbols(string message) => this._symbolsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m == null ? 0 : m.Length));
+        private int GetNumberOfSymbols(string message) => this._symbolsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m is null ? 0 : m.Length));
 
         /// <summary>
         /// Method that checks if the message has a fake purge.

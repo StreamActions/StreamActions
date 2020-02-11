@@ -412,7 +412,7 @@ namespace StreamActions
                         context.CancellationTokenSource = killTokenSource;
                         context.CancellationToken = killToken;
 
-                        if (context == null)
+                        if (context is null)
                         {
                             request.Dispose();
                             killTokenSource.Dispose();
