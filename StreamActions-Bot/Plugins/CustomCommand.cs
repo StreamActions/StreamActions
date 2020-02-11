@@ -73,16 +73,16 @@ namespace StreamActions.Plugins
         /// <returns>The <see cref="CommandDocument"/> for the command, if it exists; <c>null</c> otherwise.</returns>
         public static async Task<CommandDocument> GetCustomCommandAsync(string channelId, string command)
         {
-            IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
             FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command.ToLowerInvariant());
 
-            if (await commands.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+            if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
             {
                 return null;
             }
 
-            using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
+            using IAsyncCursor<CommandDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
 
             return await cursor.FirstAsync().ConfigureAwait(false);
         }
@@ -94,10 +94,10 @@ namespace StreamActions.Plugins
         /// <returns>A List of <see cref="CommandDocument"/>.</returns>
         public static async Task<List<CommandDocument>> ListCustomCommandsAsync(string channelId)
         {
-            IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
             FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId);
-            using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
+            using IAsyncCursor<CommandDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
 
             return await cursor.ToListAsync().ConfigureAwait(false);
         }
@@ -152,7 +152,7 @@ namespace StreamActions.Plugins
                         // Do something.
                     }
 
-                    IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
                     CommandDocument commandDocument = new CommandDocument
                     {
@@ -162,7 +162,7 @@ namespace StreamActions.Plugins
                         UserLevel = userLevel
                     };
 
-                    await commands.InsertOneAsync(commandDocument).ConfigureAwait(false);
+                    await collection.InsertOneAsync(commandDocument).ConfigureAwait(false);
 
                     // Command added.
                     TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
@@ -230,19 +230,19 @@ namespace StreamActions.Plugins
                         // Do something.
                     }
 
-                    IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
                     // Update the document.
-                    UpdateDefinition<CommandDocument> commandUpdate = Builders<CommandDocument>.Update.Set(c => c.Response, response);
+                    UpdateDefinition<CommandDocument> update = Builders<CommandDocument>.Update.Set(c => c.Response, response);
                     FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == command);
 
                     // Update permission if the user specified it.
                     if (!string.IsNullOrEmpty(commandMatch.Groups["userlevel"].Value))
                     {
-                        _ = commandUpdate.Set(c => c.UserLevel, userLevel);
+                        _ = update.Set(c => c.UserLevel, userLevel);
                     }
 
-                    _ = await commands.UpdateOneAsync(filter, commandUpdate).ConfigureAwait(false);
+                    _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                     // Command modified.
                     TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
@@ -285,11 +285,11 @@ namespace StreamActions.Plugins
 
                 if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                 {
-                    IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
                     FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == command);
 
-                    _ = await commands.DeleteOneAsync(filter).ConfigureAwait(false);
+                    _ = await collection.DeleteOneAsync(filter).ConfigureAwait(false);
                     //TODO: Unregister custom permission
 
                     // Command removed.

@@ -41,8 +41,8 @@ namespace StreamActions.Database.Documents
         /// If a message should be said in chat when someone uses the blacklist.
         /// </summary>
         [BsonElement]
-        [BsonDefaultValue(true)]
         [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
         public bool BlacklistMessageStatus { get; set; }
 
         /// <summary>
@@ -56,8 +56,8 @@ namespace StreamActions.Database.Documents
         /// Type of punishment given when using this phrase.
         /// </summary>
         [BsonElement]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
         [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
         public ModerationPunishment BlacklistPunishment { get; set; }
 
         /// <summary>
@@ -75,19 +75,19 @@ namespace StreamActions.Database.Documents
         public string BlacklistTimeoutReason { get; set; }
 
         /// <summary>
-        /// How long the user should be timed-out for when using this phrase, this is null when the punishment is <see cref="ModerationPunishment.Delete"/> or <see cref="ModerationPunishment.Ban"/>.
+        /// How long the user should be timed-out for when using this phrase, if the punishment is set to <see cref="ModerationPunishment.Timeout"/>.
         /// </summary>
         [BsonElement]
-        [BsonDefaultValue(600)]
         [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
         public uint BlacklistTimeoutTimeSeconds { get; set; }
 
         /// <summary>
         /// Id of this blacklist.
         /// </summary>
-        [BsonId]
         [BsonElement]
         [BsonRequired]
+        [BsonId]
         public Guid Id { get; set; }
 
         /// <summary>

@@ -15,6 +15,7 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using StreamActions.Database.Documents.Users;
 using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
@@ -26,7 +27,7 @@ namespace StreamActions.Database.Documents
     /// <summary>
     /// A document structure representing a command.
     /// </summary>
-    public class CommandDocument : ICursorable
+    public class CommandDocument : ICursorable, IDocument
     {
         #region Public Properties
 
@@ -127,6 +128,21 @@ namespace StreamActions.Database.Documents
         #region Public Methods
 
         public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
+
+        public async void Initialize()
+        {
+            IMongoCollection<CommandDocument> collection = Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IndexKeysDefinitionBuilder<CommandDocument> indexBuilder = Builders<CommandDocument>.IndexKeys;
+
+            try
+            {
+                CreateIndexModel<CommandDocument> indexModel = new CreateIndexModel<CommandDocument>(indexBuilder.Ascending(d => d.ChannelId).Ascending(d => d.Command),
+                    new CreateIndexOptions { Name = "CommandDocument_unique_ChannelId-Command", Unique = true });
+                _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
+            }
+            catch (MongoWriteConcernException)
+            { }
+        }
 
         #endregion Public Methods
     }

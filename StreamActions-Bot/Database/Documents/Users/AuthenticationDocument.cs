@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 
 namespace StreamActions.Database.Documents.Users
 {
     /// <summary>
     /// A document containing authentication information for a Twitch user.
     /// </summary>
-    public class AuthenticationDocument
+    public class AuthenticationDocument : IDocument
     {
         #region Public Properties
 
@@ -48,5 +50,24 @@ namespace StreamActions.Database.Documents.Users
         public string UserId { get; set; }
 
         #endregion Public Properties
+
+        #region Public Methods
+
+        public async void Initialize()
+        {
+            IMongoCollection<AuthenticationDocument> collection = Database.Instance.MongoDatabase.GetCollection<AuthenticationDocument>("authentications");
+            IndexKeysDefinitionBuilder<AuthenticationDocument> indexBuilder = Builders<AuthenticationDocument>.IndexKeys;
+
+            try
+            {
+                CreateIndexModel<AuthenticationDocument> indexModel = new CreateIndexModel<AuthenticationDocument>(indexBuilder.Ascending(d => d.GraphQLBearer),
+                    new CreateIndexOptions { Name = "AuthenticationDocument_unique_GraphQLBearer", Unique = true });
+                _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
+            }
+            catch (MongoWriteConcernException)
+            { }
+        }
+
+        #endregion Public Methods
     }
 }

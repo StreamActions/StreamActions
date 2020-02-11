@@ -28,6 +28,7 @@ using StreamActions.MemoryDocuments;
 using StreamActions.Database.Documents;
 using MongoDB.Driver;
 using StreamActions.Enums;
+using StreamActions.Database;
 
 namespace StreamActions.Plugin
 {
@@ -285,6 +286,13 @@ namespace StreamActions.Plugin
 
                         _ = this._plugins.TryAdd(type.FullName, result);
                         this.EnablePlugin(type.FullName);
+                    }
+                }
+                else if (typeof(IDocument).IsAssignableFrom(type) && type.IsClass && !type.IsAbstract)
+                {
+                    if (Activator.CreateInstance(type) is IDocument result)
+                    {
+                        result.Initialize();
                     }
                 }
             }

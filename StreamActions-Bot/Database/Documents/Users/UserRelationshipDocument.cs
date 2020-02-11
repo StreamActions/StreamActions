@@ -27,7 +27,7 @@ namespace StreamActions.Database.Documents.Users
         #region Public Properties
 
         /// <summary>
-        /// The <see cref="UserDocument.Id"/> of the channel whose relationships are expressed in this document.
+        /// The <see cref="UserRelationshipDocument.Id"/> of the channel whose relationships are expressed in this document.
         /// </summary>
         [BsonElement]
         [BsonRequired]

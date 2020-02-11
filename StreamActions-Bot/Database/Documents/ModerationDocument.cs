@@ -15,13 +15,14 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using StreamActions.Enums;
 using System;
 using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents
 {
-    public class ModerationDocument
+    public class ModerationDocument : IDocument
     {
         #region Main document Properties
 
@@ -49,7 +50,7 @@ namespace StreamActions.Database.Documents
         /// <summary>
         /// Where all channel blacklists are stored.
         /// </summary>
-        public List<BlacklistDocument> Blacklist { get; set; }
+        public List<BlacklistDocument> Blacklist { get; } = new List<BlacklistDocument>();
 
         #endregion Blacklist Moderation Properties
 
@@ -83,7 +84,7 @@ namespace StreamActions.Database.Documents
         public UserLevels LinkExcludedLevels { get; set; }
 
         /// <summary>
-        /// How long a user will be permited to post a link.
+        /// How long a user will be permitted to post a link.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -99,14 +100,14 @@ namespace StreamActions.Database.Documents
         public bool LinkStatus { get; set; }
 
         /// <summary>
-        /// Message said in chat on a user's second and last offence for using links.
+        /// Message said in chat on a user's second and last offense for using links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string LinkTimeoutMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's second and last offence for links.
+        /// If a warning message should be said on a user's second and last offense for links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -114,7 +115,7 @@ namespace StreamActions.Database.Documents
         public bool LinkTimeoutMessageStatus { get; set; }
 
         /// <summary>
-        /// Type of punishment given for a user second and last offence for using links.
+        /// Type of punishment given for a user second and last offense for using links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -122,14 +123,14 @@ namespace StreamActions.Database.Documents
         public ModerationPunishment LinkTimeoutPunishment { get; set; }
 
         /// <summary>
-        /// Message said next to the timeout message on a user's second and last offence for using links.
+        /// Message said next to the timeout message on a user's second and last offense for using links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string LinkTimeoutReason { get; set; }
 
         /// <summary>
-        /// How long a user will get timed-out on their second and last offence for using links.
+        /// How long a user will get timed-out on their second and last offense for using links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -137,14 +138,14 @@ namespace StreamActions.Database.Documents
         public uint LinkTimeoutTimeSeconds { get; set; }
 
         /// <summary>
-        /// Message said in chat on a user's first offence for using links.
+        /// Message said in chat on a user's first offense for using links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string LinkWarningMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's first offence for links.
+        /// If a warning message should be said on a user's first offense for links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -152,7 +153,7 @@ namespace StreamActions.Database.Documents
         public bool LinkWarningMessageStatus { get; set; }
 
         /// <summary>
-        /// Type of punishment given for a user's first offence for using links.
+        /// Type of punishment given for a user's first offense for using links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -160,14 +161,14 @@ namespace StreamActions.Database.Documents
         public ModerationPunishment LinkWarningPunishment { get; set; }
 
         /// <summary>
-        /// Message said next to the timeout message on a user's first offence for using links.
+        /// Message said next to the timeout message on a user's first offense for using links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string LinkWarningReason { get; set; }
 
         /// <summary>
-        /// How long a user will get timed-out on their first offence for using links.
+        /// How long a user will get timed-out on their first offense for using links.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -179,7 +180,7 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public List<string> LinkWhitelist { get; set; }
+        public List<string> LinkWhitelist { get; } = new List<string>();
 
         #endregion Link Moderation Properties
 
@@ -217,14 +218,14 @@ namespace StreamActions.Database.Documents
         public bool CapStatus { get; set; }
 
         /// <summary>
-        /// Message said in chat on a user's second and last offence for using caps.
+        /// Message said in chat on a user's second and last offense for using caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string CapTimeoutMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's second and last offence for caps.
+        /// If a warning message should be said on a user's second and last offense for caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -232,7 +233,7 @@ namespace StreamActions.Database.Documents
         public bool CapTimeoutMessageStatus { get; set; }
 
         /// <summary>
-        /// Type of punishment given for a user second and last offence for using caps.
+        /// Type of punishment given for a user second and last offense for using caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -240,14 +241,14 @@ namespace StreamActions.Database.Documents
         public ModerationPunishment CapTimeoutPunishment { get; set; }
 
         /// <summary>
-        /// Message said next to the timeout message on a user's second and last offence for using caps.
+        /// Message said next to the timeout message on a user's second and last offense for using caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string CapTimeoutReason { get; set; }
 
         /// <summary>
-        /// How long a user will get timed-out on their second and last offence for using caps.
+        /// How long a user will get timed-out on their second and last offense for using caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -255,14 +256,14 @@ namespace StreamActions.Database.Documents
         public uint CapTimeoutTimeSeconds { get; set; }
 
         /// <summary>
-        /// Message said in chat on a user's first offence for using caps.
+        /// Message said in chat on a user's first offense for using caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string CapWarningMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's first offence for caps.
+        /// If a warning message should be said on a user's first offense for caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -270,7 +271,7 @@ namespace StreamActions.Database.Documents
         public bool CapWarningMessageStatus { get; set; }
 
         /// <summary>
-        /// Type of punishment given for a user's first offence for using caps.
+        /// Type of punishment given for a user's first offense for using caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -278,14 +279,14 @@ namespace StreamActions.Database.Documents
         public ModerationPunishment CapWarningPunishment { get; set; }
 
         /// <summary>
-        /// Message said next to the timeout message on a user's first offence for using caps.
+        /// Message said next to the timeout message on a user's first offense for using caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string CapWarningReason { get; set; }
 
         /// <summary>
-        /// How long a user will get timed-out on their first offence for using caps.
+        /// How long a user will get timed-out on their first offense for using caps.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -336,14 +337,14 @@ namespace StreamActions.Database.Documents
         public bool RepetitionStatus { get; set; }
 
         /// <summary>
-        /// Message said in chat on a user's second and last offence for repetition in the message.
+        /// Message said in chat on a user's second and last offense for repetition in the message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string RepetitionTimeoutMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's second and last offence for repetition.
+        /// If a warning message should be said on a user's second and last offense for repetition.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -351,7 +352,7 @@ namespace StreamActions.Database.Documents
         public bool RepetitionTimeoutMessageStatus { get; set; }
 
         /// <summary>
-        /// Type of punishment given for a user second and last offence for repetition in the message.
+        /// Type of punishment given for a user second and last offense for repetition in the message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -359,14 +360,14 @@ namespace StreamActions.Database.Documents
         public ModerationPunishment RepetitionTimeoutPunishment { get; set; }
 
         /// <summary>
-        /// Message said next to the timeout message on a user's second and last offence for repetition in the message.
+        /// Message said next to the timeout message on a user's second and last offense for repetition in the message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string RepetitionTimeoutReason { get; set; }
 
         /// <summary>
-        /// How long a user will get timed-out on their second and last offence for repetition in the message.
+        /// How long a user will get timed-out on their second and last offense for repetition in the message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -374,14 +375,14 @@ namespace StreamActions.Database.Documents
         public uint RepetitionTimeoutTimeSeconds { get; set; }
 
         /// <summary>
-        /// Message said in chat on a user's first offence for repetition in the message.
+        /// Message said in chat on a user's first offense for repetition in the message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string RepetitionWarningMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's first offence for repetition.
+        /// If a warning message should be said on a user's first offense for repetition.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -389,7 +390,7 @@ namespace StreamActions.Database.Documents
         public bool RepetitionWarningMessageStatus { get; set; }
 
         /// <summary>
-        /// Type of punishment given for a user's first offence for repetition in the message.
+        /// Type of punishment given for a user's first offense for repetition in the message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -397,14 +398,14 @@ namespace StreamActions.Database.Documents
         public ModerationPunishment RepetitionWarningPunishment { get; set; }
 
         /// <summary>
-        /// Message said next to the timeout message on a user's first offence for repetition in the message.
+        /// Message said next to the timeout message on a user's first offense for repetition in the message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public string RepetitionWarningReason { get; set; }
 
         /// <summary>
-        /// How long a user will get timed-out on their first offence for repetition in the message.
+        /// How long a user will get timed-out on their first offense for repetition in the message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -412,5 +413,24 @@ namespace StreamActions.Database.Documents
         public uint RepetitionWarningTimeSeconds { get; set; }
 
         #endregion Repetition Moderation Properties
+
+        #region Public Methods
+
+        public async void Initialize()
+        {
+            IMongoCollection<ModerationDocument> collection = Database.Instance.MongoDatabase.GetCollection<ModerationDocument>("moderations");
+            IndexKeysDefinitionBuilder<ModerationDocument> indexBuilder = Builders<ModerationDocument>.IndexKeys;
+
+            try
+            {
+                CreateIndexModel<ModerationDocument> indexModel = new CreateIndexModel<ModerationDocument>(indexBuilder.Ascending(d => d.ChannelId),
+                    new CreateIndexOptions { Name = "ModerationDocument_unique_ChannelId", Unique = true });
+                _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
+            }
+            catch (MongoWriteConcernException)
+            { }
+        }
+
+        #endregion Public Methods
     }
 }

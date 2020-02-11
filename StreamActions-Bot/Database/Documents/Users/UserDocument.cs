@@ -15,6 +15,7 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
 using System;
@@ -25,7 +26,7 @@ namespace StreamActions.Database.Documents.Users
     /// <summary>
     /// A document representing a Twitch user.
     /// </summary>
-    public class UserDocument : ICursorable
+    public class UserDocument : ICursorable, IDocument
     {
         #region Public Properties
 
@@ -33,16 +34,16 @@ namespace StreamActions.Database.Documents.Users
         /// The users <see cref="BotGlobal"/>.
         /// </summary>
         [BsonElement]
-        [BsonDefaultValue(BotGlobal.None)]
         [BsonIgnoreIfDefault]
+        [BsonDefaultValue(BotGlobal.None)]
         public BotGlobal BotGlobalPermission { get; set; }
 
         /// <summary>
         /// The users <see cref="TwitchBroadcaster"/>.
         /// </summary>
         [BsonElement]
-        [BsonDefaultValue(TwitchBroadcaster.None)]
         [BsonIgnoreIfDefault]
+        [BsonDefaultValue(TwitchBroadcaster.None)]
         public TwitchBroadcaster BroadcasterType { get; set; }
 
         /// <summary>
@@ -92,16 +93,16 @@ namespace StreamActions.Database.Documents.Users
         /// The users <see cref="TwitchStaff"/>.
         /// </summary>
         [BsonElement]
-        [BsonDefaultValue(TwitchStaff.None)]
         [BsonIgnoreIfDefault]
+        [BsonDefaultValue(TwitchStaff.None)]
         public TwitchStaff StaffType { get; set; }
 
         /// <summary>
         /// The users <see cref="UserLevels"/>.
         /// </summary>
         [BsonElement]
-        [BsonDefaultValue(UserLevels.Viewer)]
         [BsonIgnoreIfDefault]
+        [BsonDefaultValue(UserLevels.Viewer)]
         public UserLevels UserLevels { get; set; }
 
         #endregion Public Properties
@@ -109,6 +110,30 @@ namespace StreamActions.Database.Documents.Users
         #region Public Methods
 
         public string GetCursor() => this.Id;
+
+        public async void Initialize()
+        {
+            IMongoCollection<UserDocument> collection = Database.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            IndexKeysDefinitionBuilder<UserDocument> indexBuilder = Builders<UserDocument>.IndexKeys;
+
+            try
+            {
+                CreateIndexModel<UserDocument> indexModel = new CreateIndexModel<UserDocument>(indexBuilder.Ascending(d => d.Login),
+                    new CreateIndexOptions { Name = "UserDocument_unique_Login", Unique = true });
+                _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
+            }
+            catch (MongoWriteConcernException)
+            { }
+
+            try
+            {
+                CreateIndexModel<UserDocument> indexModel = new CreateIndexModel<UserDocument>(indexBuilder.Ascending(d => d.PermissionGroupMembership),
+                    new CreateIndexOptions { Name = "UserDocument_unique_PermissionGroupMembership", Unique = true });
+                _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
+            }
+            catch (MongoWriteConcernException)
+            { }
+        }
 
         #endregion Public Methods
     }

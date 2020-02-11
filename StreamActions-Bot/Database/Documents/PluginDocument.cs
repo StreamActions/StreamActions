@@ -15,6 +15,7 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 
@@ -23,7 +24,7 @@ namespace StreamActions.Database.Documents
     /// <summary>
     /// Represents the enabled status of a plugin.
     /// </summary>
-    public class PluginDocument
+    public class PluginDocument : IDocument
     {
         #region Public Properties
 
@@ -43,5 +44,24 @@ namespace StreamActions.Database.Documents
         public Guid Id { get; set; }
 
         #endregion Public Properties
+
+        #region Public Methods
+
+        public async void Initialize()
+        {
+            IMongoCollection<PluginDocument> collection = Database.Instance.MongoDatabase.GetCollection<PluginDocument>("plugins");
+            IndexKeysDefinitionBuilder<PluginDocument> indexBuilder = Builders<PluginDocument>.IndexKeys;
+
+            try
+            {
+                CreateIndexModel<PluginDocument> indexModel = new CreateIndexModel<PluginDocument>(indexBuilder.Ascending(d => d.EnabledChannelIds),
+                    new CreateIndexOptions { Name = "PluginDocument_unique_EnabledChannelIds", Unique = true });
+                _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
+            }
+            catch (MongoWriteConcernException)
+            { }
+        }
+
+        #endregion Public Methods
     }
 }

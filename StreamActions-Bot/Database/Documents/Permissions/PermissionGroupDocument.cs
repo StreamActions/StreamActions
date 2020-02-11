@@ -15,6 +15,7 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using StreamActions.Database.Documents.Users;
 using StreamActions.GraphQL.Connections;
 using System;
@@ -26,7 +27,7 @@ namespace StreamActions.Database.Documents.Permissions
     /// <summary>
     /// A document representing a permission group.
     /// </summary>
-    public class PermissionGroupDocument : ICursorable
+    public class PermissionGroupDocument : ICursorable, IDocument
     {
         #region Public Properties
 
@@ -65,6 +66,21 @@ namespace StreamActions.Database.Documents.Permissions
         #region Public Methods
 
         public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
+
+        public async void Initialize()
+        {
+            IMongoCollection<PermissionGroupDocument> collection = Database.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            IndexKeysDefinitionBuilder<PermissionGroupDocument> indexBuilder = Builders<PermissionGroupDocument>.IndexKeys;
+
+            try
+            {
+                CreateIndexModel<PermissionGroupDocument> indexModel = new CreateIndexModel<PermissionGroupDocument>(indexBuilder.Ascending(d => d.ChannelId).Ascending(d => d.GroupName),
+                    new CreateIndexOptions { Name = "PermissionGroupDocument_unique_ChannelId-GroupName", Unique = true });
+                _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
+            }
+            catch (MongoWriteConcernException)
+            { }
+        }
 
         #endregion Public Methods
     }

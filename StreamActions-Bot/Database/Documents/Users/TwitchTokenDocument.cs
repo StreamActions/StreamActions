@@ -26,14 +26,23 @@ namespace StreamActions.Database.Documents.Users
     {
         #region Public Properties
 
+        /// <summary>
+        /// The refresh token.
+        /// </summary>
         [BsonElement]
         [BsonRequired]
         public string Refresh { get; set; }
 
+        /// <summary>
+        /// The authorized scopes.
+        /// </summary>
         [BsonElement]
         [BsonRequired]
         public AuthScopes Scopes { get; set; }
 
+        /// <summary>
+        /// The OAuth token
+        /// </summary>
         [BsonElement]
         [BsonRequired]
         public string Token { get; set; }
