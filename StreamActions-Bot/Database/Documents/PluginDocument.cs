@@ -49,7 +49,7 @@ namespace StreamActions.Database.Documents
 
         public async void Initialize()
         {
-            IMongoCollection<PluginDocument> collection = Database.Instance.MongoDatabase.GetCollection<PluginDocument>("plugins");
+            IMongoCollection<PluginDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PluginDocument>("plugins");
             IndexKeysDefinitionBuilder<PluginDocument> indexBuilder = Builders<PluginDocument>.IndexKeys;
 
             try

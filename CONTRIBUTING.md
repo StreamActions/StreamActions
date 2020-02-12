@@ -24,7 +24,7 @@ The following is a set of guidelines and rules for contributing to StreamActions
 [Additional Notes](#additional-notes)
   * [Issue and Pull Request Labels](#issue-and-pull-request-labels)
   
-[Acknowledgements](#acknowledgements)
+[Acknowledgments](#acknowledgments)
 
 ## Code of Conduct
 
@@ -281,7 +281,7 @@ This section lists the labels we use to help us track and manage issues and pull
 | `testing` | [search][search-streamactions-repo-label-testing] | Something needs testing |
 | `wontfix` | [search][search-streamactions-repo-label-wontfix] | This will not be worked on |
 
-## Acknowledgements
+## Acknowledgments
 The formatting and text of portions of this _CONTRIBUTING_ document have been copied and modified from the original over at [Atom](https://github.com/atom/atom/blob/master/CONTRIBUTING.md)
 
 [search-streamactions-repo-label-bug]: https://github.com/search?q=is%3Aopen+is%3Aissue+repo%3AStreamActions%2FStreamActions-Bot+label%3Abug

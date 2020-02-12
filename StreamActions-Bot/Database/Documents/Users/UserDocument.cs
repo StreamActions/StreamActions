@@ -113,7 +113,7 @@ namespace StreamActions.Database.Documents.Users
 
         public async void Initialize()
         {
-            IMongoCollection<UserDocument> collection = Database.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
             IndexKeysDefinitionBuilder<UserDocument> indexBuilder = Builders<UserDocument>.IndexKeys;
 
             try

@@ -23,14 +23,14 @@ namespace StreamActions.Database
     /// <summary>
     /// Handles connections to the database.
     /// </summary>
-    public class Database
+    public class DatabaseClient
     {
         #region Public Properties
 
         /// <summary>
-        /// Singleton of <see cref="Database"/>.
+        /// Singleton of <see cref="DatabaseClient"/>.
         /// </summary>
-        public static Database Instance => _instance.Value;
+        public static DatabaseClient Instance => _instance.Value;
 
         /// <summary>
         /// The <see cref="MongoDatabase"/>.
@@ -44,7 +44,7 @@ namespace StreamActions.Database
         /// <summary>
         /// Field that backs the <see cref="Instance"/> property.
         /// </summary>
-        private static readonly Lazy<Database> _instance = new Lazy<Database>(() => new Database());
+        private static readonly Lazy<DatabaseClient> _instance = new Lazy<DatabaseClient>(() => new DatabaseClient());
 
         /// <summary>
         /// The <see cref="MongoClient"/>.
@@ -58,7 +58,7 @@ namespace StreamActions.Database
         /// <summary>
         /// Constructor.
         /// </summary>
-        private Database()
+        private DatabaseClient()
         {
             MongoClientSettings settings = new MongoClientSettings
             {

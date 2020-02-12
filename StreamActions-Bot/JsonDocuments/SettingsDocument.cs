@@ -113,6 +113,11 @@ namespace StreamActions.JsonDocuments
         internal string WSSslCert { get; set; }
 
         /// <summary>
+        /// Password to the SSL certificate for the WS Server, if used.
+        /// </summary>
+        internal string WSSslCertPass { get; set; }
+
+        /// <summary>
         /// The super admin bearer token for the WS Server.
         /// </summary>
         internal string WSSuperadminBearer { get; set; } = WebSocketServer.GenerateBearer(new ClaimsPrincipal(new GenericIdentity("superadmin", "GlobalToken")));

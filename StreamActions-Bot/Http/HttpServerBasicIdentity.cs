@@ -57,7 +57,13 @@ namespace StreamActions.Http
         /// Authenticates this identity.
         /// </summary>
         /// <param name="validIdentities">A Dictionary of valid identities that would result in successful authentication. Key is username; value is password.</param>
-        internal void Authenticate(Dictionary<string, string> validIdentities) => this._isAuthenticated = validIdentities.ContainsKey(this.Name) && validIdentities[this.Name].Equals(this.Password, StringComparison.InvariantCulture);
+        internal void Authenticate(Dictionary<string, string> validIdentities) => this._isAuthenticated = validIdentities.ContainsKey(this.Name) && validIdentities[this.Name].Equals(this.Password, StringComparison.Ordinal);
+
+        /// <summary>
+        /// Authenticates this identity.
+        /// </summary>
+        /// <param name="authenticator">A Func that accepts the username and password provided by the client and returns a <c>bool</c> indicating if authentication is successful.</param>
+        internal void Authenticate(Func<string, string, bool> authenticator) => this._isAuthenticated = authenticator.Invoke(this.Name, this.Password);
 
         #endregion Internal Methods
 

@@ -25,6 +25,7 @@ using StreamActions.Enums;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using StreamActions.Database;
 
 namespace StreamActions.Plugins
 {
@@ -73,7 +74,7 @@ namespace StreamActions.Plugins
         /// <returns>The <see cref="CommandDocument"/> for the command, if it exists; <c>null</c> otherwise.</returns>
         public static async Task<CommandDocument> GetCustomCommandAsync(string channelId, string command)
         {
-            IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
             FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command.ToLowerInvariant());
 
@@ -94,7 +95,7 @@ namespace StreamActions.Plugins
         /// <returns>A List of <see cref="CommandDocument"/>.</returns>
         public static async Task<List<CommandDocument>> ListCustomCommandsAsync(string channelId)
         {
-            IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
             FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId);
             using IAsyncCursor<CommandDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
@@ -152,7 +153,7 @@ namespace StreamActions.Plugins
                         // Do something.
                     }
 
-                    IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
                     CommandDocument commandDocument = new CommandDocument
                     {
@@ -230,7 +231,7 @@ namespace StreamActions.Plugins
                         // Do something.
                     }
 
-                    IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
                     // Update the document.
                     UpdateDefinition<CommandDocument> update = Builders<CommandDocument>.Update.Set(c => c.Response, response);
@@ -285,7 +286,7 @@ namespace StreamActions.Plugins
 
                 if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                 {
-                    IMongoCollection<CommandDocument> collection = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
                     FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == command);
 

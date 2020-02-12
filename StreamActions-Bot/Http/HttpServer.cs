@@ -33,7 +33,7 @@ using System.Threading.Tasks;
 namespace StreamActions.Http
 {
     /// <summary>
-    /// An HTTP Server. Currently only supports Authorization headers and WwebSocket Upgrade.
+    /// An HTTP Server.
     /// </summary>
     internal class HttpServer : IDisposable
     {
@@ -45,16 +45,23 @@ namespace StreamActions.Http
 
         #region Internal Constructors
 
-        internal HttpServer(string listenIp, int listenPort, bool useSsl, string certFile = null)
+        /// <summary>
+        /// Initializes the HttpServer.
+        /// </summary>
+        /// <param name="listenIp">The IP address to listen on. <c>*</c> for Any.</param>
+        /// <param name="listenPort">The port to listen on.</param>
+        /// <param name="useSsl">Whether SSL should be used.</param>
+        /// <param name="certFile">The DER, PFX, or PCKS12 file to use.</param>
+        /// <param name="certPass">The password for <paramref name="certFile"/>.</param>
+        internal HttpServer(string listenIp, int listenPort, bool useSsl, string certFile = null, string certPass = null)
         {
-            IPAddress ipAddress = listenIp == "*" ? IPAddress.Any : listenIp == "127.0.0.1" ? IPAddress.Loopback : IPAddress.Parse(listenIp);
-            this._server = new TcpListener(ipAddress, listenPort);
+            IPAddress ipAddress = listenIp == "*" ? IPAddress.Any : (string.IsNullOrWhiteSpace(listenIp) || listenIp == "127.0.0.1") ? IPAddress.Loopback : IPAddress.Parse(listenIp);
+            this._server = new TcpListener(ipAddress, Math.Clamp(listenPort, 1, 65535));
             this._useSsl = useSsl;
 
             if (this._useSsl)
             {
-                this._certificate = new X509Certificate2();
-                this._certificate.Import(certFile);
+                this._certificate = new X509Certificate2(certFile, certPass, X509KeyStorageFlags.EphemeralKeySet);
             }
         }
 
@@ -62,9 +69,24 @@ namespace StreamActions.Http
 
         #region Internal Methods
 
+        /// <summary>
+        /// Indicates if the specified <see cref="HttpServerRequestMessage"/> contains a possible WebSocket upgrade request.
+        /// </summary>
+        /// <param name="request">The request to check.</param>
+        /// <returns><c>true</c> if the request may be a WebSocket upgrade request.</returns>
         internal static bool IsWebSocketUpgradeRequest(HttpServerRequestMessage request) => request.Headers.Contains("Upgrade") && request.Headers.GetValues("Upgrade").Contains("websocket")
             && request.Headers.Contains("Connection") && request.Headers.GetValues("Connection").Contains("Upgrade");
 
+        /// <summary>
+        /// Sends an HTTP response.
+        /// </summary>
+        /// <param name="client">The TcpClient for the connection.</param>
+        /// <param name="stream">The Stream to send the data over.</param>
+        /// <param name="statusCode">The HTTP status code of the response.</param>
+        /// <param name="content">The content to send; <c>Array.Empty<byte>()</c> if there is no content.</param>
+        /// <param name="httpHeaders">The HTTP headers to send back. Key is header name; value is List of header values.</param>
+        /// <param name="isClosing"><c>true</c> to close the connection after sending; defaults to true, should only be overridden when starting a WebSocket.</param>
+        /// <returns>A Task that can be awaited.</returns>
         internal static async Task SendHTTPResponseAsync(TcpClient client, Stream stream, HttpStatusCode statusCode, byte[] content, Dictionary<string, List<string>> httpHeaders = null, bool isClosing = true)
         {
             if (httpHeaders is null)
@@ -97,7 +119,14 @@ namespace StreamActions.Http
 
             if (isClosing)
             {
-                httpHeaders.Add("Connection", new List<string> { "close" });
+                if (!httpHeaders.ContainsKey("Connection"))
+                {
+                    httpHeaders.Add("Connection", new List<string> { "close" });
+                }
+                else
+                {
+                    httpHeaders["Connection"].Add("close");
+                }
             }
 
             string header = "HTTP/1.1 " + (int)statusCode + " " + GetStatusDescription(statusCode) + _endl;
@@ -126,10 +155,20 @@ namespace StreamActions.Http
             }
         }
 
+        /// <summary>
+        /// Starts the TcpListener.
+        /// </summary>
         internal void Start() => this._server.Start();
 
+        /// <summary>
+        /// Stops the TcpListener.
+        /// </summary>
         internal void Stop() => this._server.Stop();
 
+        /// <summary>
+        /// Waits for a new TcpClient to connect and parses/validates the request.
+        /// </summary>
+        /// <returns>A <see cref="HttpServerRequestMessage"/> if a valid request is received; <c>null</c> if an incoming connection failed.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Closed by SendHTTPResponseAsync")]
         internal async Task<HttpServerRequestMessage> WaitForRequestAsync()
         {
@@ -147,7 +186,8 @@ namespace StreamActions.Http
                 catch (AuthenticationException)
                 {
                     stream.WriteTimeout = _streamTimeout;
-                    await SendHTTPResponseAsync(client, sslStream, HttpStatusCode.InternalServerError, Array.Empty<byte>()).ConfigureAwait(false);
+                    await SendHTTPResponseAsync(client, stream, HttpStatusCode.InternalServerError, Array.Empty<byte>()).ConfigureAwait(false);
+                    sslStream.Close();
                     return null;
                 }
 
@@ -164,6 +204,10 @@ namespace StreamActions.Http
 
         #region Protected Methods
 
+        /// <summary>
+        /// Releases resources.
+        /// </summary>
+        /// <param name="disposing">Whether to release managed resources.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (!this._disposedValue)
@@ -182,21 +226,65 @@ namespace StreamActions.Http
 
         #region Private Fields
 
+        /// <summary>
+        /// String constant that indicates the end of the HTTP header section.
+        /// </summary>
         private const string _endh = _endl + _endl;
+
+        /// <summary>
+        /// String constant for the RFC-defined line ending for HTTP lines.
+        /// </summary>
         private const string _endl = "\r\n";
+
+        /// <summary>
+        /// Timeout for incoming requests.
+        /// </summary>
         private const int _requestTimeout = 15000;
+
+        /// <summary>
+        /// Read/Write timeout for streams.
+        /// </summary>
         private const int _streamTimeout = 5000;
+
+        /// <summary>
+        /// Regex for detecting a header line.
+        /// </summary>
         private static readonly Regex _headerRegex = new Regex(@"^(?<field>\S*): (?<value>[\S\s]+)$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regex for detecting a HTTP request line.
+        /// </summary>
         private static readonly Regex _requestRegex = new Regex(@"^(?<method>(GET|HEAD|POST|PUT|DELETE|PATCH)) (?<path>\/\S*) (?<protocol>HTTP\/1\.1)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// The SSL Certificate, if SSL is enabled.
+        /// </summary>
         private readonly X509Certificate2 _certificate;
+
+        /// <summary>
+        /// The TcpListener that handles incoming connections.
+        /// </summary>
         private readonly TcpListener _server;
+
+        /// <summary>
+        /// Indicates whether SSL is enabled.
+        /// </summary>
         private readonly bool _useSsl;
+
+        /// <summary>
+        /// Indicates whether this object has been disposed.
+        /// </summary>
         private bool _disposedValue = false;
 
         #endregion Private Fields
 
         #region Private Methods
 
+        /// <summary>
+        /// Converts a string-form HTTP method into an HttpMethod.
+        /// </summary>
+        /// <param name="method">The string to parse.</param>
+        /// <returns>An HttpMethod; <c>null</c> for invalid or unsupported methods.</returns>
         private static HttpMethod GetHttpMethod(string method) => method switch
         {
             "GET" => HttpMethod.Get,
@@ -209,9 +297,19 @@ namespace StreamActions.Http
             _ => null,
         };
 
+        /// <summary>
+        /// Gets the description for an HttpStatusCode.
+        /// </summary>
+        /// <param name="code">The code to lookup.</param>
+        /// <returns>The description. <c>null</c> if <paramref name="code"/> is invalid.</returns>
         private static string GetStatusDescription(HttpStatusCode code) =>
                     GetStatusDescription((int)code);
 
+        /// <summary>
+        /// Gets the description for an HTTP status code.
+        /// </summary>
+        /// <param name="code">The code to lookup.</param>
+        /// <returns>The description. <c>null</c> if <paramref name="code"/> is invalid.</returns>
         private static string GetStatusDescription(int code) =>
             code switch
             {
@@ -283,6 +381,12 @@ namespace StreamActions.Http
                 _ => null,
             };
 
+        /// <summary>
+        /// Waits for the request data to be received, then parses it.
+        /// </summary>
+        /// <param name="client">The TcpClient of the connection.</param>
+        /// <param name="stream">The Stream to listen on.</param>
+        /// <returns>A <see cref="HttpServerRequestMessage"/> with the request data. <c>null</c> if the request is invalid.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Upstream type is responsible for this")]
         private static async Task<HttpServerRequestMessage> WaitAndParseRequestAsync(TcpClient client, Stream stream)
         {

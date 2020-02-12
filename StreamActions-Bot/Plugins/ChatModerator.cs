@@ -158,7 +158,7 @@ namespace StreamActions.Plugins
         private int GetLongestSequenceOfRepeatingSymbols(string message) => this._groupedSymbolsRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Length));
 
         /// <summary>
-        /// Method that will return the longest sequence amount of repeating wrods in the message.
+        /// Method that will return the longest sequence amount of repeating words in the message.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
         /// <returns>Length of longest sequence repeating words in the message.</returns>

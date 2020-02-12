@@ -55,7 +55,7 @@ namespace StreamActions.Database.Documents.Users
 
         public async void Initialize()
         {
-            IMongoCollection<AuthenticationDocument> collection = Database.Instance.MongoDatabase.GetCollection<AuthenticationDocument>("authentications");
+            IMongoCollection<AuthenticationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<AuthenticationDocument>("authentications");
             IndexKeysDefinitionBuilder<AuthenticationDocument> indexBuilder = Builders<AuthenticationDocument>.IndexKeys;
 
             try

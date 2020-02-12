@@ -131,7 +131,7 @@ namespace StreamActions.Database.Documents
 
         public async void Initialize()
         {
-            IMongoCollection<CommandDocument> collection = Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
             IndexKeysDefinitionBuilder<CommandDocument> indexBuilder = Builders<CommandDocument>.IndexKeys;
 
             try

@@ -409,7 +409,7 @@ namespace StreamActions.Plugin
 
             if (!this._commandCooldowns[channelId].ContainsKey(command))
             {
-                IMongoCollection<CommandDocument> commands = Database.Database.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
                 FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command);
 

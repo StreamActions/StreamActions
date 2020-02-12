@@ -25,7 +25,6 @@ using System.IO;
 using System.Net;
 using System.Net.WebSockets;
 using System.Security.Claims;
-using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -82,10 +81,8 @@ namespace StreamActions
         {
             if (this._clients.ContainsKey(ipPort))
             {
-                CancellationTokenSource tokenSource = new CancellationTokenSource();
-                await this._clients[ipPort].WebSocket.CloseAsync(closeStatus, closeReason, tokenSource.Token).ConfigureAwait(false);
+                await this.CloseAsync(this._clients[ipPort].WebSocket, closeStatus, closeReason).ConfigureAwait(false);
                 this._clients[ipPort].CancellationTokenSource.Cancel();
-                tokenSource.Dispose();
                 this._clients[ipPort].WebSocket.Dispose();
                 this._clients[ipPort].TcpClient.Dispose();
                 _ = this._clients.TryRemove(ipPort, out _);
@@ -118,22 +115,38 @@ namespace StreamActions
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="data">String containing data.</param>
-        public async Task SendAsync(string ipPort, string data)
-        {
-            CancellationTokenSource tokenSource = new CancellationTokenSource();
-            await this.SendAsync(ipPort, Encoding.UTF8.GetBytes(data), WebSocketMessageType.Text, true, tokenSource.Token).ConfigureAwait(false);
-            tokenSource.Dispose();
-        }
+        public async Task SendAsync(string ipPort, string data) => await this.SendAsync(ipPort, Encoding.UTF8.GetBytes(data), WebSocketMessageType.Text, true).ConfigureAwait(false);
 
         /// <summary>
         /// Send data to the specified client, asynchronously.
         /// </summary>
         /// <param name="ipPort">IP:port of the recipient client.</param>
         /// <param name="data">Byte array containing data.</param>
-        public async Task SendAsync(string ipPort, byte[] data)
+        public async Task SendAsync(string ipPort, byte[] data) => await this.SendAsync(ipPort, data, WebSocketMessageType.Binary, true).ConfigureAwait(false);
+
+        /// <summary>
+        /// Send data to the specified client, asynchronously.
+        /// </summary>
+        /// <param name="ipPort">IP:port of the recipient client.</param>
+        /// <param name="buffer">The buffer to be sent over the connection.</param>
+        /// <param name="messageType">Indicates whether the application is sending a binary or text message.</param>
+        /// <param name="endOfmessage">Indicates whether the data in <paramref name="buffer"/> is the last part of a message.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task SendAsync(string ipPort, ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfmessage)
         {
+            if (!this.IsClientConnected(ipPort))
+            {
+                return;
+            }
+
             CancellationTokenSource tokenSource = new CancellationTokenSource();
-            await this.SendAsync(ipPort, data, WebSocketMessageType.Binary, true, tokenSource.Token).ConfigureAwait(false);
+            Task sendTask = this._clients[ipPort].WebSocket.SendAsync(buffer, messageType, endOfmessage, tokenSource.Token);
+
+            if (await Task.WhenAny(sendTask, Task.Delay(_sendTimeout)).ConfigureAwait(false) != sendTask)
+            {
+                tokenSource.Cancel();
+            }
+
             tokenSource.Dispose();
         }
 
@@ -144,35 +157,23 @@ namespace StreamActions
         /// <param name="buffer">The buffer to be sent over the connection.</param>
         /// <param name="messageType">Indicates whether the application is sending a binary or text message.</param>
         /// <param name="endOfmessage">Indicates whether the data in <paramref name="buffer"/> is the last part of a message.</param>
-        /// <param name="cancellationToken">The token that propagates the notification that operations should be canceled.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        public async Task SendAsync(string ipPort, ArraySegment<byte> buffer, WebSocketMessageType messageType, bool endOfmessage, CancellationToken cancellationToken)
+        public async Task SendAsync(string ipPort, ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType, bool endOfmessage)
         {
             if (!this.IsClientConnected(ipPort))
             {
                 return;
             }
 
-            await this._clients[ipPort].WebSocket.SendAsync(buffer, messageType, endOfmessage, cancellationToken).ConfigureAwait(false);
-        }
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            Task sendTask = this._clients[ipPort].WebSocket.SendAsync(buffer, messageType, endOfmessage, tokenSource.Token).AsTask();
 
-        /// <summary>
-        /// Send data to the specified client, asynchronously.
-        /// </summary>
-        /// <param name="ipPort">IP:port of the recipient client.</param>
-        /// <param name="buffer">The buffer to be sent over the connection.</param>
-        /// <param name="messageType">Indicates whether the application is sending a binary or text message.</param>
-        /// <param name="endOfmessage">Indicates whether the data in <paramref name="buffer"/> is the last part of a message.</param>
-        /// <param name="cancellationToken">The token that propagates the notification that operations should be canceled.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        public async Task SendAsync(string ipPort, ReadOnlyMemory<byte> buffer, WebSocketMessageType messageType, bool endOfmessage, CancellationToken cancellationToken)
-        {
-            if (!this.IsClientConnected(ipPort))
+            if (await Task.WhenAny(sendTask, Task.Delay(_sendTimeout)).ConfigureAwait(false) != sendTask)
             {
-                return;
+                tokenSource.Cancel();
             }
 
-            await this._clients[ipPort].WebSocket.SendAsync(buffer, messageType, endOfmessage, cancellationToken).ConfigureAwait(false);
+            tokenSource.Dispose();
         }
 
         /// <summary>
@@ -309,6 +310,16 @@ namespace StreamActions
         #region Private Fields
 
         /// <summary>
+        /// Timeout for close operations.
+        /// </summary>
+        private const int _closeTimeout = 15000;
+
+        /// <summary>
+        /// Timeout for send operations.
+        /// </summary>
+        private const int _sendTimeout = 5000;
+
+        /// <summary>
         /// Field that backs the <see cref="Instance"/> property.
         /// </summary>
         private static readonly Lazy<WebSocketServer> _instance = new Lazy<WebSocketServer>(() => new WebSocketServer());
@@ -354,12 +365,13 @@ namespace StreamActions
         /// </summary>
         private WebSocketServer()
         {
-            string listenerIp = Program.Settings.WSListenIp ?? "*";
+            string listenerIp = Program.Settings.WSListenIp ?? "127.0.0.1";
             bool useSsl = Program.Settings.WSUseSsl;
             int listenerPort = Program.Settings.WSListenPort > 0 ? Program.Settings.WSListenPort : (useSsl ? 443 : 80);
             string sslCertFile = useSsl ? Program.Settings.WSSslCert : null;
+            string sslCertPass = useSsl && !string.IsNullOrWhiteSpace(Program.Settings.WSSslCertPass) ? Program.Settings.WSSslCertPass : null;
 
-            this._server = new HttpServer(listenerIp, listenerPort, useSsl, sslCertFile);
+            this._server = new HttpServer(listenerIp, listenerPort, useSsl, sslCertFile, sslCertPass);
 
             this._tokenSource = new CancellationTokenSource();
             this._token = this._tokenSource.Token;
@@ -421,16 +433,17 @@ namespace StreamActions
 
                         if (!this._clients.TryAdd(ipPort, context))
                         {
-                            CancellationTokenSource tokenSource = new CancellationTokenSource();
-                            await context.WebSocket.CloseAsync(WebSocketCloseStatus.InternalServerError, "Unable to store client context", tokenSource.Token).ConfigureAwait(false);
-                            tokenSource.Dispose();
+                            await this.CloseAsync(context.WebSocket, WebSocketCloseStatus.InternalServerError, "Unable to store client context").ConfigureAwait(false);
                             context.WebSocket.Dispose();
                             context.TcpClient.Dispose();
                             killTokenSource.Dispose();
                             return;
                         }
 
-                        await this.DataReceiver(ipPort, context, killToken).ConfigureAwait(false);
+                        if (await this.DataReceiver(ipPort, context, killToken).ConfigureAwait(false))
+                        {
+                            await this.CloseOutputAsync(context.WebSocket, WebSocketCloseStatus.NormalClosure, "Closed by client").ConfigureAwait(false);
+                        }
 
                         await this.ClientDisconnected(ipPort).ConfigureAwait(false);
                         this._clients[ipPort].WebSocket.Dispose();
@@ -505,13 +518,53 @@ namespace StreamActions
         }).ConfigureAwait(false);
 
         /// <summary>
+        /// Closes the Websocket as an asynchronous operation using the close handshake defined in the WebSocket protocol specification section 7.
+        /// </summary>
+        /// <param name="webSocket">The WebSocket to close.</param>
+        /// <param name="closeStatus">Indicates the reason for closing the WebSocket connection.</param>
+        /// <param name="statusDescription">Specifies a human readable explanation as to why the connection is closed.</param>
+        /// <returns>A Task that can be awaited.</returns>
+        private async Task CloseAsync(WebSocket webSocket, WebSocketCloseStatus closeStatus, string statusDescription)
+        {
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            Task closeTask = webSocket.CloseAsync(closeStatus, statusDescription, tokenSource.Token);
+
+            if (await Task.WhenAny(closeTask, Task.Delay(_closeTimeout)).ConfigureAwait(false) != closeTask)
+            {
+                tokenSource.Cancel();
+            }
+
+            tokenSource.Dispose();
+        }
+
+        /// <summary>
+        /// Initiates or completes the close handshake defined in the WebSocket protocol specification section 7.
+        /// </summary>
+        /// <param name="webSocket">The WebSocket to close.</param>
+        /// <param name="closeStatus">Indicates the reason for closing the WebSocket connection.</param>
+        /// <param name="statusDescription">Specifies a human readable explanation as to why the connection is closed.</param>
+        /// <returns>A Task that can be awaited.</returns>
+        private async Task CloseOutputAsync(WebSocket webSocket, WebSocketCloseStatus closeStatus, string statusDescription)
+        {
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            Task closeTask = webSocket.CloseOutputAsync(closeStatus, statusDescription, tokenSource.Token);
+
+            if (await Task.WhenAny(closeTask, Task.Delay(_closeTimeout)).ConfigureAwait(false) != closeTask)
+            {
+                tokenSource.Cancel();
+            }
+
+            tokenSource.Dispose();
+        }
+
+        /// <summary>
         /// Receive loop for a client.
         /// </summary>
         /// <param name="ipPort">The remote <c>IP:Port</c> of the client.</param>
         /// <param name="context">The <see cref="HttpServerWebSocketContext"/> of the client.</param>
         /// <param name="cancellationToken">A CancellationToken for shutting down the event loop.</param>
-        /// <returns>A Task that can be awaited.</returns>
-        private async Task DataReceiver(string ipPort, HttpServerWebSocketContext context, CancellationToken cancellationToken)
+        /// <returns><c>true</c> if the WebSocket was closed by the client.</returns>
+        private async Task<bool> DataReceiver(string ipPort, HttpServerWebSocketContext context, CancellationToken cancellationToken)
         {
             try
             {
@@ -528,7 +581,7 @@ namespace StreamActions
 
                             if (result.MessageType == WebSocketMessageType.Close)
                             {
-                                return;
+                                return true;
                             }
 
                             dataStream.Write(buffer, 0, result.Count);
@@ -553,6 +606,8 @@ namespace StreamActions
                 }
             }
             catch (OperationCanceledException) { }
+
+            return false;
         }
 
         /// <summary>

@@ -16,6 +16,7 @@
 
 using MongoDB.Driver;
 using StreamActions.Attributes;
+using StreamActions.Database;
 using StreamActions.Database.Documents.Users;
 using StreamActions.Enums;
 using StreamActions.EventArgs;
@@ -306,7 +307,7 @@ namespace StreamActions.Plugins
         /// <returns>The name of the current culture; <see cref="GlobalCulture"/> if the channel is not found or hasn't set a culture.</returns>
         public async Task<string> GetCurrentCultureNameAsync(string channelId)
         {
-            IMongoCollection<UserDocument> users = Database.Database.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            IMongoCollection<UserDocument> users = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.Id == channelId);
             using IAsyncCursor<UserDocument> cursor = await users.FindAsync(filter).ConfigureAwait(false);
 
@@ -414,7 +415,7 @@ namespace StreamActions.Plugins
                 _ = this._loadedCultures.TryAdd(newCulture.Name, newCulture);
             }
 
-            IMongoCollection<UserDocument> users = Database.Database.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            IMongoCollection<UserDocument> users = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
             UpdateDefinition<UserDocument> userUpdate = Builders<UserDocument>.Update.Set(u => u.CurrentCulture, newCulture.Name);
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.Id == channelId);
             _ = await users.UpdateOneAsync(filter, userUpdate).ConfigureAwait(false);

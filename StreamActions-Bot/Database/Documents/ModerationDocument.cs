@@ -418,7 +418,7 @@ namespace StreamActions.Database.Documents
 
         public async void Initialize()
         {
-            IMongoCollection<ModerationDocument> collection = Database.Instance.MongoDatabase.GetCollection<ModerationDocument>("moderations");
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("moderations");
             IndexKeysDefinitionBuilder<ModerationDocument> indexBuilder = Builders<ModerationDocument>.IndexKeys;
 
             try

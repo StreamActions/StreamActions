@@ -69,7 +69,7 @@ namespace StreamActions.Database.Documents.Permissions
 
         public async void Initialize()
         {
-            IMongoCollection<PermissionGroupDocument> collection = Database.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
             IndexKeysDefinitionBuilder<PermissionGroupDocument> indexBuilder = Builders<PermissionGroupDocument>.IndexKeys;
 
             try
