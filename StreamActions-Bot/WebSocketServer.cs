@@ -141,12 +141,8 @@ namespace StreamActions
 
             CancellationTokenSource tokenSource = new CancellationTokenSource();
             Task sendTask = this._clients[ipPort].WebSocket.SendAsync(buffer, messageType, endOfmessage, tokenSource.Token);
-
-            if (await Task.WhenAny(sendTask, Task.Delay(_sendTimeout)).ConfigureAwait(false) != sendTask)
-            {
-                tokenSource.Cancel();
-            }
-
+            _ = await Task.WhenAny(sendTask, Task.Delay(_sendTimeout, tokenSource.Token)).ConfigureAwait(false);
+            tokenSource.Cancel();
             tokenSource.Dispose();
         }
 
@@ -167,12 +163,8 @@ namespace StreamActions
 
             CancellationTokenSource tokenSource = new CancellationTokenSource();
             Task sendTask = this._clients[ipPort].WebSocket.SendAsync(buffer, messageType, endOfmessage, tokenSource.Token).AsTask();
-
-            if (await Task.WhenAny(sendTask, Task.Delay(_sendTimeout)).ConfigureAwait(false) != sendTask)
-            {
-                tokenSource.Cancel();
-            }
-
+            _ = await Task.WhenAny(sendTask, Task.Delay(_sendTimeout, tokenSource.Token)).ConfigureAwait(false);
+            tokenSource.Cancel();
             tokenSource.Dispose();
         }
 
@@ -528,12 +520,8 @@ namespace StreamActions
         {
             CancellationTokenSource tokenSource = new CancellationTokenSource();
             Task closeTask = webSocket.CloseAsync(closeStatus, statusDescription, tokenSource.Token);
-
-            if (await Task.WhenAny(closeTask, Task.Delay(_closeTimeout)).ConfigureAwait(false) != closeTask)
-            {
-                tokenSource.Cancel();
-            }
-
+            _ = await Task.WhenAny(closeTask, Task.Delay(_closeTimeout, tokenSource.Token)).ConfigureAwait(false);
+            tokenSource.Cancel();
             tokenSource.Dispose();
         }
 
@@ -548,12 +536,8 @@ namespace StreamActions
         {
             CancellationTokenSource tokenSource = new CancellationTokenSource();
             Task closeTask = webSocket.CloseOutputAsync(closeStatus, statusDescription, tokenSource.Token);
-
-            if (await Task.WhenAny(closeTask, Task.Delay(_closeTimeout)).ConfigureAwait(false) != closeTask)
-            {
-                tokenSource.Cancel();
-            }
-
+            _ = await Task.WhenAny(closeTask, Task.Delay(_closeTimeout, tokenSource.Token)).ConfigureAwait(false);
+            tokenSource.Cancel();
             tokenSource.Dispose();
         }
 
