@@ -81,7 +81,7 @@ namespace StreamActions
         {
             if (this._clients.ContainsKey(ipPort))
             {
-                await this.CloseAsync(this._clients[ipPort].WebSocket, closeStatus, closeReason).ConfigureAwait(false);
+                await CloseAsync(this._clients[ipPort].WebSocket, closeStatus, closeReason).ConfigureAwait(false);
                 this._clients[ipPort].CancellationTokenSource.Cancel();
                 this._clients[ipPort].WebSocket.Dispose();
                 this._clients[ipPort].TcpClient.Dispose();
@@ -267,6 +267,7 @@ namespace StreamActions
                 this._server.Stop();
                 this._server.Dispose();
                 this._tokenSource.Cancel();
+                this._tokenSource.Dispose();
             }
         }
 
@@ -374,6 +375,38 @@ namespace StreamActions
         #region Private Methods
 
         /// <summary>
+        /// Closes the Websocket as an asynchronous operation using the close handshake defined in the WebSocket protocol specification section 7.
+        /// </summary>
+        /// <param name="webSocket">The WebSocket to close.</param>
+        /// <param name="closeStatus">Indicates the reason for closing the WebSocket connection.</param>
+        /// <param name="statusDescription">Specifies a human readable explanation as to why the connection is closed.</param>
+        /// <returns>A Task that can be awaited.</returns>
+        private static async Task CloseAsync(WebSocket webSocket, WebSocketCloseStatus closeStatus, string statusDescription)
+        {
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            Task closeTask = webSocket.CloseAsync(closeStatus, statusDescription, tokenSource.Token);
+            _ = await Task.WhenAny(closeTask, Task.Delay(_closeTimeout, tokenSource.Token)).ConfigureAwait(false);
+            tokenSource.Cancel();
+            tokenSource.Dispose();
+        }
+
+        /// <summary>
+        /// Initiates or completes the close handshake defined in the WebSocket protocol specification section 7.
+        /// </summary>
+        /// <param name="webSocket">The WebSocket to close.</param>
+        /// <param name="closeStatus">Indicates the reason for closing the WebSocket connection.</param>
+        /// <param name="statusDescription">Specifies a human readable explanation as to why the connection is closed.</param>
+        /// <returns>A Task that can be awaited.</returns>
+        private static async Task CloseOutputAsync(WebSocket webSocket, WebSocketCloseStatus closeStatus, string statusDescription)
+        {
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            Task closeTask = webSocket.CloseOutputAsync(closeStatus, statusDescription, tokenSource.Token);
+            _ = await Task.WhenAny(closeTask, Task.Delay(_closeTimeout, tokenSource.Token)).ConfigureAwait(false);
+            tokenSource.Cancel();
+            tokenSource.Dispose();
+        }
+
+        /// <summary>
         /// Accepts connections from <see cref="_server"/>.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Disposed in task and disconnect members")]
@@ -425,7 +458,7 @@ namespace StreamActions
 
                         if (!this._clients.TryAdd(ipPort, context))
                         {
-                            await this.CloseAsync(context.WebSocket, WebSocketCloseStatus.InternalServerError, "Unable to store client context").ConfigureAwait(false);
+                            await CloseAsync(context.WebSocket, WebSocketCloseStatus.InternalServerError, "Unable to store client context").ConfigureAwait(false);
                             context.WebSocket.Dispose();
                             context.TcpClient.Dispose();
                             killTokenSource.Dispose();
@@ -434,7 +467,7 @@ namespace StreamActions
 
                         if (await this.DataReceiver(ipPort, context, killToken).ConfigureAwait(false))
                         {
-                            await this.CloseOutputAsync(context.WebSocket, WebSocketCloseStatus.NormalClosure, "Closed by client").ConfigureAwait(false);
+                            await CloseOutputAsync(context.WebSocket, WebSocketCloseStatus.NormalClosure, "Closed by client").ConfigureAwait(false);
                         }
 
                         await this.ClientDisconnected(ipPort).ConfigureAwait(false);
@@ -508,38 +541,6 @@ namespace StreamActions
                 _ = this._clients.TryRemove(ipPort, out _);
             }
         }).ConfigureAwait(false);
-
-        /// <summary>
-        /// Closes the Websocket as an asynchronous operation using the close handshake defined in the WebSocket protocol specification section 7.
-        /// </summary>
-        /// <param name="webSocket">The WebSocket to close.</param>
-        /// <param name="closeStatus">Indicates the reason for closing the WebSocket connection.</param>
-        /// <param name="statusDescription">Specifies a human readable explanation as to why the connection is closed.</param>
-        /// <returns>A Task that can be awaited.</returns>
-        private async Task CloseAsync(WebSocket webSocket, WebSocketCloseStatus closeStatus, string statusDescription)
-        {
-            CancellationTokenSource tokenSource = new CancellationTokenSource();
-            Task closeTask = webSocket.CloseAsync(closeStatus, statusDescription, tokenSource.Token);
-            _ = await Task.WhenAny(closeTask, Task.Delay(_closeTimeout, tokenSource.Token)).ConfigureAwait(false);
-            tokenSource.Cancel();
-            tokenSource.Dispose();
-        }
-
-        /// <summary>
-        /// Initiates or completes the close handshake defined in the WebSocket protocol specification section 7.
-        /// </summary>
-        /// <param name="webSocket">The WebSocket to close.</param>
-        /// <param name="closeStatus">Indicates the reason for closing the WebSocket connection.</param>
-        /// <param name="statusDescription">Specifies a human readable explanation as to why the connection is closed.</param>
-        /// <returns>A Task that can be awaited.</returns>
-        private async Task CloseOutputAsync(WebSocket webSocket, WebSocketCloseStatus closeStatus, string statusDescription)
-        {
-            CancellationTokenSource tokenSource = new CancellationTokenSource();
-            Task closeTask = webSocket.CloseOutputAsync(closeStatus, statusDescription, tokenSource.Token);
-            _ = await Task.WhenAny(closeTask, Task.Delay(_closeTimeout, tokenSource.Token)).ConfigureAwait(false);
-            tokenSource.Cancel();
-            tokenSource.Dispose();
-        }
 
         /// <summary>
         /// Receive loop for a client.

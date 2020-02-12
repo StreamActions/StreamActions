@@ -32,7 +32,7 @@ namespace StreamActions.Plugins
     /// Handles permissions.
     /// </summary>
     [Guid("93149A5E-54D4-4EC2-AF18-D32602C12BFE")]
-    public class Permissions : IPlugin
+    public class Permission : IPlugin
     {
         #region Public Properties
 
@@ -60,7 +60,7 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Handles user permissions";
 
-        public Guid PluginId => typeof(Permissions).GUID;
+        public Guid PluginId => typeof(Permission).GUID;
 
         public string PluginName => "Permissions";
 

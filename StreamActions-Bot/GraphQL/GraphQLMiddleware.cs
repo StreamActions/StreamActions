@@ -119,7 +119,7 @@ namespace StreamActions.GraphQL
                     result = new QueryResult();
                     result.Errors.Add(new GraphQLError(ex.Message));
                 }
-                _ = await WebSocketServer.Instance.SendAsync(e.IpPort, JsonSerializer.SerializeToUtf8Bytes(new GraphQLResult(result))).ConfigureAwait(false);
+                await WebSocketServer.Instance.SendAsync(e.IpPort, JsonSerializer.SerializeToUtf8Bytes(new GraphQLResult(result))).ConfigureAwait(false);
             }
         }
 

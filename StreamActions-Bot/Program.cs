@@ -17,6 +17,7 @@
 using StreamActions.JsonDocuments;
 using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 using TwitchLib.Api;
 
 namespace StreamActions
@@ -53,7 +54,7 @@ namespace StreamActions
 
         #region Private Methods
 
-        private static async void Main()
+        private static void Main()
         {
             using FileStream fs = File.OpenRead(Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "settings.json")));
             JsonSerializerOptions options = new JsonSerializerOptions
@@ -62,7 +63,9 @@ namespace StreamActions
                 PropertyNameCaseInsensitive = true,
                 ReadCommentHandling = JsonCommentHandling.Skip
             };
-            _settings = await JsonSerializer.DeserializeAsync<SettingsDocument>(fs, options);
+            using Task<SettingsDocument> t = JsonSerializer.DeserializeAsync<SettingsDocument>(fs, options).AsTask();
+            t.Wait();
+            _settings = t.Result;
 
             _twitchApi = new TwitchAPI();
             _twitchApi.Settings.ClientId = _settings.TwitchApiClientId;

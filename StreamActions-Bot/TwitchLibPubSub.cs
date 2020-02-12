@@ -164,7 +164,7 @@ namespace StreamActions
         /// <summary>
         /// Singleton of <see cref="TwitchLibPubSub"/>.
         /// </summary>
-        public TwitchLibPubSub Instance => _instance.Value;
+        public static TwitchLibPubSub Instance => _instance.Value;
 
         #endregion Public Properties
 

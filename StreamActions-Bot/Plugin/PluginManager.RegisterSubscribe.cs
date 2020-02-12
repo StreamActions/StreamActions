@@ -78,14 +78,9 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
         public bool RegisterBotnameChatCommand(string typeName, string command)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
-            }
-
-            if (command is null || command.Length == 0)
-            {
-                throw new ArgumentNullException(nameof(command));
             }
 
             if (!this.DoesBotnameChatCommandExist(command))
@@ -93,6 +88,11 @@ namespace StreamActions.Plugin
                 if (!this._registeredBotnameChatCommands.ContainsKey(typeName))
                 {
                     _ = this._registeredBotnameChatCommands.TryAdd(typeName, new List<string>());
+                }
+
+                if (string.IsNullOrWhiteSpace(command))
+                {
+                    throw new ArgumentNullException(nameof(command));
                 }
 
                 this._registeredBotnameChatCommands[typeName].Add(command.ToLowerInvariant());
@@ -111,7 +111,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="commands"/> is null or empty.</exception>
         public void RegisterBotnameChatCommands(string typeName, string[] commands)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -136,14 +136,9 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
         public bool RegisterBotnameWhisperCommand(string typeName, string command)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
-            }
-
-            if (command is null || command.Length == 0)
-            {
-                throw new ArgumentNullException(nameof(command));
             }
 
             if (!this.DoesBotnameWhisperCommandExist(command))
@@ -151,6 +146,11 @@ namespace StreamActions.Plugin
                 if (!this._registeredBotnameWhisperCommands.ContainsKey(typeName))
                 {
                     _ = this._registeredBotnameWhisperCommands.TryAdd(typeName, new List<string>());
+                }
+
+                if (string.IsNullOrWhiteSpace(command))
+                {
+                    throw new ArgumentNullException(nameof(command));
                 }
 
                 this._registeredBotnameWhisperCommands[typeName].Add(command.ToLowerInvariant());
@@ -169,7 +169,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="commands"/> is null or empty.</exception>
         public void RegisterBotnameWhisperCommands(string typeName, string[] commands)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -194,14 +194,9 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
         public bool RegisterChatCommand(string typeName, string command)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
-            }
-
-            if (command is null || command.Length == 0)
-            {
-                throw new ArgumentNullException(nameof(command));
             }
 
             if (!this.DoesChatCommandExist(command))
@@ -209,6 +204,11 @@ namespace StreamActions.Plugin
                 if (!this._registeredChatCommands.ContainsKey(typeName))
                 {
                     _ = this._registeredChatCommands.TryAdd(typeName, new List<string>());
+                }
+
+                if (string.IsNullOrWhiteSpace(command))
+                {
+                    throw new ArgumentNullException(nameof(command));
                 }
 
                 this._registeredChatCommands[typeName].Add(command.ToLowerInvariant());
@@ -227,7 +227,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="commands"/> is null or empty.</exception>
         public void RegisterChatCommands(string typeName, string[] commands)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -252,14 +252,9 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
         public bool RegisterWhisperCommand(string typeName, string command)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
-            }
-
-            if (command is null || command.Length == 0)
-            {
-                throw new ArgumentNullException(nameof(command));
             }
 
             if (!this.DoesWhisperCommandExist(command))
@@ -267,6 +262,11 @@ namespace StreamActions.Plugin
                 if (!this._registeredWhisperCommands.ContainsKey(typeName))
                 {
                     _ = this._registeredWhisperCommands.TryAdd(typeName, new List<string>());
+                }
+
+                if (string.IsNullOrWhiteSpace(command))
+                {
+                    throw new ArgumentNullException(nameof(command));
                 }
 
                 this._registeredWhisperCommands[typeName].Add(command.ToLowerInvariant());
@@ -285,7 +285,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="commands"/> is null or empty.</exception>
         public void RegisterWhisperCommands(string typeName, string[] commands)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -308,7 +308,15 @@ namespace StreamActions.Plugin
         /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool SubscribeBotnameChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._botnameChatCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
+        public bool SubscribeBotnameChatCommand(string command, ChatCommandReceivedEventHandler handler)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return this._botnameChatCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
+        }
 
         /// <summary>
         /// Attempts to subscribe the provided Delegate to the designated whisper <c>!botname command</c>.
@@ -317,7 +325,15 @@ namespace StreamActions.Plugin
         /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool SubscribeBotnameWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._botnameWhisperCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
+        public bool SubscribeBotnameWhisperCommand(string command, WhisperCommandReceivedEventHandler handler)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return this._botnameWhisperCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
+        }
 
         /// <summary>
         /// Attempts to subscribe the provided Delegate to the designated chat <c>!command</c>.
@@ -326,7 +342,15 @@ namespace StreamActions.Plugin
         /// <param name="handler">The <see cref="ChatCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool SubscribeChatCommand(string command, ChatCommandReceivedEventHandler handler) => this._chatCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
+        public bool SubscribeChatCommand(string command, ChatCommandReceivedEventHandler handler)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return this._chatCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
+        }
 
         /// <summary>
         /// Attempts to subscribe the provided Delegate to the designated whisper <c>!command</c>.
@@ -335,7 +359,15 @@ namespace StreamActions.Plugin
         /// <param name="handler">The <see cref="WhisperCommandReceivedEventHandler"/> to subscribe.</param>
         /// <returns><c>true</c> if the command was subscribed successfully; <c>false</c> if the command already exists.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool SubscribeWhisperCommand(string command, WhisperCommandReceivedEventHandler handler) => this._whisperCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
+        public bool SubscribeWhisperCommand(string command, WhisperCommandReceivedEventHandler handler)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return this._whisperCommandEventHandlers.TryAdd(command.ToLowerInvariant(), handler);
+        }
 
         /// <summary>
         /// Unregisters all <c>!botname</c> chat commands from a Type.
@@ -344,7 +376,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null.</exception>
         public void UnregisterAllBotnameChatCommands(string typeName)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -359,7 +391,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null.</exception>
         public void UnregisterAllBotnameWhisperCommands(string typeName)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -374,7 +406,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null.</exception>
         public void UnregisterAllChatCommands(string typeName)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -389,7 +421,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null.</exception>
         public void UnregisterAllWhisperCommands(string typeName)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -405,7 +437,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
         public void UnregisterBotnameChatCommand(string typeName, string command)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -429,7 +461,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
         public void UnregisterBotnameWhisperCommand(string typeName, string command)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -453,7 +485,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
         public void UnregisterChatCommand(string typeName, string command)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -477,7 +509,7 @@ namespace StreamActions.Plugin
         /// <exception cref="ArgumentNullException"><paramref name="typeName"/> is null; <paramref name="command"/> is null or empty.</exception>
         public void UnregisterWhisperCommand(string typeName, string command)
         {
-            if (typeName is null)
+            if (string.IsNullOrWhiteSpace(typeName))
             {
                 throw new ArgumentNullException(nameof(typeName));
             }
@@ -499,7 +531,15 @@ namespace StreamActions.Plugin
         /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
         /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool UnsubscribeBotnameChatCommand(string command) => this._botnameChatCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
+        public bool UnsubscribeBotnameChatCommand(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return this._botnameChatCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
+        }
 
         /// <summary>
         /// Attempts to unsubscribe the designated whisper <c>!botname command</c>.
@@ -507,7 +547,15 @@ namespace StreamActions.Plugin
         /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
         /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool UnsubscribeBotnameWhisperCommand(string command) => this._botnameWhisperCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
+        public bool UnsubscribeBotnameWhisperCommand(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return this._botnameWhisperCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
+        }
 
         /// <summary>
         /// Attempts to unsubscribe the designated chat <c>!command</c>.
@@ -515,7 +563,15 @@ namespace StreamActions.Plugin
         /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
         /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool UnsubscribeChatCommand(string command) => this._chatCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
+        public bool UnsubscribeChatCommand(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return this._chatCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
+        }
 
         /// <summary>
         /// Attempts to unsubscribe the designated whisper <c>!command</c>.
@@ -523,7 +579,15 @@ namespace StreamActions.Plugin
         /// <param name="command">The command to unsubscribe from, without the <c>!</c>.</param>
         /// <returns><c>true</c> if the command was unsubscribed successfully; <c>false</c> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="command"/> is <c>null</c>.
-        public bool UnsubscribeWhisperCommand(string command) => this._whisperCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
+        public bool UnsubscribeWhisperCommand(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
+            return this._whisperCommandEventHandlers.TryRemove(command.ToLowerInvariant(), out _);
+        }
 
         /// <summary>
         /// Updates the subscribed chat <c>!botname command</c> names.
