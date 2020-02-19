@@ -15,6 +15,7 @@
  */
 
 using MongoDB.Driver;
+using StreamActions.Attributes;
 using StreamActions.Database;
 using StreamActions.Database.Documents.Permissions;
 using StreamActions.Database.Documents.Users;
@@ -26,6 +27,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using TwitchLib.Client.Events;
 
 namespace StreamActions.Plugins
 {
@@ -490,5 +492,132 @@ namespace StreamActions.Plugins
         private static readonly ConcurrentDictionary<string, string> _registeredPermissions = new ConcurrentDictionary<string, string>();
 
         #endregion Private Fields
+
+        #region Private Methods
+
+        /// <summary>
+        /// Creates a new permission group in the channel.
+        /// </summary>
+        /// <param name="e">The chat command arguments.</param>
+        private async void CreateGroup(OnChatCommandReceivedArgs e)
+        {
+        }
+
+        /// <summary>
+        /// Deletes permission group from the channel.
+        /// </summary>
+        /// <param name="e">The chat command arguments.</param>
+        private async void DeleteGroup(OnChatCommandReceivedArgs e)
+        {
+        }
+
+        /// <summary>
+        /// Allows a permission to users of the specified permission group.
+        /// </summary>
+        /// <param name="e">The chat command arguments.</param>
+        private async void GroupAllowPermission(OnChatCommandReceivedArgs e)
+        {
+        }
+
+        /// <summary>
+        /// Explicitly denies a permission to users of the specified permission group.
+        /// </summary>
+        /// <param name="e">The chat command arguments.</param>
+        private async void GroupDenyPermission(OnChatCommandReceivedArgs e)
+        {
+        }
+
+        /// <summary>
+        /// Sets the specified permission to be inherited in the permission group.
+        /// </summary>
+        /// <param name="e">The chat command arguments.</param>
+        private async void GroupInheritPermission(OnChatCommandReceivedArgs e)
+        {
+        }
+
+        /// <summary>
+        /// Lists the current permissions of the specified permission group.
+        /// </summary>
+        /// <param name="e">The chat command arguments.</param>
+        private async void GroupListPermissions(OnChatCommandReceivedArgs e)
+        {
+        }
+
+        /// <summary>
+        /// Lists the permission groups of the channel.
+        /// </summary>
+        /// <param name="e">The chat command arguments.</param>
+        private async void ListGroups(OnChatCommandReceivedArgs e)
+        {
+        }
+
+        /// <summary>
+        /// Permission group management command. Allows CRUD of groups and their permissions.
+        /// </summary>
+        /// <param name="sender">The object that invoked the delegate.</param>
+        /// <param name="e">The chat command arguments.</param>
+        [BotnameChatCommand("permissions", "group", UserLevels.Broadcaster)]
+        private void Permission_OnGroupCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            switch ((e.Command.ArgumentsAsList[2] ?? "usage").ToLowerInvariant())
+            {
+                case "create":
+                    this.CreateGroup(e);
+                    break;
+
+                case "delete":
+                    this.DeleteGroup(e);
+                    break;
+
+                case "list":
+                    this.ListGroups(e);
+                    break;
+
+                case "rename":
+                    this.RenameGroup(e);
+                    break;
+
+                case "allow":
+                    this.GroupAllowPermission(e);
+                    break;
+
+                case "deny":
+                    this.GroupDenyPermission(e);
+                    break;
+
+                case "inherit":
+                    this.GroupInheritPermission(e);
+                    break;
+
+                case "listpermissions":
+                    this.GroupListPermissions(e);
+                    break;
+
+                default:
+                    //TODO: Usage
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Main command. Just provides usage to get to the sub-commands.
+        /// </summary>
+        /// <param name="sender">The object that invoked the delegate.</param>
+        /// <param name="e">The chat command arguments.</param>
+        [BotnameChatCommand("permissions", UserLevels.Broadcaster)]
+        private void Permission_OnMainCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            //TODO: Usage
+        }
+
+        /// <summary>
+        /// Renames the specified permission group.
+        /// </summary>
+        /// <param name="e">The chat command arguments.</param>
+        private async void RenameGroup(OnChatCommandReceivedArgs e)
+        {
+        }
+
+        #endregion Private Methods
     }
 }

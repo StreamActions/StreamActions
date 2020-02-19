@@ -20,7 +20,7 @@ using System;
 namespace StreamActions.MemoryDocuments
 {
     /// <summary>
-    /// Contains the cooldown information for a user cooldown, for a particular command. Coontained in a <see cref="CommandCooldownDocument"/>.
+    /// Contains the cooldown information for a user cooldown, for a particular command. Contained in a <see cref="CommandCooldownDocument"/>.
     /// </summary>
     public class CommandUserCooldownDocument : ICursorable
     {
