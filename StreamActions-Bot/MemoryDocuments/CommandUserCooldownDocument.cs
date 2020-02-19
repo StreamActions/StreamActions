@@ -19,11 +19,21 @@ using System;
 
 namespace StreamActions.MemoryDocuments
 {
+    /// <summary>
+    /// Contains the cooldown information for a user cooldown, for a particular command. Coontained in a <see cref="CommandCooldownDocument"/>.
+    /// </summary>
     public class CommandUserCooldownDocument : ICursorable
     {
         #region Public Properties
 
+        /// <summary>
+        /// The expiration time of the cooldown.
+        /// </summary>
         public DateTime CooldownExpires { get; set; }
+
+        /// <summary>
+        /// The userId this cooldown applies to.
+        /// </summary>
         public string UserId { get; set; }
 
         #endregion Public Properties

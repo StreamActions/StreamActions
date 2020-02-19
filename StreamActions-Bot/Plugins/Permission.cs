@@ -23,6 +23,7 @@ using StreamActions.Plugin;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
@@ -61,11 +62,8 @@ namespace StreamActions.Plugins
         public string PluginDescription => "Handles user permissions";
 
         public Guid PluginId => typeof(Permission).GUID;
-
         public string PluginName => "Permissions";
-
         public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
-
         public string PluginVersion => "1.0.0";
 
         #endregion Public Properties
@@ -252,6 +250,8 @@ namespace StreamActions.Plugins
         public void Enabled()
         {
         }
+
+        public string GetCursor() => this.PluginId.ToString("D", CultureInfo.InvariantCulture);
 
         #endregion Public Methods
 

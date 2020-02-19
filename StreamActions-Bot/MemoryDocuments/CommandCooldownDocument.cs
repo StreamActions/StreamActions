@@ -15,9 +15,11 @@
  */
 
 using EntityGraphQL.Schema;
+using StreamActions.GraphQL.Connections;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 
 namespace StreamActions.MemoryDocuments
@@ -25,17 +27,19 @@ namespace StreamActions.MemoryDocuments
     /// <summary>
     /// Represents the current cooldown state of a command.
     /// </summary>
-    public class CommandCooldownDocument
+    public class CommandCooldownDocument : ICursorable
     {
         #region Public Constructors
 
         /// <summary>
         /// Constructor.
         /// </summary>
+        /// <param name="command">The commandId this document applies to.</param>
         /// <param name="globalCooldown">The default global cooldown time to use for this command, in seconds.</param>
         /// <param name="userCooldown">The default user cooldown time to use for this command, in seconds.</param>
-        public CommandCooldownDocument(uint globalCooldown, uint userCooldown)
+        public CommandCooldownDocument(Guid commandId, uint globalCooldown, uint userCooldown)
         {
+            this.CommandId = commandId;
             this.GlobalCooldown = globalCooldown;
             this.UserCooldown = userCooldown;
         }
@@ -43,6 +47,11 @@ namespace StreamActions.MemoryDocuments
         #endregion Public Constructors
 
         #region Public Properties
+
+        /// <summary>
+        /// The commandId this document applies to.
+        /// </summary>
+        public Guid CommandId { get; set; }
 
         /// <summary>
         /// The global cooldown time for this command, in seconds.
@@ -120,6 +129,8 @@ namespace StreamActions.MemoryDocuments
                 }
             }
         }
+
+        public string GetCursor() => this.CommandId.ToString("D", CultureInfo.InvariantCulture);
 
         /// <summary>
         /// Indicates if either the specified user Id or the command itself is currently on cooldown.

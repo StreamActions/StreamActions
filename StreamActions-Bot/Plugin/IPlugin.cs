@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+using StreamActions.GraphQL.Connections;
 using System;
 
 namespace StreamActions.Plugin
@@ -21,7 +22,7 @@ namespace StreamActions.Plugin
     /// <summary>
     /// An interface for a plugin that processes messages, commands, and other input.
     /// </summary>
-    public interface IPlugin
+    public interface IPlugin : ICursorable
     {
         #region Public Properties
 

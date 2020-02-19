@@ -80,12 +80,10 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Provides i18n support";
 
-        public Guid PluginId => typeof(I18n).GUID;
         public string PluginName => "I18n";
-
         public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
-
         public string PluginVersion => "1.0.0";
+        public Guid PluginId => typeof(I18n).GUID;
 
         #endregion Public Properties
 
@@ -313,6 +311,8 @@ namespace StreamActions.Plugins
 
             return (await cursor.FirstAsync().ConfigureAwait(false))?.CurrentCulture ?? this.GlobalCulture.Name;
         }
+
+        public string GetCursor() => this.PluginId.ToString("D", CultureInfo.InvariantCulture);
 
         /// <summary>
         /// Loads the specified culture and it's I18n data into memory, if needed.

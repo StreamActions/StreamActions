@@ -22,6 +22,7 @@ using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Globalization;
 
 namespace StreamActions.Plugins
 {
@@ -89,6 +90,8 @@ namespace StreamActions.Plugins
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnSymbolsCheck;
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnZalgoCheck;
         }
+
+        public string GetCursor() => this.PluginId.ToString("D", CultureInfo.InvariantCulture);
 
         #endregion Public Methods
 

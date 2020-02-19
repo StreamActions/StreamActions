@@ -26,6 +26,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using StreamActions.Database;
+using System.Globalization;
 
 namespace StreamActions.Plugins
 {
@@ -54,13 +55,10 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Custom Command plugin for StreamActions";
 
-        public Guid PluginId => typeof(CustomCommand).GUID;
-
         public string PluginName => "CustomCommand";
-
         public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
-
         public string PluginVersion => "1.0.0";
+        public Guid PluginId => typeof(CustomCommand).GUID;
 
         #endregion Public Properties
 
@@ -108,6 +106,8 @@ namespace StreamActions.Plugins
         }
 
         public void Enabled() => PluginManager.Instance.OnChatCommandReceived += this.CustomCommand_OnCustomCommand;
+
+        public string GetCursor() => this.PluginId.ToString("D", CultureInfo.InvariantCulture);
 
         #endregion Public Methods
 

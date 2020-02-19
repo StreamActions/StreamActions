@@ -425,7 +425,7 @@ namespace StreamActions.Plugin
 
                 using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
                 CommandDocument commandDocument = await cursor.FirstAsync().ConfigureAwait(false);
-                _ = this._commandCooldowns[channelId].TryAdd(command, new CommandCooldownDocument(commandDocument.GlobalCooldown, commandDocument.UserCooldown));
+                _ = this._commandCooldowns[channelId].TryAdd(command, new CommandCooldownDocument(commandDocument.Id, commandDocument.GlobalCooldown, commandDocument.UserCooldown));
             }
 
             return this._commandCooldowns[channelId][command];
