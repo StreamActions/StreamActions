@@ -55,10 +55,10 @@ namespace StreamActions.Plugins
 
         public string PluginDescription => "Custom Command plugin for StreamActions";
 
+        public Guid PluginId => typeof(CustomCommand).GUID;
         public string PluginName => "CustomCommand";
         public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
         public string PluginVersion => "1.0.0";
-        public Guid PluginId => typeof(CustomCommand).GUID;
 
         #endregion Public Properties
 
@@ -116,12 +116,12 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Regular expression used to detect the command format for when adding or editing commands.
         /// </summary>
-        private readonly Regex _commandAddEditRegex = new Regex("(?<command>" + PluginManager.Instance.ChatCommandIdentifier + "\\S{1,})\\s((?<userlevel>(-b|-m|-ts|-ta|-s|-v|-c))\\s)?(?<response>[\\w\\W]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private readonly Regex _commandAddEditRegex = new Regex("(?<prefix>" + PluginManager.Instance.ChatCommandIdentifier + ")(?<command>\\S{1,})\\s((?<userlevel>(-b|-m|-ts|-ta|-s|-v|-c))\\s)?(?<response>[\\w\\W]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         /// <summary>
         /// Regular expression used to detect the command format for when removing a command.
         /// </summary>
-        private readonly Regex _commandRemoveRegex = new Regex("(?<command>" + PluginManager.Instance.ChatCommandIdentifier + "\\S{1,})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private readonly Regex _commandRemoveRegex = new Regex("(?<prefix>" + PluginManager.Instance.ChatCommandIdentifier + ")(?<command>\\S{1,})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         #endregion Private Fields
 
@@ -168,16 +168,31 @@ namespace StreamActions.Plugins
                     // Command added.
                     TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
                         await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "AddSuccess", e.Command.ChatMessage.RoomId,
-                        new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command, Response = response },
-                        "The command {CommandPrefix}{Command} has been added with the response: {Response}").ConfigureAwait(false));
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            Command = command,
+                            Response = response,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            DisplayName = e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, the command {CommandPrefix}{Command} has been added with the response: {Response}").ConfigureAwait(false));
                 }
                 else
                 {
                     // Command exists.
                     TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
                         await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "AddAlreadyExists", e.Command.ChatMessage.RoomId,
-                        new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command },
-                        "The command {CommandPrefix}{Command} cannot be added as it already exists.").ConfigureAwait(false));
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            Command = command,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            DisplayName = e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, the command {CommandPrefix}{Command} cannot be added as it already exists.").ConfigureAwait(false));
                 }
             }
             else
@@ -185,8 +200,14 @@ namespace StreamActions.Plugins
                 // Wrong syntax.
                 TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
                     await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "AddUsage", e.Command.ChatMessage.RoomId,
-                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier },
-                    "Add command usage: !command add {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        User = e.Command.ChatMessage.Username,
+                        Sender = e.Command.ChatMessage.Username,
+                        DisplayName = e.Command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, add command usage: !command add {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
             }
         }
 
@@ -247,17 +268,32 @@ namespace StreamActions.Plugins
 
                     // Command modified.
                     TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
-                    await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "ModifySuccess", e.Command.ChatMessage.RoomId,
-                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command, Response = response },
-                    "The command {CommandPrefix}{Command} has been modified with the response: {Response}").ConfigureAwait(false));
+                        await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "ModifySuccess", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            Command = command,
+                            Response = response,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            DisplayName = e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, the command {CommandPrefix}{Command} has been modified with the response: {Response}").ConfigureAwait(false));
                 }
                 else
                 {
                     // Command does not exist.
                     TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
                         await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "ModifyNotExists", e.Command.ChatMessage.RoomId,
-                        new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command },
-                        "The command {CommandPrefix}{Command} cannot be modified as it doesn't exist.").ConfigureAwait(false));
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            Command = command,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            DisplayName = e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, the command {CommandPrefix}{Command} cannot be modified as it doesn't exist.").ConfigureAwait(false));
                 }
             }
             else
@@ -265,8 +301,14 @@ namespace StreamActions.Plugins
                 // Wrong syntax.
                 TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
                     await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "ModifyUsage", e.Command.ChatMessage.RoomId,
-                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier },
-                    "Modify command usage: !command modify {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        User = e.Command.ChatMessage.Username,
+                        Sender = e.Command.ChatMessage.Username,
+                        DisplayName = e.Command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, modify command usage: !command modify {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
             }
         }
 
@@ -295,17 +337,31 @@ namespace StreamActions.Plugins
 
                     // Command removed.
                     TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
-                    await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "RemoveSuccess", e.Command.ChatMessage.RoomId,
-                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command },
-                    "The command {CommandPrefix}{Command} has been removed.").ConfigureAwait(false));
+                        await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "RemoveSuccess", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            Command = command,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            DisplayName = e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, the command {CommandPrefix}{Command} has been removed.").ConfigureAwait(false));
                 }
                 else
                 {
                     // Command doesn't exist.
                     TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
                         await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "RemoveNotExists", e.Command.ChatMessage.RoomId,
-                        new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier, Command = command },
-                        "The command {CommandPrefix}{Command} cannot be removed as it doesn't exist.").ConfigureAwait(false));
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            Command = command,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            DisplayName = e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, the command {CommandPrefix}{Command} cannot be removed as it doesn't exist.").ConfigureAwait(false));
                 }
             }
             else
@@ -313,8 +369,14 @@ namespace StreamActions.Plugins
                 // Wrong syntax.
                 TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel,
                     await I18n.Instance.GetAndFormatWithAsync("CustomCommand", "RemoveUsage", e.Command.ChatMessage.RoomId,
-                    new { CommandPrefix = PluginManager.Instance.ChatCommandIdentifier },
-                    "Remove command usage: !command remove {CommandPrefix}[command]").ConfigureAwait(false));
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        User = e.Command.ChatMessage.Username,
+                        Sender = e.Command.ChatMessage.Username,
+                        DisplayName = e.Command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, remove command usage: !command remove {CommandPrefix}[command]").ConfigureAwait(false));
             }
         }
 
