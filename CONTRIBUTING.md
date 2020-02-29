@@ -20,6 +20,7 @@ The following is a set of guidelines and rules for contributing to StreamActions
   * [Git Commit Messages](#git-commit-messages)
   * [C# Styleguide](#c-styleguide)
   * [MongoDB Styleguide](#mongodb-styleguide)
+  * [Chat Styleguide](#chat-styleguide)
 
 [Additional Notes](#additional-notes)
   * [Issue and Pull Request Labels](#issue-and-pull-request-labels)
@@ -256,6 +257,16 @@ To make following the C# styleguide easier, we recommend using [Visual Studio 20
 * If the document can only exist once for a given user or channel, make the _id_ field _string UserId_, otherwise, make the _id_ field _Guid Id_ and then have a separate _string UserId_ field with a unique index on it
     * Exact naming of the _string UserId_ field can be chosen based on context, such as _ChannelId_ for a channel context or _FollowerId_ for a follower context
 * Only create indexes across fields that will regularly be used in the _WHERE_, _SORT_, or _GROUP BY_ clauses
+
+### Chat Styleguide
+* Output in response to a built-in command should generally @ the display name of the sender
+* Never hard-code the chat command prefix **!**. Use a format var and substitute using `PluginManager.Instance.ChatCommandIdentifier`
+* Never hard-code the whisper command prefix **!**. Use a format var and substitute using `PluginManager.Instance.WhisperCommandIdentifier`
+* Always use `I18n.Instance.GetAndFormatWithAsync` (preferred), `I18n.GetAndFormatWith`, or `I18n.FormatWith` for inserting variables into chat output
+* All hard-coded chat responses must be passed through `I18n.Instance.GetAndFormatWithAsync` (preferred), `I18n.GetAndFormatWith`, or `I18n.Get` to provide an opportunity for I18n/translation
+* The format for _Usage_ chat responses is `@{DisplayName}, Description.... Usage: {CommandPrefix}Command subcommand [required-param-1] [optional-param-1 (optional)] ...`
+    * Example: `@{DisplayName}, Lists the permissions that are allowed or explicitly denied by a custom group. Usage: {CommandPrefix}{BotName} permissions group listpermissions [page (optional)] [GroupName]`
+* If the output to a command is going to be larger than a single chat message can handle and has the ability to be split into pages (eg. A list of permissions), use the `{CommandPrefix}command page#` convention (See example above)
 
 ## Additional Notes
 

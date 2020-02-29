@@ -537,16 +537,29 @@ namespace StreamActions.Plugins
             if (string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupCreateUsage", command.ChatMessage.RoomId,
-                    new { BotName = Program.Settings.BotLogin },
-                    "Creates a new custom permission group. Usage: !{BotName} permissions group create (GroupName)").ConfigureAwait(false));
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        DisplayName = command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Creates a new custom permission group. Usage: {CommandPrefix}{BotName} permissions group create [GroupName]").ConfigureAwait(false));
                 return;
             }
 
             AddPermissionGroup(command.ChatMessage.RoomId, groupName);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupCreateSuccess", command.ChatMessage.RoomId,
-                new { Group = groupName },
-                "The permission group {Group} has been created.").ConfigureAwait(false));
+                new
+                {
+                    Group = groupName,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    DisplayName = command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The permission group {Group} has been created").ConfigureAwait(false));
         }
 
         /// <summary>
@@ -560,16 +573,29 @@ namespace StreamActions.Plugins
             if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]) || string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupAllowUsage", command.ChatMessage.RoomId,
-                    new { BotName = Program.Settings.BotLogin },
-                    "Allows the specified permission in the custom permission group, can be overridden by a deny. Usage: !{BotName} permissions group allow (PermissionName) (GroupName)").ConfigureAwait(false));
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        DisplayName = command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Allows the specified permission in the custom permission group, can be overridden by a deny. Usage: {CommandPrefix}{BotName} permissions group allow [PermissionName] [GroupName]").ConfigureAwait(false));
                 return;
             }
 
             AddOrUpdatePermissionToGroup(await GetGroupGuidAsync(command.ChatMessage.RoomId, groupName).ConfigureAwait(false), command.ArgumentsAsList[3], false);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupAllowSuccess", command.ChatMessage.RoomId,
-                new { Group = groupName },
-                "The permission {Permission} has been allowed to members of {Group}.").ConfigureAwait(false));
+                new
+                {
+                    Group = groupName,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    DisplayName = command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The permission {Permission} has been allowed to members of {Group}").ConfigureAwait(false));
         }
 
         /// <summary>
@@ -583,16 +609,29 @@ namespace StreamActions.Plugins
             if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]) || string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupDenyUsage", command.ChatMessage.RoomId,
-                    new { BotName = Program.Settings.BotLogin },
-                    "Explicitly denies the specified permission in the custom permission group, overriding any allows that another group may provide. Usage: !{BotName} permissions group deny (PermissionName) (GroupName)").ConfigureAwait(false));
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        DisplayName = command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Explicitly denies the specified permission in the custom permission group, overriding any allows that another group may provide. Usage: {CommandPrefix}{BotName} permissions group deny [PermissionName] [GroupName]").ConfigureAwait(false));
                 return;
             }
 
             AddOrUpdatePermissionToGroup(await GetGroupGuidAsync(command.ChatMessage.RoomId, groupName).ConfigureAwait(false), command.ArgumentsAsList[3], true);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupDenySuccess", command.ChatMessage.RoomId,
-                new { Group = groupName },
-                "The permission {Permission} has been explicitly denied to members of {Group}.").ConfigureAwait(false));
+                new
+                {
+                    Group = groupName,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    DisplayName = command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The permission {Permission} has been explicitly denied to members of {Group} and will override any allows provided by another group").ConfigureAwait(false));
         }
 
         /// <summary>
@@ -606,16 +645,29 @@ namespace StreamActions.Plugins
             if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]) || string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupInheritUsage", command.ChatMessage.RoomId,
-                    new { BotName = Program.Settings.BotLogin },
-                    "Implicitly denies the specified permission in the custom permission group, but another group can allow it. Usage: !{BotName} permissions group inherit (PermissionName) (GroupName)").ConfigureAwait(false));
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        DisplayName = command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Implicitly denies the specified permission in the custom permission group, but another group can allow it. Usage: {CommandPrefix}{BotName} permissions group inherit [PermissionName] [GroupName]").ConfigureAwait(false));
                 return;
             }
 
             RemovePermissionFromGroup(await GetGroupGuidAsync(command.ChatMessage.RoomId, groupName).ConfigureAwait(false), command.ArgumentsAsList[3]);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupInheritSuccess", command.ChatMessage.RoomId,
-                new { Group = groupName },
-                "The permission {Permission} has been explicitly denied to members of {Group}.").ConfigureAwait(false));
+                new
+                {
+                    Group = groupName,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    DisplayName = command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The permission {Permission} has been explicitly denied to members of {Group}").ConfigureAwait(false));
         }
 
         /// <summary>
@@ -641,8 +693,15 @@ namespace StreamActions.Plugins
             if (string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupListPermissionsUsage", command.ChatMessage.RoomId,
-                    new { BotName = Program.Settings.BotLogin },
-                    "Lists the permissions that are allowed or explicitly denied by a custom group. Usage: !{BotName} permissions group listpermissions [page] (GroupName)").ConfigureAwait(false));
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        DisplayName = command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Lists the permissions that are allowed or explicitly denied by a custom group. Usage: {CommandPrefix}{BotName} permissions group listpermissions [page (optional)] [GroupName]").ConfigureAwait(false));
                 return;
             }
 
@@ -681,8 +740,17 @@ namespace StreamActions.Plugins
             }
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupListPermissions", command.ChatMessage.RoomId,
-                new { Permissions = permissionNames, Group = groupName, Page = page, NumPage = numPage },
-                "Permissions of group {Group} [Page {Page} of {NumPage}]: {Permissions}").ConfigureAwait(false));
+                new
+                {
+                    Permissions = permissionNames,
+                    Group = groupName,
+                    Page = page,
+                    NumPage = numPage,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    DisplayName = command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Permissions of group {Group} [Page {Page} of {NumPage}]: {Permissions}").ConfigureAwait(false));
         }
 
         /// <summary>
@@ -719,8 +787,16 @@ namespace StreamActions.Plugins
             }
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupList", command.ChatMessage.RoomId,
-                new { Groups = groupNames, Page = page, NumPage = numPage },
-                "Permission groups [Page {Page} of {NumPage}]: {Groups}").ConfigureAwait(false));
+                new
+                {
+                    Groups = groupNames,
+                    Page = page,
+                    NumPage = numPage,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    DisplayName = command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Permission groups [Page {Page} of {NumPage}]: {Groups}").ConfigureAwait(false));
         }
 
         /// <summary>
@@ -731,7 +807,7 @@ namespace StreamActions.Plugins
         [BotnameChatCommand("permissions", "group", UserLevels.Broadcaster)]
         private async void Permission_OnGroupCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            if (!(await Can(e.Command, false, 2).ConfigureAwait(false)))
+            if (!await Can(e.Command, false, 2).ConfigureAwait(false))
             {
                 return;
             }
@@ -768,8 +844,15 @@ namespace StreamActions.Plugins
 
                 default:
                     TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupUsage", e.Command.ChatMessage.RoomId,
-                        new { BotName = Program.Settings.BotLogin },
-                        "Manages custom permission groups. Usage: !{BotName} permissions group [create, remove, list, allow, deny, inherit, listpermissions]").ConfigureAwait(false));
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            DisplayName = e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages custom permission groups. Usage: {CommandPrefix}{BotName} permissions group [create, remove, list, allow, deny, inherit, listpermissions]").ConfigureAwait(false));
                     break;
             }
         }
@@ -788,8 +871,15 @@ namespace StreamActions.Plugins
             }
 
             TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "Usage", e.Command.ChatMessage.RoomId,
-                new { BotName = Program.Settings.BotLogin },
-                "Manages custom permissions. Usage: !{BotName} permissions [group]").ConfigureAwait(false));
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = e.Command.ChatMessage.Username,
+                    Sender = e.Command.ChatMessage.Username,
+                    DisplayName = e.Command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Manages custom permissions. Usage: {CommandPrefix}{BotName} permissions [group]").ConfigureAwait(false));
         }
 
         /// <summary>
@@ -803,16 +893,29 @@ namespace StreamActions.Plugins
             if (string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupRemoveUsage", command.ChatMessage.RoomId,
-                    new { BotName = Program.Settings.BotLogin },
-                    "Deletes a custom permission group and removes all users from it's membership. Usage: !{BotName} permissions group remove (GroupName)").ConfigureAwait(false));
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        DisplayName = command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Deletes a custom permission group and removes all users from it's membership. Usage: {CommandPrefix}{BotName} permissions group remove [GroupName]").ConfigureAwait(false));
                 return;
             }
 
             RemovePermissionGroup(await GetGroupGuidAsync(command.ChatMessage.RoomId, groupName).ConfigureAwait(false));
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupRemoveSuccess", command.ChatMessage.RoomId,
-                new { Group = groupName },
-                "The permission group {Group} has been removed.").ConfigureAwait(false));
+                new
+                {
+                    Group = groupName,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    DisplayName = command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The permission group {Group} has been removed").ConfigureAwait(false));
         }
 
         #endregion Private Methods
