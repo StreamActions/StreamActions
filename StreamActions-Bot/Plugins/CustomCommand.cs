@@ -207,7 +207,7 @@ namespace StreamActions.Plugins
                         Sender = e.Command.ChatMessage.Username,
                         DisplayName = e.Command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, add command usage: {CommandPrefix}command add {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
+                    "@{DisplayName}, Adds a custom command. Usage: {CommandPrefix}command add {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
             }
         }
 
@@ -308,7 +308,7 @@ namespace StreamActions.Plugins
                         Sender = e.Command.ChatMessage.Username,
                         DisplayName = e.Command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, modify command usage: {CommandPrefix}command modify {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
+                    "@{DisplayName}, Modifies a command. Usage: {CommandPrefix}command modify {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
             }
         }
 
@@ -376,7 +376,7 @@ namespace StreamActions.Plugins
                         Sender = e.Command.ChatMessage.Username,
                         DisplayName = e.Command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, remove command usage: {CommandPrefix}command remove {CommandPrefix}[command]").ConfigureAwait(false));
+                    "@{DisplayName}, Removes a custom command. Usage: {CommandPrefix}command remove {CommandPrefix}[command]").ConfigureAwait(false));
             }
         }
 

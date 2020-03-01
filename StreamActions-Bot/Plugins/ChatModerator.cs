@@ -65,16 +65,6 @@ namespace StreamActions.Plugins
 
         public void Disabled()
         {
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnCapsCheck;
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnColouredMessageCheck;
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnEmotesCheck;
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnFakePurgeCheck;
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnLinksCheck;
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnLongMessageCheck;
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnOneManSpamCheck;
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnRepetitionCheck;
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnSymbolsCheck;
-            PluginManager.Instance.OnMessageModeration -= this.ChatModerator_OnZalgoCheck;
         }
 
         public void Enabled()
@@ -203,7 +193,8 @@ namespace StreamActions.Plugins
         private bool HasFakePurge(string message) =>
             message.Equals("<message deleted>", StringComparison.OrdinalIgnoreCase) ||
             message.Equals("<deleted message>", StringComparison.OrdinalIgnoreCase) ||
-            message.Equals("message deleted by a moderator.", StringComparison.OrdinalIgnoreCase);
+            message.Equals("message deleted by a moderator.", StringComparison.OrdinalIgnoreCase) ||
+            message.Equals("message removed by a moderator.", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Method that is used to check if a message is coloured, meaning it starts with the command /me on Twitch.
