@@ -122,7 +122,7 @@ namespace StreamActions.Plugin
         /// <summary>
         /// The number of seconds to timeout the sender for. Setting this will also set <see cref="ShouldTimeout"/>.
         /// </summary>
-        public int TimeoutSeconds
+        public uint TimeoutSeconds
         {
             get => this._timeoutSeconds;
             set
@@ -196,7 +196,7 @@ namespace StreamActions.Plugin
         /// <summary>
         /// Field that backs the <see cref="TimeoutSeconds"/> property.
         /// </summary>
-        private int _timeoutSeconds = 0;
+        private uint _timeoutSeconds = 0;
 
         #endregion Private Fields
     }

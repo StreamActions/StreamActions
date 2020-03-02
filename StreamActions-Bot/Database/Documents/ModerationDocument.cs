@@ -18,6 +18,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using StreamActions.Enums;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents
@@ -57,12 +58,26 @@ namespace StreamActions.Database.Documents
         #region Global Moderation Properties
 
         /// <summary>
-        /// The cooldown time in seconds for moderation message to be said in chat. Min: 15s
+        /// The cooldown time in seconds for moderation message to be said in chat. Minimum: 15s
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(30)]
         public uint ModerationMessageCooldownSeconds { get; set; }
+
+        /// <summary>
+        /// Used to store when was the last time a user was worned by a moderation filter.
+        /// </summary>
+        [BsonIgnore]
+        public ConcurrentDictionary<string, DateTime> ModerationUserWarnings { get; } = new ConcurrentDictionary<string, DateTime>();
+
+        /// <summary>
+        /// How long a warning lasts on a single user in seconds.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(86400)]
+        public uint ModerationWarningTimeSeconds { get; set; }
 
         #endregion Global Moderation Properties
 

@@ -29,6 +29,7 @@ using StreamActions.Database.Documents;
 using MongoDB.Driver;
 using StreamActions.Enums;
 using StreamActions.Database;
+using StreamActions.Plugins;
 
 namespace StreamActions.Plugin
 {
@@ -52,7 +53,7 @@ namespace StreamActions.Plugin
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An object that contains the received message.</param>
         /// <returns>A <see cref="ModerationResult"/> representing any moderation action to take on the message.</returns>
-        public delegate ModerationResult MessageModerationEventHandler(object sender, OnMessageReceivedArgs e);
+        public delegate Task<ModerationResult> MessageModerationEventHandler(object sender, OnMessageReceivedArgs e);
 
         /// <summary>
         /// Represents the method that will handle a WhisperCommandReceived event.
@@ -448,7 +449,7 @@ namespace StreamActions.Plugin
                  {
                      foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
                      {
-                         ModerationResult rs = d.Invoke(this, e);
+                         ModerationResult rs = d.Invoke(this, e).Result;
                          if (harshestModeration.IsHarsher(rs))
                          {
                              harshestModeration = rs;
@@ -461,6 +462,8 @@ namespace StreamActions.Plugin
             {
                 if (harshestModeration.ShouldModerate)
                 {
+                    ModerationDocument document = ChatModerator.GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+
                     if (harshestModeration.ShouldBan)
                     {
                         TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".ban " + e.ChatMessage.Username + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
@@ -478,10 +481,12 @@ namespace StreamActions.Plugin
                         TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".timeout " + e.ChatMessage.Username + " " + harshestModeration.TimeoutSeconds + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
                     }
 
-                    if (!(harshestModeration.ModerationMessage is null) && !this.InLockdown)
+                    if (!(harshestModeration.ModerationMessage is null) && !this.InLockdown && document.LastModerationMessageSent.AddSeconds(document.ModerationMessageCooldownSeconds) < DateTime.Now)
                     {
                         TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, harshestModeration.ModerationMessage);
                     }
+
+                    _ = document.ModerationUserWarnings.AddOrUpdate(e.ChatMessage.UserId, DateTime.Now, (oldKey, oldVal) => DateTime.Now);
                 }
                 else
                 {

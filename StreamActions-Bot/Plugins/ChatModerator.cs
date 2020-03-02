@@ -23,6 +23,11 @@ using TwitchLib.Client.Models;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Globalization;
+using StreamActions.Database.Documents;
+using MongoDB.Driver;
+using StreamActions.Database;
+using System.Threading.Tasks;
+using StreamActions.Enums;
 
 namespace StreamActions.Plugins
 {
@@ -240,16 +245,65 @@ namespace StreamActions.Plugins
         #region Private Methods
 
         /// <summary>
+        /// Returns the filter settings for a channel.
+        /// </summary>
+        /// <param name="channelId">Id of the channel.</param>
+        /// <returns>The document settings.</returns>
+        public static async Task<ModerationDocument> GetFilterDocumentForChannel(string channelId)
+        {
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("moderation");
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(m => m.ChannelId, channelId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            return (await cursor.FirstAsync().ConfigureAwait(false));
+        }
+
+        /// <summary>
         /// Method that will check the message for excessive use of caps.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnCapsCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnCapsCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            string message = this.RemoveEmotesFromMessage(e.ChatMessage.Message, e.ChatMessage.EmoteSet);
+
+            // Check if the caps filter is enabled.
+            if (document.CapStatus)
+            {
+                // User is not a Broadcaster, Moderator, or in the excluded levels.
+                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.CapExcludedLevels).ConfigureAwait(false))
+                {
+                    if (this.GetMessageLength(message) >= document.CapMinimumMessageLength)
+                    {
+                        if (((this.GetNumberOfCaps(message) / this.GetMessageLength(message)) * 100.0) >= document.CapMaximumPercentage)
+                        {
+                            if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                            {
+                                moderationResult.ShouldTimeout = document.CapTimeoutPunishment.Equals(ModerationPunishment.Timeout);
+                                moderationResult.ShouldDelete = document.CapTimeoutPunishment.Equals(ModerationPunishment.Delete);
+                                moderationResult.ShouldPurge = document.CapTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                                moderationResult.TimeoutSeconds = document.CapTimeoutTimeSeconds;
+                                moderationResult.ModerationReason = document.CapTimeoutReason;
+                                moderationResult.ModerationMessage = document.CapTimeoutMessage;
+                            }
+                            else
+                            {
+                                moderationResult.ShouldTimeout = document.CapWarningPunishment.Equals(ModerationPunishment.Timeout);
+                                moderationResult.ShouldDelete = document.CapWarningPunishment.Equals(ModerationPunishment.Delete);
+                                moderationResult.ShouldPurge = document.CapWarningPunishment.Equals(ModerationPunishment.Purge);
+                                moderationResult.TimeoutSeconds = document.CapWarningTimeSeconds;
+                                moderationResult.ModerationReason = document.CapWarningReason;
+                                moderationResult.ModerationMessage = document.CapWarningMessage;
+                            }
+                        }
+                    }
+                }
+            }
 
             return moderationResult;
         }
@@ -260,12 +314,40 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnColouredMessageCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnColouredMessageCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            // Check if the caps filter is enabled.
+            if (document.ActionMessageStatus)
+            {
+                // User is not a Broadcaster, Moderator, or in the excluded levels.
+                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.ActionMessageExcludedLevels).ConfigureAwait(false))
+                {
+                    if (this.HasTwitchAction(e.ChatMessage.Message))
+                    {
+                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        {
+                            moderationResult.ShouldTimeout = document.ActionMessageTimeoutPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.ActionMessageTimeoutPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.ActionMessageTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.ActionMessageTimeoutTimeSeconds;
+                            moderationResult.ModerationReason = document.ActionMessageTimeoutReason;
+                            moderationResult.ModerationMessage = document.ActionMessageTimeoutMessage;
+                        }
+                        else
+                        {
+                            moderationResult.ShouldTimeout = document.ActionMessageWarningPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.ActionMessageWarningPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.ActionMessageWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.ActionMessageWarningTimeSeconds;
+                            moderationResult.ModerationReason = document.ActionMessageWarningReason;
+                            moderationResult.ModerationMessage = document.ActionMessageWarningMessage;
+                        }
+                    }
+                }
+            }
 
             return moderationResult;
         }
@@ -276,7 +358,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnEmotesCheck(object sender, OnMessageReceivedArgs e)
+        private Task<ModerationResult> ChatModerator_OnEmotesCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -292,7 +374,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnFakePurgeCheck(object sender, OnMessageReceivedArgs e)
+        private Task<ModerationResult> ChatModerator_OnFakePurgeCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -308,7 +390,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnLinksCheck(object sender, OnMessageReceivedArgs e)
+        private Task<ModerationResult> ChatModerator_OnLinksCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -324,7 +406,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnLongMessageCheck(object sender, OnMessageReceivedArgs e)
+        private Task<ModerationResult> ChatModerator_OnLongMessageCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -340,7 +422,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnOneManSpamCheck(object sender, OnMessageReceivedArgs e)
+        private Task<ModerationResult> ChatModerator_OnOneManSpamCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -356,7 +438,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnRepetitionCheck(object sender, OnMessageReceivedArgs e)
+        private Task<ModerationResult> ChatModerator_OnRepetitionCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -372,7 +454,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnSymbolsCheck(object sender, OnMessageReceivedArgs e)
+        private Task<ModerationResult> ChatModerator_OnSymbolsCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -388,7 +470,7 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private ModerationResult ChatModerator_OnZalgoCheck(object sender, OnMessageReceivedArgs e)
+        private Task<ModerationResult> ChatModerator_OnZalgoCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -397,6 +479,14 @@ namespace StreamActions.Plugins
 
             return moderationResult;
         }
+
+        /// <summary>
+        /// If a user currently has a warning.
+        /// </summary>
+        /// <param name="document">Moderation document.</param>
+        /// <param name="userId">User id to check for warnings</param>
+        /// <returns>True if the user has a warning.</returns>
+        private bool UserHasWarning(ModerationDocument document, string userId) => document.ModerationUserWarnings.ContainsKey(userId) && document.ModerationUserWarnings[userId].AddSeconds(document.ModerationWarningTimeSeconds) > DateTime.Now;
 
         #endregion Private Methods
     }
