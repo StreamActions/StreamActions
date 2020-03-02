@@ -58,18 +58,24 @@ namespace StreamActions.Database.Documents
         #region Global Moderation Properties
 
         /// <summary>
+        /// Last time a warning or timeout message was sent
+        /// </summary>
+        [BsonIgnore]
+        public DateTime LastModerationMessageSent { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// Used to store when was the last time a user was worned by a moderation filter.
+        /// </summary>
+        [BsonIgnore]
+        public ConcurrentDictionary<string, DateTime> ModerationLastUserTimeouts { get; } = new ConcurrentDictionary<string, DateTime>();
+
+        /// <summary>
         /// The cooldown time in seconds for moderation message to be said in chat. Minimum: 15s
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(30)]
         public uint ModerationMessageCooldownSeconds { get; set; }
-
-        /// <summary>
-        /// Used to store when was the last time a user was worned by a moderation filter.
-        /// </summary>
-        [BsonIgnore]
-        public ConcurrentDictionary<string, DateTime> ModerationUserWarnings { get; } = new ConcurrentDictionary<string, DateTime>();
 
         /// <summary>
         /// How long a warning lasts on a single user in seconds.

@@ -486,7 +486,7 @@ namespace StreamActions.Plugin
                         TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, harshestModeration.ModerationMessage);
                     }
 
-                    _ = document.ModerationUserWarnings.AddOrUpdate(e.ChatMessage.UserId, DateTime.Now, (oldKey, oldVal) => DateTime.Now);
+                    _ = document.ModerationLastUserTimeouts.AddOrUpdate(e.ChatMessage.UserId, DateTime.Now, (oldKey, oldVal) => DateTime.Now);
                 }
                 else
                 {

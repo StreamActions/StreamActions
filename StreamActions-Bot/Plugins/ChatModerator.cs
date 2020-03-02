@@ -486,7 +486,7 @@ namespace StreamActions.Plugins
         /// <param name="document">Moderation document.</param>
         /// <param name="userId">User id to check for warnings</param>
         /// <returns>True if the user has a warning.</returns>
-        private bool UserHasWarning(ModerationDocument document, string userId) => document.ModerationUserWarnings.ContainsKey(userId) && document.ModerationUserWarnings[userId].AddSeconds(document.ModerationWarningTimeSeconds) > DateTime.Now;
+        private bool UserHasWarning(ModerationDocument document, string userId) => document.ModerationLastUserTimeouts.ContainsKey(userId) && document.ModerationLastUserTimeouts[userId].AddSeconds(document.ModerationWarningTimeSeconds) > DateTime.Now;
 
         #endregion Private Methods
     }
