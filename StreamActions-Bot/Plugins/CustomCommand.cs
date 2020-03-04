@@ -175,7 +175,7 @@ namespace StreamActions.Plugins
                             Response = response,
                             User = e.Command.ChatMessage.Username,
                             Sender = e.Command.ChatMessage.Username,
-                            DisplayName = e.Command.ChatMessage.DisplayName
+                            e.Command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, the command {CommandPrefix}{Command} has been added with the response: {Response}").ConfigureAwait(false));
                 }
@@ -190,7 +190,7 @@ namespace StreamActions.Plugins
                             Command = command,
                             User = e.Command.ChatMessage.Username,
                             Sender = e.Command.ChatMessage.Username,
-                            DisplayName = e.Command.ChatMessage.DisplayName
+                            e.Command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, the command {CommandPrefix}{Command} cannot be added as it already exists.").ConfigureAwait(false));
                 }
@@ -205,7 +205,7 @@ namespace StreamActions.Plugins
                         CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                         User = e.Command.ChatMessage.Username,
                         Sender = e.Command.ChatMessage.Username,
-                        DisplayName = e.Command.ChatMessage.DisplayName
+                        e.Command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, Adds a custom command. Usage: {CommandPrefix}command add {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
             }
@@ -276,7 +276,7 @@ namespace StreamActions.Plugins
                             Response = response,
                             User = e.Command.ChatMessage.Username,
                             Sender = e.Command.ChatMessage.Username,
-                            DisplayName = e.Command.ChatMessage.DisplayName
+                            e.Command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, the command {CommandPrefix}{Command} has been modified with the response: {Response}").ConfigureAwait(false));
                 }
@@ -291,7 +291,7 @@ namespace StreamActions.Plugins
                             Command = command,
                             User = e.Command.ChatMessage.Username,
                             Sender = e.Command.ChatMessage.Username,
-                            DisplayName = e.Command.ChatMessage.DisplayName
+                            e.Command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, the command {CommandPrefix}{Command} cannot be modified as it doesn't exist.").ConfigureAwait(false));
                 }
@@ -306,7 +306,7 @@ namespace StreamActions.Plugins
                         CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                         User = e.Command.ChatMessage.Username,
                         Sender = e.Command.ChatMessage.Username,
-                        DisplayName = e.Command.ChatMessage.DisplayName
+                        e.Command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, Modifies a command. Usage: {CommandPrefix}command modify {CommandPrefix}[command] [permission (optional)] [response]").ConfigureAwait(false));
             }
@@ -344,7 +344,7 @@ namespace StreamActions.Plugins
                             Command = command,
                             User = e.Command.ChatMessage.Username,
                             Sender = e.Command.ChatMessage.Username,
-                            DisplayName = e.Command.ChatMessage.DisplayName
+                            e.Command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, the command {CommandPrefix}{Command} has been removed.").ConfigureAwait(false));
                 }
@@ -359,7 +359,7 @@ namespace StreamActions.Plugins
                             Command = command,
                             User = e.Command.ChatMessage.Username,
                             Sender = e.Command.ChatMessage.Username,
-                            DisplayName = e.Command.ChatMessage.DisplayName
+                            e.Command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, the command {CommandPrefix}{Command} cannot be removed as it doesn't exist.").ConfigureAwait(false));
                 }
@@ -374,7 +374,7 @@ namespace StreamActions.Plugins
                         CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                         User = e.Command.ChatMessage.Username,
                         Sender = e.Command.ChatMessage.Username,
-                        DisplayName = e.Command.ChatMessage.DisplayName
+                        e.Command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, Removes a custom command. Usage: {CommandPrefix}command remove {CommandPrefix}[command]").ConfigureAwait(false));
             }

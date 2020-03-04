@@ -466,7 +466,7 @@ namespace StreamActions.Plugins
                         BotName = Program.Settings.BotLogin,
                         User = e.Command.ChatMessage.Username,
                         Sender = e.Command.ChatMessage.Username,
-                        DisplayName = e.Command.ChatMessage.DisplayName
+                        e.Command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The current culture is set to {CurrentCulture}. You can change it with {CommandPrefix}{BotName} culture set [CultureName]").ConfigureAwait(false));
             }
