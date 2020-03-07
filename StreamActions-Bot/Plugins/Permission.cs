@@ -17,7 +17,7 @@
 using MongoDB.Driver;
 using StreamActions.Attributes;
 using StreamActions.Database;
-using StreamActions.Database.Documents;
+using StreamActions.Database.Documents.Commands;
 using StreamActions.Database.Documents.Permissions;
 using StreamActions.Database.Documents.Users;
 using StreamActions.Enums;

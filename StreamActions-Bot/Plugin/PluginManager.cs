@@ -24,12 +24,12 @@ using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using StreamActions.Attributes;
 using System.Threading.Tasks;
-using StreamActions.MemoryDocuments;
 using StreamActions.Database.Documents;
 using MongoDB.Driver;
 using StreamActions.Enums;
 using StreamActions.Database;
 using StreamActions.Plugins;
+using StreamActions.Database.Documents.Commands;
 
 namespace StreamActions.Plugin
 {
@@ -140,6 +140,40 @@ namespace StreamActions.Plugin
         public char WhisperCommandIdentifier { get; set; } = '!';
 
         #endregion Public Properties
+
+        #region Public Methods
+
+        /// <summary>
+        /// Loads the <see cref="CommandDocument"/> associated with the specified command, or creates one if it doesn't exist.
+        /// </summary>
+        /// <param name="channelId">The channel Id the command belongs to.</param>
+        /// <param name="command">The command to lookup.</param>
+        /// <returns>A <see cref="CommandDocument"/>.</returns>
+        public async Task<CommandDocument> LoadCommandAsync(string channelId, string command)
+        {
+            IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+
+            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command);
+
+            if (await commands.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+            {
+                await commands.InsertOneAsync(new CommandDocument
+                {
+                    ChannelId = channelId,
+                    Command = command,
+                    Cooldowns = new CommandCooldownDocument(),
+                    UserLevel = this._defaultCommandPermissions[command]
+                }).ConfigureAwait(false);
+            }
+
+            using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
+            CommandDocument commandDocument = await cursor.SingleAsync().ConfigureAwait(false);
+            commandDocument.Cooldowns.Id = commandDocument.Id;
+
+            return commandDocument;
+        }
+
+        #endregion Public Methods
 
         #region Internal Methods
 
@@ -338,11 +372,6 @@ namespace StreamActions.Plugin
         private readonly ConcurrentDictionary<string, ChatCommandReceivedEventHandler> _chatCommandEventHandlers = new ConcurrentDictionary<string, ChatCommandReceivedEventHandler>();
 
         /// <summary>
-        /// Stores the <see cref="CommandCooldownDocument"/> of each command.
-        /// </summary>
-        private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, CommandCooldownDocument>> _commandCooldowns = new ConcurrentDictionary<string, ConcurrentDictionary<string, CommandCooldownDocument>>();
-
-        /// <summary>
         /// Stores the provided default permissions of pre-registered commands.
         /// </summary>
         private readonly ConcurrentDictionary<string, UserLevels> _defaultCommandPermissions = new ConcurrentDictionary<string, UserLevels>();
@@ -400,37 +429,6 @@ namespace StreamActions.Plugin
         #endregion Private Constructors
 
         #region Private Methods
-
-        private async Task<CommandCooldownDocument> LoadCooldownAsync(string channelId, string command)
-        {
-            if (!this._commandCooldowns.ContainsKey(channelId))
-            {
-                _ = this._commandCooldowns.TryAdd(channelId, new ConcurrentDictionary<string, CommandCooldownDocument>());
-            }
-
-            if (!this._commandCooldowns[channelId].ContainsKey(command))
-            {
-                IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
-
-                FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command);
-
-                if (await commands.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
-                {
-                    await commands.InsertOneAsync(new CommandDocument
-                    {
-                        ChannelId = channelId,
-                        Command = command,
-                        UserLevel = this._defaultCommandPermissions[command]
-                    }).ConfigureAwait(false);
-                }
-
-                using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
-                CommandDocument commandDocument = await cursor.FirstAsync().ConfigureAwait(false);
-                _ = this._commandCooldowns[channelId].TryAdd(command, new CommandCooldownDocument(commandDocument.Id, commandDocument.GlobalCooldown, commandDocument.UserCooldown));
-            }
-
-            return this._commandCooldowns[channelId][command];
-        }
 
         /// <summary>
         /// Passes <see cref="OnMessageReceivedArgs"/> on to subscribers of <see cref="OnMessageModeration"/> to determine if a moderation action should be taken.
@@ -501,22 +499,22 @@ namespace StreamActions.Plugin
                         {
                             if (chatCommand.ArgumentsAsList.Count > 1 && this._botnameChatCommandEventHandlers.TryGetValue((chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1]).ToLowerInvariant(), out eventHandler))
                             {
-                                CommandCooldownDocument cooldownDocument = await this.LoadCooldownAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1]).ToLowerInvariant()).ConfigureAwait(false);
+                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1]).ToLowerInvariant()).ConfigureAwait(false);
 
-                                if (!cooldownDocument.IsOnCooldown(e.ChatMessage.UserId))
+                                if (!commandDocument.Cooldowns.IsOnCooldown(e.ChatMessage.UserId))
                                 {
                                     eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
-                                    cooldownDocument.StartCooldown(e.ChatMessage.UserId);
+                                    commandDocument.Cooldowns.StartCooldown(e.ChatMessage.UserId);
                                 }
                             }
                             else if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0].ToLowerInvariant(), out eventHandler))
                             {
-                                CommandCooldownDocument cooldownDocument = await this.LoadCooldownAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
+                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
 
-                                if (!cooldownDocument.IsOnCooldown(e.ChatMessage.UserId))
+                                if (!commandDocument.Cooldowns.IsOnCooldown(e.ChatMessage.UserId))
                                 {
                                     eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
-                                    cooldownDocument.StartCooldown(e.ChatMessage.UserId);
+                                    commandDocument.Cooldowns.StartCooldown(e.ChatMessage.UserId);
                                 }
                             }
                         }
@@ -524,22 +522,22 @@ namespace StreamActions.Plugin
                         {
                             if (chatCommand.ArgumentsAsList.Count > 1 && this._chatCommandEventHandlers.TryGetValue((chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant(), out eventHandler))
                             {
-                                CommandCooldownDocument cooldownDocument = await this.LoadCooldownAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
+                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
 
-                                if (!cooldownDocument.IsOnCooldown(e.ChatMessage.UserId))
+                                if (!commandDocument.Cooldowns.IsOnCooldown(e.ChatMessage.UserId))
                                 {
                                     eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
-                                    cooldownDocument.StartCooldown(e.ChatMessage.UserId);
+                                    commandDocument.Cooldowns.StartCooldown(e.ChatMessage.UserId);
                                 }
                             }
                             else if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText.ToLowerInvariant(), out eventHandler))
                             {
-                                CommandCooldownDocument cooldownDocument = await this.LoadCooldownAsync(e.ChatMessage.RoomId, chatCommand.CommandText.ToLowerInvariant()).ConfigureAwait(false);
+                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, chatCommand.CommandText.ToLowerInvariant()).ConfigureAwait(false);
 
-                                if (!cooldownDocument.IsOnCooldown(e.ChatMessage.UserId))
+                                if (!commandDocument.Cooldowns.IsOnCooldown(e.ChatMessage.UserId))
                                 {
                                     eventHandler.Invoke(this, new OnChatCommandReceivedArgs { Command = chatCommand });
-                                    cooldownDocument.StartCooldown(e.ChatMessage.UserId);
+                                    commandDocument.Cooldowns.StartCooldown(e.ChatMessage.UserId);
                                 }
                             }
                             else

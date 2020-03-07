@@ -15,72 +15,65 @@
  */
 
 using EntityGraphQL.Schema;
-using StreamActions.GraphQL.Connections;
+using MongoDB.Bson.Serialization.Attributes;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Threading.Tasks;
 
-namespace StreamActions.MemoryDocuments
+namespace StreamActions.Database.Documents.Commands
 {
     /// <summary>
     /// Represents the current cooldown state of a command.
     /// </summary>
-    public class CommandCooldownDocument : ICursorable
+    public class CommandCooldownDocument
     {
-        #region Public Constructors
-
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        /// <param name="command">The commandId this document applies to.</param>
-        /// <param name="globalCooldown">The default global cooldown time to use for this command, in seconds.</param>
-        /// <param name="userCooldown">The default user cooldown time to use for this command, in seconds.</param>
-        public CommandCooldownDocument(Guid commandId, uint globalCooldown, uint userCooldown)
-        {
-            this.CommandId = commandId;
-            this.GlobalCooldown = globalCooldown;
-            this.UserCooldown = userCooldown;
-        }
-
-        #endregion Public Constructors
-
         #region Public Properties
-
-        /// <summary>
-        /// The commandId this document applies to.
-        /// </summary>
-        public Guid CommandId { get; set; }
 
         /// <summary>
         /// The global cooldown time for this command, in seconds.
         /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
         public uint GlobalCooldown { get; set; }
 
         /// <summary>
         /// Indicates when the global cooldown will expire.
         /// </summary>
+        [BsonIgnore]
         public DateTime GlobalCooldownExpires { get; private set; } = DateTime.Now;
 
         /// <summary>
         /// Indicates the remaining time until the global cooldown expires.
         /// </summary>
+        [BsonIgnore]
         public TimeSpan GlobalCooldownTimeRemaining => this.IsOnGlobalCooldown ? this.GlobalCooldownExpires - DateTime.Now : TimeSpan.Zero;
+
+        /// <summary>
+        /// The Guid for referencing this command in the database.
+        /// </summary>
+        [BsonIgnore]
+        [GraphQLIgnore]
+        public Guid Id { get; internal set; }
 
         /// <summary>
         /// Indicates whether the command is currently on global cooldown.
         /// </summary>
+        [BsonIgnore]
         public bool IsOnGlobalCooldown => DateTime.Now.CompareTo(this.GlobalCooldownExpires) < 0;
 
         /// <summary>
         /// The user cooldown time for this command, in seconds.
         /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(0)]
         public uint UserCooldown { get; set; }
 
         /// <summary>
         /// Indicates when the cooldown for a user Id expires.
         /// </summary>
+        [BsonIgnore]
         [GraphQLIgnore]
         public Dictionary<string, DateTime> UserCooldownExpires
         {
@@ -88,29 +81,21 @@ namespace StreamActions.MemoryDocuments
             {
                 Dictionary<string, DateTime> value = new Dictionary<string, DateTime>();
 
-                foreach (KeyValuePair<string, CommandUserCooldownDocument> kvp in this._userCooldownExpires)
+                foreach (CommandUserCooldownDocument d in this.UserCooldowns)
                 {
-                    value.Add(kvp.Value.UserId, kvp.Value.CooldownExpires);
+                    value.Add(d.UserId, d.CooldownExpires);
                 }
 
                 return value;
             }
         }
 
-        public List<CommandUserCooldownDocument> UserCooldowns
-        {
-            get
-            {
-                List<CommandUserCooldownDocument> value = new List<CommandUserCooldownDocument>();
-
-                foreach (KeyValuePair<string, CommandUserCooldownDocument> kvp in this._userCooldownExpires)
-                {
-                    value.Add(kvp.Value);
-                }
-
-                return value;
-            }
-        }
+        /// <summary>
+        /// Contains a list of <see cref="CommandUserCooldownDocument"/>.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public List<CommandUserCooldownDocument> UserCooldowns { get; } = new List<CommandUserCooldownDocument>();
 
         #endregion Public Properties
 
@@ -119,18 +104,22 @@ namespace StreamActions.MemoryDocuments
         /// <summary>
         /// Cleans up expired user cooldowns.
         /// </summary>
-        public void CleanupUserCooldowns()
+        /// <param name="shouldCache">Indicates if the cleaned up cooldowns should be cached for the next DB write.</param>
+        public void CleanupUserCooldowns(bool shouldCache = true)
         {
-            foreach (KeyValuePair<string, CommandUserCooldownDocument> kvp in this._userCooldownExpires)
+            foreach (CommandUserCooldownDocument d in this.UserCooldowns)
             {
-                if (DateTime.Now.CompareTo(kvp.Value.CooldownExpires) >= 0)
+                if (DateTime.Now.CompareTo(d.CooldownExpires) >= 0)
                 {
-                    _ = this._userCooldownExpires.TryRemove(kvp.Key, out CommandUserCooldownDocument _);
+                    _ = this.UserCooldowns.Remove(d);
+
+                    if (shouldCache)
+                    {
+                        this.CacheChange();
+                    }
                 }
             }
         }
-
-        public string GetCursor() => this.CommandId.ToString("D", CultureInfo.InvariantCulture);
 
         /// <summary>
         /// Indicates if either the specified user Id or the command itself is currently on cooldown.
@@ -146,26 +135,21 @@ namespace StreamActions.MemoryDocuments
         /// <returns><c>true</c> if the user is on cooldown.</returns>
         public bool IsUserOnCooldown(string userId)
         {
-            if (this._userCooldownExpires.ContainsKey(userId))
+            if (this.UserCooldowns.Exists(d => d.UserId == userId))
             {
-                if (DateTime.Now.CompareTo(this._userCooldownExpires[userId]) < 0)
+                if (DateTime.Now.CompareTo(this.UserCooldowns.Find(d => d.UserId == userId).CooldownExpires) < 0)
                 {
                     return true;
                 }
                 else
                 {
-                    _ = this._userCooldownExpires.TryRemove(userId, out _);
+                    _ = this.UserCooldowns.Remove(this.UserCooldowns.Find(d => d.UserId == userId));
+                    this.CacheChange();
                 }
             }
 
             return false;
         }
-
-        /// <summary>
-        /// Starts both the global cooldown and the user cooldown for the times specified in the appropriate properties.
-        /// </summary>
-        /// <param name="userId">The user Id to cooldown.</param>
-        public void StartCooldown(string userId) => this.StartCooldown(TimeSpan.FromSeconds(this.GlobalCooldown), userId, TimeSpan.FromSeconds(this.UserCooldown));
 
         /// <summary>
         /// Starts both the global cooldown and the user cooldown for the specified times.
@@ -187,10 +171,20 @@ namespace StreamActions.MemoryDocuments
         }
 
         /// <summary>
+        /// Starts both the global cooldown and the user cooldown.
+        /// </summary>
+        /// <param name="userId">The user Id to cooldown.</param>
+        public void StartCooldown(string userId) => this.StartCooldown(TimeSpan.FromSeconds(this.GlobalCooldown), userId, TimeSpan.FromSeconds(this.UserCooldown));
+
+        /// <summary>
         /// Starts the global cooldown for the specified time.
         /// </summary>
         /// <param name="time">A TimeSpan representing the amount of time the cooldown will last.</param>
-        public void StartGlobalCooldown(TimeSpan time) => this.GlobalCooldownExpires = DateTime.Now.Add(time);
+        public void StartGlobalCooldown(TimeSpan time)
+        {
+            this.GlobalCooldownExpires = DateTime.Now.Add(time);
+            this.CacheChange();
+        }
 
         /// <summary>
         /// Starts the global cooldown for <see cref="GlobalCooldown"/> seconds.
@@ -204,10 +198,16 @@ namespace StreamActions.MemoryDocuments
         /// <param name="time">A TimeSpan representing the amount of time the cooldown will last.</param>
         public void StartUserCooldown(string userId, TimeSpan time)
         {
-            _ = this._userCooldownExpires.TryRemove(userId, out _);
-            _ = this._userCooldownExpires.TryAdd(userId, new CommandUserCooldownDocument { UserId = userId, CooldownExpires = DateTime.Now.Add(time) });
+            if (this.UserCooldowns.Exists(d => d.UserId == userId))
+            {
+                this.UserCooldowns.Find(d => d.UserId == userId).CooldownExpires = DateTime.Now.Add(time);
+            }
+            else
+            {
+                this.UserCooldowns.Add(new CommandUserCooldownDocument { UserId = userId, CooldownExpires = DateTime.Now.Add(time) });
+            }
 
-            _ = Task.Run(async () => await this.WaitForUserCooldownAsync(userId).ConfigureAwait(false));
+            this.CacheChange();
         }
 
         /// <summary>
@@ -221,7 +221,7 @@ namespace StreamActions.MemoryDocuments
         /// </summary>
         /// <param name="userId">The userId to check.</param>
         /// <returns>A TimeSpan indicating the time left until the user Ids cooldown expires.</returns>
-        public TimeSpan UserCooldownTimeRemaining(string userId) => this.IsUserOnCooldown(userId) ? this._userCooldownExpires[userId].CooldownExpires - DateTime.Now : TimeSpan.Zero;
+        public TimeSpan UserCooldownTimeRemaining(string userId) => this.IsUserOnCooldown(userId) ? this.UserCooldowns.Find(d => d.UserId == userId).CooldownExpires - DateTime.Now : TimeSpan.Zero;
 
         /// <summary>
         /// Awaits the expiration of this commands global cooldown.
@@ -248,22 +248,21 @@ namespace StreamActions.MemoryDocuments
                         break;
                     }
                 }
+
                 if (this.UserCooldownTimeRemaining(userId).TotalMilliseconds == 0)
                 {
-                    _ = this._userCooldownExpires.TryRemove(userId, out _);
+                    _ = this.UserCooldowns.Remove(this.UserCooldowns.Find(d => d.UserId == userId));
+                    this.CacheChange();
                 }
             }
         }
 
         #endregion Public Methods
 
-        #region Private Fields
+        #region Private Methods
 
-        /// <summary>
-        /// Field that backs the <see cref="UserCooldownExpires"/> property.
-        /// </summary>
-        private readonly ConcurrentDictionary<string, CommandUserCooldownDocument> _userCooldownExpires = new ConcurrentDictionary<string, CommandUserCooldownDocument>();
+        private void CacheChange() => _ = MiscScheduledTasks._changedCooldowns.TryAdd(this.Id, this);
 
-        #endregion Private Fields
+        #endregion Private Methods
     }
 }

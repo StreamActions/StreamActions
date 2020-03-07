@@ -22,7 +22,7 @@ using StreamActions.GraphQL.Connections;
 using System;
 using System.Globalization;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Commands
 {
     /// <summary>
     /// A document structure representing a command.
@@ -54,6 +54,13 @@ namespace StreamActions.Database.Documents
         public string Command { get; set; }
 
         /// <summary>
+        /// The cooldowns for this command.
+        /// </summary>
+        [BsonElement]
+        [BsonRequired]
+        public CommandCooldownDocument Cooldowns { get; set; }
+
+        /// <summary>
         /// Cost of the command.
         /// </summary>
         [BsonElement]
@@ -68,14 +75,6 @@ namespace StreamActions.Database.Documents
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(0)]
         public uint Count { get; set; }
-
-        /// <summary>
-        /// Global cooldown for the command.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(5)]
-        public uint GlobalCooldown { get; set; }
 
         /// <summary>
         /// The Guid for referencing this command in the database.
@@ -107,14 +106,6 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfNull]
         public string Response { get; set; }
-
-        /// <summary>
-        /// Per-user cooldown of the command.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(0)]
-        public uint UserCooldown { get; set; }
 
         /// <summary>
         /// Permission required to run this command.

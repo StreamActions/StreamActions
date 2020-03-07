@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
+using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.GraphQL.Connections;
 using System;
 
-namespace StreamActions.MemoryDocuments
+namespace StreamActions.Database.Documents.Commands
 {
     /// <summary>
     /// Contains the cooldown information for a user cooldown, for a particular command. Contained in a <see cref="CommandCooldownDocument"/>.
@@ -29,11 +30,16 @@ namespace StreamActions.MemoryDocuments
         /// <summary>
         /// The expiration time of the cooldown.
         /// </summary>
+        [BsonElement]
+        [BsonRequired]
         public DateTime CooldownExpires { get; set; }
 
         /// <summary>
         /// The userId this cooldown applies to.
         /// </summary>
+        [BsonElement]
+        [BsonRequired]
+        [BsonId]
         public string UserId { get; set; }
 
         #endregion Public Properties

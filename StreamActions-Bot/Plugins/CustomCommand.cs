@@ -15,7 +15,6 @@
  */
 
 using StreamActions.Attributes;
-using StreamActions.Database.Documents;
 using StreamActions.Plugin;
 using MongoDB.Driver;
 using System;
@@ -27,6 +26,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using StreamActions.Database;
 using System.Globalization;
+using StreamActions.Database.Documents.Commands;
 
 namespace StreamActions.Plugins
 {
