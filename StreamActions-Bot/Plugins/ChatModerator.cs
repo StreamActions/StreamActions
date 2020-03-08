@@ -358,12 +358,40 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private Task<ModerationResult> ChatModerator_OnEmotesCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnEmotesCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            // Check if the caps filter is enabled.
+            if (document.EmoteStatus)
+            {
+                // User is not a Broadcaster, Moderator, or in the excluded levels.
+                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.EmoteExcludedLevels).ConfigureAwait(false))
+                {
+                    if ((this.GetNumberOfEmotes(e.ChatMessage.EmoteSet) >= document.EmoteMaximumAllowed) || (document.EmoteRemoveOnlyEmotes && this.RemoveEmotesFromMessage(e.ChatMessage.Message, e.ChatMessage.EmoteSet).Trim().Length == 0))
+                    {
+                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        {
+                            moderationResult.ShouldTimeout = document.EmoteTimeoutPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.EmoteTimeoutPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.EmoteTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.EmoteTimeoutTimeSeconds;
+                            moderationResult.ModerationReason = document.EmoteTimeoutReason;
+                            moderationResult.ModerationMessage = document.EmoteTimeoutMessage;
+                        }
+                        else
+                        {
+                            moderationResult.ShouldTimeout = document.EmoteWarningPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.EmoteWarningPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.EmoteWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.EmoteWarningTimeSeconds;
+                            moderationResult.ModerationReason = document.EmoteWarningReason;
+                            moderationResult.ModerationMessage = document.EmoteWarningMessage;
+                        }
+                    }
+                }
+            }
 
             return moderationResult;
         }
@@ -374,12 +402,40 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private Task<ModerationResult> ChatModerator_OnFakePurgeCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnFakePurgeCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            // Check if the caps filter is enabled.
+            if (document.FakePurgeStatus)
+            {
+                // User is not a Broadcaster, Moderator, or in the excluded levels.
+                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.FakePurgeExcludedLevels).ConfigureAwait(false))
+                {
+                    if (this.HasFakePurge(e.ChatMessage.Message))
+                    {
+                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        {
+                            moderationResult.ShouldTimeout = document.FakePurgeTimeoutPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.FakePurgeTimeoutPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.FakePurgeTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.FakePurgeTimeoutTimeSeconds;
+                            moderationResult.ModerationReason = document.FakePurgeTimeoutReason;
+                            moderationResult.ModerationMessage = document.FakePurgeTimeoutMessage;
+                        }
+                        else
+                        {
+                            moderationResult.ShouldTimeout = document.FakePurgeWarningPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.FakePurgeWarningPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.FakePurgeWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.FakePurgeWarningTimeSeconds;
+                            moderationResult.ModerationReason = document.FakePurgeWarningReason;
+                            moderationResult.ModerationMessage = document.FakePurgeWarningMessage;
+                        }
+                    }
+                }
+            }
 
             return moderationResult;
         }
@@ -390,12 +446,42 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private Task<ModerationResult> ChatModerator_OnLinksCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnLinksCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            // Check if the caps filter is enabled.
+            if (document.LinkStatus)
+            {
+                // User is not a Broadcaster, Moderator, or in the excluded levels.
+                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.LinkExcludedLevels).ConfigureAwait(false))
+                {
+                    // TODO: Check whitelist
+                    // TODO: Check to make sure the URL isn't for clips.
+                    if (this.HasUrl(e.ChatMessage.Message))
+                    {
+                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        {
+                            moderationResult.ShouldTimeout = document.LinkTimeoutPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.LinkTimeoutPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.LinkTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.LinkTimeoutTimeSeconds;
+                            moderationResult.ModerationReason = document.LinkTimeoutReason;
+                            moderationResult.ModerationMessage = document.LinkTimeoutMessage;
+                        }
+                        else
+                        {
+                            moderationResult.ShouldTimeout = document.LinkWarningPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.LinkWarningPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.LinkWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.LinkWarningTimeSeconds;
+                            moderationResult.ModerationReason = document.LinkWarningReason;
+                            moderationResult.ModerationMessage = document.LinkWarningMessage;
+                        }
+                    }
+                }
+            }
 
             return moderationResult;
         }
@@ -406,12 +492,40 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private Task<ModerationResult> ChatModerator_OnLongMessageCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnLongMessageCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            // Check if the lengthy message filter is enabled.
+            if (document.LenghtyMessageStatus)
+            {
+                // User is not a Broadcaster, Moderator, or in the excluded levels.
+                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.LenghtyMessageExcludedLevels).ConfigureAwait(false))
+                {
+                    if (this.GetMessageLength(e.ChatMessage.Message) > document.LenghtyMessageMaximumLength)
+                    {
+                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        {
+                            moderationResult.ShouldTimeout = document.LenghtyMessageTimeoutPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.LenghtyMessageTimeoutPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.LenghtyMessageTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.LenghtyMessageTimeoutTimeSeconds;
+                            moderationResult.ModerationReason = document.LenghtyMessageTimeoutReason;
+                            moderationResult.ModerationMessage = document.LenghtyMessageTimeoutMessage;
+                        }
+                        else
+                        {
+                            moderationResult.ShouldTimeout = document.LenghtyMessageWarningPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.LenghtyMessageWarningPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.LenghtyMessageWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.LenghtyMessageWarningTimeSeconds;
+                            moderationResult.ModerationReason = document.LenghtyMessageWarningReason;
+                            moderationResult.ModerationMessage = document.LenghtyMessageWarningMessage;
+                        }
+                    }
+                }
+            }
 
             return moderationResult;
         }
@@ -422,12 +536,16 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private Task<ModerationResult> ChatModerator_OnOneManSpamCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnOneManSpamCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            if (document.OneManSpamStatus)
+            {
+                // TODO: Add check if this is enabled in user settings.
+                // TODO: Add filter check.
+            }
 
             return moderationResult;
         }
@@ -438,12 +556,16 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private Task<ModerationResult> ChatModerator_OnRepetitionCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnRepetitionCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            if (document.RepetitionStatus)
+            {
+                // TODO: Add check if this is enabled in user settings.
+                // TODO: Add filter check.
+            }
 
             return moderationResult;
         }
@@ -454,12 +576,16 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private Task<ModerationResult> ChatModerator_OnSymbolsCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnSymbolsCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            if (document.SymbolStatus)
+            {
+                // TODO: Add check if this is enabled in user settings.
+                // TODO: Add filter check.
+            }
 
             return moderationResult;
         }
@@ -470,12 +596,40 @@ namespace StreamActions.Plugins
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private Task<ModerationResult> ChatModerator_OnZalgoCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnZalgoCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-            // TODO: Add check if this is enabled in user settings.
-            // TODO: Add filter check.
+            // Check if the zalgo filter is enabled.
+            if (document.ZalgoStatus)
+            {
+                // User is not a Broadcaster, Moderator, or in the excluded levels.
+                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.ZalgoExcludedLevels).ConfigureAwait(false))
+                {
+                    if (this.HasZalgo(e.ChatMessage.Message))
+                    {
+                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        {
+                            moderationResult.ShouldTimeout = document.ZalgoTimeoutPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.ZalgoTimeoutPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.ZalgoTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.ZalgoTimeoutTimeSeconds;
+                            moderationResult.ModerationReason = document.ZalgoTimeoutReason;
+                            moderationResult.ModerationMessage = document.ZalgoTimeoutMessage;
+                        }
+                        else
+                        {
+                            moderationResult.ShouldTimeout = document.ZalgoWarningPunishment.Equals(ModerationPunishment.Timeout);
+                            moderationResult.ShouldDelete = document.ZalgoWarningPunishment.Equals(ModerationPunishment.Delete);
+                            moderationResult.ShouldPurge = document.ZalgoWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.TimeoutSeconds = document.ZalgoWarningTimeSeconds;
+                            moderationResult.ModerationReason = document.ZalgoWarningReason;
+                            moderationResult.ModerationMessage = document.ZalgoWarningMessage;
+                        }
+                    }
+                }
+            }
 
             return moderationResult;
         }
