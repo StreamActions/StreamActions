@@ -206,11 +206,6 @@ namespace StreamActions
         public event EventHandler<OnMessageClearedArgs> OnMessageCleared;
 
         /// <summary>
-        /// Fires when a new chat message arrives, returns ChatMessage.
-        /// </summary>
-        public event EventHandler<OnMessageReceivedArgs> OnMessageReceived;
-
-        /// <summary>
         /// Fires when a chat message is sent, returns username, channel and message.
         /// </summary>
         public event EventHandler<OnMessageSentArgs> OnMessageSent;
@@ -314,11 +309,6 @@ namespace StreamActions
         /// Fires when VIPs are received from chat
         /// </summary>
         public event EventHandler<OnVIPsReceivedArgs> OnVIPsReceived;
-
-        /// <summary>
-        /// Fires when a new whisper arrives, returns WhisperMessage.
-        /// </summary>
-        public event EventHandler<OnWhisperReceivedArgs> OnWhisperReceived;
 
         /// <summary>
         /// Fires when a whisper message is sent, returns username and message.
@@ -425,12 +415,12 @@ namespace StreamActions
         /// </summary>
         /// <returns>A Task that can be awaited.</returns>
         internal Task WaitForFinalDisconnect() => Task.Run(async () =>
-                                                                     {
-                                                                         while (!this._shutdown || this.IsConnected)
-                                                                         {
-                                                                             await Task.Delay(1000).ConfigureAwait(false);
-                                                                         }
-                                                                     });
+                 {
+                     while (!this._shutdown || this.IsConnected)
+                     {
+                         await Task.Delay(1000).ConfigureAwait(false);
+                     }
+                 });
 
         #endregion Internal Methods
 

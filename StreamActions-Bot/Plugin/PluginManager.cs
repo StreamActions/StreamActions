@@ -556,38 +556,38 @@ namespace StreamActions.Plugin
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="OnWhisperReceivedArgs"/> object.</param>
         private async void Twitch_OnWhisperReceived(object sender, OnWhisperReceivedArgs e) => await Task.Run(() =>
-                                                                                             {
-                                                                                                 OnWhisperReceived?.Invoke(this, e);
+            {
+                OnWhisperReceived?.Invoke(this, e);
 
-                                                                                                 if (Equals(e.WhisperMessage.Message[0], this.WhisperCommandIdentifier))
-                                                                                                 {
-                                                                                                     WhisperCommand whisperCommand = new WhisperCommand(e.WhisperMessage);
-                                                                                                     WhisperCommandReceivedEventHandler eventHandler;
+                if (Equals(e.WhisperMessage.Message[0], this.WhisperCommandIdentifier))
+                {
+                    WhisperCommand whisperCommand = new WhisperCommand(e.WhisperMessage);
+                    WhisperCommandReceivedEventHandler eventHandler;
 
-                                                                                                     if (string.Equals(whisperCommand.CommandText, Program.Settings.BotLogin, StringComparison.OrdinalIgnoreCase))
-                                                                                                     {
-                                                                                                         if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0] + " " + whisperCommand.ArgumentsAsList[1], out eventHandler))
-                                                                                                         {
-                                                                                                             eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                                                                                                         }
-                                                                                                         else if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0], out eventHandler))
-                                                                                                         {
-                                                                                                             eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                                                                                                         }
-                                                                                                     }
-                                                                                                     else
-                                                                                                     {
-                                                                                                         if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText + " " + whisperCommand.ArgumentsAsList[0], out eventHandler))
-                                                                                                         {
-                                                                                                             eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                                                                                                         }
-                                                                                                         else if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText, out eventHandler))
-                                                                                                         {
-                                                                                                             eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                                                                                                         }
-                                                                                                     }
-                                                                                                 }
-                                                                                             }).ConfigureAwait(false);
+                    if (string.Equals(whisperCommand.CommandText, Program.Settings.BotLogin, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0] + " " + whisperCommand.ArgumentsAsList[1], out eventHandler))
+                        {
+                            eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                        }
+                        else if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0], out eventHandler))
+                        {
+                            eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                        }
+                    }
+                    else
+                    {
+                        if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText + " " + whisperCommand.ArgumentsAsList[0], out eventHandler))
+                        {
+                            eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                        }
+                        else if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText, out eventHandler))
+                        {
+                            eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                        }
+                    }
+                }
+            }).ConfigureAwait(false);
 
         #endregion Private Methods
     }
