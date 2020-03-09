@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace StreamActions.Enums
 {
     /// <summary>
@@ -39,6 +41,11 @@ namespace StreamActions.Enums
         /// <summary>
         /// Message should be removed.
         /// </summary>
-        Delete
+        Delete,
+
+        /// <summary>
+        /// Nothing should be done.
+        /// </summary>
+        None
     }
 }

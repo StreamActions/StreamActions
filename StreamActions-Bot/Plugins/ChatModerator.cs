@@ -284,18 +284,14 @@ namespace StreamActions.Plugins
                         {
                             if (this.UserHasWarning(document, e.ChatMessage.UserId))
                             {
-                                moderationResult.ShouldTimeout = document.CapTimeoutPunishment.Equals(ModerationPunishment.Timeout);
-                                moderationResult.ShouldDelete = document.CapTimeoutPunishment.Equals(ModerationPunishment.Delete);
-                                moderationResult.ShouldPurge = document.CapTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                                moderationResult.Punishment = document.CapTimeoutPunishment;
                                 moderationResult.TimeoutSeconds = document.CapTimeoutTimeSeconds;
                                 moderationResult.ModerationReason = document.CapTimeoutReason;
                                 moderationResult.ModerationMessage = document.CapTimeoutMessage;
                             }
                             else
                             {
-                                moderationResult.ShouldTimeout = document.CapWarningPunishment.Equals(ModerationPunishment.Timeout);
-                                moderationResult.ShouldDelete = document.CapWarningPunishment.Equals(ModerationPunishment.Delete);
-                                moderationResult.ShouldPurge = document.CapWarningPunishment.Equals(ModerationPunishment.Purge);
+                                moderationResult.Punishment = document.CapWarningPunishment;
                                 moderationResult.TimeoutSeconds = document.CapWarningTimeSeconds;
                                 moderationResult.ModerationReason = document.CapWarningReason;
                                 moderationResult.ModerationMessage = document.CapWarningMessage;
@@ -329,18 +325,14 @@ namespace StreamActions.Plugins
                     {
                         if (this.UserHasWarning(document, e.ChatMessage.UserId))
                         {
-                            moderationResult.ShouldTimeout = document.ActionMessageTimeoutPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.ActionMessageTimeoutPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.ActionMessageTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.ActionMessageTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.ActionMessageTimeoutTimeSeconds;
                             moderationResult.ModerationReason = document.ActionMessageTimeoutReason;
                             moderationResult.ModerationMessage = document.ActionMessageTimeoutMessage;
                         }
                         else
                         {
-                            moderationResult.ShouldTimeout = document.ActionMessageWarningPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.ActionMessageWarningPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.ActionMessageWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.ActionMessageWarningPunishment;
                             moderationResult.TimeoutSeconds = document.ActionMessageWarningTimeSeconds;
                             moderationResult.ModerationReason = document.ActionMessageWarningReason;
                             moderationResult.ModerationMessage = document.ActionMessageWarningMessage;
@@ -373,18 +365,14 @@ namespace StreamActions.Plugins
                     {
                         if (this.UserHasWarning(document, e.ChatMessage.UserId))
                         {
-                            moderationResult.ShouldTimeout = document.EmoteTimeoutPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.EmoteTimeoutPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.EmoteTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.EmoteTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.EmoteTimeoutTimeSeconds;
                             moderationResult.ModerationReason = document.EmoteTimeoutReason;
                             moderationResult.ModerationMessage = document.EmoteTimeoutMessage;
                         }
                         else
                         {
-                            moderationResult.ShouldTimeout = document.EmoteWarningPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.EmoteWarningPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.EmoteWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.EmoteWarningPunishment;
                             moderationResult.TimeoutSeconds = document.EmoteWarningTimeSeconds;
                             moderationResult.ModerationReason = document.EmoteWarningReason;
                             moderationResult.ModerationMessage = document.EmoteWarningMessage;
@@ -417,18 +405,14 @@ namespace StreamActions.Plugins
                     {
                         if (this.UserHasWarning(document, e.ChatMessage.UserId))
                         {
-                            moderationResult.ShouldTimeout = document.FakePurgeTimeoutPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.FakePurgeTimeoutPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.FakePurgeTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.FakePurgeTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.FakePurgeTimeoutTimeSeconds;
                             moderationResult.ModerationReason = document.FakePurgeTimeoutReason;
                             moderationResult.ModerationMessage = document.FakePurgeTimeoutMessage;
                         }
                         else
                         {
-                            moderationResult.ShouldTimeout = document.FakePurgeWarningPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.FakePurgeWarningPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.FakePurgeWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.FakePurgeWarningPunishment;
                             moderationResult.TimeoutSeconds = document.FakePurgeWarningTimeSeconds;
                             moderationResult.ModerationReason = document.FakePurgeWarningReason;
                             moderationResult.ModerationMessage = document.FakePurgeWarningMessage;
@@ -463,18 +447,14 @@ namespace StreamActions.Plugins
                     {
                         if (this.UserHasWarning(document, e.ChatMessage.UserId))
                         {
-                            moderationResult.ShouldTimeout = document.LinkTimeoutPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.LinkTimeoutPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.LinkTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.LinkTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.LinkTimeoutTimeSeconds;
                             moderationResult.ModerationReason = document.LinkTimeoutReason;
                             moderationResult.ModerationMessage = document.LinkTimeoutMessage;
                         }
                         else
                         {
-                            moderationResult.ShouldTimeout = document.LinkWarningPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.LinkWarningPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.LinkWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.LinkWarningPunishment;
                             moderationResult.TimeoutSeconds = document.LinkWarningTimeSeconds;
                             moderationResult.ModerationReason = document.LinkWarningReason;
                             moderationResult.ModerationMessage = document.LinkWarningMessage;
@@ -507,18 +487,14 @@ namespace StreamActions.Plugins
                     {
                         if (this.UserHasWarning(document, e.ChatMessage.UserId))
                         {
-                            moderationResult.ShouldTimeout = document.LenghtyMessageTimeoutPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.LenghtyMessageTimeoutPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.LenghtyMessageTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.LenghtyMessageTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.LenghtyMessageTimeoutTimeSeconds;
                             moderationResult.ModerationReason = document.LenghtyMessageTimeoutReason;
                             moderationResult.ModerationMessage = document.LenghtyMessageTimeoutMessage;
                         }
                         else
                         {
-                            moderationResult.ShouldTimeout = document.LenghtyMessageWarningPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.LenghtyMessageWarningPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.LenghtyMessageWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.LenghtyMessageWarningPunishment;
                             moderationResult.TimeoutSeconds = document.LenghtyMessageWarningTimeSeconds;
                             moderationResult.ModerationReason = document.LenghtyMessageWarningReason;
                             moderationResult.ModerationMessage = document.LenghtyMessageWarningMessage;
@@ -611,18 +587,14 @@ namespace StreamActions.Plugins
                     {
                         if (this.UserHasWarning(document, e.ChatMessage.UserId))
                         {
-                            moderationResult.ShouldTimeout = document.ZalgoTimeoutPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.ZalgoTimeoutPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.ZalgoTimeoutPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.ZalgoTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.ZalgoTimeoutTimeSeconds;
                             moderationResult.ModerationReason = document.ZalgoTimeoutReason;
                             moderationResult.ModerationMessage = document.ZalgoTimeoutMessage;
                         }
                         else
                         {
-                            moderationResult.ShouldTimeout = document.ZalgoWarningPunishment.Equals(ModerationPunishment.Timeout);
-                            moderationResult.ShouldDelete = document.ZalgoWarningPunishment.Equals(ModerationPunishment.Delete);
-                            moderationResult.ShouldPurge = document.ZalgoWarningPunishment.Equals(ModerationPunishment.Purge);
+                            moderationResult.Punishment = document.ZalgoWarningPunishment;
                             moderationResult.TimeoutSeconds = document.ZalgoWarningTimeSeconds;
                             moderationResult.ModerationReason = document.ZalgoWarningReason;
                             moderationResult.ModerationMessage = document.ZalgoWarningMessage;

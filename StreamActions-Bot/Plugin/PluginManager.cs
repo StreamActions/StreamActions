@@ -462,21 +462,23 @@ namespace StreamActions.Plugin
                 {
                     ModerationDocument document = ChatModerator.GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
 
-                    if (harshestModeration.ShouldBan)
+                    switch (harshestModeration.Punishment)
                     {
-                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".ban " + e.ChatMessage.Username + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
-                    }
-                    else if (harshestModeration.ShouldDelete)
-                    {
-                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".delete " + e.ChatMessage.Id);
-                    }
-                    else if (harshestModeration.ShouldPurge)
-                    {
-                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".timeout " + e.ChatMessage.Username + " 1" + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
-                    }
-                    else if (harshestModeration.ShouldTimeout)
-                    {
-                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".timeout " + e.ChatMessage.Username + " " + harshestModeration.TimeoutSeconds + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
+                        case ModerationPunishment.Ban:
+                            TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".ban " + e.ChatMessage.Username + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
+                            break;
+
+                        case ModerationPunishment.Delete:
+                            TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".delete " + e.ChatMessage.Id);
+                            break;
+
+                        case ModerationPunishment.Timeout:
+                            TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".timeout " + e.ChatMessage.Username + " " + harshestModeration.TimeoutSeconds + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
+                            break;
+
+                        case ModerationPunishment.Purge:
+                            TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".timeout " + e.ChatMessage.Username + " 1" + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
+                            break;
                     }
 
                     if (!(harshestModeration.ModerationMessage is null) && !this.InLockdown && document.LastModerationMessageSent.AddSeconds(document.ModerationMessageCooldownSeconds) < DateTime.Now)

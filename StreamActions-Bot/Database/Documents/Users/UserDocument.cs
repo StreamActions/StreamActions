@@ -16,6 +16,7 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
+using StreamActions.Database.Documents.Moderation;
 using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
 using System;
@@ -98,12 +99,18 @@ namespace StreamActions.Database.Documents.Users
         public TwitchStaff StaffType { get; set; }
 
         /// <summary>
-        /// The users <see cref="UserLevels"/>.
+        /// The users <see cref="UserLevels"/> per channel, "string" being the channel Id.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
-        [BsonDefaultValue(UserLevels.Viewer)]
-        public UserLevels UserLevels { get; set; }
+        public Dictionary<string, UserLevels> UserLevel { get; } = new Dictionary<string, UserLevels>();
+
+        /// <summary>
+        /// All moderation action related to this user based on channel Id.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        public List<UserModerationDocument> UserModeration { get; } = new List<UserModerationDocument>();
 
         #endregion Public Properties
 

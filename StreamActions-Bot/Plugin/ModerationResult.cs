@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+using StreamActions.Enums;
+
 namespace StreamActions.Plugin
 {
     /// <summary>
@@ -34,90 +36,18 @@ namespace StreamActions.Plugin
         public string ModerationReason { get; set; }
 
         /// <summary>
-        /// Set to true to indicate that the sender should be banned.
+        /// The type of punishment to give to the user <see cref="_punishment"/>.
         /// </summary>
-        public bool ShouldBan
+        public ModerationPunishment Punishment
         {
-            get => this._shouldBan;
-            set
-            {
-                if (value)
-                {
-                    this._shouldDelete = false;
-                    this._shouldPurge = false;
-                    this._shouldTimeout = false;
-                }
-
-                this._shouldBan = value;
-            }
-        }
-
-        /// <summary>
-        /// Set to true to indicate that the message should be deleted.
-        /// </summary>
-        public bool ShouldDelete
-        {
-            get => this._shouldDelete;
-            set
-            {
-                if (value)
-                {
-                    this._shouldPurge = false;
-                    this._shouldTimeout = false;
-                    this._shouldBan = false;
-                }
-
-                this._shouldDelete = value;
-            }
+            get => this._punishment;
+            set => this._punishment = value;
         }
 
         /// <summary>
         /// Returns true if a moderation action has been indicated.
         /// </summary>
-        public bool ShouldModerate => this.ShouldBan || this.ShouldTimeout || this.ShouldPurge || this.ShouldDelete;
-
-        /// <summary>
-        /// Set to true to indicate that the sender should be purged.
-        /// </summary>
-        public bool ShouldPurge
-        {
-            get => this._shouldPurge;
-            set
-            {
-                if (value)
-                {
-                    this._shouldDelete = false;
-                    this._shouldTimeout = false;
-                    this._shouldBan = false;
-                }
-
-                this._shouldPurge = value;
-            }
-        }
-
-        /// <summary>
-        /// Set to true to indicate that the sender should be timed out for <see cref="TimeoutSeconds"/>.
-        /// </summary>
-        public bool ShouldTimeout
-        {
-            get => this._shouldTimeout;
-            set
-            {
-                if (value)
-                {
-                    this._shouldDelete = false;
-                    this._shouldPurge = false;
-                    this._shouldBan = false;
-
-                    if (this._timeoutSeconds == 0)
-                    {
-                        this._timeoutSeconds = 1;
-                    }
-                }
-
-                this._shouldTimeout = value;
-            }
-        }
+        public bool ShouldModerate => !this.Punishment.Equals(ModerationPunishment.None);
 
         /// <summary>
         /// The number of seconds to timeout the sender for. Setting this will also set <see cref="ShouldTimeout"/>.
@@ -129,15 +59,7 @@ namespace StreamActions.Plugin
             {
                 if (value > 0)
                 {
-                    this._shouldDelete = false;
-                    this._shouldPurge = false;
-                    this._shouldTimeout = true;
-                    this._shouldBan = false;
-                }
-                else
-                {
-                    this._shouldTimeout = false;
-                    value = 0;
+                    this._punishment = ModerationPunishment.Timeout;
                 }
 
                 this._timeoutSeconds = value;
@@ -153,45 +75,30 @@ namespace StreamActions.Plugin
         /// </summary>
         /// <param name="b">A ModerationResult to compare.</param>
         /// <returns><c>true</c> if <paramref name="b"/> is a harsher ModerationResult.</returns>
-        public bool IsHarsher(ModerationResult b) => b is null || this.ShouldBan
+        public bool IsHarsher(ModerationResult b) => b is null || this.Punishment.Equals(ModerationPunishment.Ban)
                 ? false
-                : b.ShouldBan
+                : b.Punishment.Equals(ModerationPunishment.Ban)
                 ? true
-                : b.ShouldTimeout && b.TimeoutSeconds > this.TimeoutSeconds
+                : b.Punishment.Equals(ModerationPunishment.Timeout) && b.TimeoutSeconds > this.TimeoutSeconds
                 ? true
-                : this.ShouldTimeout
+                : this.Punishment.Equals(ModerationPunishment.Timeout)
                 ? false
-                : this.ShouldPurge
+                : this.Punishment.Equals(ModerationPunishment.Purge)
                 ? false
-                : b.ShouldPurge
+                : b.Punishment.Equals(ModerationPunishment.Purge)
                 ? true
-                : this.ShouldDelete
+                : this.Punishment.Equals(ModerationPunishment.Delete)
                 ? false
-                : b.ShouldDelete;
+                : b.Punishment.Equals(ModerationPunishment.Delete);
 
         #endregion Public Methods
 
         #region Private Fields
 
         /// <summary>
-        /// Field that backs the <see cref="ShouldBan"/> property.
+        /// Feild that backs the <see cref="Punishment"/> property.
         /// </summary>
-        private bool _shouldBan = false;
-
-        /// <summary>
-        /// Field that backs the <see cref="ShouldDelete"/> property.
-        /// </summary>
-        private bool _shouldDelete = false;
-
-        /// <summary>
-        /// Field that backs the <see cref="ShouldPurge"/> property.
-        /// </summary>
-        private bool _shouldPurge = false;
-
-        /// <summary>
-        /// Field that backs the <see cref="ShouldTimeout"/> property.
-        /// </summary>
-        private bool _shouldTimeout = false;
+        private ModerationPunishment _punishment = ModerationPunishment.None;
 
         /// <summary>
         /// Field that backs the <see cref="TimeoutSeconds"/> property.
