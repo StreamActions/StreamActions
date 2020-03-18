@@ -112,17 +112,18 @@ namespace StreamActions.Plugins
 
             using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
 
-            return await Can(command.ChatMessage.UserId, (await cursor.FirstAsync().ConfigureAwait(false)).UserLevel, "can_" + cmdText.Replace(' ', '_')).ConfigureAwait(false);
+            return await Can(command.ChatMessage.UserId, command.ChatMessage.RoomId, (await cursor.FirstAsync().ConfigureAwait(false)).UserLevel, "can_" + cmdText.Replace(' ', '_')).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Determines if the specified user has permission to perform the specified action.
         /// </summary>
         /// <param name="userId">The userId to check.</param>
+        /// <param name="channelId">The channelId to check.</param>
         /// <param name="userLevels">The <see cref="UserLevels"/> allowed to perform this action. Include <see cref="UserLevels.Custom"/> and <paramref name="permissionName"/> to also check permission groups.</param>
         /// <param name="permissionName">The permission name to check in the permission groups, if the <see cref="UserLevels.Custom"/> flag was set in <paramref name="userLevels"/>.</param>
         /// <returns><c>true</c> if the user has permission; <c>false</c> otherwise.</returns>
-        public static async Task<bool> Can(string userId, UserLevels userLevels, string permissionName = null)
+        public static async Task<bool> Can(string userId, string channelId, UserLevels userLevels, string permissionName = null)
         {
             IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
 
@@ -136,22 +137,30 @@ namespace StreamActions.Plugins
             using IAsyncCursor<UserDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
 
             UserDocument userDocument = await cursor.SingleAsync().ConfigureAwait(false);
+            UserLevels userLevel = userDocument.UserLevel.GetValueOrDefault(channelId);
 
             if (userDocument.BotGlobalPermission == BotGlobal.Banned)
             {
                 return false;
             }
-            else if (userDocument.BotGlobalPermission == BotGlobal.SuperAdmin || (userDocument.UserLevels & UserLevels.Broadcaster) == UserLevels.Broadcaster
+            else if (userDocument.BotGlobalPermission == BotGlobal.SuperAdmin || (userLevel & UserLevels.Broadcaster) == UserLevels.Broadcaster
                 || (userLevels & UserLevels.Viewer) == UserLevels.Viewer)
             {
                 return true;
             }
 
-            if (userLevels != UserLevels.Custom)
+            bool hasCustom = false;
+            if ((userLevels & UserLevels.Custom) == UserLevels.Custom)
+            {
+                hasCustom = true;
+                userLevels &= ~UserLevels.Custom;
+            }
+
+            if (userLevels > UserLevels.Viewer)
             {
                 foreach (UserLevels level in Enum.GetValues(typeof(UserLevels)))
                 {
-                    if ((userDocument.UserLevels & level) == level)
+                    if ((userLevel & level) == level)
                     {
                         switch (level)
                         {
@@ -194,7 +203,7 @@ namespace StreamActions.Plugins
                 }
             }
 
-            return (userLevels & UserLevels.Custom) == UserLevels.Custom && !string.IsNullOrWhiteSpace(permissionName)
+            return hasCustom && !string.IsNullOrWhiteSpace(permissionName)
                 ? await HasPermission(userDocument.PermissionGroupMembership, permissionName.Replace(' ', '_').ToLowerInvariant()).ConfigureAwait(false)
                 : false;
         }
