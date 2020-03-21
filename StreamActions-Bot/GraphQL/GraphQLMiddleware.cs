@@ -16,6 +16,9 @@
 
 using EntityGraphQL;
 using EntityGraphQL.Schema;
+using MongoDB.Driver;
+using StreamActions.Database;
+using StreamActions.Database.Documents.Users;
 using StreamActions.EventArgs;
 using System;
 using System.Collections.Concurrent;
@@ -36,9 +39,9 @@ namespace StreamActions.GraphQL
         public static GraphQLMiddleware Instance => _instance.Value;
 
         /// <summary>
-        /// The <see cref="MappedSchemaProvider{TContextType}"/> that has mapped out available fields.
+        /// The <see cref="SchemaProvider{TContextType, TArgType}"/> that has mapped out available fields.
         /// </summary>
-        public MappedSchemaProvider<GraphQLSchema> SchemaProvider => this._schemaProvider;
+        public SchemaProvider<GraphQLSchema, UserDocument> SchemaProvider => this._schemaProvider;
 
         #endregion Public Properties
 
@@ -50,14 +53,19 @@ namespace StreamActions.GraphQL
         private static readonly Lazy<GraphQLMiddleware> _instance = new Lazy<GraphQLMiddleware>(() => new GraphQLMiddleware());
 
         /// <summary>
-        /// Field that backs <see cref="SchemaProvider"/>.
+        /// The <see cref="GraphQLSchema"/>.
         /// </summary>
-        private readonly MappedSchemaProvider<GraphQLSchema> _schemaProvider;
+        private readonly GraphQLSchema _context = new GraphQLSchema();
 
         /// <summary>
-        /// Contains a Dictionary of user contexts. Key is IpPort; value is <see cref="GraphQLSchema"/>.
+        /// Field that backs <see cref="SchemaProvider"/>.
         /// </summary>
-        private readonly ConcurrentDictionary<string, GraphQLSchema> _userContext = new ConcurrentDictionary<string, GraphQLSchema>();
+        private readonly SchemaProvider<GraphQLSchema, UserDocument> _schemaProvider;
+
+        /// <summary>
+        /// Contains a Dictionary of user contexts. Key is IpPort; value is <see cref="UserDocument.Id"/>.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, string> _userContext = new ConcurrentDictionary<string, string>();
 
         #endregion Private Fields
 
@@ -68,7 +76,7 @@ namespace StreamActions.GraphQL
         /// </summary>
         private GraphQLMiddleware()
         {
-            this._schemaProvider = SchemaBuilder.FromObject<GraphQLSchema>();
+            this._schemaProvider = SchemaBuilder.FromObject<GraphQLSchema, UserDocument>();
             WebSocketServer.Instance.SubscribeClientConnectedEventHandler("graphql-ws", this.GraphQL_WebSocketClientConnectedEventHandler);
             WebSocketServer.Instance.SubscribeMessageReceivedEventHandler("graphql-ws", this.GraphQL_WebSocketMessageReceivedEventHandler);
             WebSocketServer.Instance.SubscribeClientDisconnectedEventHandler("graphql-ws", this.GraphQL_WebSocketClientDisconnectedEventHandler);
@@ -85,7 +93,7 @@ namespace StreamActions.GraphQL
         /// <param name="e">An object that contains the client's request.</param>
         /// <returns><c>true</c> to allow the connection; <c>false</c> otherwise.</returns>
         private bool GraphQL_WebSocketClientConnectedEventHandler(object sender, OnWebSocketClientConnectedArgs e) =>
-            //TODO: Authenticate client, place into _userContext as <ipPort, schema>
+            //TODO: Authenticate client, place into _userContext as <ipPort, UserId>
             false;
 
         /// <summary>
@@ -100,6 +108,7 @@ namespace StreamActions.GraphQL
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An object that contains the received data.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1303:Do not pass literals as localized parameters", Justification = "JSON Error")]
         private async void GraphQL_WebSocketMessageReceivedEventHandler(object sender, OnWebSocketMessageReceivedArgs e)
         {
             if (this._userContext.ContainsKey(e.IpPort))
@@ -112,7 +121,20 @@ namespace StreamActions.GraphQL
                         PropertyNameCaseInsensitive = true,
                     });
 
-                    result = this._userContext[e.IpPort].QueryObject(query, this._schemaProvider);
+                    IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+
+                    FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.Id.Equals(this._userContext[e.IpPort], StringComparison.OrdinalIgnoreCase));
+
+                    if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+                    {
+                        throw new JsonException("invalid user");
+                    }
+
+                    using IAsyncCursor<UserDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+
+                    UserDocument userDocument = await cursor.SingleAsync().ConfigureAwait(false);
+
+                    result = this._schemaProvider.ExecuteQuery(query, this._context, userDocument, null);
                 }
                 catch (JsonException ex)
                 {

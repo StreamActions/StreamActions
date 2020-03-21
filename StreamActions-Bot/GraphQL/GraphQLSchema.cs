@@ -23,32 +23,13 @@ namespace StreamActions.GraphQL
     /// </summary>
     public class GraphQLSchema
     {
-        #region Public Properties
-
-        /// <summary>
-        /// A <see cref="UserDocument"/> indicating the user that this client is authenticated as.
-        /// </summary>
-        public UserDocument AuthenticatedUser => this._authenticatedUser;
-
-        #endregion Public Properties
-
         #region Internal Constructors
 
         /// <summary>
         /// Constructor.
         /// </summary>
-        /// <param name="authenticatedUser">The <see cref="UserDocument"/> indicating the user that this client is authenticated as.</param>
-        internal GraphQLSchema(UserDocument authenticatedUser) => this._authenticatedUser = authenticatedUser;
+        internal GraphQLSchema() { }
 
         #endregion Internal Constructors
-
-        #region Private Fields
-
-        /// <summary>
-        /// Field that backs the <see cref="AuthenticatedUser"/> property.
-        /// </summary>
-        private readonly UserDocument _authenticatedUser;
-
-        #endregion Private Fields
     }
 }
