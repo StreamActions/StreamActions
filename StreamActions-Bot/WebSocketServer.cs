@@ -17,6 +17,7 @@
 using Microsoft.IdentityModel.Tokens;
 using StreamActions.EventArgs;
 using StreamActions.Http;
+using StreamActions.Http.ConfigWizard;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -358,7 +359,7 @@ namespace StreamActions
         /// </summary>
         private WebSocketServer()
         {
-            string listenerIp = Program.Settings.WSListenIp ?? "127.0.0.1";
+            string listenerIp = string.IsNullOrWhiteSpace(Program.Settings.WSListenIp) ? "127.0.0.1" : Program.Settings.WSListenIp;
             bool useSsl = Program.Settings.WSUseSsl;
             int listenerPort = Program.Settings.WSListenPort > 0 ? Program.Settings.WSListenPort : (useSsl ? 443 : 80);
             string sslCertFile = useSsl ? Program.Settings.WSSslCert : null;
@@ -422,7 +423,15 @@ namespace StreamActions
 
                     if (!HttpServer.IsWebSocketUpgradeRequest(request))
                     {
-                        await HttpServer.SendHTTPResponseAsync(request.TcpClient, request.Stream, HttpStatusCode.NotFound, Array.Empty<byte>()).ConfigureAwait(false);
+                        if (request.IsLocal && (request.RequestUri.AbsolutePath.Equals("/", StringComparison.OrdinalIgnoreCase) || request.RequestUri.AbsolutePath.StartsWith("/config", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            HttpConfigWizard.HandleRequest(request);
+                        }
+                        else
+                        {
+                            await HttpServer.SendHTTPResponseAsync(request.TcpClient, request.Stream, HttpStatusCode.NotFound, Array.Empty<byte>()).ConfigureAwait(false);
+                        }
+
                         request.Dispose();
                         continue;
                     }

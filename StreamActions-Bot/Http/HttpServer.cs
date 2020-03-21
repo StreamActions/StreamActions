@@ -257,6 +257,11 @@ namespace StreamActions.Http
         private static readonly Regex _requestRegex = new Regex(@"^(?<method>(GET|HEAD|POST|PUT|DELETE|PATCH)) (?<path>\/\S*) (?<protocol>HTTP\/1\.1)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         /// <summary>
+        /// The local hosts IP addresses.
+        /// </summary>
+        private static readonly IPAddress[] _selfAddresses = Dns.GetHostEntry(Dns.GetHostName()).AddressList;
+
+        /// <summary>
         /// The SSL Certificate, if SSL is enabled.
         /// </summary>
         private readonly X509Certificate2 _certificate;
@@ -522,6 +527,9 @@ namespace StreamActions.Http
 
                 requestMessage.Content = new StringContent(requestString);
             }
+
+            IPEndPoint remoteEndpoint = (IPEndPoint)client.Client.RemoteEndPoint;
+            requestMessage.IsLocal = IPAddress.IsLoopback(remoteEndpoint.Address) || _selfAddresses.Any(a => a.Equals(remoteEndpoint.Address));
 
             return requestMessage;
         }

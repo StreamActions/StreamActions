@@ -23,18 +23,34 @@ using System.Security.Principal;
 
 namespace StreamActions.Http
 {
+    /// <summary>
+    /// Represents a HTTP request message.
+    /// </summary>
     public class HttpServerRequestMessage : HttpRequestMessage
     {
         #region Internal Constructors
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         internal HttpServerRequestMessage() : base()
         {
         }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="method">The method of the HTTP request.</param>
+        /// <param name="requestUri">The Uri requested.</param>
         internal HttpServerRequestMessage(HttpMethod method, string requestUri) : base(method, requestUri)
         {
         }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="method">The method of the HTTP request.</param>
+        /// <param name="requestUri">The Uri requested.</param>
         internal HttpServerRequestMessage(HttpMethod method, Uri requestUri) : base(method, requestUri)
         {
         }
@@ -43,9 +59,29 @@ namespace StreamActions.Http
 
         #region Internal Properties
 
+        /// <summary>
+        /// The cookies passed to the request.
+        /// </summary>
         internal CookieCollection CookieCollection { get; set; }
+
+        /// <summary>
+        /// Indicates if the request came from the local host.
+        /// </summary>
+        internal bool IsLocal { get; set; }
+
+        /// <summary>
+        /// The underlying Stream of the request.
+        /// </summary>
         internal Stream Stream { get; set; }
+
+        /// <summary>
+        /// The TcpClient of the request.
+        /// </summary>
         internal TcpClient TcpClient { get; set; }
+
+        /// <summary>
+        /// A ClaimsPrincipal representing a user the client is authenticating as; <c>null</c> if no authentication was attempted.
+        /// </summary>
         internal IPrincipal User { get; set; }
 
         #endregion Internal Properties

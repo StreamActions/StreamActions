@@ -42,6 +42,15 @@ namespace StreamActions.Plugins
     [Guid("53739937-794D-406F-AFF3-5340F96C4D50")]
     public class I18n : IPlugin
     {
+        #region Public Fields
+
+        /// <summary>
+        /// The default Culture.
+        /// </summary>
+        public static readonly string DefaultCulture = "en-US";
+
+        #endregion Public Fields
+
         #region Public Events
 
         /// <summary>
@@ -380,7 +389,7 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Field that backs <see cref="GlobalCulture"/>.
         /// </summary>
-        private CultureInfo _globalCulture = new CultureInfo("en-US", false);
+        private CultureInfo _globalCulture = new CultureInfo(DefaultCulture, false);
 
         #endregion Private Fields
 

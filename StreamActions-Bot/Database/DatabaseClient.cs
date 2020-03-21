@@ -62,22 +62,22 @@ namespace StreamActions.Database
         {
             MongoClientSettings settings = new MongoClientSettings
             {
-                AllowInsecureTls = false,
+                AllowInsecureTls = Program.Settings.DBAllowInsecureTls,
                 ApplicationName = "StreamActions-Bot",
                 ConnectionMode = ConnectionMode.Automatic,
                 ConnectTimeout = TimeSpan.FromSeconds(30),
                 GuidRepresentation = GuidRepresentation.Standard,
-                UseTls = Program.Settings.DBUseTLS
+                UseTls = Program.Settings.DBUseTls
             };
 
-            if (!(Program.Settings.DBHost is null))
+            if (!string.IsNullOrWhiteSpace(Program.Settings.DBHost))
             {
                 settings.Server = Program.Settings.DBPort > 0
                     ? new MongoServerAddress(Program.Settings.DBHost, Program.Settings.DBPort)
                     : new MongoServerAddress(Program.Settings.DBHost);
             }
 
-            if (!(Program.Settings.DBName is null || Program.Settings.DBUsername is null))
+            if (!string.IsNullOrWhiteSpace(Program.Settings.DBName) || !string.IsNullOrWhiteSpace(Program.Settings.DBUsername))
             {
                 settings.Credential = MongoCredential.CreateCredential(Program.Settings.DBName, Program.Settings.DBUsername, Program.Settings.DBPassword);
             }

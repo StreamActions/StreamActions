@@ -1,0 +1,285 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>StreamActions-Bot Configuration Wizard</title>
+    <script type="text/javascript">
+        var SingleOAuth = false;
+        function OnOAuthTypeChanged() {
+            if (document.getElementById("BotOAuthMethodSeparate").checked) {
+                SingleOAuth = false;
+            } else {
+                SingleOAuth = true;
+            }
+        }
+
+        function SelectSuperadminBearer() {
+            document.getElementById("WsSuperadminBearer").select();
+        }
+
+        function TwitchConnectBot() {
+
+        }
+    </script>
+</head>
+<body>
+    <h1 style="text-align: center;">StreamActions-Bot Configuration Wizard</h1><br />
+    <span id="ResponseText"></span>
+    <form action="/" method="post" autocomplete="off" enctype="application/x-www-form-urlencoded">
+        <fieldset>
+            <legend>Twitch Connect</legend>
+            <table style="border: 0;">
+                <tr>
+                    <td id="BotLoginLabel">
+                        <label for="BotLogin">Bot Username:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="BotLogin" id="BotLogin" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The Twitch username the bot will appear as in chat
+                    </td>
+                </tr>
+                <tr>
+                    <td id="BotOAuthLabel">
+                        <label for="BotOAuth">Bot OAuth:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="BotOAuth" id="BotOAuth" /> <input type="image" value="Connect with Twitch" onclick="TwitchConnectBot();" src="/config/TwitchConnect.png" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The Twitch OAuth token for the bot to login to chat
+                    </td>
+                </tr>
+            </table>
+            <div style="margin-left: 25px;">
+                <span style="font-weight: bold;">How do you want to setup your OAuth?</span><br />
+                <table style="border: 0;">
+                    <tr>
+                        <td>
+                            <label for="BotOAuthMethodSeparate">Separate OAuths for Bot and Broadcaster:</label>
+                        </td>
+                        <td>
+                            <input type="radio" name="BotOAuthMethod" id="BotOAuthMethodSeparate" onchange="OnOAuthTypeChanged();" />
+                        </td>
+                        <td style="font-style: italic;">
+                            An OAuth for chat only is used for the bot, while a separate OAuth on the Broadcaster's account is used for Twitch API (recommended)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label for="BotOAuthMethodSingle">Single OAuth for Bot:</label>
+                        </td>
+                        <td>
+                            <input type="radio" name="BotOAuthMethod" id="BotOAuthMethodSingle" onchange="OnOAuthTypeChanged();" />
+                        </td>
+                        <td style="font-style: italic;">
+                            A single OAuth is used for the bot which includes both chat and TwitchAPI. Certain API features like Subscribers may fail unless the bot is on the Broadcaster's account
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Chat</legend>
+            <table style="border: 0;">
+                <tr>
+                    <td id="ChatCommandIdentifierLabel">
+                        <label for="ChatCommandIdentifier">Chat Command Identifier:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="ChatCommandIdentifier" id="ChatCommandIdentifier" maxlength="1" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The character to use as the chat command prefix
+                    </td>
+                </tr>
+                <tr>
+                    <td id="WhisperCommandIdentifierLabel">
+                        <label for="WhisperCommandIdentifier">Whisper Command Identifier:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="WhisperCommandIdentifier" id="WhisperCommandIdentifier" maxlength="1" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The character to use as the whisper command prefix
+                    </td>
+                </tr>
+                <tr>
+                    <td id="GlobalCultureLabel">
+                        <label for="GlobalCulture">Global Culture:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="GlobalCulture" id="GlobalCulture" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The default global culture (language/number style/etc) to use, in languagecode2-country/regioncode2 format. See <a href="https://en.wikipedia.org/wiki/IETF_language_tag" target="_blank">Wikipedia - IETF Language Tag</a> and <a href="https://r12a.github.io/app-subtags/" target="_blank">BCP47 Language Subtag Lookup</a><br />
+                        NOTE: Only cultures available on your operating system may be selected
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
+        <fieldset>
+            <legend>Channels</legend>//ChannelsToJoin, BroadcasterOAuth
+        </fieldset>
+        <fieldset>
+            <legend>Database</legend>
+            <table style="border: 0;">
+                <tr>
+                    <td id="DBHostLabel">
+                        <label for="DBHost">Database Hostname/IP:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="DBHost" id="DBHost" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The hostname or IP address of the database
+                    </td>
+                </tr>
+                <tr>
+                    <td id="DBPortLabel">
+                        <label for="DBPort">Database Port:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="DBPort" id="DBPort" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The port of the database. Leave blank to use the default
+                    </td>
+                </tr>
+                <tr>
+                    <td id="DBNameLabel">
+                        <label for="DBName">Database Name:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="DBName" id="DBName" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The name of the database (equivalent to a MySQL schema). Leave blank to use the default
+                    </td>
+                </tr>
+                <tr>
+                    <td id="DBUsernameLabel">
+                        <label for="DBUsername">Database Username:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="DBUsername" id="DBUsername" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The username to authenticate to the database with. Leave blank if no authentication is required
+                    </td>
+                </tr>
+                <tr>
+                    <td id="DBPasswordLabel">
+                        <label for="DBPassword">Database Password:</label>
+                    </td>
+                    <td>
+                        <input type="password" name="DBPassword" id="DBPassword" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The password to authenticate to the database with. Leave blank if no password is required
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="DBUseTls">Database Use TLS:</label>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="DBUseTls" id="DBUseTls" />
+                    </td>
+                    <td style="font-style: italic;">
+                        Whether to use TLS encryption on the database connection. Requires additional configuration on the database side. See the first two sections of <a href="https://guyharwood.co.uk/2016/11/29/configuring-mongodb-and-c-client-for-tls-ssl/" target="_blank">Configuring MongoDB and C# Client for TLS / SSL</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="DBAllowInsecureTls">Database Allow Insecure TLS:</label>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="DBAllowInsecureTls" id="DBAllowInsecureTls" />
+                    </td>
+                    <td style="font-style: italic;">
+                        Whether to allow insecure usage of TLS, such as self-signed certificates. It is highly recommended to get a certificate that is signed by a globally trusted certification authority (CA) and then disable this checkbox, if possible
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
+        <fieldset>
+            <legend>GraphQL Server</legend>
+            <table style="border: 0;">
+                <tr>
+                    <td id="WsListenIPLabel">
+                        <label for="WsListenIP">GraphQL Server Listen IP:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="WsListenIP" id="WsListenIP" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The IP address the GraphQL server should listen on. Leave blank to limit to <span style="font-weight: bold;">localhost</span> only. Put <span style="font-weight: bold;">*</span> to listen on all IP addresses
+                    </td>
+                </tr>
+                <tr>
+                    <td id="WsListenPortLabel">
+                        <label for="WsListenPort">GraphQL Server Listen Port:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="WsListenPort" id="WsListenPort" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The port the GraphQL server should listen on. Leave blank for the default (443 if SSL enabled, 80 otherwise)
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="WsSuperadminBearer">GraphQL Server Superadmin Token:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="WsSuperadminBearer" id="WsSuperadminBearer" readonly="readonly" onclick="SelectSuperadminBearer();" />
+                        <label for="WsSuperadminBearerRegenerate">Regenerate:</label>
+                        <input type="checkbox" name="WsSuperadminBearerRegenerate" id="WsSuperadminBearerRegenerate" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The token for the superadmin. Only works on localhost. Check the box to have a new one generated
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="WsUseSsl">GraphQL Server Use SSL:</label>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="WsUseSsl" id="WsUseSsl" />
+                    </td>
+                    <td style="font-style: italic;">
+                        Whether to use SSL encryption on the GraphQL server
+                    </td>
+                </tr>
+                <tr>
+                    <td id="WsSslCertLabel">
+                        <label for="WsSslCert">GraphQL Server SSL Certificate File:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="WsSslCert" id="WsSslCert" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The path to the SSL certificate file. This should be a PKCS12 (PFX) file containing the private key
+                    </td>
+                </tr>
+                <tr>
+                    <td id="WsSslCertPassLabel">
+                        <label for="WsSslCertPass">GraphQL Server SSL Certificate File Password:</label>
+                    </td>
+                    <td>
+                        <input type="password" name="WsSslCertPass" id="WsSslCertPass" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The password for unlocking the SSL cert file, if required
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
+        <br />
+        <input type="submit" value="Save" />
+    </form>
+</body>
+</html>

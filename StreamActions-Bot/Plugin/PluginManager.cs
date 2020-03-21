@@ -91,6 +91,11 @@ namespace StreamActions.Plugin
         #region Public Properties
 
         /// <summary>
+        /// The default command identifier.
+        /// </summary>
+        public static readonly char DefaultCommandIdentifier = '!';
+
+        /// <summary>
         /// Singleton of <see cref="PluginManager"/>.
         /// </summary>
         public static PluginManager Instance => _instance.Value;
@@ -98,7 +103,7 @@ namespace StreamActions.Plugin
         /// <summary>
         /// The character that is used as the prefix to identify a chat command.
         /// </summary>
-        public char ChatCommandIdentifier { get; set; } = '!';
+        public char ChatCommandIdentifier { get; set; } = DefaultCommandIdentifier;
 
         /// <summary>
         /// Indicates if the bot is in lock down mode. When this is set, only plugins with <see cref="OnMessageModeration"/> EventHandlers or the <see cref="IPlugin.AlwaysEnabled"/>
@@ -137,7 +142,7 @@ namespace StreamActions.Plugin
         /// <summary>
         /// The character that is used as the prefix to identify a whisper command.
         /// </summary>
-        public char WhisperCommandIdentifier { get; set; } = '!';
+        public char WhisperCommandIdentifier { get; set; } = DefaultCommandIdentifier;
 
         #endregion Public Properties
 

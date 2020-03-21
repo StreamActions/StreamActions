@@ -39,6 +39,11 @@ namespace StreamActions.JsonDocuments
         internal string BotOAuth { get; set; }
 
         /// <summary>
+        /// The bot's Twitch OAuth refresh token.
+        /// </summary>
+        internal string BotRefreshToken { get; set; }
+
+        /// <summary>
         /// The channels the bot should join.
         /// </summary>
         internal List<string> ChannelsToJoin { get; } = new List<string>();
@@ -49,9 +54,14 @@ namespace StreamActions.JsonDocuments
         internal char ChatCommandIdentifier { get; set; }
 
         /// <summary>
+        /// Whether the database connection should use TLS.
+        /// </summary>
+        internal bool DBAllowInsecureTls { get; set; }
+
+        /// <summary>
         /// The IP address of the database host. <c>null</c> to use the default on localhost.
         /// </summary>
-        internal string DBHost { get; set; }
+        internal string DBHost { get; set; } = "mongod";
 
         /// <summary>
         /// The name of the Database to use. <c>null</c> to use the default.
@@ -76,12 +86,17 @@ namespace StreamActions.JsonDocuments
         /// <summary>
         /// Whether the database connection should use TLS.
         /// </summary>
-        internal bool DBUseTLS { get; set; }
+        internal bool DBUseTls { get; set; }
 
         /// <summary>
         /// The global culture. <c>null</c> to use the default.
         /// </summary>
         internal string GlobalCulture { get; set; }
+
+        /// <summary>
+        /// Indicates if the <see cref="BotOAuth"/> will be used for API calls, instead of individual Broadcaster OAuths.
+        /// </summary>
+        internal bool SingleOAuth { get; set; }
 
         /// <summary>
         /// The Client ID for the Twitch developer app.
@@ -99,7 +114,7 @@ namespace StreamActions.JsonDocuments
         internal char WhisperCommandIdentifier { get; set; }
 
         /// <summary>
-        /// The IP address the WebSocket server should listen on. <c>null</c> to use the default or <c>""</c> (empty string) to limit to localhost.
+        /// The IP address the WebSocket server should listen on. <c>null</c> or <c>""</c> (empty string) to limit to localhost. <c>*</c> for IPAddress.Any.
         /// </summary>
         internal string WSListenIp { get; set; }
 
