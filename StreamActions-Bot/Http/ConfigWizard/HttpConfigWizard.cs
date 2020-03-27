@@ -156,9 +156,9 @@ namespace StreamActions.Http.ConfigWizard
                 sContent = await reader.ReadToEndAsync().ConfigureAwait(false);
             }
 
-            if (request.Method == HttpMethod.Put)
+            if (request.Method == HttpMethod.Post)
             {
-                sContent = await HandlePut(request, sContent).ConfigureAwait(false);
+                sContent = await HandlePost(request, sContent).ConfigureAwait(false);
             }
 
             byte[] content = Encoding.UTF8.GetBytes(sContent);
@@ -171,7 +171,7 @@ namespace StreamActions.Http.ConfigWizard
             await HttpServer.SendHTTPResponseAsync(request.TcpClient, request.Stream, HttpStatusCode.OK, content, headers).ConfigureAwait(false);
         }
 
-        private static async Task<string> HandlePut(HttpServerRequestMessage request, string sContent)
+        private static async Task<string> HandlePost(HttpServerRequestMessage request, string sContent)
         {
         }
 
