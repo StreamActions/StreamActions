@@ -6,20 +6,73 @@
     <title>StreamActions-Bot Configuration Wizard</title>
     <script type="text/javascript">
         var SingleOAuth = false;
+        var WaitingOnToken = false;
         function OnOAuthTypeChanged() {
-            if (document.getElementById("BotOAuthMethodSeparate").checked) {
-                SingleOAuth = false;
-            } else {
-                SingleOAuth = true;
-            }
+            SingleOAuth = document.getElementById("BotOAuthMethodSingle").checked;
         }
 
-        function SelectSuperadminBearer() {
+        function OnSelectSuperadminBearer() {
             document.getElementById("WsSuperadminBearer").select();
         }
 
-        function TwitchConnectBot() {
+        function OnTwitchConnectBot() {
+            var type = "bot";
 
+            if (SingleOAuth) {
+                type = "single";
+            }
+
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var response = JSON.parse(this.responseText);
+                    if (response.Error > 0) {
+                        if (response.Error == 3) {
+                            document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FFAA00;\">Waiting for Bot OAuth response...</span>";
+                        } else {
+                            document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FF0000;\">" + response.Message + "</span>";
+                        }
+                    } else {
+                        document.getElementById("BotOAuth").value = response.Token;
+                        document.getElementById("BotRefreshToken").value = response.Refresh;
+
+                        document.getElementById("ResponseText").innerHTML = "<span style=\"color: #00FF00;\">Bot OAuth Successful</span>";
+                    }
+                }
+            };
+            xhttp.open("GET", "/config/ConnectWithTwitch.json?type=" + type, true);
+            xhttp.send();
+        }
+
+        function OnDBUseTlsChanged() {
+            if (document.getElementById("DBUseTls").checked) {
+                document.getElementById("DBAllowInsecureTls").disabled = '';
+            } else {
+                document.getElementById("DBAllowInsecureTls").disabled = 'disabled';
+            }
+        }
+
+        function OnWsUseSslChanged() {
+            if (document.getElementById("WsUseSsl").checked) {
+                document.getElementById("WsSslCert").disabled = '';
+                document.getElementById("WsSslCertPass").disabled = '';
+            } else {
+                document.getElementById("WsSslCert").disabled = 'disabled';
+                document.getElementById("WsSslCertPass").disabled = 'disabled';
+            }
+        }
+
+        function OnInit() {
+            OnOAuthTypeChanged();
+            OnDBUseTlsChanged();
+            OnWsUseSslChanged();
+        }
+
+        if (document.readyState === "complete" ||
+            (document.readyState !== "loading" && !document.documentElement.doScroll)) {
+            OnInit();
+        } else {
+            document.addEventListener("DOMContentLoaded", OnInit);
         }
     </script>
 </head>
@@ -46,10 +99,21 @@
                         <label for="BotOAuth">Bot OAuth:</label>
                     </td>
                     <td>
-                        <input type="text" name="BotOAuth" id="BotOAuth" /> <input type="image" value="Connect with Twitch" onclick="TwitchConnectBot();" src="/config/TwitchConnect.png" />
+                        <input type="text" name="BotOAuth" id="BotOAuth" />
                     </td>
                     <td style="font-style: italic;">
                         The Twitch OAuth token for the bot to login to chat
+                    </td>
+                </tr>
+                <tr>
+                    <td id="BotRefreshTokenLabel">
+                        <label for="BotRefreshToken">Bot Refresh Token:</label>
+                    </td>
+                    <td>
+                        <input type="text" name="BotRefreshToken" id="BotRefreshToken" />
+                    </td>
+                    <td style="font-style: italic;">
+                        The refresh token, used for keeping the OAuth valid. Leave blank if not required
                     </td>
                 </tr>
             </table>
@@ -79,6 +143,7 @@
                         </td>
                     </tr>
                 </table>
+                <input type="image" value="Connect with Twitch" onclick="OnTwitchConnectBot();" src="/config/TwitchConnect.png" />
             </div>
         </fieldset>
         <fieldset>
@@ -186,7 +251,7 @@
                         <label for="DBUseTls">Database Use TLS:</label>
                     </td>
                     <td>
-                        <input type="checkbox" name="DBUseTls" id="DBUseTls" />
+                        <input type="checkbox" name="DBUseTls" id="DBUseTls" onchange="OnDBUseTlsChanged();" />
                     </td>
                     <td style="font-style: italic;">
                         Whether to use TLS encryption on the database connection. Requires additional configuration on the database side. See the first two sections of <a href="https://guyharwood.co.uk/2016/11/29/configuring-mongodb-and-c-client-for-tls-ssl/" target="_blank">Configuring MongoDB and C# Client for TLS / SSL</a>
@@ -235,9 +300,8 @@
                         <label for="WsSuperadminBearer">GraphQL Server Superadmin Token:</label>
                     </td>
                     <td>
-                        <input type="text" name="WsSuperadminBearer" id="WsSuperadminBearer" readonly="readonly" onclick="SelectSuperadminBearer();" />
-                        <label for="WsSuperadminBearerRegenerate">Regenerate:</label>
-                        <input type="checkbox" name="WsSuperadminBearerRegenerate" id="WsSuperadminBearerRegenerate" />
+                        <input type="text" name="WsSuperadminBearer" id="WsSuperadminBearer" readonly="readonly" onclick="OnSelectSuperadminBearer();" />
+                        <input type="checkbox" name="WsSuperadminBearerRegenerate" id="WsSuperadminBearerRegenerate" style="position: relative; left: -25px; top: 1px;" />
                     </td>
                     <td style="font-style: italic;">
                         The token for the superadmin. Only works on localhost. Check the box to have a new one generated
@@ -248,10 +312,10 @@
                         <label for="WsUseSsl">GraphQL Server Use SSL:</label>
                     </td>
                     <td>
-                        <input type="checkbox" name="WsUseSsl" id="WsUseSsl" />
+                        <input type="checkbox" name="WsUseSsl" id="WsUseSsl" onchange="OnWsUseSslChanged();" />
                     </td>
                     <td style="font-style: italic;">
-                        Whether to use SSL encryption on the GraphQL server
+                        Whether to use SSL encryption on the GraphQL server. If checked, you must set a certificate file, and the password to the certificate file, if required
                     </td>
                 </tr>
                 <tr>

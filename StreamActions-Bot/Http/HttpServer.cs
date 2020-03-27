@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+using StreamActions.Http.Identity;
 using System;
 using System.Collections.Generic;
 using System.Globalization;

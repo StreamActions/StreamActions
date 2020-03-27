@@ -18,12 +18,12 @@ using System;
 using System.Collections.Generic;
 using System.Security.Principal;
 
-namespace StreamActions.Http
+namespace StreamActions.Http.Identity
 {
     /// <summary>
-    /// An identity claim proven using the HTTP Authorization Basic scheme.
+    /// An identity claim proven using the HTTP Authorization Bearer scheme.
     /// </summary>
-    internal class HttpServerBasicIdentity : GenericIdentity
+    internal class HttpServerBearerIdentity : GenericIdentity
     {
         #region Public Properties
 
@@ -36,34 +36,24 @@ namespace StreamActions.Http
         /// <summary>
         /// Constructor.
         /// </summary>
-        /// <param name="username">The username provided by the client.</param>
-        /// <param name="password">The password provided by the client.</param>
-        internal HttpServerBasicIdentity(string username, string password) : base(username, "Basic") => this.Password = password;
+        /// <param name="token">The token provided by the client.</param>
+        internal HttpServerBearerIdentity(string token) : base(token, "Bearer") { }
 
         #endregion Internal Constructors
-
-        #region Internal Properties
-
-        /// <summary>
-        /// The password provided by the client.
-        /// </summary>
-        internal string Password { get; }
-
-        #endregion Internal Properties
 
         #region Internal Methods
 
         /// <summary>
         /// Authenticates this identity.
         /// </summary>
-        /// <param name="validIdentities">A Dictionary of valid identities that would result in successful authentication. Key is username; value is password.</param>
-        internal void Authenticate(Dictionary<string, string> validIdentities) => this._isAuthenticated = validIdentities.ContainsKey(this.Name) && validIdentities[this.Name].Equals(this.Password, StringComparison.Ordinal);
+        /// <param name="validIdentities">A List of valid identities that would result in successful authentication.</param>
+        internal void Authenticate(List<string> validIdentities) => this._isAuthenticated = validIdentities.Contains(this.Name);
 
         /// <summary>
         /// Authenticates this identity.
         /// </summary>
-        /// <param name="authenticator">A Func that accepts the username and password provided by the client and returns a <c>bool</c> indicating if authentication is successful.</param>
-        internal void Authenticate(Func<string, string, bool> authenticator) => this._isAuthenticated = authenticator.Invoke(this.Name, this.Password);
+        /// <param name="authenticator">A Func that accepts the token provided by the client and returns a <c>bool</c> indicating if authentication is successful.</param>
+        internal void Authenticate(Func<string, bool> authenticator) => this._isAuthenticated = authenticator.Invoke(this.Name);
 
         #endregion Internal Methods
 
