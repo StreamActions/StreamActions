@@ -15,6 +15,8 @@
             document.getElementById("WsSuperadminBearer").select();
         }
 
+        var BotConnectId = "";
+        var BotConnectTimer;
         function OnTwitchConnectBot() {
             var type = "bot";
 
@@ -26,11 +28,29 @@
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
                     var response = JSON.parse(this.responseText);
+                    BotConnectId = response.Id;
+
+                    Window.open(response.Url, "_blank");
+                    document.getElementById("ResponseText").innerHTML = "Launching Twitch Connect Window...<br />If the window does not open, click <a href=\"" + response.Url + "\" target=\"_blank\">here</a>";
+                    setTimeout(function () {
+                        BotConnectTimer = setInterval(OnWaitForTwitchConnectBot, 5000);
+                    }, 20000);
+                }
+            };
+            xhttp.open("GET", "/config/ConnectWithTwitch.json?type=" + type, true);
+            xhttp.send();
+        }
+
+        function OnWaitForTwitchConnectBot() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var response = JSON.parse(this.responseText);
                     if (response.Error > 0) {
                         if (response.Error == 3) {
                             document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FFAA00;\">Waiting for Bot OAuth response...</span>";
                         } else {
-                            document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FF0000;\">" + response.Message + "</span>";
+                            document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FF0000;\">Twitch Connect Error: " + response.Message + "</span>";
                         }
                     } else {
                         document.getElementById("BotOAuth").value = response.Token;
@@ -40,7 +60,7 @@
                     }
                 }
             };
-            xhttp.open("GET", "/config/ConnectWithTwitch.json?type=" + type, true);
+            xhttp.open("GET", "/config/ConnectWithTwitch.json?type=check-bot&id=" + BotConnectId, true);
             xhttp.send();
         }
 
@@ -88,7 +108,7 @@
                         <label for="BotLogin">Bot Username:</label>
                     </td>
                     <td>
-                        <input type="text" name="BotLogin" id="BotLogin" />
+                        <input type="text" name="BotLogin" id="BotLogin" value="BotLoginValue" />
                     </td>
                     <td style="font-style: italic;">
                         The Twitch username the bot will appear as in chat
@@ -99,7 +119,7 @@
                         <label for="BotOAuth">Bot OAuth:</label>
                     </td>
                     <td>
-                        <input type="text" name="BotOAuth" id="BotOAuth" />
+                        <input type="text" name="BotOAuth" id="BotOAuth" value="BotOAuthValue" />
                     </td>
                     <td style="font-style: italic;">
                         The Twitch OAuth token for the bot to login to chat
@@ -110,7 +130,7 @@
                         <label for="BotRefreshToken">Bot Refresh Token:</label>
                     </td>
                     <td>
-                        <input type="text" name="BotRefreshToken" id="BotRefreshToken" />
+                        <input type="text" name="BotRefreshToken" id="BotRefreshToken" value="BotRefreshTokenValue" />
                     </td>
                     <td style="font-style: italic;">
                         The refresh token, used for keeping the OAuth valid. Leave blank if not required
@@ -143,7 +163,7 @@
                         </td>
                     </tr>
                 </table>
-                <input type="image" value="Connect with Twitch" onclick="OnTwitchConnectBot();" src="/config/TwitchConnect.png" />
+                <img alt="Connect with Twitch" onclick="OnTwitchConnectBot();" src="/config/TwitchConnect.png" style="cursor: pointer;" />
             </div>
         </fieldset>
         <fieldset>
@@ -154,7 +174,7 @@
                         <label for="ChatCommandIdentifier">Chat Command Identifier:</label>
                     </td>
                     <td>
-                        <input type="text" name="ChatCommandIdentifier" id="ChatCommandIdentifier" maxlength="1" />
+                        <input type="text" name="ChatCommandIdentifier" id="ChatCommandIdentifier" value="ChatCommandIdentifierValue" maxlength="1" />
                     </td>
                     <td style="font-style: italic;">
                         The character to use as the chat command prefix
@@ -165,7 +185,7 @@
                         <label for="WhisperCommandIdentifier">Whisper Command Identifier:</label>
                     </td>
                     <td>
-                        <input type="text" name="WhisperCommandIdentifier" id="WhisperCommandIdentifier" maxlength="1" />
+                        <input type="text" name="WhisperCommandIdentifier" id="WhisperCommandIdentifier" value="WhisperCommandIdentifierValue" maxlength="1" />
                     </td>
                     <td style="font-style: italic;">
                         The character to use as the whisper command prefix
@@ -176,7 +196,7 @@
                         <label for="GlobalCulture">Global Culture:</label>
                     </td>
                     <td>
-                        <input type="text" name="GlobalCulture" id="GlobalCulture" />
+                        <input type="text" name="GlobalCulture" id="GlobalCulture" value="GlobalCultureValue" />
                     </td>
                     <td style="font-style: italic;">
                         The default global culture (language/number style/etc) to use, in languagecode2-country/regioncode2 format. See <a href="https://en.wikipedia.org/wiki/IETF_language_tag" target="_blank">Wikipedia - IETF Language Tag</a> and <a href="https://r12a.github.io/app-subtags/" target="_blank">BCP47 Language Subtag Lookup</a><br />
@@ -196,7 +216,7 @@
                         <label for="DBHost">Database Hostname/IP:</label>
                     </td>
                     <td>
-                        <input type="text" name="DBHost" id="DBHost" />
+                        <input type="text" name="DBHost" id="DBHost" value="DBHostValue" />
                     </td>
                     <td style="font-style: italic;">
                         The hostname or IP address of the database
@@ -207,10 +227,10 @@
                         <label for="DBPort">Database Port:</label>
                     </td>
                     <td>
-                        <input type="text" name="DBPort" id="DBPort" />
+                        <input type="number" min="0" max="65535" name="DBPort" id="DBPort" value="DBPortValue" />
                     </td>
                     <td style="font-style: italic;">
-                        The port of the database. Leave blank to use the default
+                        The port of the database. Put <span style="font-weight: bold;">0</span> to use the default
                     </td>
                 </tr>
                 <tr>
@@ -218,7 +238,7 @@
                         <label for="DBName">Database Name:</label>
                     </td>
                     <td>
-                        <input type="text" name="DBName" id="DBName" />
+                        <input type="text" name="DBName" id="DBName" value="DBNameValue" />
                     </td>
                     <td style="font-style: italic;">
                         The name of the database (equivalent to a MySQL schema). Leave blank to use the default
@@ -229,7 +249,7 @@
                         <label for="DBUsername">Database Username:</label>
                     </td>
                     <td>
-                        <input type="text" name="DBUsername" id="DBUsername" />
+                        <input type="text" name="DBUsername" id="DBUsername" value="DBUsernameValue" />
                     </td>
                     <td style="font-style: italic;">
                         The username to authenticate to the database with. Leave blank if no authentication is required
@@ -240,7 +260,7 @@
                         <label for="DBPassword">Database Password:</label>
                     </td>
                     <td>
-                        <input type="password" name="DBPassword" id="DBPassword" />
+                        <input type="password" name="DBPassword" id="DBPassword" value="DBPasswordValue" />
                     </td>
                     <td style="font-style: italic;">
                         The password to authenticate to the database with. Leave blank if no password is required
@@ -278,7 +298,7 @@
                         <label for="WsListenIP">GraphQL Server Listen IP:</label>
                     </td>
                     <td>
-                        <input type="text" name="WsListenIP" id="WsListenIP" />
+                        <input type="text" name="WsListenIP" id="WsListenIP" value="WsListenIPValue" />
                     </td>
                     <td style="font-style: italic;">
                         The IP address the GraphQL server should listen on. Leave blank to limit to <span style="font-weight: bold;">localhost</span> only. Put <span style="font-weight: bold;">*</span> to listen on all IP addresses
@@ -289,10 +309,10 @@
                         <label for="WsListenPort">GraphQL Server Listen Port:</label>
                     </td>
                     <td>
-                        <input type="text" name="WsListenPort" id="WsListenPort" />
+                        <input type="number" min="0" max="65535" name="WsListenPort" id="WsListenPort" value="WsListenPortValue" />
                     </td>
                     <td style="font-style: italic;">
-                        The port the GraphQL server should listen on. Leave blank for the default (443 if SSL enabled, 80 otherwise)
+                        The port the GraphQL server should listen on. Put <span style="font-weight: bold;">0</span> for the default (443 if SSL enabled, 80 otherwise)
                     </td>
                 </tr>
                 <tr>
@@ -300,7 +320,7 @@
                         <label for="WsSuperadminBearer">GraphQL Server Superadmin Token:</label>
                     </td>
                     <td>
-                        <input type="text" name="WsSuperadminBearer" id="WsSuperadminBearer" readonly="readonly" onclick="OnSelectSuperadminBearer();" />
+                        <input type="text" name="WsSuperadminBearer" id="WsSuperadminBearer" value="WsSuperadminBearerValue" readonly="readonly" onclick="OnSelectSuperadminBearer();" />
                         <input type="checkbox" name="WsSuperadminBearerRegenerate" id="WsSuperadminBearerRegenerate" style="position: relative; left: -25px; top: 1px;" />
                     </td>
                     <td style="font-style: italic;">
@@ -323,7 +343,7 @@
                         <label for="WsSslCert">GraphQL Server SSL Certificate File:</label>
                     </td>
                     <td>
-                        <input type="text" name="WsSslCert" id="WsSslCert" />
+                        <input type="text" name="WsSslCert" id="WsSslCert" value="WsSslCertValue" />
                     </td>
                     <td style="font-style: italic;">
                         The path to the SSL certificate file. This should be a PKCS12 (PFX) file containing the private key
@@ -334,7 +354,7 @@
                         <label for="WsSslCertPass">GraphQL Server SSL Certificate File Password:</label>
                     </td>
                     <td>
-                        <input type="password" name="WsSslCertPass" id="WsSslCertPass" />
+                        <input type="password" name="WsSslCertPass" id="WsSslCertPass" value="WsSslCertPassValue" />
                     </td>
                     <td style="font-style: italic;">
                         The password for unlocking the SSL cert file, if required

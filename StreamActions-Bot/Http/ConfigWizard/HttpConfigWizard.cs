@@ -59,9 +59,9 @@ namespace StreamActions.Http.ConfigWizard
             {
                 string[] query = s.Split('=', 2);
 
-                if (!string.IsNullOrWhiteSpace(query[0]) && !string.IsNullOrWhiteSpace(query[1]))
+                if (!string.IsNullOrWhiteSpace(query[0]) && !string.IsNullOrWhiteSpace(WebUtility.UrlDecode(query[1])))
                 {
-                    queryParams.Add(query[0].ToLowerInvariant(), query[1]);
+                    queryParams.Add(query[0].ToLowerInvariant(), WebUtility.UrlDecode(query[1]));
                 }
             }
 
@@ -99,6 +99,7 @@ namespace StreamActions.Http.ConfigWizard
                             break;
 
                         case "check":
+                        case "check-bot":
                             PingResponse response = queryParams.ContainsKey("id")
                                 ? Program.TwitchApi.ThirdParty.AuthorizationFlow.PingStatus(queryParams["id"])
                                 : Program.TwitchApi.ThirdParty.AuthorizationFlow.PingStatus();
@@ -107,6 +108,13 @@ namespace StreamActions.Http.ConfigWizard
 
                             if (response.Success)
                             {
+                                if (queryParams["type"] == "check-bot")
+                                {
+                                    Program.Settings.BotOAuth = response.Token;
+                                    Program.Settings.BotRefreshToken = response.Refresh;
+                                    Program.TwitchApi.Settings.AccessToken = response.Token;
+                                }
+
                                 writer.WriteString("Token", response.Token);
                                 writer.WriteString("Refresh", response.Refresh);
                             }
@@ -161,6 +169,8 @@ namespace StreamActions.Http.ConfigWizard
                 sContent = await HandlePost(request, sContent).ConfigureAwait(false);
             }
 
+            sContent = UpdateFormInputs(sContent);
+
             byte[] content = Encoding.UTF8.GetBytes(sContent);
             Dictionary<string, List<string>> headers = new Dictionary<string, List<string>>
             {
@@ -173,6 +183,60 @@ namespace StreamActions.Http.ConfigWizard
 
         private static async Task<string> HandlePost(HttpServerRequestMessage request, string sContent)
         {
+            Dictionary<string, string> postParams = new Dictionary<string, string>();
+
+            foreach (string s in (await request.Content.ReadAsStringAsync().ConfigureAwait(false)).Split('&'))
+            {
+                string[] post = s.Split('=', 2);
+
+                if (!string.IsNullOrWhiteSpace(post[0]) && !string.IsNullOrWhiteSpace(WebUtility.UrlDecode(post[1])))
+                {
+                    postParams.Add(post[0].ToLowerInvariant(), WebUtility.UrlDecode(post[1]));
+                }
+            }
+
+            return sContent;
+        }
+
+        private static string UpdateFormInputs(string sContent)
+        {
+            sContent = sContent.Replace("BotLoginValue", Program.Settings.BotLogin, StringComparison.Ordinal)
+                .Replace("BotOAuthValue", Program.Settings.BotOAuth, StringComparison.Ordinal)
+                .Replace("BotRefreshTokenValue", Program.Settings.BotRefreshToken, StringComparison.Ordinal)
+                .Replace("ChatCommandIdentifierValue", Program.Settings.ChatCommandIdentifier.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+                .Replace("WhisperCommandIdentifierValue", Program.Settings.WhisperCommandIdentifier.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+                .Replace("GlobalCultureValue", Program.Settings.GlobalCulture, StringComparison.Ordinal)
+                .Replace("DBHostValue", Program.Settings.DBHost, StringComparison.Ordinal)
+                .Replace("DBPortValue", Program.Settings.DBPort.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+                .Replace("DBNameValue", Program.Settings.DBName, StringComparison.Ordinal)
+                .Replace("DBUsernameValue", Program.Settings.DBUsername, StringComparison.Ordinal)
+                .Replace("DBPasswordValue", Program.Settings.DBPassword, StringComparison.Ordinal)
+                .Replace("WsListenIPValue", Program.Settings.WSListenIp, StringComparison.Ordinal)
+                .Replace("WsListenPortValue", Program.Settings.WSListenPort.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+                .Replace("WsSuperadminBearerValue", Program.Settings.WSSuperadminBearer, StringComparison.Ordinal)
+                .Replace("WsSslCertValue", Program.Settings.WSSslCert, StringComparison.Ordinal)
+                .Replace("WsSslCertPassValue", Program.Settings.WSSslCertPass, StringComparison.Ordinal);
+
+            sContent = Program.Settings.SingleOAuth
+                ? sContent.Replace("id=\"BotOAuthMethodSingle\"", "id=\"BotOAuthMethodSingle\" checked=\"checked\"", StringComparison.Ordinal)
+                : sContent.Replace("id=\"BotOAuthMethodSeparate\"", "id=\"BotOAuthMethodSeparate\" checked=\"checked\"", StringComparison.Ordinal);
+
+            if (Program.Settings.DBUseTls)
+            {
+                sContent = sContent.Replace("id=\"DBUseTls\"", "id=\"DBUseTls\" checked=\"checked\"", StringComparison.Ordinal);
+            }
+
+            if (Program.Settings.DBAllowInsecureTls)
+            {
+                sContent = sContent.Replace("id=\"DBAllowInsecureTls\"", "id=\"DBAllowInsecureTls\" checked=\"checked\"", StringComparison.Ordinal);
+            }
+
+            if (Program.Settings.WSUseSsl)
+            {
+                sContent = sContent.Replace("id=\"WsUseSsl\"", "id=\"WsUseSsl\" checked=\"checked\"", StringComparison.Ordinal);
+            }
+
+            return sContent;
         }
 
         #endregion Private Methods
