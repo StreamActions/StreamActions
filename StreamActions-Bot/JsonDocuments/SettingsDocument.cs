@@ -23,6 +23,7 @@ namespace StreamActions.JsonDocuments
     /// <summary>
     /// A document containing the bot's settings.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Build", "CA1812:Avoid uninstantiated internal classes", Justification = "Instantiated by JsonSerializer")]
     internal class SettingsDocument
     {
         #region Internal Properties
