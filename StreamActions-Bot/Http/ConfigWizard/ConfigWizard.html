@@ -30,7 +30,7 @@
                     var response = JSON.parse(this.responseText);
                     BotConnectId = response.Id;
 
-                    Window.open(response.Url, "_blank");
+                    window.open(response.Url, "_blank");
                     document.getElementById("ResponseText").innerHTML = "Launching Twitch Connect Window...<br />If the window does not open, click <a href=\"" + response.Url + "\" target=\"_blank\">here</a>";
                     setTimeout(function () {
                         BotConnectTimer = setInterval(OnWaitForTwitchConnectBot, 5000);
