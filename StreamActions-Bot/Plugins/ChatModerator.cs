@@ -118,7 +118,7 @@ namespace StreamActions.Plugins
         /// Regular expression that is for finding URLs in a string.
         /// Example: google.com
         /// </summary>
-        private readonly Regex _linkRegex = new Regex(@"((?:(http|https|rtsp):\/\/(?:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,64}(?:\:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,25})?\@)?)?((?:(?:[a-z0-9][a-z0-9\-]{0,64}\.)+(?:(?:aero|a[cdefgilmnoqrstuwxz])|(?:biz|bike|bot|b[abdefghijmnorstvwyz])|(?:com|c[acdfghiklmnoruvxyz])|d[ejkmoz]|(?:edu|e[cegrstu])|(?:fyi|f[ijkmor])|(?:gov|g[abdefghilmnpqrstuwy])|(?:how|h[kmnrtu])|(?:info|i[delmnoqrst])|(?:jobs|j[emop])|k[eghimnrwyz]|l[abcikrstuvy]|(?:mil|mobi|moe|m[acdeghklmnopqrstuvwxyz])|(?:name|net|n[acefgilopruz])|(?:org|om)|(?:pro|p[aefghklmnrstwy])|qa|(?:r[eouw])|(?:s[abcdeghijklmnortuvyz])|(?:t[cdfghjklmnoprtvwz])|u[agkmsyz]|(?:vote|v[ceginu])|(?:xxx)|(?:watch|w[fs])|y[etu]|z[amw]))|(?:(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])))(?:\:\d{1,5})?)(\/(?:(?:[a-z0-9\;\/\?\:\@\&\=\#\~\-\.\+\!\*\\\'\(\)\,\_])|(?:\%[a-fA-F0-9]{2}))*)?(?:\b|$)|(\.[a-z]+\/|magnet:\/\/|mailto:\/\/|ed2k:\/\/|irc:\/\/|ircs:\/\/|skype:\/\/|ymsgr:\/\/|xfire:\/\/|steam:\/\/|aim:\/\/|spotify:\/\/)", RegexOptions.Compiled);
+        private readonly Regex _linkRegex = new Regex(@"((?:(http|https|rtsp):\/\/(?:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,64}(?:\:(?:[a-z0-9\$\-_\.\+\!\*\\\'\(\)\,\;\?\&\=]|(?:\%[a-fA-F0-9]{2})){1,25})?\@)?)?((?:(?:[a-z0-9][a-z0-9\-]{0,64}\.)+(?:(?:aero|a[cdefgilmnoqrstuwxz])|(?:biz|bike|bot|b[abdefghijmnorstvwyz])|(?:com|c[acdfghiklmnoruvxyz])|d[ejkmoz]|(?:edu|e[cegrstu])|(?:fyi|f[ijkmor])|(?:gov|g[abdefghilmnpqrstuwy])|(?:how|h[kmnrtu])|(?:info|i[delmnoqrst])|(?:jobs|j[emop])|k[eghimnrwyz]|l[abcikrstuvy]|(?:mil|mobi|moe|m[acdeghklmnopqrstuvwxyz])|(?:name|net|n[acefgilopruz])|(?:org|om)|(?:pro|p[aefghklmnrstwy])|qa|(?:r[eouw])|(?:s[abcdeghijklmnortuvyz])|(?:t[cdfghjklmnoprtvwz])|u[agkmsyz]|(?:vote|v[ceginu])|(?:xxx)|(?:watch|w[fs])|y[etu]|z[amw]))|(?:(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])))(?:\:\d{1,5})?)(\/(?:(?:[a-z0-9\;\/\?\:\@\&\=\#\~\-\.\+\!\*\\\'\(\)\,_])|(?:\%[a-fA-F0-9]{2}))*)?(?:\b|$)|(\.[a-z]+\/|magnet:\/\/|mailto:\/\/|ed2k:\/\/|irc:\/\/|ircs:\/\/|skype:\/\/|ymsgr:\/\/|xfire:\/\/|steam:\/\/|aim:\/\/|spotify:\/\/)", RegexOptions.Compiled);
 
         /// <summary>
         /// Regular expression that is used for getting the number of symbols in a string.
@@ -242,7 +242,7 @@ namespace StreamActions.Plugins
 
         #endregion Filter check methods
 
-        #region Private Methods
+        #region Private methods
 
         /// <summary>
         /// Returns the filter settings for a channel.
@@ -261,6 +261,18 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
+        /// If a user currently has a warning.
+        /// </summary>
+        /// <param name="document">Moderation document.</param>
+        /// <param name="userId">User id to check for warnings</param>
+        /// <returns>True if the user has a warning.</returns>
+        private bool UserHasWarning(ModerationDocument document, string userId) => document.ModerationLastUserTimeouts.ContainsKey(userId) && document.ModerationLastUserTimeouts[userId].AddSeconds(document.ModerationWarningTimeSeconds) > DateTime.Now;
+
+        #endregion Private methods
+
+        #region Filter events
+
+        /// <summary>
         /// Method that will check the message for excessive use of caps.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -269,14 +281,14 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnCapsCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
             string message = this.RemoveEmotesFromMessage(e.ChatMessage.Message, e.ChatMessage.EmoteSet);
 
-            // Check if the caps filter is enabled.
+            // Check if the filter is enabled.
             if (document.CapStatus)
             {
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
-                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.CapExcludedLevels).ConfigureAwait(false))
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.CapExcludedLevels).ConfigureAwait(false))
                 {
                     if (this.GetMessageLength(message) >= document.CapMinimumMessageLength)
                     {
@@ -313,13 +325,13 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnColouredMessageCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
-            // Check if the caps filter is enabled.
+            // Check if the filter is enabled.
             if (document.ActionMessageStatus)
             {
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
-                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.ActionMessageExcludedLevels).ConfigureAwait(false))
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.ActionMessageExcludedLevels).ConfigureAwait(false))
                 {
                     if (this.HasTwitchAction(e.ChatMessage.Message))
                     {
@@ -353,13 +365,13 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnEmotesCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
-            // Check if the caps filter is enabled.
+            // Check if the filter is enabled.
             if (document.EmoteStatus)
             {
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
-                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.EmoteExcludedLevels).ConfigureAwait(false))
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.EmoteExcludedLevels).ConfigureAwait(false))
                 {
                     if ((this.GetNumberOfEmotes(e.ChatMessage.EmoteSet) >= document.EmoteMaximumAllowed) || (document.EmoteRemoveOnlyEmotes && this.RemoveEmotesFromMessage(e.ChatMessage.Message, e.ChatMessage.EmoteSet).Trim().Length == 0))
                     {
@@ -393,13 +405,13 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnFakePurgeCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
-            // Check if the caps filter is enabled.
+            // Check if the filter is enabled.
             if (document.FakePurgeStatus)
             {
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
-                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.FakePurgeExcludedLevels).ConfigureAwait(false))
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.FakePurgeExcludedLevels).ConfigureAwait(false))
                 {
                     if (this.HasFakePurge(e.ChatMessage.Message))
                     {
@@ -433,13 +445,13 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnLinksCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
-            // Check if the caps filter is enabled.
+            // Check if the filter is enabled.
             if (document.LinkStatus)
             {
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
-                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.LinkExcludedLevels).ConfigureAwait(false))
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.LinkExcludedLevels).ConfigureAwait(false))
                 {
                     // TODO: Check whitelist
                     // TODO: Check to make sure the URL isn't for clips.
@@ -475,13 +487,13 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnLongMessageCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
-            // Check if the lengthy message filter is enabled.
+            // Check if the filter is enabled.
             if (document.LenghtyMessageStatus)
             {
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
-                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.LenghtyMessageExcludedLevels).ConfigureAwait(false))
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.LenghtyMessageExcludedLevels).ConfigureAwait(false))
                 {
                     if (this.GetMessageLength(e.ChatMessage.Message) > document.LenghtyMessageMaximumLength)
                     {
@@ -515,7 +527,7 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnOneManSpamCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
             if (document.OneManSpamStatus)
             {
@@ -535,7 +547,7 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnRepetitionCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
             if (document.RepetitionStatus)
             {
@@ -555,7 +567,7 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnSymbolsCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
             if (document.SymbolStatus)
             {
@@ -575,13 +587,13 @@ namespace StreamActions.Plugins
         private async Task<ModerationResult> ChatModerator_OnZalgoCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
             // Check if the zalgo filter is enabled.
             if (document.ZalgoStatus)
             {
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
-                if (!await Permission.Can(e.ChatMessage.UserId, UserLevels.Broadcaster | UserLevels.Moderator | document.ZalgoExcludedLevels).ConfigureAwait(false))
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.ZalgoExcludedLevels).ConfigureAwait(false))
                 {
                     if (this.HasZalgo(e.ChatMessage.Message))
                     {
@@ -606,14 +618,6 @@ namespace StreamActions.Plugins
             return moderationResult;
         }
 
-        /// <summary>
-        /// If a user currently has a warning.
-        /// </summary>
-        /// <param name="document">Moderation document.</param>
-        /// <param name="userId">User id to check for warnings</param>
-        /// <returns>True if the user has a warning.</returns>
-        private bool UserHasWarning(ModerationDocument document, string userId) => document.ModerationLastUserTimeouts.ContainsKey(userId) && document.ModerationLastUserTimeouts[userId].AddSeconds(document.ModerationWarningTimeSeconds) > DateTime.Now;
-
-        #endregion Private Methods
+        #endregion Filter events
     }
 }

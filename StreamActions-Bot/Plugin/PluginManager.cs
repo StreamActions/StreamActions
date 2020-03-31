@@ -446,13 +446,13 @@ namespace StreamActions.Plugin
         {
             ModerationResult harshestModeration = new ModerationResult();
 
-            await Task.Run(() =>
+            await Task.Run(async () =>
              {
                  if (!(OnMessageModeration is null))
                  {
                      foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
                      {
-                         ModerationResult rs = d.Invoke(this, e).Result;
+                         ModerationResult rs = await d.Invoke(this, e).ConfigureAwait(false);
                          if (harshestModeration.IsHarsher(rs))
                          {
                              harshestModeration = rs;
@@ -465,7 +465,7 @@ namespace StreamActions.Plugin
             {
                 if (harshestModeration.ShouldModerate)
                 {
-                    ModerationDocument document = ChatModerator.GetFilterDocumentForChannel(e.ChatMessage.RoomId).Result;
+                    ModerationDocument document = await ChatModerator.GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
                     switch (harshestModeration.Punishment)
                     {
