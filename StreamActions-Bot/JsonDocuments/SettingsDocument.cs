@@ -94,11 +94,6 @@ namespace StreamActions.JsonDocuments
         internal string GlobalCulture { get; set; } = "en-US";
 
         /// <summary>
-        /// Indicates if the <see cref="BotOAuth"/> will be used for API calls, instead of individual Broadcaster OAuths.
-        /// </summary>
-        internal bool SingleOAuth { get; set; } = false;
-
-        /// <summary>
         /// The Client ID for the Twitch developer app.
         /// </summary>
         internal string TwitchApiClientId { get; set; } = "";

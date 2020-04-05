@@ -78,21 +78,14 @@ namespace StreamActions.Http.ConfigWizard
                     switch (queryParams["type"])
                     {
                         case "bot":
-                            CreatedFlow bflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions-Bot (Bot/Chat_Login)", _chatAuthScopes);
+                            CreatedFlow bflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions-Bot (Bot)", _broadcasterAuthScopes.Concat(_chatAuthScopes));
                             Program.TwitchApi.ThirdParty.AuthorizationFlow.BeginPingingStatus(bflow.Id);
                             writer.WriteString("Id", bflow.Id);
                             writer.WriteString("Url", bflow.Url);
                             break;
 
-                        case "single":
-                            CreatedFlow sflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions-Bot (Bot/All_Scopes)", _chatAuthScopes.Concat(_broadcasterAuthScopes));
-                            Program.TwitchApi.ThirdParty.AuthorizationFlow.BeginPingingStatus(sflow.Id);
-                            writer.WriteString("Id", sflow.Id);
-                            writer.WriteString("Url", sflow.Url);
-                            break;
-
                         case "broadcaster":
-                            CreatedFlow cflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions-Bot (Broadcaster)", _broadcasterAuthScopes.Concat(_broadcasterAuthScopes));
+                            CreatedFlow cflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions-Bot (Broadcaster)", _broadcasterAuthScopes);
                             Program.TwitchApi.ThirdParty.AuthorizationFlow.BeginPingingStatus(cflow.Id);
                             writer.WriteString("Id", cflow.Id);
                             writer.WriteString("Url", cflow.Url);
@@ -217,10 +210,6 @@ namespace StreamActions.Http.ConfigWizard
                 .Replace("WsSslCertValue", Program.Settings.WSSslCert, StringComparison.Ordinal)
                 .Replace("WsSslCertPassValue", Program.Settings.WSSslCertPass, StringComparison.Ordinal);
 
-            sContent = Program.Settings.SingleOAuth
-                ? sContent.Replace("id=\"BotOAuthMethodSingle\"", "id=\"BotOAuthMethodSingle\" checked=\"checked\"", StringComparison.Ordinal)
-                : sContent.Replace("id=\"BotOAuthMethodSeparate\"", "id=\"BotOAuthMethodSeparate\" checked=\"checked\"", StringComparison.Ordinal);
-
             if (Program.Settings.DBUseTls)
             {
                 sContent = sContent.Replace("id=\"DBUseTls\"", "id=\"DBUseTls\" checked=\"checked\"", StringComparison.Ordinal);
@@ -235,6 +224,12 @@ namespace StreamActions.Http.ConfigWizard
             {
                 sContent = sContent.Replace("id=\"WsUseSsl\"", "id=\"WsUseSsl\" checked=\"checked\"", StringComparison.Ordinal);
             }
+
+            string channelJoinList = "";
+
+            //TODO: Create elements for Program.Settings.ChannelsToJoin, if present
+
+            sContent = sContent.Replace("<!--ChannelJoinList-->", channelJoinList, StringComparison.Ordinal);
 
             return sContent;
         }

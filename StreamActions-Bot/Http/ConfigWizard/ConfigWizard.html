@@ -5,25 +5,13 @@
     <meta charset="utf-8" />
     <title>StreamActions-Bot Configuration Wizard</title>
     <script type="text/javascript">
-        var SingleOAuth = false;
-        var WaitingOnToken = false;
-        function OnOAuthTypeChanged() {
-            SingleOAuth = document.getElementById("BotOAuthMethodSingle").checked;
-        }
-
         function OnSelectSuperadminBearer() {
             document.getElementById("WsSuperadminBearer").select();
         }
 
-        var BotConnectId = "";
+        var BotConnectId = null;
         var BotConnectTimer;
         function OnTwitchConnectBot() {
-            var type = "bot";
-
-            if (SingleOAuth) {
-                type = "single";
-            }
-
             var xhttp = new XMLHttpRequest();
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
@@ -37,11 +25,16 @@
                     }, 20000);
                 }
             };
-            xhttp.open("GET", "/config/ConnectWithTwitch.json?type=" + type, true);
+            xhttp.open("GET", "/config/ConnectWithTwitch.json?type=bot", true);
             xhttp.send();
         }
 
         function OnWaitForTwitchConnectBot() {
+            if (BotConnectId === null) {
+                clearInterval(BotConnectTimer);
+                return;
+            }
+
             var xhttp = new XMLHttpRequest();
             xhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
@@ -51,16 +44,77 @@
                             document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FFAA00;\">Waiting for Bot OAuth response...</span>";
                         } else {
                             document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FF0000;\">Twitch Connect Error: " + response.Message + "</span>";
+                            clearInterval(BotConnectTimer);
+                            BotConnectId = null;
                         }
                     } else {
                         document.getElementById("BotOAuth").value = response.Token;
                         document.getElementById("BotRefreshToken").value = response.Refresh;
 
                         document.getElementById("ResponseText").innerHTML = "<span style=\"color: #00FF00;\">Bot OAuth Successful</span>";
+                        clearInterval(BotConnectTimer);
+                        BotConnectId = null;
                     }
                 }
             };
             xhttp.open("GET", "/config/ConnectWithTwitch.json?type=check-bot&id=" + BotConnectId, true);
+            xhttp.send();
+        }
+
+        var BroadcasterConnectId = null;
+        var BroadcasterConnectChannel = null;
+        var BroadcasterConnectTimer;
+        function OnTwitchConnectBroadcaster() {
+            BroadcasterConnectChannel = this.id.substring(this.id.indexOf("[") + 1, this.id.length - 1);
+
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var response = JSON.parse(this.responseText);
+                    BroadcasterConnectId = response.Id;
+
+                    window.open(response.Url, "_blank");
+                    document.getElementById("ResponseText").innerHTML = "Launching Twitch Connect Window...<br />If the window does not open, click <a href=\"" + response.Url + "\" target=\"_blank\">here</a>";
+                    setTimeout(function () {
+                        BroadcasterConnectTimer = setInterval(OnWaitForTwitchConnectBroadcaster, 5000);
+                    }, 20000);
+                }
+            };
+            xhttp.open("GET", "/config/ConnectWithTwitch.json?type=broadcaster", true);
+            xhttp.send();
+        }
+
+        function OnWaitForTwitchConnectBroadcaster() {
+            if (BroadcasterConnectId === null) {
+                clearInterval(BroadcasterConnectTimer);
+                return;
+            }
+
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var response = JSON.parse(this.responseText);
+                    if (response.Error > 0) {
+                        if (response.Error == 3) {
+                            document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FFAA00;\">Waiting for Broadcaster OAuth response...</span>";
+                        } else {
+                            document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FF0000;\">Twitch Connect Error: " + response.Message + "</span>";
+                            clearInterval(BroadcasterConnectTimer);
+                            BroadcasterConnectId = null;
+                            BroadcasterConnectChannel = null;
+                        }
+                    } else {
+                        document.getElementById("ChannelsToJoinOAuth[" + BroadcasterConnectChannel + "]").value = response.Token;
+                        document.getElementById("ChannelsToJoinRefresh[" + BroadcasterConnectChannel + "]").value = response.Refresh;
+
+                        document.getElementById("ResponseText").innerHTML = "<span style=\"color: #00FF00;\">Broadcaster OAuth for " + BroadcasterConnectChannel + " Successful</span>";
+                        clearInterval(BroadcasterConnectTimer);
+                        BroadcasterConnectId = null;
+                        BroadcasterConnectChannel = null;
+                    }
+                }
+            };
+            xhttp.open("GET", "/config/ConnectWithTwitch.json?type=check&id=" + BroadcasterConnectId, true);
             xhttp.send();
         }
 
@@ -82,10 +136,128 @@
             }
         }
 
+        var ChannelsToJoin = [];
+        function OnAddChannel() {
+            var newChannel = document.getElementById("NewChannelJoin").value;
+
+            if (ChannelsToJoin.includes(newChannel.toLowerCase())) {
+                document.getElementById("ResponseText").innerHTML = "<span style=\"color: #FF0000;\">The channel " + newChannel + " has already been added</span>";
+                document.getElementById("NewChannelJoin").value = "";
+                return;
+            }
+
+            var newTr = document.createElement("tr");
+            newTr.id = "ChannelList[" + newChannel + "]";
+
+            if (ChannelsToJoin.length % 2 == 1) {
+                newTr.style.backgroundColor = "#CCCCCC";
+            }
+
+            var nameTd = document.createElement("td");
+            nameTd.id = "ChannelsToJoinNameTd[" + newChannel + "]";
+            var nameSpan = document.createElement("span");
+            nameSpan.style.fontWeight = "bold";
+            var nameNode = document.createTextNode(newChannel);
+            nameSpan.appendChild(nameNode);
+            var nameInput = document.createElement("input");
+            nameInput.type = "hidden";
+            nameInput.name = "ChannelsToJoin[" + newChannel + "]";
+            nameInput.value = newChannel;
+
+            nameTd.appendChild(nameSpan);
+            nameTd.appendChild(nameInput);
+
+            var oauthTd = document.createElement("td");
+            oauthTd.id = "ChannelsToJoinOAuthTd[" + newChannel + "]";
+            oauthTd.style.paddingLeft = "15px";
+            var oauthLabel = document.createElement("label");
+            oauthLabel.htmlFor = "ChannelsToJoinOAuth[" + newChannel + "]";
+            var oauthNode = document.createTextNode("Broadcaster OAuth: ");
+            oauthLabel.appendChild(oauthNode);
+            var oauthInput = document.createElement("input");
+            oauthInput.type = "text";
+            oauthInput.name = "ChannelsToJoinOAuth[" + newChannel + "]";
+
+            oauthTd.appendChild(oauthLabel);
+            oauthTd.appendChild(oauthInput);
+
+            var refreshTd = document.createElement("td");
+            refreshTd.id = "ChannelsToJoinRefreshTd[" + newChannel + "]";
+            refreshTd.style.paddingLeft = "15px";
+            var refreshLabel = document.createElement("label");
+            refreshLabel.htmlFor = "ChannelsToJoinRefresh[" + newChannel + "]";
+            var refreshNode = document.createTextNode("Refresh Token: ");
+            refreshLabel.appendChild(refreshNode);
+            var refreshInput = document.createElement("input");
+            refreshInput.type = "text";
+            refreshInput.name = "ChannelsToJoinRefresh[" + newChannel + "]";
+
+            refreshTd.appendChild(refreshLabel);
+            refreshTd.appendChild(refreshInput);
+
+            var actionsTd = document.createElement("td");
+            actionsTd.id = "ChannelsToJoinActionsTd[" + newChannel + "]";
+            actionsTd.style.paddingLeft = "15px";
+            var connectImg = document.createElement("img");
+            connectImg.id = "ChannelsToJoinActionsConnect[" + newChannel + "]";
+            connectImg.alt = "Connect with Twitch";
+            connectImg.src = "/config/TwitchConnect.png";
+            connectImg.style.cursor = "pointer";
+            connectImg.onclick = OnTwitchConnectBroadcaster;
+            connectImg.style.position = "relative";
+            connectImg.style.top = "3px";
+            var removeButton = document.createElement("input");
+            removeButton.id = "ChannelsToJoinActionsRemove[" + newChannel + "]";
+            removeButton.type = "button";
+            removeButton.value = "Remove";
+            removeButton.onclick = OnRemoveBroadcaster;
+            removeButton.style.marginLeft = "15px";
+            removeButton.style.position = "relative";
+            removeButton.style.bottom = "8px";
+
+            actionsTd.appendChild(connectImg);
+            actionsTd.appendChild(removeButton);
+
+            newTr.appendChild(nameTd);
+            newTr.appendChild(oauthTd);
+            newTr.appendChild(refreshTd);
+            newTr.appendChild(actionsTd);
+
+            document.getElementById("ChannelList").appendChild(newTr);
+            ChannelsToJoin.push(newChannel.toLowerCase());
+            document.getElementById("NewChannelJoin").value = "";
+        }
+
+        function OnRemoveBroadcaster() {
+            var channel = this.id.substring(this.id.indexOf("[") + 1, this.id.length - 1);
+            var idx = ChannelsToJoin.indexOf(channel.toLowerCase());
+
+            if (idx >= 0) {
+                document.getElementById("ChannelList").removeChild(document.getElementById("ChannelList[" + channel + "]"));
+
+                OnUpdateChannelArray();
+            }
+        }
+
+        function OnUpdateChannelArray() {
+            var channelElements = document.getElementById("ChannelList").children;
+
+            ChannelsToJoin = [];
+            for (var i = 0; i < channelElements.length; i++) {
+                ChannelsToJoin.push(channelElements[i].id.substring(channelElements[i].id.indexOf("[") + 1, channelElements[i].id.length - 1).toLowerCase());
+
+                if (i % 2 == 1) {
+                    channelElements[i].style.backgroundColor = "#CCCCCC";
+                } else {
+                    channelElements[i].style.backgroundColor = "";
+                }
+            }
+        }
+
         function OnInit() {
-            OnOAuthTypeChanged();
             OnDBUseTlsChanged();
             OnWsUseSslChanged();
+            OnUpdateChannelArray();
         }
 
         if (document.readyState === "complete" ||
@@ -98,7 +270,7 @@
 </head>
 <body>
     <h1 style="text-align: center;">StreamActions-Bot Configuration Wizard</h1><br />
-    <span id="ResponseText"></span>
+    <h3 style="text-align: center;" id="ResponseText"></h3>
     <form action="/" method="post" autocomplete="off" enctype="application/x-www-form-urlencoded">
         <fieldset>
             <legend>Twitch Connect</legend>
@@ -122,7 +294,7 @@
                         <input type="text" name="BotOAuth" id="BotOAuth" value="BotOAuthValue" />
                     </td>
                     <td style="font-style: italic;">
-                        The Twitch OAuth token for the bot to login to chat
+                        The Twitch OAuth token for the bot to login to chat and perform API requests. Certain API features like subscribers may fail unless the bot is on the broadcaster's account or a separate broadcaster OAuth is set
                     </td>
                 </tr>
                 <tr>
@@ -138,32 +310,7 @@
                 </tr>
             </table>
             <div style="margin-left: 25px;">
-                <span style="font-weight: bold;">How do you want to setup your OAuth?</span><br />
-                <table style="border: 0;">
-                    <tr>
-                        <td>
-                            <label for="BotOAuthMethodSeparate">Separate OAuths for Bot and Broadcaster:</label>
-                        </td>
-                        <td>
-                            <input type="radio" name="BotOAuthMethod" id="BotOAuthMethodSeparate" onchange="OnOAuthTypeChanged();" />
-                        </td>
-                        <td style="font-style: italic;">
-                            An OAuth for chat only is used for the bot, while a separate OAuth on the Broadcaster's account is used for Twitch API (recommended)
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <label for="BotOAuthMethodSingle">Single OAuth for Bot:</label>
-                        </td>
-                        <td>
-                            <input type="radio" name="BotOAuthMethod" id="BotOAuthMethodSingle" onchange="OnOAuthTypeChanged();" />
-                        </td>
-                        <td style="font-style: italic;">
-                            A single OAuth is used for the bot which includes both chat and TwitchAPI. Certain API features like Subscribers may fail unless the bot is on the Broadcaster's account
-                        </td>
-                    </tr>
-                </table>
-                <img alt="Connect with Twitch" onclick="OnTwitchConnectBot();" src="/config/TwitchConnect.png" style="cursor: pointer;" />
+                <img alt="Connect with Twitch" onclick="OnTwitchConnectBot();" src="/config/TwitchConnect.png" style="cursor: pointer; position: relative; top: 3px;" />
             </div>
         </fieldset>
         <fieldset>
@@ -206,7 +353,12 @@
             </table>
         </fieldset>
         <fieldset>
-            <legend>Channels</legend>//ChannelsToJoin, BroadcasterOAuth
+            <legend>Channels</legend>
+            <label for="NewChannelJoin">Add Channel:</label> <input type="text" id="NewChannelJoin" name="NewChannelJoin" /> <input type="button" value="Add" onclick="OnAddChannel();" />
+            <span style="font-style: italic;">The OAuth/Refresh Token is optional for each channel, but may be required by certain API endpoints and features, such as subscribers, to function properly</span>
+            <table style="border: 0;" id="ChannelList">
+                <!--ChannelJoinList-->
+            </table>
         </fieldset>
         <fieldset>
             <legend>Database</legend>
