@@ -28,6 +28,8 @@ using MongoDB.Driver;
 using StreamActions.Database;
 using System.Threading.Tasks;
 using StreamActions.Enums;
+using StreamActions.Database.Documents.Users;
+using StreamActions.Database.Documents.Moderation;
 
 namespace StreamActions.Plugins
 {
@@ -35,7 +37,7 @@ namespace StreamActions.Plugins
     /// Handles various moderation actions against chat messages, such as links protection.
     /// </summary>
     [Guid("723C3D97-7FB3-40C9-AFC5-904D38170384")]
-    public class ChatModerator : IPlugin
+    public partial class ChatModerator : IPlugin
     {
         #region Public Constructors
 
@@ -261,12 +263,37 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
+        /// Method for deobfuscating a URL from a message.
+        /// Example: google(dot)com
+        /// </summary>
+        /// <see cref="https://github.com/gmt2001/PhantomBot/blob/master/res/scripts/util/patternDetector.js#L102"/>
+        /// <param name="message">Message to be deobfuscated.</param>
+        /// <returns>The deobfuscated message</returns>
+        private string GetDeobfuscatedUrlFromMessage(string message)
+        {
+            // TODO: Implement this: https://github.com/gmt2001/PhantomBot/blob/master/res/scripts/util/patternDetector.js#L102
+            return null;
+        }
+
+        /// <summary>
         /// If a user currently has a warning.
         /// </summary>
         /// <param name="document">Moderation document.</param>
         /// <param name="userId">User id to check for warnings</param>
         /// <returns>True if the user has a warning.</returns>
-        private bool UserHasWarning(ModerationDocument document, string userId) => document.ModerationLastUserTimeouts.ContainsKey(userId) && document.ModerationLastUserTimeouts[userId].AddSeconds(document.ModerationWarningTimeSeconds) > DateTime.Now;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1307:Specify StringComparison", Justification = "Channel Id is stored as a string.")]
+        private async Task<bool> UserHasWarning(ModerationDocument document, string userId)
+        {
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, userId);
+
+            using IAsyncCursor<UserDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            UserModerationDocument userModerationDocument = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration.First(m => m.ChannelId.Equals(document.ChannelId));
+
+            return userModerationDocument.LastModerationWarning.AddSeconds(document.ModerationWarningTimeSeconds) >= DateTime.Now;
+        }
 
         #endregion Private methods
 
@@ -294,7 +321,7 @@ namespace StreamActions.Plugins
                     {
                         if (((this.GetNumberOfCaps(message) / this.GetMessageLength(message)) * 100.0) >= document.CapMaximumPercentage)
                         {
-                            if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                            if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
                             {
                                 moderationResult.Punishment = document.CapTimeoutPunishment;
                                 moderationResult.TimeoutSeconds = document.CapTimeoutTimeSeconds;
@@ -335,7 +362,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.HasTwitchAction(e.ChatMessage.Message))
                     {
-                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.ActionMessageTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.ActionMessageTimeoutTimeSeconds;
@@ -375,7 +402,7 @@ namespace StreamActions.Plugins
                 {
                     if ((this.GetNumberOfEmotes(e.ChatMessage.EmoteSet) >= document.EmoteMaximumAllowed) || (document.EmoteRemoveOnlyEmotes && this.RemoveEmotesFromMessage(e.ChatMessage.Message, e.ChatMessage.EmoteSet).Trim().Length == 0))
                     {
-                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.EmoteTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.EmoteTimeoutTimeSeconds;
@@ -415,7 +442,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.HasFakePurge(e.ChatMessage.Message))
                     {
-                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.FakePurgeTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.FakePurgeTimeoutTimeSeconds;
@@ -457,7 +484,7 @@ namespace StreamActions.Plugins
                     // TODO: Check to make sure the URL isn't for clips.
                     if (this.HasUrl(e.ChatMessage.Message))
                     {
-                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.LinkTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.LinkTimeoutTimeSeconds;
@@ -497,7 +524,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.GetMessageLength(e.ChatMessage.Message) > document.LenghtyMessageMaximumLength)
                     {
-                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.LenghtyMessageTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.LenghtyMessageTimeoutTimeSeconds;
@@ -529,6 +556,7 @@ namespace StreamActions.Plugins
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
+            // Check if the filter is enabled.
             if (document.OneManSpamStatus)
             {
                 // TODO: Add check if this is enabled in user settings.
@@ -549,10 +577,33 @@ namespace StreamActions.Plugins
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
+            // Check if the filter is enabled.
             if (document.RepetitionStatus)
             {
-                // TODO: Add check if this is enabled in user settings.
-                // TODO: Add filter check.
+                // User is not a Broadcaster, Moderator, or in the excluded levels.
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.RepetitionExcludedLevels).ConfigureAwait(false))
+                {
+                    if (e.ChatMessage.Message.Length >= document.RepetitionMinimumMessageLength)
+                    {
+                        if (this.GetLongestSequenceOfRepeatingCharacters(e.ChatMessage.Message) >= document.RepetionMaximumRepeatingCharacters || this.GetLongestSequenceOfRepeatingWords(e.ChatMessage.Message) >= document.RepetionMaximumRepeatingWords)
+                        {
+                            if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                            {
+                                moderationResult.Punishment = document.RepetitionTimeoutPunishment;
+                                moderationResult.TimeoutSeconds = document.RepetitionTimeoutTimeSeconds;
+                                moderationResult.ModerationReason = document.RepetitionTimeoutReason;
+                                moderationResult.ModerationMessage = document.RepetitionTimeoutMessage;
+                            }
+                            else
+                            {
+                                moderationResult.Punishment = document.RepetitionWarningPunishment;
+                                moderationResult.TimeoutSeconds = document.RepetitionWarningTimeSeconds;
+                                moderationResult.ModerationReason = document.RepetitionWarningReason;
+                                moderationResult.ModerationMessage = document.RepetitionWarningMessage;
+                            }
+                        }
+                    }
+                }
             }
 
             return moderationResult;
@@ -569,10 +620,33 @@ namespace StreamActions.Plugins
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
+            // Check if the filter is enabled.
             if (document.SymbolStatus)
             {
-                // TODO: Add check if this is enabled in user settings.
-                // TODO: Add filter check.
+                // User is not a Broadcaster, Moderator, or in the excluded levels.
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.SymbolExcludedLevels).ConfigureAwait(false))
+                {
+                    if (e.ChatMessage.Message.Length >= document.SymbolMinimumMessageLength)
+                    {
+                        if (((this.GetNumberOfSymbols(e.ChatMessage.Message) / e.ChatMessage.Message.Length) * 100) >= document.SymbolMaximumPercent || this.GetLongestSequenceOfRepeatingSymbols(e.ChatMessage.Message) >= document.SymbolMaximumGrouped)
+                        {
+                            if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                            {
+                                moderationResult.Punishment = document.SymbolTimeoutPunishment;
+                                moderationResult.TimeoutSeconds = document.SymbolTimeoutTimeSeconds;
+                                moderationResult.ModerationReason = document.SymbolTimeoutReason;
+                                moderationResult.ModerationMessage = document.SymbolTimeoutMessage;
+                            }
+                            else
+                            {
+                                moderationResult.Punishment = document.SymbolWarningPunishment;
+                                moderationResult.TimeoutSeconds = document.SymbolWarningTimeSeconds;
+                                moderationResult.ModerationReason = document.SymbolWarningReason;
+                                moderationResult.ModerationMessage = document.SymbolWarningMessage;
+                            }
+                        }
+                    }
+                }
             }
 
             return moderationResult;
@@ -589,7 +663,7 @@ namespace StreamActions.Plugins
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
-            // Check if the zalgo filter is enabled.
+            // Check if the filter is enabled.
             if (document.ZalgoStatus)
             {
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
@@ -597,7 +671,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.HasZalgo(e.ChatMessage.Message))
                     {
-                        if (this.UserHasWarning(document, e.ChatMessage.UserId))
+                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.ZalgoTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.ZalgoTimeoutTimeSeconds;

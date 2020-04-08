@@ -34,6 +34,14 @@ namespace StreamActions.Database.Documents.Moderation
         public string ChannelId { get; set; }
 
         /// <summary>
+        /// If the user is permitted to post a link.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool HasUrlPermit { get; set; }
+
+        /// <summary>
         /// The Guid for referencing this user in the database.
         /// </summary>
         [BsonElement]

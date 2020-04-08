@@ -159,6 +159,14 @@ namespace StreamActions.Database.Documents
         public uint LinkTimeoutTimeSeconds { get; set; }
 
         /// <summary>
+        /// If we should use aggressive URL detection in the channel.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool LinkUseAggressiveDetection { get; set; }
+
+        /// <summary>
         /// Message said in chat on a user's first offense for using links.
         /// </summary>
         [BsonElement]
