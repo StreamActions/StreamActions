@@ -251,6 +251,9 @@
                 } else {
                     channelElements[i].style.backgroundColor = "";
                 }
+
+                document.getElementById("ChannelsToJoinActionsConnect[" + channelElements[i].id.substring(channelElements[i].id.indexOf("[") + 1, channelElements[i].id.length - 1) + "]").onclick = OnTwitchConnectBroadcaster;
+                document.getElementById("ChannelsToJoinActionsRemove[" + channelElements[i].id.substring(channelElements[i].id.indexOf("[") + 1, channelElements[i].id.length - 1) + "]").onclick = OnRemoveBroadcaster;
             }
         }
 

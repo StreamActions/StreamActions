@@ -1,4 +1,7 @@
-﻿using System;
+﻿using MongoDB.Driver;
+using StreamActions.Database;
+using StreamActions.Database.Documents.Users;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -162,7 +165,7 @@ namespace StreamActions.Http.ConfigWizard
                 sContent = await HandlePost(request, sContent).ConfigureAwait(false);
             }
 
-            sContent = UpdateFormInputs(sContent);
+            sContent = await UpdateFormInputsAsync(sContent).ConfigureAwait(false);
 
             byte[] content = Encoding.UTF8.GetBytes(sContent);
             Dictionary<string, List<string>> headers = new Dictionary<string, List<string>>
@@ -191,7 +194,7 @@ namespace StreamActions.Http.ConfigWizard
             return sContent;
         }
 
-        private static string UpdateFormInputs(string sContent)
+        private static async Task<string> UpdateFormInputsAsync(string sContent)
         {
             sContent = sContent.Replace("BotLoginValue", Program.Settings.BotLogin, StringComparison.Ordinal)
                 .Replace("BotOAuthValue", Program.Settings.BotOAuth, StringComparison.Ordinal)
@@ -227,7 +230,68 @@ namespace StreamActions.Http.ConfigWizard
 
             string channelJoinList = "";
 
-            //TODO: Create elements for Program.Settings.ChannelsToJoin, if present
+            if (Program.Settings.ChannelsToJoin.Count > 0)
+            {
+                IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+                IMongoCollection<AuthenticationDocument> collection2 = DatabaseClient.Instance.MongoDatabase.GetCollection<AuthenticationDocument>("authentications");
+
+                foreach (string channel in Program.Settings.ChannelsToJoin)
+                {
+                    string oauth = "";
+                    string refresh = "";
+
+                    FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.Login.Equals(channel, StringComparison.OrdinalIgnoreCase));
+                    if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) > 0)
+                    {
+                        using IAsyncCursor<UserDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+
+                        UserDocument userDocument = await cursor.SingleAsync().ConfigureAwait(false);
+
+                        FilterDefinition<AuthenticationDocument> filter2 = Builders<AuthenticationDocument>.Filter.Where(d => d.UserId.Equals(userDocument.Id, StringComparison.OrdinalIgnoreCase));
+
+                        if (await collection2.CountDocumentsAsync(filter2).ConfigureAwait(false) > 0)
+                        {
+                            using IAsyncCursor<AuthenticationDocument> cursor2 = await collection2.FindAsync(filter2).ConfigureAwait(false);
+
+                            AuthenticationDocument authenticationDocument = await cursor2.SingleAsync().ConfigureAwait(false);
+
+                            if (!string.IsNullOrWhiteSpace(authenticationDocument.TwitchToken.Token))
+                            {
+                                oauth = authenticationDocument.TwitchToken.Token;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(authenticationDocument.TwitchToken.Refresh))
+                            {
+                                refresh = authenticationDocument.TwitchToken.Refresh;
+                            }
+                        }
+                    }
+
+                    channelJoinList += "<tr id=\"ChannelList[" + channel + "]\">";
+
+                    channelJoinList += "<td id=\"ChannelsToJoinNameTd[" + channel + "]\">";
+                    channelJoinList += "<span style=\"font-weight: bold;\">" + channel + "</span>";
+                    channelJoinList += "<input type=\"hidden\" name=\"ChannelsToJoin[" + channel + "]\" value=\"" + channel + "\" />";
+                    channelJoinList += "</td>";
+
+                    channelJoinList += "<td id=\"ChannelsToJoinOAuthTd[" + channel + "]\" style=\"padding-left: 15px;\">";
+                    channelJoinList += "<label for=\"ChannelsToJoinOAuth[" + channel + "]\">Broadcaster OAuth: </label>";
+                    channelJoinList += "<input type=\"text\" name=\"ChannelsToJoinOAuth[" + channel + "]\" value=\"" + oauth + "\" />";
+                    channelJoinList += "</td>";
+
+                    channelJoinList += "<td id=\"ChannelsToJoinRefreshTd[" + channel + "]\" style=\"padding-left: 15px;\">";
+                    channelJoinList += "<label for=\"ChannelsToJoinRefresh[" + channel + "]\">Refresh Token: </label>";
+                    channelJoinList += "<input type=\"text\" name=\"ChannelsToJoinRefresh[" + channel + "]\" value=\"" + refresh + "\" />";
+                    channelJoinList += "</td>";
+
+                    channelJoinList += "<td id=\"ChannelsToJoinActionsTd[" + channel + "]\" style=\"padding-left: 15px;\">";
+                    channelJoinList += "<img id=\"ChannelsToJoinActionsConnect[" + channel + "]\" alt=\"Connect with Twitch\" src=\"/config/TwitchConnect.png\" style=\"cursor: pointer; position: relative; top: 3px;\" />";
+                    channelJoinList += "<input type=\"button\" id=\"ChannelsToJoinActionsRemove[" + channel + "]\" value=\"Remove\" style=\"margin-left: 15px; cursor: pointer; position: relative; bottom: 8px;\" />";
+                    channelJoinList += "</td>";
+
+                    channelJoinList += "</tr>";
+                }
+            }
 
             sContent = sContent.Replace("<!--ChannelJoinList-->", channelJoinList, StringComparison.Ordinal);
 
