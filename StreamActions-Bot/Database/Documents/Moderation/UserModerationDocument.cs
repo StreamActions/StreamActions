@@ -17,7 +17,6 @@
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.GraphQL.Connections;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 
 namespace StreamActions.Database.Documents.Moderation
@@ -53,22 +52,15 @@ namespace StreamActions.Database.Documents.Moderation
         /// Last time a message was sent.
         /// </summary>
         [BsonElement]
-        [BsonRequired]
+        [BsonIgnoreIfNull]
         public DateTime LastMessageSent { get; set; }
 
         /// <summary>
         /// Last time the user got a moderation warning.
         /// </summary>
         [BsonElement]
-        [BsonRequired]
+        [BsonIgnoreIfNull]
         public DateTime LastModerationWarning { get; set; }
-
-        /// <summary>
-        /// List of messages sent by this user to this channel.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        public List<MessageDocument> MessageSent { get; } = new List<MessageDocument>();
 
         #endregion Public Properties
 
