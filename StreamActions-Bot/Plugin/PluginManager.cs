@@ -447,19 +447,23 @@ namespace StreamActions.Plugin
             ModerationResult harshestModeration = new ModerationResult();
 
             await Task.Run(async () =>
-             {
-                 if (!(OnMessageModeration is null))
-                 {
-                     foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
-                     {
-                         ModerationResult rs = await d.Invoke(this, e).ConfigureAwait(false);
-                         if (harshestModeration.IsHarsher(rs))
-                         {
-                             harshestModeration = rs;
-                         }
-                     }
-                 }
-             }).ConfigureAwait(false);
+            {
+                if (!(OnMessageModeration is null))
+                {
+                    // Add the message to our cache to moderation purposes.
+                    TwitchMessageCache.Instance.Consume(e.ChatMessage);
+
+                    // Run all moderation events and get the harshes one found.
+                    foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
+                    {
+                        ModerationResult rs = await d.Invoke(this, e).ConfigureAwait(false);
+                        if (harshestModeration.IsHarsher(rs))
+                        {
+                            harshestModeration = rs;
+                        }
+                    }
+                }
+            }).ConfigureAwait(false);
 
             await Task.Run(async () =>
             {

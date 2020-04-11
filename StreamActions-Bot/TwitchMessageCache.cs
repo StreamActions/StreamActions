@@ -14,15 +14,123 @@
  * limitations under the License.
  */
 
+using StreamActions.MemoryDocuments;
+using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using TwitchLib.Client.Models;
+using System.Linq;
+
 namespace StreamActions
 {
     internal class TwitchMessageCache
     {
+        #region Internal Properties
+
+        /// <summary>
+        /// Singleton of <see cref="TwitchMessageCache"/>.
+        /// </summary>
+        internal static TwitchMessageCache Instance => _instance.Value;
+
+        #endregion Internal Properties
+
+        #region Private Fields
+
+        /// <summary>
+        /// Field that backs the <see cref="Instance"/> property.
+        /// </summary>
+        private static readonly Lazy<TwitchMessageCache> _instance = new Lazy<TwitchMessageCache>(() => new TwitchMessageCache());
+
+        /// <summary>
+        /// Used to make the list concurrent.
+        /// </summary>
+        private readonly object _lock = new object();
+
+        /// <summary>
+        /// Message that have been consumed by this cache.
+        /// </summary>
+        private readonly List<ChatMessageDocument> _messages = new List<ChatMessageDocument>();
+
+        #endregion Private Fields
+
+        #region Internal Methods
+
+        /// <summary>
+        /// Method that will consume each Twitch message and add it to our cache list.
+        /// </summary>
+        /// <param name="message">Message from Twitch <see cref="ChatMessage"/>.</param>
+        public void Consume(ChatMessage message)
+        {
+            lock (this._lock)
+            {
+                this._messages.Add(new ChatMessageDocument
+                {
+                    Message = message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Method that will return a list of users that sent a messages maching the matchMessage variable.
+        /// </summary>
+        /// <param name="matchMessage">Message that should be matched.</param>
+        /// <param name="channelId">The ID of the channel which to choose the message from.</param>
+        /// <param name="isRegex">If match message should be converted into a regular expression.</param>
+        /// <returns>List of users, can return no users if none are found.</returns>
+        public List<string> GetUsersWhoSentMatchingMessage(string matchMessage, string channelId, bool isRegex = false)
+        {
+            if (string.IsNullOrEmpty(matchMessage))
+            {
+                throw new ArgumentNullException(nameof(matchMessage));
+            }
+
+            if (string.IsNullOrEmpty(channelId))
+            {
+                throw new ArgumentNullException(nameof(channelId));
+            }
+
+            Regex matcher = new Regex((isRegex ? matchMessage : Regex.Escape(matchMessage)), RegexOptions.Compiled);
+
+            lock (this._lock)
+            {
+                return this._messages.Where(m => m.Message.RoomId.Equals(channelId, StringComparison.Ordinal) && matcher.IsMatch(m.Message.Message))
+                    .GroupBy(m => m.Message.Username)
+                    .Select(m => m.First().Message.Username)
+                    .ToList();
+            }
+        }
+
+        #endregion Internal Methods
+
+        #region Private Methods
+
+        /// <summary>
+        /// Method that will create the job to remove messages that are older than 5 minutes from the cache.
+        /// </summary>
+        private void ScheduleMessageCacheRemover() => Scheduler.AddJob(() =>
+        {
+            DateTime pastTime = DateTime.Now.AddMinutes(-5);
+
+            lock (this._lock)
+            {
+                this._messages.ForEach((m =>
+                {
+                    if (m.SentAt <= pastTime)
+                    {
+                        _ = this._messages.Remove(m);
+                    }
+                }));
+            }
+        }, s => s.WithName("MessageCacheRemover").ToRunEvery(5).Minutes());
+
+        #endregion Private Methods
+
         #region Private Constructors
 
-        private TwitchMessageCache()
-        {
-        }
+        /// <summary>
+        /// Class constructor.
+        /// </summary>
+        private TwitchMessageCache() => this.ScheduleMessageCacheRemover();
 
         #endregion Private Constructors
     }

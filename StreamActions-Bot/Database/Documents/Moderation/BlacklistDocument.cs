@@ -34,53 +34,8 @@ namespace StreamActions.Database.Documents
         /// Message said in chat when the user uses the blacklisted phrase.
         /// </summary>
         [BsonElement]
-        [BsonIgnoreIfNull]
-        public string BlacklistMessage { get; set; }
-
-        /// <summary>
-        /// If a message should be said in chat when someone uses the blacklist.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool BlacklistMessageStatus { get; set; }
-
-        /// <summary>
-        /// Phrase that is blacklisted, is null when IsRegex is true.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string BlacklistPhrase { get; set; }
-
-        /// <summary>
-        /// Type of punishment given when using this phrase.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment BlacklistPunishment { get; set; }
-
-        /// <summary>
-        /// Regex phrase that is blacklisted, is null when IsRegex is false.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public Regex BlacklistRegexPhrase { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string BlacklistTimeoutReason { get; set; }
-
-        /// <summary>
-        /// How long the user should be timed-out for when using this phrase, if the punishment is set to <see cref="ModerationPunishment.Timeout"/>.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(600)]
-        public uint BlacklistTimeoutTimeSeconds { get; set; }
+        [BsonRequired]
+        public string ChatMessage { get; set; }
 
         /// <summary>
         /// Id of this blacklist.
@@ -97,6 +52,66 @@ namespace StreamActions.Database.Documents
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(false)]
         public bool IsRegex { get; set; }
+
+        /// <summary>
+        /// What the blacklist should match on.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(BlacklistMatchTypes.Message)]
+        public BlacklistMatchTypes MatchOn { get; set; }
+
+        /// <summary>
+        /// Name for this blacklist.
+        /// </summary>
+        [BsonElement]
+        [BsonRequired]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Phrase that is blacklisted, is null when IsRegex is true.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string Phrase { get; set; }
+
+        /// <summary>
+        /// Type of punishment given when using this phrase.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment Punishment { get; set; }
+
+        /// <summary>
+        /// Regex phrase that is blacklisted, is null when IsRegex is false.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public Regex RegexPhrase { get; set; }
+
+        /// <summary>
+        /// If a message should be said in chat when someone uses the blacklist.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool ShouldSendChatMessage { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string TimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long the user should be timed-out for when using this phrase, if the punishment is set to <see cref="ModerationPunishment.Timeout"/>.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
+        public uint TimeoutTimeSeconds { get; set; }
 
         #endregion Public Properties
 
