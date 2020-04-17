@@ -77,6 +77,11 @@ namespace StreamActions.Plugin
         public event MessageModerationEventHandler OnMessageModeration;
 
         /// <summary>
+        /// Fires when a new chat message arrives, just before moderation, returns <see cref="ChatMessage"/>.
+        /// </summary>
+        public event EventHandler<OnMessageReceivedArgs> OnMessagePreModeration;
+
+        /// <summary>
         /// Fires when a new chat message arrives and has passed moderation, returns <see cref="ChatMessage"/>.
         /// </summary>
         public event EventHandler<OnMessageReceivedArgs> OnMessageReceived;
@@ -444,17 +449,19 @@ namespace StreamActions.Plugin
         /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         private async void Twitch_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
+            this.OnMessagePreModeration?.Invoke(this, e);
+
             ModerationResult harshestModeration = new ModerationResult();
 
             await Task.Run(async () =>
             {
-                if (!(OnMessageModeration is null))
+                if (!(this.OnMessageModeration is null))
                 {
                     // Add the message to our cache to moderation purposes.
                     TwitchMessageCache.Instance.Consume(e.ChatMessage);
 
-                    // Run all moderation events and get the harshes one found.
-                    foreach (MessageModerationEventHandler d in OnMessageModeration.GetInvocationList())
+                    // Run all moderation events and get the harshest one found.
+                    foreach (MessageModerationEventHandler d in this.OnMessageModeration.GetInvocationList())
                     {
                         ModerationResult rs = await d.Invoke(this, e).ConfigureAwait(false);
                         if (harshestModeration.IsHarsher(rs))
@@ -499,7 +506,7 @@ namespace StreamActions.Plugin
                 }
                 else
                 {
-                    OnMessageReceived?.Invoke(this, e);
+                    this.OnMessageReceived?.Invoke(this, e);
 
                     if (Equals(e.ChatMessage.Message[0], this.ChatCommandIdentifier))
                     {
