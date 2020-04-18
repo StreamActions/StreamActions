@@ -71,6 +71,33 @@ namespace StreamActions
         }
 
         /// <summary>
+        /// Gets the number of messages a user sent in a time period.
+        /// </summary>
+        /// <param name="userId">The ID of the user.</param>
+        /// <param name="channelId">The ID of the channel which to choose the message from.</param>
+        /// <param name="period">Time period of which the messages have been sent.</param>
+        /// <returns>Number of messages sent in that period.</returns>
+        public int GetNumberOfMessageSentFromUserInPeriod(string userId, string channelId, DateTime period)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                throw new ArgumentNullException(nameof(userId));
+            }
+
+            if (string.IsNullOrEmpty(channelId))
+            {
+                throw new ArgumentNullException(nameof(channelId));
+            }
+
+            lock (this._lock)
+            {
+                return this._messages.Where(m => m.Message.RoomId.Equals(channelId, StringComparison.OrdinalIgnoreCase)
+                    && m.Message.UserId.Equals(userId, StringComparison.OrdinalIgnoreCase)
+                    && m.SentAt <= period).Count();
+            }
+        }
+
+        /// <summary>
         /// Method that will return a list of users that sent a messages maching the matchMessage variable.
         /// </summary>
         /// <param name="matchMessage">Message that should be matched.</param>
@@ -93,7 +120,8 @@ namespace StreamActions
 
             lock (this._lock)
             {
-                return this._messages.Where(m => m.Message.RoomId.Equals(channelId, StringComparison.Ordinal) && matcher.IsMatch(m.Message.Message))
+                return this._messages.Where(m => m.Message.RoomId.Equals(channelId, StringComparison.Ordinal)
+                     && matcher.IsMatch(m.Message.Message))
                     .GroupBy(m => m.Message.Username)
                     .Select(m => m.First().Message.Username)
                     .ToList();

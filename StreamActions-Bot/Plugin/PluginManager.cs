@@ -352,6 +352,41 @@ namespace StreamActions.Plugin
         }
 
         /// <summary>
+        /// Method called when to perform a moderation action on a user.
+        /// </summary>
+        /// <param name="result">The result of the moderation.</param>
+        /// <param name="document">The channel's moderation document.</param>
+        /// <param name="message">The chat message.</param>
+        internal void PerformModerationAction(ModerationResult result, ModerationDocument document, ChatMessage message)
+        {
+            switch (result.Punishment)
+            {
+                case ModerationPunishment.Ban:
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".ban " + message.Username + (!(result.ModerationReason is null) ? " " + result.ModerationReason : ""));
+                    break;
+
+                case ModerationPunishment.Delete:
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".delete " + message.Id);
+                    break;
+
+                case ModerationPunishment.Timeout:
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " " + result.TimeoutSeconds + (!(result.ModerationReason is null) ? " " + result.ModerationReason : ""));
+                    break;
+
+                case ModerationPunishment.Purge:
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " 1" + (!(result.ModerationReason is null) ? " " + result.ModerationReason : ""));
+                    break;
+            }
+
+            if (!(result.ModerationMessage is null) && !this.InLockdown && document.LastModerationMessageSent.AddSeconds(document.ModerationMessageCooldownSeconds) < DateTime.Now)
+            {
+                TwitchLibClient.Instance.SendMessage(message.RoomId, result.ModerationMessage);
+            }
+
+            // TODO: Update the user's last timeout time.
+        }
+
+        /// <summary>
         /// Disables and removes the reference to a plugin, enabling GC to occur.
         /// </summary>
         /// <param name="fullName">The full name of the plugin to disable, as would be provided by Type.FullName.</param>
@@ -457,7 +492,7 @@ namespace StreamActions.Plugin
         /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         private async void Twitch_OnMessageReceived(object sender, OnMessageReceivedArgs e)
         {
-            this.OnMessagePreModeration?.Invoke(this, e);
+            _ = this.OnMessagePreModeration?.Invoke(this, e);
 
             ModerationResult harshestModeration = new ModerationResult();
 
@@ -481,33 +516,7 @@ namespace StreamActions.Plugin
             {
                 if (harshestModeration.ShouldModerate)
                 {
-                    ModerationDocument document = await ChatModerator.GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
-
-                    switch (harshestModeration.Punishment)
-                    {
-                        case ModerationPunishment.Ban:
-                            TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".ban " + e.ChatMessage.Username + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
-                            break;
-
-                        case ModerationPunishment.Delete:
-                            TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".delete " + e.ChatMessage.Id);
-                            break;
-
-                        case ModerationPunishment.Timeout:
-                            TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".timeout " + e.ChatMessage.Username + " " + harshestModeration.TimeoutSeconds + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
-                            break;
-
-                        case ModerationPunishment.Purge:
-                            TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, ".timeout " + e.ChatMessage.Username + " 1" + (!(harshestModeration.ModerationReason is null) ? " " + harshestModeration.ModerationReason : ""));
-                            break;
-                    }
-
-                    if (!(harshestModeration.ModerationMessage is null) && !this.InLockdown && document.LastModerationMessageSent.AddSeconds(document.ModerationMessageCooldownSeconds) < DateTime.Now)
-                    {
-                        TwitchLibClient.Instance.SendMessage(e.ChatMessage.RoomId, harshestModeration.ModerationMessage);
-                    }
-
-                    _ = document.ModerationLastUserTimeouts.AddOrUpdate(e.ChatMessage.UserId, DateTime.Now, (oldKey, oldVal) => DateTime.Now);
+                    this.PerformModerationAction(harshestModeration, await ChatModerator.GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false), e.ChatMessage);
                 }
                 else
                 {

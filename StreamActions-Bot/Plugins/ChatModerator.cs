@@ -76,6 +76,7 @@ namespace StreamActions.Plugins
 
         public void Enabled()
         {
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnBlacklistCheck;
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnCapsCheck;
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnColouredMessageCheck;
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnEmotesCheck;
@@ -340,14 +341,14 @@ namespace StreamActions.Plugins
 
         #endregion Filter check methods
 
-        #region Private methods
+        #region Internal Methods
 
         /// <summary>
         /// Returns the filter settings for a channel.
         /// </summary>
         /// <param name="channelId">Id of the channel.</param>
         /// <returns>The document settings.</returns>
-        public static async Task<ModerationDocument> GetFilterDocumentForChannel(string channelId)
+        internal static async Task<ModerationDocument> GetFilterDocumentForChannel(string channelId)
         {
             IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("moderation");
 
@@ -357,6 +358,10 @@ namespace StreamActions.Plugins
 
             return (await cursor.FirstAsync().ConfigureAwait(false));
         }
+
+        #endregion Internal Methods
+
+        #region Private methods
 
         /// <summary>
         /// Method for deobfuscating a URL from a message.
@@ -394,6 +399,37 @@ namespace StreamActions.Plugins
         #endregion Private methods
 
         #region Filter events
+
+        /// <summary>
+        /// Method that will check the message for any blacklisted phrases.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <returns>The result gotten from this check.</returns>
+        private async Task<ModerationResult> ChatModerator_OnBlacklistCheck(object sender, OnMessageReceivedArgs e)
+        {
+            ModerationResult moderationResult = new ModerationResult();
+            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            foreach (BlacklistDocument blacklist in document.Blacklist)
+            {
+                if (blacklist.IsRegex)
+                {
+                    Regex regex = (blacklist.IsRegex ? blacklist.RegexPhrase : new Regex(Regex.Escape(blacklist.Phrase)));
+
+                    if (regex.IsMatch(e.ChatMessage.Message))
+                    {
+                        moderationResult.Punishment = blacklist.Punishment;
+                        moderationResult.TimeoutSeconds = blacklist.TimeoutTimeSeconds;
+                        moderationResult.ModerationReason = blacklist.TimeoutReason;
+                        moderationResult.ModerationMessage = blacklist.ChatMessage;
+                        break;
+                    }
+                }
+            }
+
+            return moderationResult;
+        }
 
         /// <summary>
         /// Method that will check the message for excessive use of caps.
@@ -655,8 +691,26 @@ namespace StreamActions.Plugins
             // Check if the filter is enabled.
             if (document.OneManSpamStatus)
             {
-                // TODO: Add check if this is enabled in user settings.
-                // TODO: Add filter check.
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.OneManSpamExcludedLevels).ConfigureAwait(false))
+                {
+                    if (TwitchMessageCache.Instance.GetNumberOfMessageSentFromUserInPeriod(e.ChatMessage.UserId, e.ChatMessage.RoomId, DateTime.Now.AddSeconds(-document.OneManSpamResetTimeSeconds)) >= document.OneManSpamMaximumMessages)
+                    {
+                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                        {
+                            moderationResult.Punishment = document.OneManSpamTimeoutPunishment;
+                            moderationResult.TimeoutSeconds = document.OneManSpamTimeoutTimeSeconds;
+                            moderationResult.ModerationReason = document.OneManSpamTimeoutReason;
+                            moderationResult.ModerationMessage = document.OneManSpamTimeoutMessage;
+                        }
+                        else
+                        {
+                            moderationResult.Punishment = document.OneManSpamWarningPunishment;
+                            moderationResult.TimeoutSeconds = document.OneManSpamWarningTimeSeconds;
+                            moderationResult.ModerationReason = document.OneManSpamWarningReason;
+                            moderationResult.ModerationMessage = document.OneManSpamWarningMessage;
+                        }
+                    }
+                }
             }
 
             return moderationResult;
