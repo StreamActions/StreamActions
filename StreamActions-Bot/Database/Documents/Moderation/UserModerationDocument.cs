@@ -49,18 +49,18 @@ namespace StreamActions.Database.Documents.Moderation
         public Guid Id { get; }
 
         /// <summary>
-        /// Last time a message was sent.
+        /// Last time a message was sent. This should only be used for moderation purposes.
         /// </summary>
         [BsonElement]
-        [BsonIgnoreIfNull]
-        public DateTime LastMessageSent { get; set; }
+        [BsonRequired]
+        public DateTime LastMessageSent { get; set; } = DateTime.MinValue;
 
         /// <summary>
         /// Last time the user got a moderation warning.
         /// </summary>
         [BsonElement]
-        [BsonIgnoreIfNull]
-        public DateTime LastModerationWarning { get; set; }
+        [BsonRequired]
+        public DateTime LastModerationWarning { get; set; } = DateTime.MinValue;
 
         #endregion Public Properties
 

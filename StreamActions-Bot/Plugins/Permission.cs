@@ -122,7 +122,15 @@ namespace StreamActions.Plugins
         /// <param name="userLevels">The <see cref="UserLevels"/> allowed to perform this action. Include <see cref="UserLevels.Custom"/> and <paramref name="permissionName"/> to also check permission groups.</param>
         /// <param name="permissionName">The permission name to check in the permission groups, if the <see cref="UserLevels.Custom"/> flag was set in <paramref name="userLevels"/>.</param>
         /// <returns><c>true</c> if the user has permission; <c>false</c> otherwise.</returns>
-        public static async Task<bool> Can(ChatMessage chatMessage, UserLevels userLevels, string permissionName = null) => await Can(chatMessage.UserId, chatMessage.RoomId, userLevels, permissionName).ConfigureAwait(false);
+        public static async Task<bool> Can(ChatMessage chatMessage, UserLevels userLevels, string permissionName = null)
+        {
+            if (chatMessage is null)
+            {
+                throw new ArgumentNullException(nameof(chatMessage));
+            }
+
+            return await Can(chatMessage.UserId, chatMessage.RoomId, userLevels, permissionName).ConfigureAwait(false);
+        }
 
         /// <summary>
         /// Determines if the specified user has permission to perform the specified action.

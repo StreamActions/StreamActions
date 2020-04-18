@@ -86,11 +86,107 @@ namespace StreamActions.Plugins
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnRepetitionCheck;
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnSymbolsCheck;
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnZalgoCheck;
+
+            PluginManager.Instance.OnMessagePreModeration += this.ChatModerator_OnMessagePreModeration;
         }
 
         public string GetCursor() => this.PluginId.ToString("D", CultureInfo.InvariantCulture);
 
         #endregion Public Methods
+
+        #region Pre moderation event
+
+        /// <summary>
+        /// Event method called before all moderation events.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments</param>
+        private async Task ChatModerator_OnMessagePreModeration(object sender, OnMessageReceivedArgs e)
+        {
+            // Add the message to our cache to moderation purposes.
+            TwitchMessageCache.Instance.Consume(e.ChatMessage);
+
+            // Set the last time the user sent a message.
+            UserDocument document;
+
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, e.ChatMessage.UserId);
+
+            // Make sure the user exists.
+            if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+            {
+                document = new UserDocument
+                {
+                    DisplayName = e.ChatMessage.DisplayName,
+                    Id = e.ChatMessage.UserId,
+                    Login = e.ChatMessage.Username
+                };
+            }
+            else
+            {
+                using IAsyncCursor<UserDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+
+                document = (await cursor.SingleAsync().ConfigureAwait(false));
+            }
+
+            // We only need to get the first badge.
+            // Twitch orders badges from higher level to lower.
+            // Broadcaster, Twitch Staff, Twitch Admin, (Moderator | VIP) Subscriber, (Prime | Turbo | Others)
+            if (e.ChatMessage.Badges.Count > 0)
+            {
+                switch (e.ChatMessage.Badges[0].Key.ToLowerInvariant())
+                {
+                    case "staff":
+                        document.StaffType = TwitchStaff.Staff;
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.TwitchStaff;
+                        break;
+
+                    case "admin":
+                        document.StaffType = TwitchStaff.Admin;
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.TwitchAdmin;
+                        break;
+
+                    case "broadcaster":
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.Broadcaster;
+                        break;
+
+                    case "moderator":
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.Moderator;
+                        break;
+
+                    case "subscriber":
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.Subscriber;
+                        break;
+
+                    case "vip":
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.VIP;
+                        break;
+                }
+            }
+            else
+            {
+                _ = document.UserLevel.Remove(e.ChatMessage.RoomId);
+            }
+
+            if (document.UserModeration.Exists(i => i.ChannelId.Equals(e.ChatMessage.RoomId, StringComparison.Ordinal)))
+            {
+                document.UserModeration.Find(i => i.ChannelId.Equals(e.ChatMessage.RoomId, StringComparison.Ordinal)).LastMessageSent = DateTime.Now;
+            }
+            else
+            {
+                document.UserModeration.Add(new UserModerationDocument
+                {
+                    LastMessageSent = DateTime.Now
+                });
+            }
+
+            UpdateDefinition<UserDocument> update = Builders<UserDocument>.Update.Set(i => i, document);
+
+            _ = await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
+        }
+
+        #endregion Pre moderation event
 
         #region Private filter regex
 
@@ -290,7 +386,7 @@ namespace StreamActions.Plugins
 
             using IAsyncCursor<UserDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
 
-            UserModerationDocument userModerationDocument = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration.First(m => m.ChannelId.Equals(document.ChannelId));
+            UserModerationDocument userModerationDocument = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration.FirstOrDefault(m => m.ChannelId.Equals(document.ChannelId));
 
             return userModerationDocument.LastModerationWarning.AddSeconds(document.ModerationWarningTimeSeconds) >= DateTime.Now;
         }

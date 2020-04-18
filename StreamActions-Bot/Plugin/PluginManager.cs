@@ -56,6 +56,14 @@ namespace StreamActions.Plugin
         public delegate Task<ModerationResult> MessageModerationEventHandler(object sender, OnMessageReceivedArgs e);
 
         /// <summary>
+        /// Represents the method that will handle a <see cref="OnMessagePreModeration"/> event.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An object that contains the received message.</param>
+        /// <returns>Nothing.</returns>
+        public delegate Task MessagePreModerationEventHandler(object sender, OnMessageReceivedArgs e);
+
+        /// <summary>
         /// Represents the method that will handle a WhisperCommandReceived event.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -79,7 +87,7 @@ namespace StreamActions.Plugin
         /// <summary>
         /// Fires when a new chat message arrives, just before moderation, returns <see cref="ChatMessage"/>.
         /// </summary>
-        public event EventHandler<OnMessageReceivedArgs> OnMessagePreModeration;
+        public event MessagePreModerationEventHandler OnMessagePreModeration;
 
         /// <summary>
         /// Fires when a new chat message arrives and has passed moderation, returns <see cref="ChatMessage"/>.
@@ -457,9 +465,6 @@ namespace StreamActions.Plugin
             {
                 if (!(this.OnMessageModeration is null))
                 {
-                    // Add the message to our cache to moderation purposes.
-                    TwitchMessageCache.Instance.Consume(e.ChatMessage);
-
                     // Run all moderation events and get the harshest one found.
                     foreach (MessageModerationEventHandler d in this.OnMessageModeration.GetInvocationList())
                     {
