@@ -136,6 +136,11 @@ namespace StreamActions.Plugins
         [ChatCommand("command", "add", UserLevels.Moderator)]
         private async void CustomCommand_OnAddCommand(object sender, OnChatCommandReceivedArgs e)
         {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
             Match commandMatch = this._commandAddEditRegex.Match(e.Command.ArgumentsAsString);
 
             if (commandMatch.Success)
@@ -222,6 +227,11 @@ namespace StreamActions.Plugins
 
             if (!(commandDocument is null))
             {
+                if (!await Permission.Can(e.Command, false, 0).ConfigureAwait(false))
+                {
+                    return;
+                }
+
                 TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.RoomId, commandDocument.Response);
             }
         }
@@ -235,6 +245,11 @@ namespace StreamActions.Plugins
         [ChatCommand("command", "modify", UserLevels.Moderator)]
         private async void CustomCommand_OnEditCommand(object sender, OnChatCommandReceivedArgs e)
         {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
             Match commandMatch = this._commandAddEditRegex.Match(e.Command.ArgumentsAsString);
 
             if (commandMatch.Success)
@@ -320,6 +335,11 @@ namespace StreamActions.Plugins
         [ChatCommand("command", "remove", UserLevels.Moderator)]
         private async void CustomCommand_OnRemoveCommand(object sender, OnChatCommandReceivedArgs e)
         {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
             Match commandMatch = this._commandRemoveRegex.Match(e.Command.ArgumentsAsString);
 
             if (commandMatch.Success)

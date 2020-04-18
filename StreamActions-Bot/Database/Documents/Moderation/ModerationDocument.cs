@@ -90,14 +90,6 @@ namespace StreamActions.Database.Documents
         #region Link Moderation Properties
 
         /// <summary>
-        /// If users should be able to post clips for this channel even when link moderation is enabled.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(false)]
-        public bool LinkAllowChannelClips { get; set; }
-
-        /// <summary>
         /// Which roles are excluded from link moderations, note that moderators and above are always excluded.
         /// </summary>
         [BsonElement]
