@@ -102,11 +102,10 @@ namespace StreamActions
         /// </summary>
         /// <param name="matchMessage">Message that should be matched.</param>
         /// <param name="channelId">The ID of the channel which to choose the message from.</param>
-        /// <param name="isRegex">If match message should be converted into a regular expression.</param>
         /// <returns>List of users, can return no users if none are found.</returns>
-        public List<string> GetUsersWhoSentMatchingMessage(string matchMessage, string channelId, bool isRegex = false)
+        public List<string> GetUsersWhoSentMatchingMessage(Regex matchMessage, string channelId)
         {
-            if (string.IsNullOrEmpty(matchMessage))
+            if (matchMessage is null)
             {
                 throw new ArgumentNullException(nameof(matchMessage));
             }
@@ -116,12 +115,10 @@ namespace StreamActions
                 throw new ArgumentNullException(nameof(channelId));
             }
 
-            Regex matcher = new Regex((isRegex ? matchMessage : Regex.Escape(matchMessage)), RegexOptions.Compiled);
-
             lock (this._lock)
             {
                 return this._messages.Where(m => m.Message.RoomId.Equals(channelId, StringComparison.Ordinal)
-                     && matcher.IsMatch(m.Message.Message))
+                     && matchMessage.IsMatch(m.Message.Message))
                     .GroupBy(m => m.Message.Username)
                     .Select(m => m.First().Message.Username)
                     .ToList();

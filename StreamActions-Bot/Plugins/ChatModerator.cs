@@ -315,6 +315,31 @@ namespace StreamActions.Plugins
         private bool HasUrl(string message) => this._linkRegex.IsMatch(message);
 
         /// <summary>
+        /// Method that checks if the message contains a whitelisted link.
+        /// </summary>
+        /// <param name="message">Message to check for the whitelist.</param>
+        /// <param name="channelId">The channel ID to get the whitelist from.</param>
+        /// <returns>True if a whitelist is found.</returns>
+        private async Task<bool> HasWhitelist(string message, string channelId)
+        {
+            ModerationDocument document = await GetFilterDocumentForChannel(channelId).ConfigureAwait(false);
+            List<Match> matches = this._linkRegex.Matches(message).ToList();
+
+            foreach (Match match in matches)
+            {
+                string val = (match.Value.IndexOf("?", StringComparison.InvariantCulture) != -1 ?
+                    match.Value.Substring(match.Value.IndexOf("?", StringComparison.InvariantCulture)) : match.Value);
+
+                if (document.LinkWhitelist.Exists(w => w.Equals(val, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    _ = matches.Remove(match);
+                }
+            }
+
+            return matches.Any();
+        }
+
+        /// <summary>
         /// Method that is used to check if a message contains zalgo characters.
         /// </summary>
         /// <param name="message">Message to be checked.</param>
@@ -612,9 +637,7 @@ namespace StreamActions.Plugins
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
                 if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.LinkExcludedLevels).ConfigureAwait(false))
                 {
-                    // TODO: Check whitelist
-                    // TODO: Check to make sure the URL isn't for clips.
-                    if (this.HasUrl(e.ChatMessage.Message))
+                    if (this.HasUrl(e.ChatMessage.Message) && !await this.HasWhitelist(e.ChatMessage.Message, e.ChatMessage.RoomId).ConfigureAwait(false))
                     {
                         if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
