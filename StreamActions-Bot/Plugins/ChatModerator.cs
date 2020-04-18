@@ -435,21 +435,21 @@ namespace StreamActions.Plugins
         {
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+            string toMatch;
 
             foreach (BlacklistDocument blacklist in document.Blacklist)
             {
-                if (blacklist.IsRegex)
-                {
-                    Regex regex = (blacklist.IsRegex ? blacklist.RegexPhrase : new Regex(Regex.Escape(blacklist.Phrase)));
+                Regex regex = (blacklist.IsRegex ? blacklist.RegexPhrase : new Regex(Regex.Escape(blacklist.Phrase)));
+                toMatch = (blacklist.MatchOn == BlacklistMatchTypes.Message ? e.ChatMessage.Message :
+                    (blacklist.MatchOn == BlacklistMatchTypes.Username ? e.ChatMessage.Username : e.ChatMessage.Username + " " + e.ChatMessage.Message));
 
-                    if (regex.IsMatch(e.ChatMessage.Message))
-                    {
-                        moderationResult.Punishment = blacklist.Punishment;
-                        moderationResult.TimeoutSeconds = blacklist.TimeoutTimeSeconds;
-                        moderationResult.ModerationReason = blacklist.TimeoutReason;
-                        moderationResult.ModerationMessage = blacklist.ChatMessage;
-                        break;
-                    }
+                if (regex.IsMatch(toMatch))
+                {
+                    moderationResult.Punishment = blacklist.Punishment;
+                    moderationResult.TimeoutSeconds = blacklist.TimeoutTimeSeconds;
+                    moderationResult.ModerationReason = blacklist.TimeoutReason;
+                    moderationResult.ModerationMessage = blacklist.ChatMessage;
+                    break;
                 }
             }
 

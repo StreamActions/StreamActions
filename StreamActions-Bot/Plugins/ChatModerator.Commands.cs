@@ -43,7 +43,7 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            switch ((e.Command.ArgumentsAsList[1] ?? "usage").ToLowerInvariant())
+            switch ((e.Command.ArgumentsAsList[2] ?? "usage").ToLowerInvariant())
             {
                 case "links":
                     this.UpdateLinkFilter(e.Command);
