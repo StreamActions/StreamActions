@@ -15,6 +15,7 @@
  */
 
 using System;
+using System.Globalization;
 using StreamActions.Attributes;
 using StreamActions.Database.Documents;
 using StreamActions.Enums;
@@ -104,104 +105,156 @@ namespace StreamActions.Plugins
         /// Updates the link filter settings.
         /// </summary>
         /// <param name="command">Command used in chat.</param>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1305:Specify IFormatProvider", Justification = "Just parsing a normal number.")]
         private async void UpdateLinkFilter(ChatCommand command)
         {
-            ModerationDocument document = null;
-
-            if (string.IsNullOrEmpty(command.ArgumentsAsList[2]))
+            if (string.IsNullOrEmpty(command.ArgumentsAsList[3]))
             {
                 // Usage.
                 return;
             }
 
-            if (string.Equals("toggle", command.ArgumentsAsList[2], StringComparison.OrdinalIgnoreCase))
+            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+
+            if (string.Equals("toggle", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
             {
-                if (string.Equals("on", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
-                {
-                    document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                    document.LinkStatus = true;
-                }
-                else if (string.Equals("off", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
-                {
-                    document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                    document.LinkStatus = false;
-                }
-                else
+                if (!string.Equals("on", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals("off", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
                     // Usage.
+                    return;
                 }
+
+                document.LinkStatus = string.Equals("on", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase);
             }
-            else if (string.Equals("warning", command.ArgumentsAsList[2], StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals("warning", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
             {
-                if (string.Equals("time", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                if (string.Equals("time", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
-                    if (string.IsNullOrEmpty(command.ArgumentsAsList[4]) && uint.TryParse(command.ArgumentsAsList[4], out _))
-                    {
-                        document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                        document.LinkWarningTimeSeconds = uint.Parse(command.ArgumentsAsList[4]);
-                        document.LinkWarningPunishment = (document.LinkWarningTimeSeconds > 1 ? ModerationPunishment.Timeout :
-                            (document.LinkTimeoutTimeSeconds < 1 ? ModerationPunishment.Delete : ModerationPunishment.Purge));
-                    }
-                    else
+                    if (!string.IsNullOrEmpty(command.ArgumentsAsList[5]) || !uint.TryParse(command.ArgumentsAsList[5], out uint time) || time < 1 || time > 1209600)
                     {
                         // Usage.
+                        return;
                     }
+
+                    document.LinkWarningTimeSeconds = uint.Parse(command.ArgumentsAsList[5], NumberStyles.Integer,
+                        await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                    document.LinkWarningPunishment = (document.LinkWarningTimeSeconds > 1 ? ModerationPunishment.Timeout :
+                        (document.LinkWarningTimeSeconds < 1 ? ModerationPunishment.Delete : ModerationPunishment.Purge));
                 }
-                else if (string.Equals("message", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals("message", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
+                    if (string.IsNullOrEmpty(command.ArgumentsAsList[5]))
+                    {
+                        // Usage.
+                        return;
+                    }
+
+                    document.LinkWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
                 }
-                else if (string.Equals("reason", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals("reason", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
+                    if (string.IsNullOrEmpty(command.ArgumentsAsList[5]))
+                    {
+                        // Usage.
+                        return;
+                    }
+
+                    document.LinkWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
                 }
-                else if (string.Equals("punishment", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals("punishment", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!string.Equals("delete", command.ArgumentsAsList[5], StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals("purge", command.ArgumentsAsList[5], StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals("timeout", command.ArgumentsAsList[5], StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals("ban", command.ArgumentsAsList[5], StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Usage.
+                        return;
+                    }
+
+                    document.LinkWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), command.ArgumentsAsList[5], true);
                 }
                 else
                 {
                     // Usage.
                 }
             }
-            else if (string.Equals("timeout", command.ArgumentsAsList[2], StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals("timeout", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
             {
-                if (string.Equals("time", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                if (string.Equals("time", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!string.IsNullOrEmpty(command.ArgumentsAsList[5]) || !uint.TryParse(command.ArgumentsAsList[5], out uint time) || time < 1 || time > 1209600)
+                    {
+                        // Usage.
+                        return;
+                    }
+
+                    document.LinkTimeoutTimeSeconds = uint.Parse(command.ArgumentsAsList[5], NumberStyles.Integer,
+                        await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                    document.LinkTimeoutPunishment = (document.LinkTimeoutTimeSeconds > 1 ? ModerationPunishment.Timeout :
+                        (document.LinkTimeoutTimeSeconds < 1 ? ModerationPunishment.Delete : ModerationPunishment.Purge));
                 }
-                else if (string.Equals("message", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals("message", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
+                    if (string.IsNullOrEmpty(command.ArgumentsAsList[5]))
+                    {
+                        // Usage.
+                        return;
+                    }
+
+                    document.LinkTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
                 }
-                else if (string.Equals("reason", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals("reason", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
+                    if (string.IsNullOrEmpty(command.ArgumentsAsList[5]))
+                    {
+                        // Usage.
+                        return;
+                    }
+
+                    document.LinkTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
                 }
-                else if (string.Equals("punishment", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals("punishment", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
+                    if (!string.Equals("delete", command.ArgumentsAsList[5], StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals("purge", command.ArgumentsAsList[5], StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals("timeout", command.ArgumentsAsList[5], StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals("ban", command.ArgumentsAsList[5], StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Usage.
+                        return;
+                    }
+
+                    document.LinkTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), command.ArgumentsAsList[5], true);
                 }
                 else
                 {
                     // Usage.
                 }
             }
-            else if (string.Equals("exclude", command.ArgumentsAsList[2], StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals("exclude", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
             {
-                if (string.Equals("add", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals("subscribers", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals("vips", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals("subscribers vips",
+                    string.Join(" ", command.ArgumentsAsList.GetRange(4, command.ArgumentsAsList.Count - 4)), StringComparison.OrdinalIgnoreCase))
                 {
+                    // Usage.
+                    return;
                 }
-                else if (string.Equals("remove", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
-                {
-                }
-                else
-                {
-                }
+
+                document.LinkExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels),
+                    string.Join(", ", command.ArgumentsAsList.GetRange(4, command.ArgumentsAsList.Count - 4)));
             }
-            else if (string.Equals("whitelist", command.ArgumentsAsList[2], StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals("whitelist", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
             {
-                if (string.Equals("add", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                if (string.Equals("add", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
                 }
-                else if (string.Equals("remove", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals("remove", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
                 }
-                else if (string.Equals("list", command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals("list", command.ArgumentsAsList[4], StringComparison.OrdinalIgnoreCase))
                 {
                 }
                 else
