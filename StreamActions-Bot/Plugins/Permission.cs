@@ -661,7 +661,7 @@ namespace StreamActions.Plugins
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
-            if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]) || string.IsNullOrWhiteSpace(groupName))
+            if (command.ArgumentsAsList.IsNullWhiteSpaceOrOutOfRange(3) || string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "UserAddUsage", command.ChatMessage.RoomId,
                     new
@@ -761,7 +761,7 @@ namespace StreamActions.Plugins
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
-            if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]) || string.IsNullOrWhiteSpace(groupName))
+            if (command.ArgumentsAsList.IsNullWhiteSpaceOrOutOfRange(3) || string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupAllowUsage", command.ChatMessage.RoomId,
                     new
@@ -810,7 +810,7 @@ namespace StreamActions.Plugins
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
-            if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]) || string.IsNullOrWhiteSpace(groupName))
+            if (command.ArgumentsAsList.IsNullWhiteSpaceOrOutOfRange(3) || string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupDenyUsage", command.ChatMessage.RoomId,
                     new
@@ -859,7 +859,7 @@ namespace StreamActions.Plugins
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
-            if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]) || string.IsNullOrWhiteSpace(groupName))
+            if (command.ArgumentsAsList.IsNullWhiteSpaceOrOutOfRange(3) || string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupInheritUsage", command.ChatMessage.RoomId,
                     new
@@ -1072,7 +1072,7 @@ namespace StreamActions.Plugins
         /// <param name="e">The chat command arguments.</param>
         private async void ListUsersGroups(ChatCommand command)
         {
-            if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]))
+            if (command.ArgumentsAsList.IsNullWhiteSpaceOrOutOfRange(3))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "UserListUsage", command.ChatMessage.RoomId,
                     new
@@ -1355,7 +1355,7 @@ namespace StreamActions.Plugins
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
-            if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]) || string.IsNullOrWhiteSpace(groupName))
+            if (command.ArgumentsAsList.IsNullWhiteSpaceOrOutOfRange(3) || string.IsNullOrWhiteSpace(groupName))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "UserRemoveUsage", command.ChatMessage.RoomId,
                     new
@@ -1404,7 +1404,7 @@ namespace StreamActions.Plugins
         /// <param name="e">The chat command arguments.</param>
         private async void UserEffectivePermissions(ChatCommand command)
         {
-            if (string.IsNullOrWhiteSpace(command.ArgumentsAsList[3]))
+            if (command.ArgumentsAsList.IsNullWhiteSpaceOrOutOfRange(3))
             {
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "UserEffectivePermissionsUsage", command.ChatMessage.RoomId,
                     new
