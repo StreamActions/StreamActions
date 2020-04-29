@@ -58,11 +58,6 @@ namespace StreamActions.Enums
         /// <summary>
         /// Twitch Broadcaster.
         /// </summary>
-        Broadcaster = 32,
-
-        /// <summary>
-        /// Custom level added by the bot user.
-        /// </summary>
-        Custom = 64
+        Broadcaster = 32
     }
 }

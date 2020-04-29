@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-using StreamActions.Database.Documents.Users;
-
 namespace StreamActions.GraphQL
 {
     /// <summary>

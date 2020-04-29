@@ -148,7 +148,7 @@ namespace StreamActions.Plugins
 
             if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
             {
-                return false;
+                return (userLevels & UserLevels.Viewer) == UserLevels.Viewer;
             }
 
             using IAsyncCursor<UserDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
@@ -166,61 +166,51 @@ namespace StreamActions.Plugins
                 return true;
             }
 
-            bool hasCustom = false;
-            if ((userLevels & UserLevels.Custom) == UserLevels.Custom)
+            foreach (UserLevels level in Enum.GetValues(typeof(UserLevels)))
             {
-                hasCustom = true;
-                userLevels &= ~UserLevels.Custom;
-            }
-
-            if (userLevels > UserLevels.Viewer)
-            {
-                foreach (UserLevels level in Enum.GetValues(typeof(UserLevels)))
+                if ((userLevel & level) == level)
                 {
-                    if ((userLevel & level) == level)
+                    switch (level)
                     {
-                        switch (level)
-                        {
-                            case UserLevels.TwitchStaff:
-                                if (userLevels >= UserLevels.TwitchStaff)
-                                {
-                                    return true;
-                                }
-                                break;
+                        case UserLevels.TwitchStaff:
+                            if (userLevels <= UserLevels.TwitchStaff || (userLevels & UserLevels.TwitchStaff) == UserLevels.TwitchStaff)
+                            {
+                                return true;
+                            }
+                            break;
 
-                            case UserLevels.TwitchAdmin:
-                                if (userLevels >= UserLevels.TwitchAdmin)
-                                {
-                                    return true;
-                                }
-                                break;
+                        case UserLevels.TwitchAdmin:
+                            if (userLevels <= UserLevels.TwitchAdmin || (userLevels & UserLevels.TwitchAdmin) == UserLevels.TwitchAdmin)
+                            {
+                                return true;
+                            }
+                            break;
 
-                            case UserLevels.Moderator:
-                                if (userLevels >= UserLevels.Moderator)
-                                {
-                                    return true;
-                                }
-                                break;
+                        case UserLevels.Moderator:
+                            if (userLevels <= UserLevels.Moderator || (userLevels & UserLevels.Moderator) == UserLevels.Moderator)
+                            {
+                                return true;
+                            }
+                            break;
 
-                            case UserLevels.VIP:
-                                if ((userLevels & UserLevels.VIP) == UserLevels.VIP)
-                                {
-                                    return true;
-                                }
-                                break;
+                        case UserLevels.VIP:
+                            if ((userLevels & UserLevels.VIP) == UserLevels.VIP)
+                            {
+                                return true;
+                            }
+                            break;
 
-                            case UserLevels.Subscriber:
-                                if ((userLevels & UserLevels.Subscriber) == UserLevels.Subscriber)
-                                {
-                                    return true;
-                                }
-                                break;
-                        }
+                        case UserLevels.Subscriber:
+                            if ((userLevels & UserLevels.Subscriber) == UserLevels.Subscriber)
+                            {
+                                return true;
+                            }
+                            break;
                     }
                 }
             }
 
-            return hasCustom && !string.IsNullOrWhiteSpace(permissionName)
+            return !string.IsNullOrWhiteSpace(permissionName)
                 ? await HasPermission(userDocument.PermissionGroupMembership, permissionName.Replace(' ', '_').ToLowerInvariant()).ConfigureAwait(false)
                 : false;
         }
@@ -297,13 +287,11 @@ namespace StreamActions.Plugins
 
             await cursor.ForEachAsync(d =>
             {
-                if (d.Permissions.Exists(p => p.PermissionName.Equals(permissionName.Replace(' ', '_').ToLowerInvariant(), StringComparison.OrdinalIgnoreCase) && p.IsDenied == false))
+                int i;
+                if ((i = d.Permissions.FindIndex(p => p.PermissionName.Equals(permissionName.Replace(' ', '_').ToLowerInvariant(), StringComparison.OrdinalIgnoreCase))) >= 0)
                 {
                     hasPermission = true;
-                }
-                else if (d.Permissions.Exists(p => p.PermissionName.Equals(permissionName.Replace(' ', '_').ToLowerInvariant(), StringComparison.OrdinalIgnoreCase) && p.IsDenied == true))
-                {
-                    isDenied = true;
+                    isDenied = isDenied || d.Permissions[i].IsDenied;
                 }
             }).ConfigureAwait(false);
 

@@ -152,11 +152,7 @@ namespace StreamActions.Plugins
                     UserLevels userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
                     string response = commandMatch.Groups["response"].Value;
 
-                    // TODO: Register the custom role.
-                    if (userLevel == UserLevels.Custom)
-                    {
-                        // Do something.
-                    }
+                    // TODO: Register the custom role
 
                     IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
@@ -260,12 +256,6 @@ namespace StreamActions.Plugins
                 {
                     UserLevels userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
                     string response = commandMatch.Groups["response"].Value;
-
-                    // TODO: Register the custom role.
-                    if (userLevel == UserLevels.Custom)
-                    {
-                        // Do something.
-                    }
 
                     IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
@@ -408,12 +398,12 @@ namespace StreamActions.Plugins
         private UserLevels GetUserLevelFromTag(string tag) => tag switch
         {
             "-b" => UserLevels.Broadcaster,
+            "-c" => UserLevels.Broadcaster,
             "-tf" => UserLevels.TwitchStaff,
             "-ta" => UserLevels.TwitchAdmin,
             "-m" => UserLevels.Moderator,
             "-s" => UserLevels.Subscriber,
             "-v" => UserLevels.VIP,
-            "-c" => UserLevels.Custom,
             _ => UserLevels.Viewer
         };
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace StreamActions
 {
-    public static class Extensions
+    public static class StreamActionsTypeExtensions
     {
         #region Public Methods
 
