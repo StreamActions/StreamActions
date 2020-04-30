@@ -20,6 +20,7 @@ using MongoDB.Driver;
 using StreamActions.Database;
 using StreamActions.Database.Documents.Users;
 using StreamActions.EventArgs;
+using StreamActions.GraphQL.Identity;
 using System;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -39,9 +40,9 @@ namespace StreamActions.GraphQL
         public static GraphQLMiddleware Instance => _instance.Value;
 
         /// <summary>
-        /// The <see cref="SchemaProvider{TContextType, TArgType}"/> that has mapped out available fields.
+        /// The <see cref="SchemaProvider{TContextType}"/> that has mapped out available fields.
         /// </summary>
-        public SchemaProvider<GraphQLSchema, UserDocument> SchemaProvider => this._schemaProvider;
+        public SchemaProvider<GraphQLSchema> SchemaProvider => this._schemaProvider;
 
         #endregion Public Properties
 
@@ -60,7 +61,7 @@ namespace StreamActions.GraphQL
         /// <summary>
         /// Field that backs <see cref="SchemaProvider"/>.
         /// </summary>
-        private readonly SchemaProvider<GraphQLSchema, UserDocument> _schemaProvider;
+        private readonly SchemaProvider<GraphQLSchema> _schemaProvider;
 
         /// <summary>
         /// Contains a Dictionary of user contexts. Key is IpPort; value is <see cref="UserDocument.Id"/>.
@@ -76,7 +77,7 @@ namespace StreamActions.GraphQL
         /// </summary>
         private GraphQLMiddleware()
         {
-            this._schemaProvider = SchemaBuilder.FromObject<GraphQLSchema, UserDocument>();
+            this._schemaProvider = SchemaBuilder.FromObject<GraphQLSchema>();
             WebSocketServer.Instance.SubscribeClientConnectedEventHandler("graphql-ws", this.GraphQL_WebSocketClientConnectedEventHandler);
             WebSocketServer.Instance.SubscribeMessageReceivedEventHandler("graphql-ws", this.GraphQL_WebSocketMessageReceivedEventHandler);
             WebSocketServer.Instance.SubscribeClientDisconnectedEventHandler("graphql-ws", this.GraphQL_WebSocketClientDisconnectedEventHandler);
@@ -134,7 +135,7 @@ namespace StreamActions.GraphQL
 
                     UserDocument userDocument = await cursor.SingleAsync().ConfigureAwait(false);
 
-                    result = this._schemaProvider.ExecuteQuery(query, this._context, userDocument, null);
+                    result = this._schemaProvider.ExecuteQuery(query, this._context, null, new UserClaimsIdentity(userDocument));
                 }
                 catch (JsonException ex)
                 {
