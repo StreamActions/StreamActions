@@ -191,6 +191,8 @@ namespace StreamActions.Http.ConfigWizard
                 }
             }
 
+            //TODO: Update Settings
+
             return sContent;
         }
 
@@ -226,6 +228,16 @@ namespace StreamActions.Http.ConfigWizard
             if (Program.Settings.WSUseSsl)
             {
                 sContent = sContent.Replace("id=\"WsUseSsl\"", "id=\"WsUseSsl\" checked=\"checked\"", StringComparison.Ordinal);
+            }
+
+            if (Program.Settings.ShowDebugMessages)
+            {
+                sContent = sContent.Replace("id=\"ShowDebugMessages\"", "id=\"ShowDebugMessages\" checked=\"checked\"", StringComparison.Ordinal);
+            }
+
+            if (Program.Settings.SendExceptions)
+            {
+                sContent = sContent.Replace("id=\"SendExceptions\"", "id=\"SendExceptions\" checked=\"checked\"", StringComparison.Ordinal);
             }
 
             string channelJoinList = "";

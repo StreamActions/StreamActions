@@ -517,6 +517,33 @@
                 </tr>
             </table>
         </fieldset>
+        <fieldset>
+            <legend>Miscellaneous Settings</legend>
+            <table style="border: 0;">
+                <tr>
+                    <td id="ShowDebugMessagesLabel">
+                        <label for="ShowDebugMessages">Show Debug Messages:</label>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="ShowDebugMessages" id="ShowDebugMessages" />
+                    </td>
+                    <td style="font-style: italic;">
+                        Whether debugging messages should be sent to the console
+                    </td>
+                </tr>
+                <tr>
+                    <td id="SendExceptionsLabel">
+                        <label for="SendExceptions">Send Exceptions:</label>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="SendExceptions" id="SendExceptions" />
+                    </td>
+                    <td style="font-style: italic;">
+                        Whether exceptions should be sent to the remote Exceptionless server, operated by the StreamActions team
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
         <br />
         <input type="submit" value="Save" />
     </form>

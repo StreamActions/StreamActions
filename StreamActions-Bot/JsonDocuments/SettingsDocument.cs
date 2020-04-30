@@ -94,6 +94,16 @@ namespace StreamActions.JsonDocuments
         internal string GlobalCulture { get; set; } = "en-US";
 
         /// <summary>
+        /// Whether exceptions should be sent to the remote Exceptionless server.
+        /// </summary>
+        internal bool SendExceptions { get; set; } = true;
+
+        /// <summary>
+        /// Whether debugging messages should be sent to the console.
+        /// </summary>
+        internal bool ShowDebugMessages { get; set; } = false;
+
+        /// <summary>
         /// The Client ID for the Twitch developer app.
         /// </summary>
         internal string TwitchApiClientId { get; set; } = "";
