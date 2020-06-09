@@ -375,7 +375,7 @@ namespace StreamActions.Plugins
         /// <returns>The document settings.</returns>
         internal static async Task<ModerationDocument> GetFilterDocumentForChannel(string channelId)
         {
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("moderation");
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("chatmoderator");
 
             FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(m => m.ChannelId, channelId);
 
