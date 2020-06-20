@@ -121,14 +121,14 @@ namespace StreamActions.Plugins
             List<object> values = new List<object>();
             Dictionary<string, object> dsource;
 
-            if (source is Dictionary<string, string>)
+            if (source is Dictionary<string, string> dictionary)
             {
-                dsource = ((Dictionary<string, string>)source).ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value);
+                dsource = dictionary.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value);
             }
-            else if (source is List<string>)
+            else if (source is List<string> list)
             {
                 int i = 0;
-                dsource = ((List<string>)source).ToDictionary(_ => i++.ToString(CultureInfo.InvariantCulture), s => (object)s);
+                dsource = list.ToDictionary(_ => i++.ToString(CultureInfo.InvariantCulture), s => (object)s);
             }
             else
             {
@@ -220,7 +220,7 @@ namespace StreamActions.Plugins
                         using FileStream fs = File.OpenRead(f);
                         document.Merge(await JsonSerializer.DeserializeAsync<I18nDocument>(fs));
                     }
-                    catch (JsonException ex) { _ = ex.LineNumber; }
+                    catch (JsonException) { }
                 }
             }
 

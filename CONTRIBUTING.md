@@ -29,7 +29,7 @@ The following is a set of guidelines and rules for contributing to StreamActions
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the [StreamActions-Bot Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [streamactionshelp@gmail.com](mailto:streamactionshelp@gmail.com).
+This project and everyone participating in it is governed by the [StreamActions-Bot Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to _community /AT streamactions /DOT hopto /DOT org_.
 
 ## I don't want to read this whole thing I just have a question!!!
 

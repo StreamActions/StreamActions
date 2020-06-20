@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-Report vulnerabilities by emailing us at [streamactionshelp@gmail.com](mailto:streamactionshelp@gmail.com?subject=%5BSECURITY%5D). Please put **[SECURITY]** in the subject to grab our attention.
+Report vulnerabilities by emailing us at _security /AT streamactions /DOT hopto /DOT org_. Please put **[SECURITY]** in the subject to grab our attention.
 
 We will try our best to reach out to you quickly, confirm the issue, reproduce it, and work on a fix.
 

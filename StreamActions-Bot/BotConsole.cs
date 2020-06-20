@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Exceptionless;
+using System;
 
 /// <summary>
 /// Contains members that handle console output.
@@ -86,7 +87,7 @@ namespace StreamActions.BotConsole
         #region Public Methods
 
         /// <summary>
-        /// Sendss the exception to the remote Exceptionless server, if enabled.
+        /// Sends the exception to the remote Exceptionless server, if enabled.
         /// </summary>
         /// <param name="e">The exception that was thrown.</param>
         /// <param name="data">Any extra data that needs to be sent to the remote Exceptionless server.</param>
@@ -102,7 +103,7 @@ namespace StreamActions.BotConsole
                 data = "N/A";
             }
 
-            //TODO: Send to Exceptionless, if enabled
+            e.ToExceptionless().AddObject(data, "Data").Submit();
         }
 
         /// <summary>

@@ -101,11 +101,6 @@ namespace StreamActions
         #region Public Events
 
         /// <summary>
-        /// Fires when a subscription is gifted  and anonymously in chat
-        /// </summary>
-        public event EventHandler<OnAnonGiftedSubscriptionArgs> OnAnonGiftedSubscription;
-
-        /// <summary>
         /// Fires when the library detects another channel has started hosting the broadcaster's stream. MUST BE CONNECTED AS BROADCASTER.
         /// </summary>
         public event EventHandler<OnBeingHostedArgs> OnBeingHosted;
@@ -476,7 +471,6 @@ namespace StreamActions
 
             this._twitchClient = new TwitchClient(webSocketClient);
             this._twitchClient.Initialize(credentials);
-            this._twitchClient.OnAnonGiftedSubscription += this.TwitchClient_OnAnonGiftedSubscription;
             this._twitchClient.OnBeingHosted += this.TwitchClient_OnBeingHosted;
             this._twitchClient.OnChannelStateChanged += this.TwitchClient_OnChannelStateChanged;
             this._twitchClient.OnChatCleared += this.TwitchClient_OnChatCleared;
@@ -525,13 +519,6 @@ namespace StreamActions
         #endregion Private Constructors
 
         #region Private Event Passthroughs
-
-        /// <summary>
-        /// Passes <see cref="OnAnonGiftedSubscription"/> events down to subscribed plugins.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="OnAnonGiftedSubscriptionArgs"/> object.</param>
-        private void TwitchClient_OnAnonGiftedSubscription(object sender, OnAnonGiftedSubscriptionArgs e) => this.OnAnonGiftedSubscription?.Invoke(this, e);
 
         /// <summary>
         /// Passes <see cref="OnBeingHosted"/> events down to subscribed plugins.
