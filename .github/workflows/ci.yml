@@ -3,20 +3,13 @@ on:
   push:
     branches:
       - '*'
-    tags:
-      - '*'
   pull_request:
     branches:
       - '*'
-    tags:
-      - '*'
 jobs:
   buildtest:
-    name: Test build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+    name: Test build on ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
