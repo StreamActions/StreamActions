@@ -142,11 +142,11 @@ namespace StreamActions.Http
 
             header += _endl;
 
-            await stream.WriteAsync(Encoding.UTF8.GetBytes(header));
+            await stream.WriteAsync(Encoding.UTF8.GetBytes(header)).ConfigureAwait(false);
 
             if (content.Length > 0)
             {
-                await stream.WriteAsync(content);
+                await stream.WriteAsync(content).ConfigureAwait(false);
             }
 
             if (isClosing)

@@ -75,21 +75,14 @@ namespace StreamActions.Plugin
         /// </summary>
         /// <param name="b">A ModerationResult to compare.</param>
         /// <returns><c>true</c> if <paramref name="b"/> is a harsher ModerationResult.</returns>
-        public bool IsHarsher(ModerationResult b) => b is null || this.Punishment.Equals(ModerationPunishment.Ban)
-                ? false
-                : b.Punishment.Equals(ModerationPunishment.Ban)
-                ? true
-                : b.Punishment.Equals(ModerationPunishment.Timeout) && b.TimeoutSeconds > this.TimeoutSeconds
-                ? true
-                : this.Punishment.Equals(ModerationPunishment.Timeout)
-                ? false
-                : this.Punishment.Equals(ModerationPunishment.Purge)
-                ? false
-                : b.Punishment.Equals(ModerationPunishment.Purge)
-                ? true
-                : this.Punishment.Equals(ModerationPunishment.Delete)
-                ? false
-                : b.Punishment.Equals(ModerationPunishment.Delete);
+        public bool IsHarsher(ModerationResult b) => !(b is null) && !this.Punishment.Equals(ModerationPunishment.Ban)
+            && (b.Punishment.Equals(ModerationPunishment.Ban)
+            || ((b.Punishment.Equals(ModerationPunishment.Timeout) && b.TimeoutSeconds > this.TimeoutSeconds)
+            || (!this.Punishment.Equals(ModerationPunishment.Timeout)
+            && (!this.Punishment.Equals(ModerationPunishment.Purge)
+            && (b.Punishment.Equals(ModerationPunishment.Purge)
+            || (!this.Punishment.Equals(ModerationPunishment.Delete)
+            && b.Punishment.Equals(ModerationPunishment.Delete)))))));
 
         #endregion Public Methods
 

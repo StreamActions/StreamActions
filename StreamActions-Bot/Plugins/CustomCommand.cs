@@ -128,6 +128,23 @@ namespace StreamActions.Plugins
         #region Private Methods
 
         /// <summary>
+        /// Gets the user level from the argument in the command.
+        /// </summary>
+        /// <param name="tag">One of the user level tags below.</param>
+        /// <returns>The user level.</returns>
+        private static UserLevels GetUserLevelFromTag(string tag) => tag switch
+        {
+            "-b" => UserLevels.Broadcaster,
+            "-c" => UserLevels.Broadcaster,
+            "-tf" => UserLevels.TwitchStaff,
+            "-ta" => UserLevels.TwitchAdmin,
+            "-m" => UserLevels.Moderator,
+            "-s" => UserLevels.Subscriber,
+            "-v" => UserLevels.VIP,
+            _ => UserLevels.Viewer
+        };
+
+        /// <summary>
         /// Method called when someone adds a new custom command.
         /// Syntax for the command is the following: !command add [command] [permission] [response] - !command add !social -m Follow my Twitter!
         /// </summary>
@@ -149,7 +166,7 @@ namespace StreamActions.Plugins
 
                 if (!await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                 {
-                    UserLevels userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
+                    UserLevels userLevel = GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
                     string response = commandMatch.Groups["response"].Value;
 
                     // TODO: Register the custom role
@@ -254,7 +271,7 @@ namespace StreamActions.Plugins
 
                 if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                 {
-                    UserLevels userLevel = this.GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
+                    UserLevels userLevel = GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
                     string response = commandMatch.Groups["response"].Value;
 
                     IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
@@ -389,23 +406,6 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, Removes a custom command. Usage: {CommandPrefix}command remove {CommandPrefix}[command]").ConfigureAwait(false));
             }
         }
-
-        /// <summary>
-        /// Gets the user level from the argument in the command.
-        /// </summary>
-        /// <param name="tag">One of the user level tags below.</param>
-        /// <returns>The user level.</returns>
-        private UserLevels GetUserLevelFromTag(string tag) => tag switch
-        {
-            "-b" => UserLevels.Broadcaster,
-            "-c" => UserLevels.Broadcaster,
-            "-tf" => UserLevels.TwitchStaff,
-            "-ta" => UserLevels.TwitchAdmin,
-            "-m" => UserLevels.Moderator,
-            "-s" => UserLevels.Subscriber,
-            "-v" => UserLevels.VIP,
-            _ => UserLevels.Viewer
-        };
 
         #endregion Private Methods
     }

@@ -218,7 +218,7 @@ namespace StreamActions.Plugins
                     try
                     {
                         using FileStream fs = File.OpenRead(f);
-                        document.Merge(await JsonSerializer.DeserializeAsync<I18nDocument>(fs));
+                        document.Merge(await JsonSerializer.DeserializeAsync<I18nDocument>(fs).ConfigureAwait(false));
                     }
                     catch (JsonException) { }
                 }

@@ -211,8 +211,7 @@ namespace StreamActions.Plugins
             }
 
             return !string.IsNullOrWhiteSpace(permissionName)
-                ? await HasPermission(userDocument.PermissionGroupMembership, permissionName.Replace(' ', '_').ToLowerInvariant()).ConfigureAwait(false)
-                : false;
+                && await HasPermission(userDocument.PermissionGroupMembership, permissionName.Replace(' ', '_').ToLowerInvariant()).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -645,7 +644,7 @@ namespace StreamActions.Plugins
         /// Adds a user to a permission group.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void AddUserToGroup(ChatCommand command)
+        private static async void AddUserToGroup(ChatCommand command)
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
@@ -696,7 +695,7 @@ namespace StreamActions.Plugins
         /// Creates a new permission group in the channel.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void CreateGroup(ChatCommand command)
+        private static async void CreateGroup(ChatCommand command)
         {
             string groupName = command.ArgumentsAsList.Count > 3 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[3], StringComparison.Ordinal)) : null;
 
@@ -745,7 +744,7 @@ namespace StreamActions.Plugins
         /// Allows a permission to users of the specified permission group.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void GroupAllowPermission(ChatCommand command)
+        private static async void GroupAllowPermission(ChatCommand command)
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
@@ -794,7 +793,7 @@ namespace StreamActions.Plugins
         /// Explicitly denies a permission to users of the specified permission group.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void GroupDenyPermission(ChatCommand command)
+        private static async void GroupDenyPermission(ChatCommand command)
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
@@ -843,7 +842,7 @@ namespace StreamActions.Plugins
         /// Sets the specified permission to be inherited in the permission group.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void GroupInheritPermission(ChatCommand command)
+        private static async void GroupInheritPermission(ChatCommand command)
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
@@ -892,7 +891,7 @@ namespace StreamActions.Plugins
         /// Lists the current permissions of the specified permission group.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void GroupListPermissions(ChatCommand command)
+        private static async void GroupListPermissions(ChatCommand command)
         {
             string permissionNames = "";
             int numPage = 1;
@@ -999,7 +998,7 @@ namespace StreamActions.Plugins
         /// Lists the permission groups of the channel.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void ListGroups(ChatCommand command)
+        private static async void ListGroups(ChatCommand command)
         {
             string groupNames = "";
             int page = 1;
@@ -1058,7 +1057,7 @@ namespace StreamActions.Plugins
         /// Lists the groups that a user is a member of.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void ListUsersGroups(ChatCommand command)
+        private static async void ListUsersGroups(ChatCommand command)
         {
             if (command.ArgumentsAsList.IsNullWhiteSpaceOrOutOfRange(3))
             {
@@ -1158,139 +1157,10 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
-        /// Permission group management command. Allows CRUD of groups and their permissions.
-        /// </summary>
-        /// <param name="sender">The object that invoked the delegate.</param>
-        /// <param name="e">The chat command arguments.</param>
-        [BotnameChatCommand("permissions", "group", UserLevels.Broadcaster)]
-        private async void Permission_OnGroupCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList[2] ?? "usage").ToLowerInvariant())
-            {
-                case "create":
-                    this.CreateGroup(e.Command);
-                    break;
-
-                case "remove":
-                    this.RemoveGroup(e.Command);
-                    break;
-
-                case "list":
-                    this.ListGroups(e.Command);
-                    break;
-
-                case "allow":
-                    this.GroupAllowPermission(e.Command);
-                    break;
-
-                case "deny":
-                    this.GroupDenyPermission(e.Command);
-                    break;
-
-                case "inherit":
-                    this.GroupInheritPermission(e.Command);
-                    break;
-
-                case "listpermissions":
-                    this.GroupListPermissions(e.Command);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages custom permission groups. Usage: {CommandPrefix}{BotName} permissions group [create, remove, list, allow, deny, inherit, listpermissions]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// Main command. Just provides usage to get to the sub-commands.
-        /// </summary>
-        /// <param name="sender">The object that invoked the delegate.</param>
-        /// <param name="e">The chat command arguments.</param>
-        [BotnameChatCommand("permissions", UserLevels.Broadcaster)]
-        private async void Permission_OnMainCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!(await Can(e.Command, false, 1).ConfigureAwait(false)))
-            {
-                return;
-            }
-
-            TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "Usage", e.Command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = e.Command.ChatMessage.Username,
-                    Sender = e.Command.ChatMessage.Username,
-                    e.Command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Manages custom permissions. Usage: {CommandPrefix}{BotName} permissions [group, user]").ConfigureAwait(false));
-        }
-
-        /// <summary>
-        /// User permission group membership management command. Allows adding/removing users from permission groups.
-        /// </summary>
-        /// <param name="sender">The object that invoked the delegate.</param>
-        /// <param name="e">The chat command arguments.</param>
-        [BotnameChatCommand("permissions", "user", UserLevels.Broadcaster)]
-        private async void Permission_OnUserCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList[2] ?? "usage").ToLowerInvariant())
-            {
-                case "add":
-                    this.AddUserToGroup(e.Command);
-                    break;
-
-                case "remove":
-                    this.RemoveUserFromGroup(e.Command);
-                    break;
-
-                case "list":
-                    this.ListUsersGroups(e.Command);
-                    break;
-
-                case "effectivepermissions":
-                    this.UserEffectivePermissions(e.Command);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "UserUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages a user's custom permission group membership. Usage: {CommandPrefix}{BotName} permissions user [add, remove, list, effectivepermissions]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        /// <summary>
         /// Removes permission group from the channel.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void RemoveGroup(ChatCommand command)
+        private static async void RemoveGroup(ChatCommand command)
         {
             string groupName = command.ArgumentsAsList.Count > 3 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[3], StringComparison.Ordinal)) : null;
 
@@ -1339,7 +1209,7 @@ namespace StreamActions.Plugins
         /// Removes a user from a permission group.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void RemoveUserFromGroup(ChatCommand command)
+        private static async void RemoveUserFromGroup(ChatCommand command)
         {
             string groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
 
@@ -1390,7 +1260,7 @@ namespace StreamActions.Plugins
         /// Lists the effective permissions of the user.
         /// </summary>
         /// <param name="e">The chat command arguments.</param>
-        private async void UserEffectivePermissions(ChatCommand command)
+        private static async void UserEffectivePermissions(ChatCommand command)
         {
             if (command.ArgumentsAsList.IsNullWhiteSpaceOrOutOfRange(3))
             {
@@ -1474,7 +1344,7 @@ namespace StreamActions.Plugins
                     }
                     else
                     {
-                        d.IsDenied = d.IsDenied ? true : p.IsDenied;
+                        d.IsDenied = d.IsDenied || p.IsDenied;
                     }
                 }
             }
@@ -1524,6 +1394,135 @@ namespace StreamActions.Plugins
                     command.ChatMessage.DisplayName
                 },
                 "@{DisplayName}, Effective Permissions of {ToUser} [Page {Page} of {NumPage}]: {Permissions}").ConfigureAwait(false));
+        }
+
+        /// <summary>
+        /// Permission group management command. Allows CRUD of groups and their permissions.
+        /// </summary>
+        /// <param name="sender">The object that invoked the delegate.</param>
+        /// <param name="e">The chat command arguments.</param>
+        [BotnameChatCommand("permissions", "group", UserLevels.Broadcaster)]
+        private async void Permission_OnGroupCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            switch ((e.Command.ArgumentsAsList[2] ?? "usage").ToLowerInvariant())
+            {
+                case "create":
+                    CreateGroup(e.Command);
+                    break;
+
+                case "remove":
+                    RemoveGroup(e.Command);
+                    break;
+
+                case "list":
+                    ListGroups(e.Command);
+                    break;
+
+                case "allow":
+                    GroupAllowPermission(e.Command);
+                    break;
+
+                case "deny":
+                    GroupDenyPermission(e.Command);
+                    break;
+
+                case "inherit":
+                    GroupInheritPermission(e.Command);
+                    break;
+
+                case "listpermissions":
+                    GroupListPermissions(e.Command);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "GroupUsage", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages custom permission groups. Usage: {CommandPrefix}{BotName} permissions group [create, remove, list, allow, deny, inherit, listpermissions]").ConfigureAwait(false));
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Main command. Just provides usage to get to the sub-commands.
+        /// </summary>
+        /// <param name="sender">The object that invoked the delegate.</param>
+        /// <param name="e">The chat command arguments.</param>
+        [BotnameChatCommand("permissions", UserLevels.Broadcaster)]
+        private async void Permission_OnMainCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!(await Can(e.Command, false, 1).ConfigureAwait(false)))
+            {
+                return;
+            }
+
+            TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "Usage", e.Command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = e.Command.ChatMessage.Username,
+                    Sender = e.Command.ChatMessage.Username,
+                    e.Command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Manages custom permissions. Usage: {CommandPrefix}{BotName} permissions [group, user]").ConfigureAwait(false));
+        }
+
+        /// <summary>
+        /// User permission group membership management command. Allows adding/removing users from permission groups.
+        /// </summary>
+        /// <param name="sender">The object that invoked the delegate.</param>
+        /// <param name="e">The chat command arguments.</param>
+        [BotnameChatCommand("permissions", "user", UserLevels.Broadcaster)]
+        private async void Permission_OnUserCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            switch ((e.Command.ArgumentsAsList[2] ?? "usage").ToLowerInvariant())
+            {
+                case "add":
+                    AddUserToGroup(e.Command);
+                    break;
+
+                case "remove":
+                    RemoveUserFromGroup(e.Command);
+                    break;
+
+                case "list":
+                    ListUsersGroups(e.Command);
+                    break;
+
+                case "effectivepermissions":
+                    UserEffectivePermissions(e.Command);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("Permission", "UserUsage", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages a user's custom permission group membership. Usage: {CommandPrefix}{BotName} permissions user [add, remove, list, effectivepermissions]").ConfigureAwait(false));
+                    break;
+            }
         }
 
         #endregion Private Methods
