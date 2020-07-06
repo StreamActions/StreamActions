@@ -30,6 +30,7 @@ using StreamActions.Enums;
 using StreamActions.Database;
 using StreamActions.Plugins;
 using StreamActions.Database.Documents.Commands;
+using StreamActions.Database.Documents.Moderation;
 
 namespace StreamActions.Plugin
 {
@@ -359,12 +360,43 @@ namespace StreamActions.Plugin
         /// <param name="result">The result of the moderation.</param>
         /// <param name="document">The channel's moderation document.</param>
         /// <param name="message">The chat message.</param>
-        internal void PerformModerationAction(ModerationResult result, ModerationDocument document, ChatMessage message)
+        internal async void PerformModerationActionAsync(ModerationResult result, ModerationDocument document, ChatMessage message)
         {
+            IMongoCollection<ModerationLogDocument> logs = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationLogDocument>("moderationLogs");
+
+            FilterDefinitionBuilder<ModerationLogDocument> builder = Builders<ModerationLogDocument>.Filter;
+            FilterDefinition<ModerationLogDocument> filter = builder.Where(c => c.ChannelId == message.RoomId);
+
+            if (await logs.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+            {
+                await logs.InsertOneAsync(new ModerationLogDocument
+                {
+                    ChannelId = message.RoomId
+                }).ConfigureAwait(false);
+            }
+
+            UpdateDefinition<ModerationLogDocument> update = Builders<ModerationLogDocument>.Update.AddToSet(d => d.Entries, new ModerationLogEntryDocument
+            {
+                Message = message.Message,
+                MessageId = message.Id,
+                ModerationMessage = result.ModerationMessage,
+                ModerationReason = result.ModerationReason,
+                Punishment = result.Punishment,
+                TimeoutSeconds = result.TimeoutSeconds
+            });
+
+            _ = await logs.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            filter = builder.And(builder.Where(c => c.ChannelId == message.RoomId), builder.ElemMatch<ModerationLogEntryDocument>(c => c.Entries, e => e.MessageId == message.Id));
+
+            ModerationLogEntryDocument mle = await logs.Aggregate().Match(filter).Project<ModerationLogEntryDocument>(Builders<ModerationLogDocument>.Projection.Expression<ModerationLogEntryDocument>(d => d.Entries.FirstOrDefault(e => e.MessageId == message.Id))).SingleAsync().ConfigureAwait(false);
+
+            using IAsyncCursor<ModerationLogDocument> cursor = await logs.FindAsync(filter).ConfigureAwait(false);
+
             switch (result.Punishment)
             {
                 case ModerationPunishment.Ban:
-                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".ban " + message.Username + (!(result.ModerationReason is null) ? " " + result.ModerationReason : ""));
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".ban " + message.Username + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + mle.Id + "]");
                     break;
 
                 case ModerationPunishment.Delete:
@@ -372,11 +404,11 @@ namespace StreamActions.Plugin
                     break;
 
                 case ModerationPunishment.Timeout:
-                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " " + result.TimeoutSeconds + (!(result.ModerationReason is null) ? " " + result.ModerationReason : ""));
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " " + result.TimeoutSeconds + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + mle.Id + "]");
                     break;
 
                 case ModerationPunishment.Purge:
-                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " 1" + (!(result.ModerationReason is null) ? " " + result.ModerationReason : ""));
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " 1" + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + nle.Id + "]");
                     break;
             }
 
@@ -518,7 +550,7 @@ namespace StreamActions.Plugin
             {
                 if (harshestModeration.ShouldModerate)
                 {
-                    this.PerformModerationAction(harshestModeration, await ChatModerator.GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false), e.ChatMessage);
+                    this.PerformModerationActionAsync(harshestModeration, await ChatModerator.GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false), e.ChatMessage);
                 }
                 else
                 {

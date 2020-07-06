@@ -96,7 +96,7 @@ namespace StreamActions.Plugin
         #region Private Fields
 
         /// <summary>
-        /// Feild that backs the <see cref="Punishment"/> property.
+        /// Field that backs the <see cref="Punishment"/> property.
         /// </summary>
         private ModerationPunishment _punishment = ModerationPunishment.None;
 

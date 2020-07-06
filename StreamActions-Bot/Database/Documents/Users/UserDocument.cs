@@ -134,6 +134,15 @@ namespace StreamActions.Database.Documents.Users
 
             try
             {
+                CreateIndexModel<UserDocument> indexModel = new CreateIndexModel<UserDocument>(indexBuilder.Ascending(d => d.Id),
+                    new CreateIndexOptions { Name = "UserDocument_unique_Id", Unique = true });
+                _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
+            }
+            catch (MongoWriteConcernException)
+            { }
+
+            try
+            {
                 CreateIndexModel<UserDocument> indexModel = new CreateIndexModel<UserDocument>(indexBuilder.Ascending(d => d.PermissionGroupMembership),
                     new CreateIndexOptions { Name = "UserDocument_unique_PermissionGroupMembership", Unique = true });
                 _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);

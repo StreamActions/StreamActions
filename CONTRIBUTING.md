@@ -242,7 +242,7 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 To make following the C# styleguide easier, we recommend using [Visual Studio 2019](https://visualstudio.microsoft.com/) with the following extensions:
  * CodeMaid
  * License Header Manager
- * Microsoft Code Analysis 2019
+ * ~Microsoft Code Analysis 2019~
  * Trailing Whitespace Visualizer
  
  Our included _.editorconfig_ and _StreamActions.ruleset_ files will setup Visual Studio to guide you through these style requirements. Our included _CodeMaid.config_ will setup CodeMaid to correct some common issues on save.
