@@ -101,6 +101,14 @@ namespace StreamActions.Database.Documents.Commands
         public bool IsVisible { get; set; }
 
         /// <summary>
+        /// If this is a whisper command.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool IsWhisperCommand { get; set; }
+
+        /// <summary>
         /// The response for this command.
         /// </summary>
         [BsonElement]
@@ -127,7 +135,7 @@ namespace StreamActions.Database.Documents.Commands
 
             try
             {
-                CreateIndexModel<CommandDocument> indexModel = new CreateIndexModel<CommandDocument>(indexBuilder.Ascending(d => d.ChannelId).Ascending(d => d.Command),
+                CreateIndexModel<CommandDocument> indexModel = new CreateIndexModel<CommandDocument>(indexBuilder.Ascending(d => d.ChannelId).Ascending(d => d.IsWhisperCommand).Ascending(d => d.Command),
                     new CreateIndexOptions { Name = "CommandDocument_unique_ChannelId-Command", Unique = true });
                 _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
             }

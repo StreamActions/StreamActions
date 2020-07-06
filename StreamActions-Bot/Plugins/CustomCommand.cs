@@ -74,7 +74,7 @@ namespace StreamActions.Plugins
         {
             IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
-            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command.ToLowerInvariant());
+            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && !c.IsWhisperCommand && c.Command == command.ToLowerInvariant());
 
             if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
             {
@@ -95,7 +95,7 @@ namespace StreamActions.Plugins
         {
             IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
-            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId);
+            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && !c.IsWhisperCommand);
             using IAsyncCursor<CommandDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
 
             return await cursor.ToListAsync().ConfigureAwait(false);
@@ -261,7 +261,7 @@ namespace StreamActions.Plugins
 
                     // Update the document.
                     UpdateDefinition<CommandDocument> update = Builders<CommandDocument>.Update.Set(c => c.Response, response);
-                    FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == command);
+                    FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && !c.IsWhisperCommand && c.Command == command);
 
                     // Update permission if the user specified it.
                     if (!string.IsNullOrEmpty(commandMatch.Groups["userlevel"].Value))
@@ -340,7 +340,7 @@ namespace StreamActions.Plugins
                 {
                     IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
-                    FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && c.Command == command);
+                    FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && !c.IsWhisperCommand && c.Command == command);
 
                     _ = await collection.DeleteOneAsync(filter).ConfigureAwait(false);
                     //TODO: Unregister custom permission

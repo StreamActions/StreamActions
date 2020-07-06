@@ -165,13 +165,14 @@ namespace StreamActions.Plugin
         /// Loads the <see cref="CommandDocument"/> associated with the specified command, or creates one if it doesn't exist.
         /// </summary>
         /// <param name="channelId">The channel Id the command belongs to.</param>
+        /// <param name="isWhisperCommand">Whether this is a whisper command.</param>
         /// <param name="command">The command to lookup.</param>
         /// <returns>A <see cref="CommandDocument"/>.</returns>
-        public async Task<CommandDocument> LoadCommandAsync(string channelId, string command)
+        public async Task<CommandDocument> LoadCommandAsync(string channelId, bool isWhisperCommand, string command)
         {
             IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
-            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.Command == command);
+            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.IsWhisperCommand == isWhisperCommand && c.Command == command);
 
             if (await commands.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
             {
@@ -179,6 +180,7 @@ namespace StreamActions.Plugin
                 {
                     ChannelId = channelId,
                     Command = command,
+                    IsWhisperCommand = isWhisperCommand,
                     Cooldowns = new CommandCooldownDocument(),
                     UserLevel = this._defaultCommandPermissions[command]
                 }).ConfigureAwait(false);
@@ -531,7 +533,7 @@ namespace StreamActions.Plugin
                         {
                             if (chatCommand.ArgumentsAsList.Count > 1 && this._botnameChatCommandEventHandlers.TryGetValue((chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1]).ToLowerInvariant(), out eventHandler))
                             {
-                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1]).ToLowerInvariant()).ConfigureAwait(false);
+                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, false, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0] + " " + chatCommand.ArgumentsAsList[1]).ToLowerInvariant()).ConfigureAwait(false);
 
                                 if (!commandDocument.Cooldowns.IsOnCooldown(e.ChatMessage.UserId))
                                 {
@@ -541,7 +543,7 @@ namespace StreamActions.Plugin
                             }
                             else if (this._botnameChatCommandEventHandlers.TryGetValue(chatCommand.ArgumentsAsList[0].ToLowerInvariant(), out eventHandler))
                             {
-                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
+                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, false, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
 
                                 if (!commandDocument.Cooldowns.IsOnCooldown(e.ChatMessage.UserId))
                                 {
@@ -554,7 +556,7 @@ namespace StreamActions.Plugin
                         {
                             if (chatCommand.ArgumentsAsList.Count > 1 && this._chatCommandEventHandlers.TryGetValue((chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant(), out eventHandler))
                             {
-                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
+                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, false, (chatCommand.CommandText + " " + chatCommand.ArgumentsAsList[0]).ToLowerInvariant()).ConfigureAwait(false);
 
                                 if (!commandDocument.Cooldowns.IsOnCooldown(e.ChatMessage.UserId))
                                 {
@@ -564,7 +566,7 @@ namespace StreamActions.Plugin
                             }
                             else if (this._chatCommandEventHandlers.TryGetValue(chatCommand.CommandText.ToLowerInvariant(), out eventHandler))
                             {
-                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, chatCommand.CommandText.ToLowerInvariant()).ConfigureAwait(false);
+                                CommandDocument commandDocument = await this.LoadCommandAsync(e.ChatMessage.RoomId, false, chatCommand.CommandText.ToLowerInvariant()).ConfigureAwait(false);
 
                                 if (!commandDocument.Cooldowns.IsOnCooldown(e.ChatMessage.UserId))
                                 {

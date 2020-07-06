@@ -108,7 +108,7 @@ namespace StreamActions.Plugins
 
             IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
 
-            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == command.ChatMessage.RoomId && c.Command == cmdText);
+            FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == command.ChatMessage.RoomId && !c.IsWhisperCommand && c.Command == cmdText);
 
             using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
 
