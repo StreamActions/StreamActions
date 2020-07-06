@@ -7,6 +7,21 @@ namespace StreamActions
     {
         #region Public Methods
 
+        public static T GetElementAtOrDefault<T>(this List<T> source, int index, T defVal)
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (index < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            return source.Count > index ? source[index] : defVal;
+        }
+
         /// <summary>
         /// Determines if the string at the specified index of the <c>List&lt;string></c> is <c>null</c> or an empty string (""), or if the index is out of range.
         /// </summary>

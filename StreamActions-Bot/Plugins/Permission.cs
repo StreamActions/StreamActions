@@ -897,7 +897,7 @@ namespace StreamActions.Plugins
             int numPage = 1;
             string groupName;
 
-            if (int.TryParse(command.ArgumentsAsList[3] ?? "1", NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false), out int page))
+            if (int.TryParse(command.ArgumentsAsList.GetElementAtOrDefault(3, "1"), NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false), out int page))
             {
                 groupName = command.ArgumentsAsList.Count > 4 ? command.ArgumentsAsString.Substring(command.ArgumentsAsString.IndexOf(command.ArgumentsAsList[4], StringComparison.Ordinal)) : null;
             }
@@ -1011,7 +1011,7 @@ namespace StreamActions.Plugins
             long numGroups = await collection.CountDocumentsAsync(filter).ConfigureAwait(false);
             numPage = (int)Math.Ceiling(numGroups / _itemsPerPageD);
 
-            page = Math.Min(numPage, Math.Max(1, int.Parse(command.ArgumentsAsList[3] ?? "1", NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false))));
+            page = Math.Min(numPage, Math.Max(1, int.Parse(command.ArgumentsAsList.GetElementAtOrDefault(3, "1"), NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false))));
 
             using IAsyncCursor<PermissionGroupDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
 
@@ -1114,7 +1114,7 @@ namespace StreamActions.Plugins
             string groupNames = "";
             int numPage = 1;
 
-            if (!int.TryParse(command.ArgumentsAsList[4] ?? "1", NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false), out int page))
+            if (!int.TryParse(command.ArgumentsAsList.GetElementAtOrDefault(4, "1"), NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false), out int page))
             {
                 page = 1;
             }
@@ -1317,7 +1317,7 @@ namespace StreamActions.Plugins
             string permissionNames = "";
             int numPage = 1;
 
-            if (!int.TryParse(command.ArgumentsAsList[4] ?? "1", NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false), out int page))
+            if (!int.TryParse(command.ArgumentsAsList.GetElementAtOrDefault(4, "1"), NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false), out int page))
             {
                 page = 1;
             }
@@ -1409,7 +1409,7 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            switch ((e.Command.ArgumentsAsList[2] ?? "usage").ToLowerInvariant())
+            switch ((e.Command.ArgumentsAsList.GetElementAtOrDefault(2, "usage")).ToLowerInvariant())
             {
                 case "create":
                     CreateGroup(e.Command);
@@ -1492,7 +1492,7 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            switch ((e.Command.ArgumentsAsList[2] ?? "usage").ToLowerInvariant())
+            switch ((e.Command.ArgumentsAsList.GetElementAtOrDefault(2, "usage")).ToLowerInvariant())
             {
                 case "add":
                     AddUserToGroup(e.Command);
