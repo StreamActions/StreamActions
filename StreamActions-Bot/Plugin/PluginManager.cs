@@ -408,7 +408,7 @@ namespace StreamActions.Plugin
                     break;
 
                 case ModerationPunishment.Purge:
-                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " 1" + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + nle.Id + "]");
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " 1" + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + mle.Id + "]");
                     break;
             }
 
