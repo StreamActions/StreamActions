@@ -63,7 +63,7 @@ namespace StreamActions.Database
             MongoClientSettings settings = new MongoClientSettings
             {
                 AllowInsecureTls = Program.Settings.DBAllowInsecureTls,
-                ApplicationName = "StreamActions-Bot",
+                ApplicationName = "StreamActions",
                 ConnectionMode = ConnectionMode.Automatic,
                 ConnectTimeout = TimeSpan.FromSeconds(30),
                 GuidRepresentation = GuidRepresentation.Standard,

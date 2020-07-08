@@ -81,14 +81,14 @@ namespace StreamActions.Http.ConfigWizard
                     switch (queryParams["type"])
                     {
                         case "bot":
-                            CreatedFlow bflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions-Bot (Bot)", _broadcasterAuthScopes.Concat(_chatAuthScopes));
+                            CreatedFlow bflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions (Bot)", _broadcasterAuthScopes.Concat(_chatAuthScopes));
                             Program.TwitchApi.ThirdParty.AuthorizationFlow.BeginPingingStatus(bflow.Id);
                             writer.WriteString("Id", bflow.Id);
                             writer.WriteString("Url", bflow.Url);
                             break;
 
                         case "broadcaster":
-                            CreatedFlow cflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions-Bot (Broadcaster)", _broadcasterAuthScopes);
+                            CreatedFlow cflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions (Broadcaster)", _broadcasterAuthScopes);
                             Program.TwitchApi.ThirdParty.AuthorizationFlow.BeginPingingStatus(cflow.Id);
                             writer.WriteString("Id", cflow.Id);
                             writer.WriteString("Url", cflow.Url);

@@ -57,7 +57,7 @@ namespace StreamActions.Plugins
 
         public Guid PluginId => typeof(CustomCommand).GUID;
         public string PluginName => "CustomCommand";
-        public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
+        public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions");
         public string PluginVersion => "1.0.0";
 
         #endregion Public Properties

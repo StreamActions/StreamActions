@@ -91,7 +91,7 @@ namespace StreamActions.Plugins
 
         public Guid PluginId => typeof(I18n).GUID;
         public string PluginName => "I18n";
-        public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
+        public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions");
         public string PluginVersion => "1.0.0";
 
         #endregion Public Properties

@@ -62,7 +62,7 @@ namespace StreamActions.Plugins
 
         public string PluginName => "ChatModerator";
 
-        public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions-Bot");
+        public Uri PluginUri => new Uri("https://github.com/StreamActions/StreamActions");
 
         public string PluginVersion => "1.0.0";
 
