@@ -21,15 +21,6 @@ namespace StreamActions.Database
     /// </summary>
     public interface IDocument
     {
-        #region Public Properties
-
-        /// <summary>
-        /// The name of the collection that holds documents of this type.
-        /// </summary>
-        public static string CollectionName => "nil";
-
-        #endregion Public Properties
-
         #region Public Methods
 
         /// <summary>
