@@ -109,8 +109,8 @@ namespace StreamActions.Plugins
 
             // Set the last time the user sent a message.
             UserDocument document;
-
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            //TODO: Refactor Mongo
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, e.ChatMessage.UserId);
 
@@ -375,7 +375,8 @@ namespace StreamActions.Plugins
         /// <returns>The document settings.</returns>
         internal static async Task<ModerationDocument> GetFilterDocumentForChannel(string channelId)
         {
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("chatmoderator");
+            //TODO: Refactor Mongo
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
             FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(m => m.ChannelId, channelId);
 
@@ -410,7 +411,8 @@ namespace StreamActions.Plugins
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1307:Specify StringComparison", Justification = "Channel Id is stored as a string.")]
         private async Task<bool> UserHasWarning(ModerationDocument document, string userId)
         {
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            //TODO: Refactor Mongo
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, userId);
 
@@ -429,10 +431,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for any blacklisted phrases.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnBlacklistCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
             string toMatch;
@@ -460,10 +463,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for excessive use of caps.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnCapsCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
             string message = this.RemoveEmotesFromMessage(e.ChatMessage.Message, e.ChatMessage.EmoteSet);
@@ -504,10 +508,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for the use of the /me command on Twitch.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnColouredMessageCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
@@ -544,10 +549,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for excessive use of emotes.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnEmotesCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
@@ -584,10 +590,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for the use of a fake purge (<message-deleted>) variations.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnFakePurgeCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
@@ -624,10 +631,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for use of links.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnLinksCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
@@ -664,10 +672,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for lengthy messages.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnLongMessageCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
@@ -704,10 +713,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message someone sending too many messages at once or the same message over and over.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnOneManSpamCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
@@ -743,10 +753,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for excessive use of repeating characters in a message.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnRepetitionCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
@@ -786,10 +797,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for excessive use of symbols.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnSymbolsCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
@@ -829,10 +841,11 @@ namespace StreamActions.Plugins
         /// Method that will check the message for disruptive characters.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnMessageReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnZalgoCheck(object sender, OnMessageReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 

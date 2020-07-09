@@ -27,7 +27,7 @@ namespace StreamActions
             {
                 foreach (KeyValuePair<Guid, CommandCooldownDocument> kvp in _changedCooldowns)
                 {
-                    IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
 
                     FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.Id.Equals(kvp.Key));
 

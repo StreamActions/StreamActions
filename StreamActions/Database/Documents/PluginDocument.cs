@@ -31,6 +31,12 @@ namespace StreamActions.Database.Documents
         #region Public Properties
 
         /// <summary>
+        /// The name of the collection that holds documents of this type.
+        /// </summary>
+        [BsonIgnore]
+        public static string CollectionName => "plugins";
+
+        /// <summary>
         /// A List of ChannelIds where this plugin is enabled.
         /// </summary>
         [BsonElement]
@@ -53,7 +59,7 @@ namespace StreamActions.Database.Documents
 
         public async void Initialize()
         {
-            IMongoCollection<PluginDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PluginDocument>("plugins");
+            IMongoCollection<PluginDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PluginDocument>(CollectionName);
             IndexKeysDefinitionBuilder<PluginDocument> indexBuilder = Builders<PluginDocument>.IndexKeys;
 
             try

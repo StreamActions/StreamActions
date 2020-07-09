@@ -72,7 +72,7 @@ namespace StreamActions.Plugins
         /// <returns>The <see cref="CommandDocument"/> for the command, if it exists; <c>null</c> otherwise.</returns>
         public static async Task<CommandDocument> GetCustomCommandAsync(string channelId, string command)
         {
-            IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
 
             FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && !c.IsWhisperCommand && c.Command == command.ToLowerInvariant());
 
@@ -93,7 +93,7 @@ namespace StreamActions.Plugins
         /// <returns>A List of <see cref="CommandDocument"/>.</returns>
         public static async Task<List<CommandDocument>> ListCustomCommandsAsync(string channelId)
         {
-            IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
 
             FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && !c.IsWhisperCommand);
             using IAsyncCursor<CommandDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
@@ -149,7 +149,7 @@ namespace StreamActions.Plugins
         /// Syntax for the command is the following: !command add [command] [permission] [response] - !command add !social -m Follow my Twitter!
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnChatCommandReceivedArgs"/> object.</param>
         [ChatCommand("command", "add", UserLevels.Moderator)]
         private async void CustomCommand_OnAddCommand(object sender, OnChatCommandReceivedArgs e)
         {
@@ -171,7 +171,7 @@ namespace StreamActions.Plugins
 
                     // TODO: Register the custom role
 
-                    IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
 
                     CommandDocument commandDocument = new CommandDocument
                     {
@@ -233,9 +233,10 @@ namespace StreamActions.Plugins
         /// Method called when someone executes a custom command.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnChatCommandReceivedArgs"/> object.</param>
         private async void CustomCommand_OnCustomCommand(object sender, OnChatCommandReceivedArgs e)
         {
+            //TODO: Refactor Mongo
             CommandDocument commandDocument = await GetCustomCommandAsync(e.Command.ChatMessage.RoomId, e.Command.CommandText).ConfigureAwait(false);
 
             if (!(commandDocument is null))
@@ -254,7 +255,7 @@ namespace StreamActions.Plugins
         /// Syntax for the command is the following: !command modify [command] [permission] [response] - !command modify !social -m Follow my Twitter!
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnChatCommandReceivedArgs"/> object.</param>
         [ChatCommand("command", "modify", UserLevels.Moderator)]
         private async void CustomCommand_OnEditCommand(object sender, OnChatCommandReceivedArgs e)
         {
@@ -274,7 +275,7 @@ namespace StreamActions.Plugins
                     UserLevels userLevel = GetUserLevelFromTag(commandMatch.Groups["userlevel"].Value);
                     string response = commandMatch.Groups["response"].Value;
 
-                    IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
 
                     // Update the document.
                     UpdateDefinition<CommandDocument> update = Builders<CommandDocument>.Update.Set(c => c.Response, response);
@@ -338,7 +339,7 @@ namespace StreamActions.Plugins
         /// Method called when someone removes a custom command.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="TwitchLib.Client.Events.OnChatCommandReceivedArgs"/> object.</param>
+        /// <param name="e">An <see cref="OnChatCommandReceivedArgs"/> object.</param>
         [ChatCommand("command", "remove", UserLevels.Moderator)]
         private async void CustomCommand_OnRemoveCommand(object sender, OnChatCommandReceivedArgs e)
         {
@@ -355,7 +356,7 @@ namespace StreamActions.Plugins
 
                 if (await PluginManager.DoesCustomChatCommandExistAsync(e.Command.ChatMessage.RoomId, command).ConfigureAwait(false))
                 {
-                    IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+                    IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
 
                     FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == e.Command.ChatMessage.RoomId && !c.IsWhisperCommand && c.Command == command);
 

@@ -28,6 +28,12 @@ namespace StreamActions.Database.Documents.Users
         #region Public Properties
 
         /// <summary>
+        /// The name of the collection that holds documents of this type.
+        /// </summary>
+        [BsonIgnore]
+        public static string CollectionName => "authentications";
+
+        /// <summary>
         /// A bearer token that authenticates this user on the GraphQL WebSocket server.
         /// </summary>
         [BsonElement]
@@ -55,7 +61,7 @@ namespace StreamActions.Database.Documents.Users
 
         public async void Initialize()
         {
-            IMongoCollection<AuthenticationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<AuthenticationDocument>("authentications");
+            IMongoCollection<AuthenticationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<AuthenticationDocument>(CollectionName);
             IndexKeysDefinitionBuilder<AuthenticationDocument> indexBuilder = Builders<AuthenticationDocument>.IndexKeys;
 
             try

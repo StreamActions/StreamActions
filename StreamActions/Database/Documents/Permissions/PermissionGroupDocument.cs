@@ -32,6 +32,12 @@ namespace StreamActions.Database.Documents.Permissions
         #region Public Properties
 
         /// <summary>
+        /// The name of the collection that holds documents of this type.
+        /// </summary>
+        [BsonIgnore]
+        public static string CollectionName => "permissionGroups";
+
+        /// <summary>
         /// The <see cref="UserDocument.Id"/> of the channel this permission group belongs to.
         /// </summary>
         [BsonElement]
@@ -69,7 +75,7 @@ namespace StreamActions.Database.Documents.Permissions
 
         public async void Initialize()
         {
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(CollectionName);
             IndexKeysDefinitionBuilder<PermissionGroupDocument> indexBuilder = Builders<PermissionGroupDocument>.IndexKeys;
 
             try

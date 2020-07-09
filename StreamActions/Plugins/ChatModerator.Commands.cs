@@ -127,7 +127,8 @@ namespace StreamActions.Plugins
             // Update settings.
             if (!(document is null))
             {
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("chatmoderator");
+                //TODO: Refactor Mongo
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == e.Command.ChatMessage.RoomId);
 
@@ -189,6 +190,7 @@ namespace StreamActions.Plugins
                 return null;
             }
 
+            //TODO: Refactor Mongo
             ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
             document.LinkExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
 
@@ -257,6 +259,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.LinkTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
@@ -293,6 +296,7 @@ namespace StreamActions.Plugins
                         "Usage: {CommandPrefix}{BotName} moderation links timeout message [message]").ConfigureAwait(false));
                     return null;
                 }
+                //TODO: Refactor Mongo
 
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.LinkTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
@@ -331,6 +335,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.LinkTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -370,6 +375,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.LinkTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
 
@@ -454,6 +460,7 @@ namespace StreamActions.Plugins
                 return null;
             }
 
+            //TODO: Refactor Mongo
             ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
             document.LinkStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
 
@@ -522,6 +529,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.LinkWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
@@ -559,6 +567,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.LinkWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -596,6 +605,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.LinkWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -635,6 +645,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.LinkWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
 
@@ -717,6 +728,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.LinkWhitelist.Add(args[5]);
 
@@ -753,6 +765,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
 
                 string finder = document.LinkWhitelist.Find(u => u.Equals(args[5], StringComparison.OrdinalIgnoreCase));
@@ -792,6 +805,7 @@ namespace StreamActions.Plugins
             // Listing all whitelists.
             if (args[4].Equals("list", StringComparison.OrdinalIgnoreCase))
             {
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 string whitelists = "";
                 int numPages = (int)Math.Ceiling(document.LinkWhitelist.Count / (double)_itemsPerPage);
@@ -910,7 +924,8 @@ namespace StreamActions.Plugins
             // Update settings.
             if (!(document is null))
             {
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("chatmoderator");
+                //TODO: Refactor Mongo
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == e.Command.ChatMessage.RoomId);
 
@@ -972,6 +987,7 @@ namespace StreamActions.Plugins
                 return null;
             }
 
+            //TODO: Refactor Mongo
             ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
             document.CapExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
 
@@ -1040,6 +1056,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapMaximumPercentage = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
@@ -1078,6 +1095,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapMinimumMessageLength = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
@@ -1163,6 +1181,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
@@ -1200,6 +1219,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -1237,6 +1257,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -1276,6 +1297,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
 
@@ -1360,6 +1382,7 @@ namespace StreamActions.Plugins
                 return null;
             }
 
+            //TODO: Refactor Mongo
             ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
             document.CapStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
 
@@ -1428,6 +1451,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
@@ -1465,6 +1489,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -1502,6 +1527,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -1541,6 +1567,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.CapWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
 
@@ -1632,7 +1659,8 @@ namespace StreamActions.Plugins
             // Update settings.
             if (!(document is null))
             {
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("chatmoderator");
+                //TODO: Refactor Mongo
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == e.Command.ChatMessage.RoomId);
 
@@ -1694,6 +1722,7 @@ namespace StreamActions.Plugins
                 return null;
             }
 
+            //TODO: Refactor Mongo
             ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
             document.RepetitionExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
 
@@ -1768,6 +1797,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.RepetitionTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
@@ -1805,6 +1835,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.RepetitionTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -1842,6 +1873,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.RepetitionTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -1881,6 +1913,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.RepetitionTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
 
@@ -1965,6 +1998,7 @@ namespace StreamActions.Plugins
                 return null;
             }
 
+            //TODO: Refactor Mongo
             ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
             document.RepetitionStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
 
@@ -2033,6 +2067,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.RepetitionWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
@@ -2070,6 +2105,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.RepetitionWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -2107,6 +2143,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.RepetitionWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
@@ -2146,6 +2183,7 @@ namespace StreamActions.Plugins
                     return null;
                 }
 
+                //TODO: Refactor Mongo
                 ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
                 document.RepetitionWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
 

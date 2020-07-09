@@ -105,8 +105,8 @@ namespace StreamActions.Plugins
             }
 
             cmdText = cmdText.ToLowerInvariant();
-
-            IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            //TODO: Refactor Mongo
+            IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
 
             FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == command.ChatMessage.RoomId && !c.IsWhisperCommand && c.Command == cmdText);
 
@@ -142,7 +142,8 @@ namespace StreamActions.Plugins
         /// <returns><c>true</c> if the user has permission; <c>false</c> otherwise.</returns>
         public static async Task<bool> Can(string userId, string channelId, UserLevels userLevels, string permissionName = null)
         {
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            //TODO: Refactor Mongo
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.Id.Equals(userId, StringComparison.OrdinalIgnoreCase));
 
@@ -222,7 +223,8 @@ namespace StreamActions.Plugins
         /// <returns>The Guid, if found; <c>Guid.Empty</c> otherwise.</returns>
         public static async Task<Guid> GetGroupGuidAsync(string channelId, string groupName)
         {
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            //TODO: Refactor Mongo
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             FilterDefinition<PermissionGroupDocument> filter = Builders<PermissionGroupDocument>.Filter.Where(d => d.ChannelId == channelId && d.GroupName == groupName);
 
@@ -243,7 +245,8 @@ namespace StreamActions.Plugins
         /// <returns>The Id, if found; <c>null</c> otherwise.</returns>
         public static async Task<string> GetUserIdAsync(string userName)
         {
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            //TODO: Refactor Mongo
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.Login.Equals(userName, StringComparison.OrdinalIgnoreCase) || d.DisplayName.Equals(userName, StringComparison.OrdinalIgnoreCase));
 
@@ -270,31 +273,19 @@ namespace StreamActions.Plugins
                 return false;
             }
 
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
-            FilterDefinition<PermissionGroupDocument> filter = Builders<PermissionGroupDocument>.Filter.Where(d => permissionGroups.Contains(d.Id));
+            FilterDefinitionBuilder<PermissionGroupDocument> builder = Builders<PermissionGroupDocument>.Filter;
+            FilterDefinition<PermissionGroupDocument> filter = builder.And(builder.In(d => d.Id, permissionGroups), builder.ElemMatch(d => d.Permissions, e => e.PermissionName.Equals(permissionName.Replace(' ', '_').ToLowerInvariant(), StringComparison.OrdinalIgnoreCase)));
 
             if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
             {
                 return false;
             }
 
-            using IAsyncCursor<PermissionGroupDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+            filter = builder.And(builder.In(d => d.Id, permissionGroups), builder.ElemMatch(d => d.Permissions, e => e.PermissionName.Equals(permissionName.Replace(' ', '_').ToLowerInvariant(), StringComparison.OrdinalIgnoreCase) && e.IsDenied));
 
-            bool hasPermission = false;
-            bool isDenied = false;
-
-            await cursor.ForEachAsync(d =>
-            {
-                int i;
-                if ((i = d.Permissions.FindIndex(p => p.PermissionName.Equals(permissionName.Replace(' ', '_').ToLowerInvariant(), StringComparison.OrdinalIgnoreCase))) >= 0)
-                {
-                    hasPermission = true;
-                    isDenied = isDenied || d.Permissions[i].IsDenied;
-                }
-            }).ConfigureAwait(false);
-
-            return hasPermission && !isDenied;
+            return await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0;
         }
 
         /// <summary>
@@ -365,7 +356,7 @@ namespace StreamActions.Plugins
                 return false;
             }
 
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             FilterDefinition<PermissionGroupDocument> filter = Builders<PermissionGroupDocument>.Filter.Where(d => d.Id == groupId);
 
@@ -407,7 +398,7 @@ namespace StreamActions.Plugins
                 return false;
             }
 
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             if (!(await GetGroupGuidAsync(channelId, groupName).ConfigureAwait(false)).Equals(Guid.Empty))
             {
@@ -431,8 +422,8 @@ namespace StreamActions.Plugins
             {
                 return false;
             }
-
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            //TODO: Refactor Mongo
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.Id.Equals(userId, StringComparison.OrdinalIgnoreCase));
 
@@ -470,8 +461,8 @@ namespace StreamActions.Plugins
             {
                 return false;
             }
-
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            //TODO: Refactor Mongo
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             FilterDefinition<PermissionGroupDocument> filter = Builders<PermissionGroupDocument>.Filter.Where(d => d.Permissions.Exists(p => p.PermissionName.Equals(permissionName.Replace(' ', '_').ToLowerInvariant(), StringComparison.OrdinalIgnoreCase)));
 
@@ -499,8 +490,8 @@ namespace StreamActions.Plugins
             {
                 return false;
             }
-
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            //TODO: Refactor Mongo
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             FilterDefinition<PermissionGroupDocument> filter = Builders<PermissionGroupDocument>.Filter.Where(d => d.Id == groupId);
 
@@ -539,7 +530,7 @@ namespace StreamActions.Plugins
                 return false;
             }
 
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             FilterDefinition<PermissionGroupDocument> filter = Builders<PermissionGroupDocument>.Filter.Where(d => d.Id == groupId);
 
@@ -560,8 +551,8 @@ namespace StreamActions.Plugins
             {
                 return false;
             }
-
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("permissionGroups");
+            //TODO: Refactor Mongo
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.PermissionGroupMembership.Contains(groupId));
 
@@ -589,8 +580,8 @@ namespace StreamActions.Plugins
             {
                 return false;
             }
-
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            //TODO: Refactor Mongo
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.Id.Equals(userId, StringComparison.OrdinalIgnoreCase));
 
@@ -924,7 +915,7 @@ namespace StreamActions.Plugins
 
             Guid groupId = await GetGroupGuidAsync(command.ChatMessage.RoomId, groupName).ConfigureAwait(false);
 
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             FilterDefinition<PermissionGroupDocument> filter = Builders<PermissionGroupDocument>.Filter.Where(d => d.Id == groupId);
 
@@ -1003,8 +994,8 @@ namespace StreamActions.Plugins
             string groupNames = "";
             int page = 1;
             int numPage = 1;
-
-            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            //TODO: Refactor Mongo
+            IMongoCollection<PermissionGroupDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             FilterDefinition<PermissionGroupDocument> filter = Builders<PermissionGroupDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
@@ -1074,7 +1065,7 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.Login.Equals(command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase) || d.DisplayName.Equals(command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase));
 
@@ -1118,8 +1109,8 @@ namespace StreamActions.Plugins
             {
                 page = 1;
             }
-
-            IMongoCollection<PermissionGroupDocument> collection2 = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            //TODO: Refactor Mongo
+            IMongoCollection<PermissionGroupDocument> collection2 = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             FilterDefinition<PermissionGroupDocument> filter2 = Builders<PermissionGroupDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId && userDocument.PermissionGroupMembership.Contains(d.Id));
 
@@ -1277,7 +1268,7 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.Login.Equals(command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase) || d.DisplayName.Equals(command.ArgumentsAsList[3], StringComparison.OrdinalIgnoreCase));
 
@@ -1321,8 +1312,8 @@ namespace StreamActions.Plugins
             {
                 page = 1;
             }
-
-            IMongoCollection<PermissionGroupDocument> collection2 = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>("permissionGroups");
+            //TODO: Refactor Mongo
+            IMongoCollection<PermissionGroupDocument> collection2 = DatabaseClient.Instance.MongoDatabase.GetCollection<PermissionGroupDocument>(PermissionGroupDocument.CollectionName);
 
             FilterDefinition<PermissionGroupDocument> filter2 = Builders<PermissionGroupDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId && userDocument.PermissionGroupMembership.Contains(d.Id));
 

@@ -27,6 +27,12 @@ namespace StreamActions.Database.Documents.Users
         #region Public Properties
 
         /// <summary>
+        /// The name of the collection that holds documents of this type.
+        /// </summary>
+        [BsonIgnore]
+        public static string CollectionName => "userRelationships";
+
+        /// <summary>
         /// The <see cref="UserRelationshipDocument.Id"/> of the channel whose relationships are expressed in this document.
         /// </summary>
         [BsonElement]

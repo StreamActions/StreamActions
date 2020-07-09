@@ -122,7 +122,7 @@ namespace StreamActions.GraphQL
                         PropertyNameCaseInsensitive = true,
                     });
 
-                    IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+                    IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
                     FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(d => d.Id.Equals(this._userContext[e.IpPort], StringComparison.OrdinalIgnoreCase));
 

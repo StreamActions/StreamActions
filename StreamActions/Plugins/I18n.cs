@@ -249,7 +249,7 @@ namespace StreamActions.Plugins
                 throw new ArgumentNullException(nameof(culture));
             }
 
-            return Get(category, key, this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(culture.Name, I18nDocument.Empty), defVal);
+            return Get(category, key, this._i18nDocuments.GetValueOrDefault(culture.Name, I18nDocument.Empty), defVal);
         }
 
         /// <summary>
@@ -314,7 +314,8 @@ namespace StreamActions.Plugins
         /// <returns>The name of the current culture; <see cref="GlobalCulture"/> if the channel is not found or hasn't set a culture.</returns>
         public async Task<string> GetCurrentCultureNameAsync(string channelId)
         {
-            IMongoCollection<UserDocument> users = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            //TODO: Refactor Mongo
+            IMongoCollection<UserDocument> users = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.Id == channelId);
             using IAsyncCursor<UserDocument> cursor = await users.FindAsync(filter).ConfigureAwait(false);
 
@@ -374,7 +375,7 @@ namespace StreamActions.Plugins
         /// <summary>
         /// Regex for <see cref="FormatWith(string, IFormatProvider, dynamic)"/>.
         /// </summary>
-        private static readonly Regex _formatWithRegex = new System.Text.RegularExpressions.Regex(@"(?<start>\{)+(?<property>[\w\.\[\]]+)(?<format>:[^}]+)?(?<end>\})+", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+        private static readonly Regex _formatWithRegex = new Regex(@"(?<start>\{)+(?<property>[\w\.\[\]]+)(?<format>:[^}]+)?(?<end>\})+", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
         /// <summary>
         /// An <see cref="I18nDocument"/> containing all currently loaded i18n data.
@@ -405,7 +406,7 @@ namespace StreamActions.Plugins
         private async void ChangeCultureAsync(string channelId, string culture, bool useUserOverride = false)
         {
             CultureInfo newCulture = new CultureInfo(culture, useUserOverride);
-            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(await this.GetCurrentCultureNameAsync(channelId).ConfigureAwait(false), I18nDocument.Empty);
+            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault(await this.GetCurrentCultureNameAsync(channelId).ConfigureAwait(false), I18nDocument.Empty);
 
             OnCultureChangedArgs args = new OnCultureChangedArgs
             {
@@ -424,7 +425,7 @@ namespace StreamActions.Plugins
                 _ = this._loadedCultures.TryAdd(newCulture.Name, newCulture);
             }
 
-            IMongoCollection<UserDocument> users = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            IMongoCollection<UserDocument> users = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
             UpdateDefinition<UserDocument> userUpdate = Builders<UserDocument>.Update.Set(u => u.CurrentCulture, newCulture.Name);
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.Id == channelId);
             _ = await users.UpdateOneAsync(filter, userUpdate).ConfigureAwait(false);
@@ -441,7 +442,7 @@ namespace StreamActions.Plugins
         private async void ChangeGlobalCultureAsync(string culture, bool useUserOverride = false)
         {
             CultureInfo newCulture = new CultureInfo(culture, useUserOverride);
-            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault<string, I18nDocument>(this._globalCulture.Name, I18nDocument.Empty);
+            I18nDocument oldDocument = this._i18nDocuments.GetValueOrDefault(this._globalCulture.Name, I18nDocument.Empty);
 
             OnCultureChangedArgs args = new OnCultureChangedArgs
             {

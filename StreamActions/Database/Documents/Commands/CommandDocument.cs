@@ -32,6 +32,12 @@ namespace StreamActions.Database.Documents.Commands
         #region Public Properties
 
         /// <summary>
+        /// The name of the collection that holds documents of this type.
+        /// </summary>
+        [BsonIgnore]
+        public static string CollectionName => "commands";
+
+        /// <summary>
         /// When is this command available to be used.
         /// </summary>
         [BsonElement]
@@ -130,7 +136,7 @@ namespace StreamActions.Database.Documents.Commands
 
         public async void Initialize()
         {
-            IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IMongoCollection<CommandDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CollectionName);
             IndexKeysDefinitionBuilder<CommandDocument> indexBuilder = Builders<CommandDocument>.IndexKeys;
 
             try

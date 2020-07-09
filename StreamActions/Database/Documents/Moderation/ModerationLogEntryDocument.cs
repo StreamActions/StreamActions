@@ -15,7 +15,6 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Driver;
 using StreamActions.Enums;
 using StreamActions.GraphQL.Connections;
 using System;
@@ -23,7 +22,7 @@ using System.Globalization;
 
 namespace StreamActions.Database.Documents.Moderation
 {
-    public class ModerationLogEntryDocument : ICursorable, IDocument
+    public class ModerationLogEntryDocument : ICursorable
     {
         #region Public Properties
 
@@ -83,21 +82,6 @@ namespace StreamActions.Database.Documents.Moderation
         #region Public Methods
 
         public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
-
-        public async void Initialize()
-        {
-            IMongoCollection<ModerationLogEntryDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationLogEntryDocument>("moderationLogs");
-            IndexKeysDefinitionBuilder<ModerationLogEntryDocument> indexBuilder = Builders<ModerationLogEntryDocument>.IndexKeys;
-
-            try
-            {
-                CreateIndexModel<ModerationLogEntryDocument> indexModel = new CreateIndexModel<ModerationLogEntryDocument>(indexBuilder.Ascending(d => d.Id),
-                    new CreateIndexOptions { Name = "ModerationLogEntryDocument_unique_Id", Unique = true });
-                _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
-            }
-            catch (MongoWriteConcernException)
-            { }
-        }
 
         #endregion Public Methods
     }

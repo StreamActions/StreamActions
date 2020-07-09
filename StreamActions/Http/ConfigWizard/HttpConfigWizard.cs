@@ -244,8 +244,8 @@ namespace StreamActions.Http.ConfigWizard
 
             if (Program.Settings.ChannelsToJoin.Count > 0)
             {
-                IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
-                IMongoCollection<AuthenticationDocument> collection2 = DatabaseClient.Instance.MongoDatabase.GetCollection<AuthenticationDocument>("authentications");
+                IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
+                IMongoCollection<AuthenticationDocument> collection2 = DatabaseClient.Instance.MongoDatabase.GetCollection<AuthenticationDocument>(AuthenticationDocument.CollectionName);
 
                 foreach (string channel in Program.Settings.ChannelsToJoin)
                 {

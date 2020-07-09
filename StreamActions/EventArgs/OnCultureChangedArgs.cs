@@ -21,7 +21,7 @@ using System.Globalization;
 namespace StreamActions.EventArgs
 {
     /// <summary>
-    /// Indicated that the <see cref="StreamActions.Plugins.I18n.CurrentCulture"/> or <see cref="StreamActions.Plugins.I18n.GlobalCulture"/> has changed,
+    /// Indicated that the <see cref="Plugins.I18n.CurrentCulture"/> or <see cref="Plugins.I18n.GlobalCulture"/> has changed,
     /// and provides a copy of the old culture.
     /// </summary>
     public class OnCultureChangedArgs
@@ -29,7 +29,7 @@ namespace StreamActions.EventArgs
         #region Public Properties
 
         /// <summary>
-        /// The channel whose culture was changed. <c>*</c> for the <see cref="StreamActions.Plugins.I18n.GlobalCulture"/>.
+        /// The channel whose culture was changed. <c>*</c> for the <see cref="Plugins.I18n.GlobalCulture"/>.
         /// </summary>
         public string Channel { get; set; }
 

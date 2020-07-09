@@ -25,6 +25,12 @@ namespace StreamActions.Database.Documents.Moderation
         #region Public Properties
 
         /// <summary>
+        /// The name of the collection that holds documents of this type.
+        /// </summary>
+        [BsonIgnore]
+        public static string CollectionName => "moderationLogs";
+
+        /// <summary>
         /// The <see cref="UserDocument.Id"/> of the channel this moderation log belongs to.
         /// </summary>
         [BsonElement]
@@ -44,7 +50,7 @@ namespace StreamActions.Database.Documents.Moderation
 
         public async void Initialize()
         {
-            IMongoCollection<ModerationLogDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationLogDocument>("moderationLogs");
+            IMongoCollection<ModerationLogDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationLogDocument>(CollectionName);
             IndexKeysDefinitionBuilder<ModerationLogDocument> indexBuilder = Builders<ModerationLogDocument>.IndexKeys;
 
             try

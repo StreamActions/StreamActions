@@ -32,6 +32,12 @@ namespace StreamActions.Database.Documents.Users
         #region Public Properties
 
         /// <summary>
+        /// The name of the collection that holds documents of this type.
+        /// </summary>
+        [BsonIgnore]
+        public static string CollectionName => "users";
+
+        /// <summary>
         /// The users <see cref="BotGlobal"/>.
         /// </summary>
         [BsonElement]
@@ -120,7 +126,7 @@ namespace StreamActions.Database.Documents.Users
 
         public async void Initialize()
         {
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>("users");
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(CollectionName);
             IndexKeysDefinitionBuilder<UserDocument> indexBuilder = Builders<UserDocument>.IndexKeys;
 
             try

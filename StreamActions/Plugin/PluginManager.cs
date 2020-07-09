@@ -171,7 +171,7 @@ namespace StreamActions.Plugin
         /// <returns>A <see cref="CommandDocument"/>.</returns>
         public async Task<CommandDocument> LoadCommandAsync(string channelId, bool isWhisperCommand, string command)
         {
-            IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>("commands");
+            IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
 
             FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.ChannelId == channelId && c.IsWhisperCommand == isWhisperCommand && c.Command == command);
 
@@ -362,14 +362,14 @@ namespace StreamActions.Plugin
         /// <param name="message">The chat message.</param>
         internal async void PerformModerationActionAsync(ModerationResult result, ModerationDocument document, ChatMessage message)
         {
-            IMongoCollection<ModerationLogDocument> logs = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationLogDocument>("moderationLogs");
+            IMongoCollection<ModerationLogDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationLogDocument>(ModerationLogDocument.CollectionName);
 
             FilterDefinitionBuilder<ModerationLogDocument> builder = Builders<ModerationLogDocument>.Filter;
             FilterDefinition<ModerationLogDocument> filter = builder.Where(c => c.ChannelId == message.RoomId);
 
-            if (await logs.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+            if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
             {
-                await logs.InsertOneAsync(new ModerationLogDocument
+                await collection.InsertOneAsync(new ModerationLogDocument
                 {
                     ChannelId = message.RoomId
                 }).ConfigureAwait(false);
@@ -385,13 +385,11 @@ namespace StreamActions.Plugin
                 TimeoutSeconds = result.TimeoutSeconds
             });
 
-            _ = await logs.UpdateOneAsync(filter, update).ConfigureAwait(false);
+            _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-            filter = builder.And(builder.Where(c => c.ChannelId == message.RoomId), builder.ElemMatch<ModerationLogEntryDocument>(c => c.Entries, e => e.MessageId == message.Id));
+            filter = builder.And(builder.Where(c => c.ChannelId == message.RoomId), builder.ElemMatch(c => c.Entries, e => e.MessageId == message.Id));
 
-            ModerationLogEntryDocument mle = await logs.Aggregate().Match(filter).Project<ModerationLogEntryDocument>(Builders<ModerationLogDocument>.Projection.Expression<ModerationLogEntryDocument>(d => d.Entries.FirstOrDefault(e => e.MessageId == message.Id))).SingleAsync().ConfigureAwait(false);
-
-            using IAsyncCursor<ModerationLogDocument> cursor = await logs.FindAsync(filter).ConfigureAwait(false);
+            ModerationLogEntryDocument mle = await collection.Aggregate().Match(filter).Project(Builders<ModerationLogDocument>.Projection.Expression(d => d.Entries.FirstOrDefault(e => e.MessageId == message.Id))).SingleAsync().ConfigureAwait(false);
 
             switch (result.Punishment)
             {

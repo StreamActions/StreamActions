@@ -28,6 +28,12 @@ namespace StreamActions.Database.Documents
         #region Main document Properties
 
         /// <summary>
+        /// The name of the collection that holds documents of this type.
+        /// </summary>
+        [BsonIgnore]
+        public static string CollectionName => "moderations";
+
+        /// <summary>
         /// Id of the channel these settings belong too.
         /// </summary>
         [BsonElement]
@@ -1168,7 +1174,7 @@ namespace StreamActions.Database.Documents
 
         public async void Initialize()
         {
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>("moderations");
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(CollectionName);
             IndexKeysDefinitionBuilder<ModerationDocument> indexBuilder = Builders<ModerationDocument>.IndexKeys;
 
             try
