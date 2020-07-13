@@ -314,12 +314,11 @@ namespace StreamActions.Plugins
         /// <returns>The name of the current culture; <see cref="GlobalCulture"/> if the channel is not found or hasn't set a culture.</returns>
         public async Task<string> GetCurrentCultureNameAsync(string channelId)
         {
-            //TODO: Refactor Mongo
             IMongoCollection<UserDocument> users = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
-            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.Id == channelId);
-            using IAsyncCursor<UserDocument> cursor = await users.FindAsync(filter).ConfigureAwait(false);
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, channelId);
+            using IAsyncCursor<string> cursor = await users.FindAsync(filter, new FindOptions<UserDocument, string> { Projection = Builders<UserDocument>.Projection.Expression(d => d.CurrentCulture) }).ConfigureAwait(false);
 
-            return (await cursor.FirstAsync().ConfigureAwait(false))?.CurrentCulture ?? this.GlobalCulture.Name;
+            return await cursor.SingleOrDefaultAsync().ConfigureAwait(false) ?? this.GlobalCulture.Name;
         }
 
         public string GetCursor() => this.PluginId.ToString("D", CultureInfo.InvariantCulture);
@@ -427,7 +426,7 @@ namespace StreamActions.Plugins
 
             IMongoCollection<UserDocument> users = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
             UpdateDefinition<UserDocument> userUpdate = Builders<UserDocument>.Update.Set(u => u.CurrentCulture, newCulture.Name);
-            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.Id == channelId);
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, channelId);
             _ = await users.UpdateOneAsync(filter, userUpdate).ConfigureAwait(false);
 
             OnCultureChanged?.Invoke(this, args);

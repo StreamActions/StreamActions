@@ -464,8 +464,7 @@ namespace StreamActions
 
             if (!e.Successful)
             {
-                // TODO:
-                // Handle error/response.
+                // TODO: Handle error/response.
             }
         }
 

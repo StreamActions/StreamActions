@@ -31,6 +31,7 @@ using StreamActions.Database;
 using StreamActions.Plugins;
 using StreamActions.Database.Documents.Commands;
 using StreamActions.Database.Documents.Moderation;
+using System.Globalization;
 
 namespace StreamActions.Plugin
 {
@@ -365,7 +366,7 @@ namespace StreamActions.Plugin
             IMongoCollection<ModerationLogDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationLogDocument>(ModerationLogDocument.CollectionName);
 
             FilterDefinitionBuilder<ModerationLogDocument> builder = Builders<ModerationLogDocument>.Filter;
-            FilterDefinition<ModerationLogDocument> filter = builder.Where(c => c.ChannelId == message.RoomId);
+            FilterDefinition<ModerationLogDocument> filter = builder.Eq(c => c.ChannelId, message.RoomId);
 
             if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
             {
@@ -387,14 +388,14 @@ namespace StreamActions.Plugin
 
             _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-            filter = builder.And(builder.Where(c => c.ChannelId == message.RoomId), builder.ElemMatch(c => c.Entries, e => e.MessageId == message.Id));
+            filter = builder.And(builder.Eq(c => c.ChannelId, message.RoomId), builder.ElemMatch(c => c.Entries, e => e.MessageId == message.Id));
 
-            ModerationLogEntryDocument mle = await collection.Aggregate().Match(filter).Project(Builders<ModerationLogDocument>.Projection.Expression(d => d.Entries.FirstOrDefault(e => e.MessageId == message.Id))).SingleAsync().ConfigureAwait(false);
+            string mleId = (await collection.Aggregate().Match(filter).Project(Builders<ModerationLogDocument>.Projection.Expression(d => d.Entries.FirstOrDefault(e => e.MessageId == message.Id).Id)).SingleAsync().ConfigureAwait(false)).ToString("D", CultureInfo.InvariantCulture);
 
             switch (result.Punishment)
             {
                 case ModerationPunishment.Ban:
-                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".ban " + message.Username + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + mle.Id + "]");
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".ban " + message.Username + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + mleId + "]");
                     break;
 
                 case ModerationPunishment.Delete:
@@ -402,11 +403,11 @@ namespace StreamActions.Plugin
                     break;
 
                 case ModerationPunishment.Timeout:
-                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " " + result.TimeoutSeconds + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + mle.Id + "]");
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " " + result.TimeoutSeconds + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + mleId + "]");
                     break;
 
                 case ModerationPunishment.Purge:
-                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " 1" + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + mle.Id + "]");
+                    TwitchLibClient.Instance.SendMessage(message.RoomId, ".timeout " + message.Username + " 1" + (!(result.ModerationReason is null) ? " " + result.ModerationReason : "") + " [" + mleId + "]");
                     break;
             }
 

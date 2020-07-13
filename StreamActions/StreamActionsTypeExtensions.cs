@@ -7,7 +7,15 @@ namespace StreamActions
     {
         #region Public Methods
 
-        public static T GetElementAtOrDefault<T>(this List<T> source, int index, T defVal)
+        /// <summary>
+        /// Returns the specified element, or <paramref name="defVal"/> if <paramref name="index"/> is out of range.
+        /// </summary>
+        /// <typeparam name="T">The type stored in <paramref name="source"/></typeparam>
+        /// <param name="source">A List of <typeparamref name="T"/> values.</param>
+        /// <param name="index">The index to attempt to retrieve.</param>
+        /// <param name="defVal">The default value to return, if <paramref name="index"/> is out of range.</param>
+        /// <returns>The value at <paramref name="index"/>; <paramref name="defVal"/> if index is out of range.</returns>
+        public static T GetElementAtOrDefault<T>(this List<T> source, int index, T defVal = default)
         {
             if (source is null)
             {
