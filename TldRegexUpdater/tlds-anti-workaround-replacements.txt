@@ -1,0 +1,10 @@
+#OriginalLetter[Flag] [Replacement1 Replacement2 Replacement3...]
+#Flags: !=Letter\s*
+O! 0
+I! 1
+L! 1
+E! 3
+N!
+F!
+R!
+C!
