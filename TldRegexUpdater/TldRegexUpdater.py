@@ -64,7 +64,7 @@ if not args.s:
                 tld = {}
             tlds[tld_s[0]], isend = addTLDRecursive(tld_s[1:], tld, False)
 
-def fillfillerer(word):
+def filler(word):
     global replacements
     combos = [(c,) if c not in replacements else replacements[c] for c in word]
     return ("".join(o) for o in product(*combos))
