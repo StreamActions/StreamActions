@@ -207,7 +207,7 @@ if path.exists("tlds-anti-workaround-tlds.txt") and path.exists("tlds-anti-worka
 
 regex = regex + ")"
 
-if args.d:
+if args.v:
     with open("tld_tree.json", "w", encoding="utf8") as tld_file:
         json.dump(tlds, tld_file)
     with open("tld_ctree.json", "w", encoding="utf8") as tld_file:
