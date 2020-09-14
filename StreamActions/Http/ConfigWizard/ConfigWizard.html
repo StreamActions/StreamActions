@@ -261,6 +261,7 @@
             OnDBUseTlsChanged();
             OnWsUseSslChanged();
             OnUpdateChannelArray();
+            document.getElementById("ResponseText").innerHTML = ""/*ResponseTextValue*/;
         }
 
         if (document.readyState === "complete" ||
@@ -308,7 +309,7 @@
                         <input type="text" name="BotRefreshToken" id="BotRefreshToken" value="BotRefreshTokenValue" />
                     </td>
                     <td style="font-style: italic;">
-                        The refresh token, used for keeping the OAuth valid. Leave blank if not required
+                        The refresh token, used for keeping the OAuth valid
                     </td>
                 </tr>
             </table>

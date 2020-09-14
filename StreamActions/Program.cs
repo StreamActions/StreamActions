@@ -16,8 +16,10 @@
 
 using Exceptionless;
 using Exceptionless.Configuration;
+using Exceptionless.Logging;
 using StreamActions.JsonDocuments;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
@@ -118,6 +120,7 @@ namespace StreamActions
                 ExceptionlessClient.Default.Configuration.IncludeQueryString = false;
                 ExceptionlessClient.Default.Configuration.IncludeUserName = false;
                 ExceptionlessClient.Default.Configuration.IncludePrivateInformation = false;
+                _ = Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
                 // Load settings.
                 using FileStream fs = File.OpenRead(Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "settings.json")));
@@ -130,6 +133,11 @@ namespace StreamActions
                 using Task<SettingsDocument> t = JsonSerializer.DeserializeAsync<SettingsDocument>(fs, options).AsTask();
                 t.Wait();
                 _settings = t.Result;
+
+                if (Settings.ShowDebugMessages)
+                {
+                    ExceptionlessClient.Default.Configuration.UseTraceLogger(LogLevel.Debug);
+                }
 
                 // Start Exceptionless session, if enabled.
                 if (Settings.SendExceptions)

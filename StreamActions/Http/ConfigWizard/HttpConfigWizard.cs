@@ -1,6 +1,7 @@
 ﻿using MongoDB.Driver;
 using StreamActions.Database;
 using StreamActions.Database.Documents.Users;
+using StreamActions.JsonDocuments;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -11,6 +12,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.Users;
@@ -47,6 +49,8 @@ namespace StreamActions.Http.ConfigWizard
 
         private static readonly List<AuthScopes> _broadcasterAuthScopes = new List<AuthScopes> { AuthScopes.Channel_Check_Subscription, AuthScopes.Channel_Commercial, AuthScopes.Channel_Editor, AuthScopes.Channel_Read, AuthScopes.Channel_Stream, AuthScopes.Channel_Subscriptions, AuthScopes.Helix_Bits_Read, AuthScopes.Helix_Channel_Read_Subscriptions, AuthScopes.Helix_Moderation_Read, AuthScopes.Helix_User_Edit, AuthScopes.Helix_User_Edit_Broadcast, AuthScopes.Helix_User_Read_Email, AuthScopes.User_Read, AuthScopes.User_Subscriptions };
         private static readonly List<AuthScopes> _chatAuthScopes = new List<AuthScopes> { AuthScopes.Chat_Login };
+        private static readonly Regex _oauthRegex = new Regex(@"^[a-zA-Z0-9]+$", RegexOptions.Compiled);
+        private static readonly Regex _usernameRegex = new Regex(@"^[a-zA-Z0-9_]{4,25}$", RegexOptions.Compiled);
 
         #endregion Private Fields
 
@@ -192,6 +196,108 @@ namespace StreamActions.Http.ConfigWizard
             }
 
             //TODO: Update Settings
+            bool isChanged = false;
+            List<string> errors = new List<string>();
+
+            if (postParams.TryGetValue("BotLogin", out string value))
+            {
+                if (_usernameRegex.IsMatch(value))
+                {
+                    if (value != Program.Settings.BotLogin)
+                    {
+                        Program.Settings.BotLogin = value.Trim();
+                        isChanged = true;
+                    }
+                }
+                else if (string.IsNullOrWhiteSpace(value))
+                {
+                    errors.Add("Bot Username is required");
+                }
+                else if (value.Length < 4 || value.Length > 25)
+                {
+                    errors.Add("Bot Username is an invalid length");
+                }
+                else
+                {
+                    errors.Add("Bot Username contains invalid characters");
+                }
+            }
+            else
+            {
+                errors.Add("Bot Username is required");
+            }
+
+            if (postParams.TryGetValue("BotOAuth", out value))
+            {
+                value = value.Replace("oauth:", "", StringComparison.OrdinalIgnoreCase);
+                if (_oauthRegex.IsMatch(value))
+                {
+                    if (value != Program.Settings.BotOAuth)
+                    {
+                        Program.Settings.BotOAuth = value.Trim();
+                        isChanged = true;
+                    }
+                }
+                else if (string.IsNullOrWhiteSpace(value))
+                {
+                    errors.Add("Bot OAuth is required");
+                }
+                else
+                {
+                    errors.Add("Bot OAuth contains invalid characters");
+                }
+            }
+            else
+            {
+                errors.Add("Bot OAuth is required");
+            }
+
+            if (postParams.TryGetValue("BotRefreshToken", out value))
+            {
+                if (_oauthRegex.IsMatch(value))
+                {
+                    if (value != Program.Settings.BotRefreshToken)
+                    {
+                        Program.Settings.BotRefreshToken = value.Trim();
+                        isChanged = true;
+                    }
+                }
+                else if (string.IsNullOrWhiteSpace(value))
+                {
+                    errors.Add("Bot Refresh Token is required");
+                }
+                else
+                {
+                    errors.Add("Bot Refresh Token contains invalid characters");
+                }
+            }
+            else
+            {
+                errors.Add("Bot Refresh Token is required");
+            }
+
+            if (isChanged)
+            {
+                using FileStream fs = File.OpenWrite(Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "settings.json")));
+                using Task t = JsonSerializer.SerializeAsync<SettingsDocument>(fs, Program.Settings);
+                t.Start();
+            }
+
+            if (errors.Count > 0)
+            {
+                string errOut = "";
+                foreach (string err in errors)
+                {
+                    if (errOut.Length > 0)
+                    {
+                        errOut += "<br />";
+                    }
+
+                    errOut += err;
+                }
+
+                sContent = sContent.Replace("/*ResponseTextValue*/", " + \"" + errOut.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"", StringComparison.Ordinal);
+            }
 
             return sContent;
         }
