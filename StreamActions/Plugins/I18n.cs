@@ -242,15 +242,9 @@ namespace StreamActions.Plugins
         /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="culture"/> is null.</exception>
-        public string Get(string category, string key, CultureInfo culture, string defVal = null)
-        {
-            if (culture is null)
-            {
-                throw new ArgumentNullException(nameof(culture));
-            }
-
-            return Get(category, key, this._i18nDocuments.GetValueOrDefault(culture.Name, I18nDocument.Empty), defVal);
-        }
+        public string Get(string category, string key, CultureInfo culture, string defVal = null) => culture is null
+                ? throw new ArgumentNullException(nameof(culture))
+                : Get(category, key, this._i18nDocuments.GetValueOrDefault(culture.Name, I18nDocument.Empty), defVal);
 
         /// <summary>
         /// Attempts to retrieve the specified i18n replacement string, and then formats it.
@@ -283,15 +277,9 @@ namespace StreamActions.Plugins
         /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
         /// <returns>The i18n replacement string, if present; <paramref name="defVal"/> otherwise.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="channelId"/> is null.</exception>
-        public async Task<string> GetAsync(string category, string key, string channelId, string defVal = null)
-        {
-            if (channelId is null)
-            {
-                throw new ArgumentNullException(nameof(channelId));
-            }
-
-            return this.Get(category, key, await this.GetCurrentCultureAsync(channelId).ConfigureAwait(false), defVal);
-        }
+        public async Task<string> GetAsync(string category, string key, string channelId, string defVal = null) => channelId is null
+                ? throw new ArgumentNullException(nameof(channelId))
+                : this.Get(category, key, await this.GetCurrentCultureAsync(channelId).ConfigureAwait(false), defVal);
 
         /// <summary>
         /// Gets the current CultureInfo of the specified channelId, and ensures the cultures I18n data is loaded.
