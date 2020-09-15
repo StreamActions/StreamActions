@@ -196,8 +196,9 @@ namespace StreamActions.Http.ConfigWizard
             }
 
             //TODO: Update Settings
-            bool isChanged = false;
             List<string> errors = new List<string>();
+
+            #region Twitch Connect
 
             if (postParams.TryGetValue("BotLogin", out string value))
             {
@@ -206,7 +207,6 @@ namespace StreamActions.Http.ConfigWizard
                     if (value != Program.Settings.BotLogin)
                     {
                         Program.Settings.BotLogin = value.Trim();
-                        isChanged = true;
                     }
                 }
                 else if (string.IsNullOrWhiteSpace(value))
@@ -235,7 +235,6 @@ namespace StreamActions.Http.ConfigWizard
                     if (value != Program.Settings.BotOAuth)
                     {
                         Program.Settings.BotOAuth = value.Trim();
-                        isChanged = true;
                     }
                 }
                 else if (string.IsNullOrWhiteSpace(value))
@@ -259,7 +258,6 @@ namespace StreamActions.Http.ConfigWizard
                     if (value != Program.Settings.BotRefreshToken)
                     {
                         Program.Settings.BotRefreshToken = value.Trim();
-                        isChanged = true;
                     }
                 }
                 else if (string.IsNullOrWhiteSpace(value))
@@ -276,12 +274,123 @@ namespace StreamActions.Http.ConfigWizard
                 errors.Add("Bot Refresh Token is required");
             }
 
-            if (isChanged)
+            #endregion Twitch Connect
+
+            #region Chat
+
+            if (postParams.TryGetValue("ChatCommandIdentifier", out value))
             {
-                using FileStream fs = File.OpenWrite(Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "settings.json")));
-                using Task t = JsonSerializer.SerializeAsync<SettingsDocument>(fs, Program.Settings);
-                t.Start();
+                if (!string.IsNullOrWhiteSpace(value) && value.Length == 1)
+                {
+                    if (value[0] != Program.Settings.ChatCommandIdentifier)
+                    {
+                        Program.Settings.ChatCommandIdentifier = value.Trim()[0];
+                    }
+                }
+                else
+                {
+                    errors.Add("Chat Command Identifier must be exactly 1 character");
+                }
             }
+            else
+            {
+                if (Program.Settings.ChatCommandIdentifier == (char)0)
+                {
+                    Program.Settings.ChatCommandIdentifier = '!';
+                }
+            }
+
+            if (postParams.TryGetValue("WhisperCommandIdentifier", out value))
+            {
+                if (!string.IsNullOrWhiteSpace(value) && value.Length == 1)
+                {
+                    if (value[0] != Program.Settings.WhisperCommandIdentifier)
+                    {
+                        Program.Settings.WhisperCommandIdentifier = value.Trim()[0];
+                    }
+                }
+                else
+                {
+                    errors.Add("Whisper Command Identifier must be exactly 1 character");
+                }
+            }
+            else
+            {
+                if (Program.Settings.WhisperCommandIdentifier == (char)0)
+                {
+                    Program.Settings.WhisperCommandIdentifier = '!';
+                }
+            }
+
+            if (postParams.TryGetValue("GlobalCulture", out value))
+            {
+                try
+                {
+                    _ = new CultureInfo(value, false);
+                    if (value != Program.Settings.GlobalCulture)
+                    {
+                        Program.Settings.GlobalCulture = value.Trim();
+                    }
+                }
+                catch (CultureNotFoundException)
+                {
+                    errors.Add("The specified culture is invalid or not available on this system");
+                }
+            }
+
+            #endregion Chat
+
+            #region Channels
+
+            IEnumerable<dynamic> channels = postParams.AsEnumerable().Where(kvp => kvp.Key.StartsWith("ChannelsToJoin", StringComparison.Ordinal) && kvp.Key.Contains("[", StringComparison.Ordinal) && kvp.Key.Contains("]", StringComparison.Ordinal)).GroupBy(kvp => kvp.Key.Substring(kvp.Key.IndexOf("[", StringComparison.Ordinal) + 1, kvp.Key.IndexOf("]", StringComparison.Ordinal) - kvp.Key.IndexOf("[", StringComparison.Ordinal) - 1), (channel, data) =>
+            {
+                string channelLogin = "";
+                string channelOAuth = "";
+                string channelRefresh = "";
+
+                foreach (KeyValuePair<string, string> kvp in data)
+                {
+                    if (kvp.Key == "ChannelsToJoin[" + channel + "]")
+                    {
+                        channelLogin = kvp.Value.Trim();
+                    }
+                    else if (kvp.Key == "ChannelsToJoinOAuth[" + channel + "]")
+                    {
+                        channelOAuth = kvp.Value.Replace("oauth:", "", StringComparison.OrdinalIgnoreCase).Trim();
+                    }
+                    else if (kvp.Key == "ChannelsToJoinRefresh[" + channel + "]")
+                    {
+                        channelRefresh = kvp.Value.Trim();
+                    }
+                }
+
+                return new
+                {
+                    Channel = channelLogin,
+                    OAuth = channelOAuth,
+                    Refresh = channelRefresh
+                };
+            });
+
+            Program.Settings.ChannelsToJoin.Clear();
+
+            foreach (dynamic channel in channels)
+            {
+                // TODO: Validate against Twitch API and get ID
+                _ = _usernameRegex.IsMatch(channel.Channel)
+                    ? Program.Settings.ChannelsToJoin.Add(channel.Channel)
+                    : channel.Channel.Length < 4 || channel.Channel.Length > 25
+                        ? errors.Add("Channel name <i>" + channel.Channel + "</i> is an invalid length")
+                        : errors.Add("Channel name <i>" + channel.Channel + "</i> contains invalid characters");
+
+                // TODO: Add user and tokens to MongoDB, if required
+            }
+
+            #endregion Channels
+
+            using FileStream fs = File.OpenWrite(Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "settings.json")));
+            using Task t = JsonSerializer.SerializeAsync<SettingsDocument>(fs, Program.Settings);
+            t.Start();
 
             if (errors.Count > 0)
             {
