@@ -1741,7 +1741,153 @@ namespace StreamActions.Plugins
 
         private async Task<ModerationDocument> UpdateRepetitionFilterOptions(ChatCommand command, List<string> args)
         {
-            // TODO: Finish this.
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            // If "maximumrepeatingcharaters or maximumrepeatingwords or minimumlength" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionSetUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the options for the repetition filter. " +
+                    "Usage: {CommandPrefix}{BotName} moderation caps set [maximumrepeatingcharaters, maximumrepeatingwords, minimumlength]").ConfigureAwait(false));
+                return null;
+            }
+
+            // Maximum repeating characters setting.
+            if (args[4].Equals("maximumrepeatingcharaters", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionMaximumCharactersUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).RepetionMaximumRepeatingCharacters,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the maximum repeating characters allowed in a message. " +
+                        "Current value: {CurrentValue}%" +
+                        "Usage: {CommandPrefix}{BotName} moderation repetition set maximumrepeatingcharaters [amount]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.RepetionMaximumRepeatingCharacters = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionMaximumCharactersUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MaximumAmount = document.RepetionMaximumRepeatingCharacters,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The maximum repeating characters allowed in a message has been set to {MaximumAmount} characters.").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Maximum repeating words setting.
+            if (args[4].Equals("maximumrepeatingwords", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionMaximumWordsUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).RepetionMaximumRepeatingWords,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the maximum repeating words allowed in a message. " +
+                        "Current value: {CurrentValue}%" +
+                        "Usage: {CommandPrefix}{BotName} moderation repetition set maximumrepeatingwords [amount]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.RepetionMaximumRepeatingWords = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionMaximumWordsUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MaximumAmount = document.RepetionMaximumRepeatingWords,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The maximum repeating words allowed in a message has been set to {MaximumAmount} words.").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Minimum length to check for repetition.
+            if (args[4].Equals("minimumlength", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionMinimumLengthUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).RepetitionMinimumMessageLength,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the minimum characters needed to check for repetition. " +
+                        "Current value: {CurrentValue}%" +
+                        "Usage: {CommandPrefix}{BotName} moderation repetition set minimumlength [amount]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.RepetitionMinimumMessageLength = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionMinimumWordsUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MinimumAmount = document.RepetitionMinimumMessageLength,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The minimum characters needed to check for repetition has been to to {MinimumAmount} characters.").ConfigureAwait(false));
+
+                return document;
+            }
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionSetUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the options for the repetition filter. " +
+                    "Usage: {CommandPrefix}{BotName} moderation caps set [maximumrepeatingcharaters, maximumrepeatingwords, minimumlength]").ConfigureAwait(false));
             return null;
         }
 
@@ -2217,5 +2363,633 @@ namespace StreamActions.Plugins
         }
 
         #endregion Repetition Filter Command Methods
+
+        #region Symbol Filter Command Methods
+
+
+        /// <summary>
+        /// Moderation commands for symbols.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "symbols", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationSymbolsCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            // Each command will return a document if a modification has been made.
+            ModerationDocument document = null;
+
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
+            {
+                case "toggle":
+                    document = await this.UpdateSymbolFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "warning":
+                    document = await this.UpdateSymbolFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "timeout":
+                    document = await this.UpdateSymbolFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "exclude":
+                    document = await this.UpdateSymbolFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "set":
+                    document = await this.UpdateSymbolFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolUsage", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages the bot's link moderation filter. Usage: {CommandPrefix}{BotName} moderation symbols [toggle, warning, timeout, exclude]").ConfigureAwait(false));
+                    break;
+            }
+
+            // Update settings.
+            if (!(document is null))
+            {
+                //TODO: Refactor Mongo
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == e.Command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d, document);
+
+                _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Method called when we update the symbol filter exclude via commands.
+        /// Command: !bot moderation symbols exclude
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
+        private async Task<ModerationDocument> UpdateSymbolFilterExcludes(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolExcludeUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the excluded levels for the symbol filter. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation symbols exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return null;
+            }
+
+            // Make sure it is valid.
+            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolExcludeOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation symbols exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return null;
+            }
+
+            //TODO: Refactor Mongo
+            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+            document.SymbolExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolExcludeUpdate", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ExcludedLevel = document.SymbolExcludedLevels,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The symbol moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
+
+            return document;
+        }
+
+        /// <summary>
+        /// Method called when updating the symbol filter.
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
+        private async Task<ModerationDocument> UpdateSymbolFilterOptions(ChatCommand command, List<string> args)
+        {
+            // TODO: finish this in 5 years.
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Method called when we update the symbol filter timeout via commands.
+        /// Command: !bot moderation symbols timeout
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
+        private async Task<ModerationDocument> UpdateSymbolFilterTimeout(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the timeout offence of the symbol moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation symbols timeout [time, message, reason, punishment]").ConfigureAwait(false));
+                return null;
+            }
+
+            // Timeout time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolTimeoutTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols timeout time [1 to 1209600]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.SymbolTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = document.SymbolTimeoutTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The symbol moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Timeout message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolTimeoutMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols timeout message [message]").ConfigureAwait(false));
+                    return null;
+                }
+                //TODO: Refactor Mongo
+
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.SymbolTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutMessage = document.SymbolTimeoutMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The symbol moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Timeout reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolTimeoutReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols timeout reason [message]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.SymbolTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutReason = document.SymbolTimeoutReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The symbol moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Timeout punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolTimeoutPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols timeout punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.SymbolTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutPunishment = document.SymbolTimeoutPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The symbol moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolTimeoutUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the timeout offence of the symbol moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation symbols timeout [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return null;
+        }
+
+        /// <summary>
+        /// Method called when we update the symbol filter toggle via commands.
+        /// Command: !bot moderation symbols toggle
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
+        private async Task<ModerationDocument> UpdateSymbolFilterToggle(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            // If "on" or "off" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolToggleUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Toggles the symbol moderation. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation symbols toggle [on, off]").ConfigureAwait(false));
+                return null;
+            }
+
+            // If the forth argument isn't "on" or "off" at all.
+            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolToggleOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid toggle for link moderation must be specified. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation symbols toggle [on, off]").ConfigureAwait(false));
+                return null;
+            }
+
+            //TODO: Refactor Mongo
+            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+            document.SymbolStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolToggle", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ToggleStatus = args[4].ToLowerInvariant(),
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The symbol moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
+
+            return document;
+        }
+
+        /// <summary>
+        /// Method called when we update the symbol filter warning via commands.
+        /// Command: !bot moderation symbols warning
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
+        private async Task<ModerationDocument> UpdateSymbolFilterWarning(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the warning offence of the symbol moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation symbols warning [time, message, reason, punishment]").ConfigureAwait(false));
+                return null;
+            }
+
+            // Warning time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolWarningTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols warning time [1 to 1209600]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.SymbolWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = document.SymbolWarningTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The symbol moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Warning message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolWarningMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols warning message [message]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.SymbolWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningMessage = document.SymbolWarningMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The symbol moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Warning reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolWarningReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols warning reason [message]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.SymbolWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningReason = document.SymbolWarningReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The symbol moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Warning punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolWarningPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols warning punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.SymbolWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningPunishment = document.SymbolWarningPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The symbol moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolWarningUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the warning offence of the symbol moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation symbols warning [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return null;
+        }
+
+        #endregion
     }
 }
