@@ -1759,7 +1759,7 @@ namespace StreamActions.Plugins
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, Sets the options for the repetition filter. " +
-                    "Usage: {CommandPrefix}{BotName} moderation caps set [maximumrepeatingcharaters, maximumrepeatingwords, minimumlength]").ConfigureAwait(false));
+                    "Usage: {CommandPrefix}{BotName} moderation repetition set [maximumrepeatingcharaters, maximumrepeatingwords, minimumlength]").ConfigureAwait(false));
                 return null;
             }
 
@@ -1779,7 +1779,7 @@ namespace StreamActions.Plugins
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets the maximum repeating characters allowed in a message. " +
-                        "Current value: {CurrentValue}%" +
+                        "Current value: {CurrentValue} characters. " +
                         "Usage: {CommandPrefix}{BotName} moderation repetition set maximumrepeatingcharaters [amount]").ConfigureAwait(false));
                     return null;
                 }
@@ -1817,7 +1817,7 @@ namespace StreamActions.Plugins
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets the maximum repeating words allowed in a message. " +
-                        "Current value: {CurrentValue}%" +
+                        "Current value: {CurrentValue} words. " +
                         "Usage: {CommandPrefix}{BotName} moderation repetition set maximumrepeatingwords [amount]").ConfigureAwait(false));
                     return null;
                 }
@@ -1855,7 +1855,7 @@ namespace StreamActions.Plugins
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets the minimum characters needed to check for repetition. " +
-                        "Current value: {CurrentValue}%" +
+                        "Current value: {CurrentValue} characters. " +
                         "Usage: {CommandPrefix}{BotName} moderation repetition set minimumlength [amount]").ConfigureAwait(false));
                     return null;
                 }
@@ -1887,7 +1887,7 @@ namespace StreamActions.Plugins
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, Sets the options for the repetition filter. " +
-                    "Usage: {CommandPrefix}{BotName} moderation caps set [maximumrepeatingcharaters, maximumrepeatingwords, minimumlength]").ConfigureAwait(false));
+                    "Usage: {CommandPrefix}{BotName} moderation repetition set [maximumrepeatingcharaters, maximumrepeatingwords, minimumlength]").ConfigureAwait(false));
             return null;
         }
 
@@ -2516,6 +2516,148 @@ namespace StreamActions.Plugins
                 return null;
             }
 
+            // If "maximumpercent or maximumgrouped or minimumlength" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolsSetUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the options for the symbols filter. " +
+                    "Usage: {CommandPrefix}{BotName} moderation symbols set [maximumpercent, maximumgrouped, minimumlength]").ConfigureAwait(false));
+                return null;
+            }
+
+            // Maximum percent of symbols allowed in a message.
+            if (args[4].Equals("maximumpercent", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0 && val <= 100))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolsMaximumPercentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolMaximumPercent,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the maximum percent of symbols allowed in a message. " +
+                        "Current value: {CurrentValue}% " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols set maximumpercent [0 - 100]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.RepetionMaximumRepeatingCharacters = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolsMaximumPercentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MaximumAmount = document.SymbolMaximumPercent,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The maximum percent of symbols allowed in a message has been set to {MaximumAmount}%").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Maximum grouped symbols allowed in a message.
+            if (args[4].Equals("maximumgrouped", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolsMaximumGroupedUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolMaximumGrouped,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the maximum amount of groupd symbols allowed in a message. " +
+                        "Current value: {CurrentValue} symbols " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols set maximumgrouped [amount]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.RepetionMaximumRepeatingCharacters = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolsMaximumGroupedUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MaximumAmount = document.SymbolMaximumGrouped,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The maximum amount of grouped symbols allowed in a message has been set to {MaximumAmount} symbols").ConfigureAwait(false));
+
+                return document;
+            }
+
+            // Minimum length to check for symbols.
+            if (args[4].Equals("minimumlength", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolsMinimumLengthUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).SymbolMinimumMessageLength,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the minimum characters needed to check for symbols. " +
+                        "Current value: {CurrentValue} characters. " +
+                        "Usage: {CommandPrefix}{BotName} moderation symbols set minimumlength [amount]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.RepetitionMinimumMessageLength = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolsMinimumWordsUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MinimumAmount = document.SymbolMinimumMessageLength,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The minimum characters needed to check for symbols has been to to {MinimumAmount} characters.").ConfigureAwait(false));
+
+                return document;
+            }
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolsSetUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the options for the symbols filter. " +
+                    "Usage: {CommandPrefix}{BotName} moderation symbols set [maximumpercent, maximumgrouped, minimumlength]").ConfigureAwait(false));
             return null;
         }
 
