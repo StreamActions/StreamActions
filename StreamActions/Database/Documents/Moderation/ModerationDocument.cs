@@ -563,11 +563,11 @@ namespace StreamActions.Database.Documents
         #region Lengthy Messsage Moderation Properties
 
         /// <summary>
-        /// Which roles are excluded from lenghty message moderations, note that moderators and above are always excluded.
+        /// Which roles are excluded from Lengthy message moderations, note that moderators and above are always excluded.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public UserLevels LenghtyMessageExcludedLevels { get; set; }
+        public UserLevels LengthyMessageExcludedLevels { get; set; }
 
         /// <summary>
         /// Maximum length for a message.
@@ -575,7 +575,7 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(300)]
-        public uint LenghtyMessageMaximumLength { get; set; }
+        public uint LengthyMessageMaximumLength { get; set; }
 
         /// <summary>
         /// If we should moderate lengthy messages.
@@ -583,22 +583,22 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(false)]
-        public bool LenghtyMessageStatus { get; set; }
+        public bool LengthyMessageStatus { get; set; }
 
         /// <summary>
         /// Message said in chat on a user's second and last offence for a lengthy message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public string LenghtyMessageTimeoutMessage { get; set; }
+        public string LengthyMessageTimeoutMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's second and last offence for a lenghty message.
+        /// If a warning message should be said on a user's second and last offence for a Lengthy message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(true)]
-        public bool LenghtyMessageTimeoutMessageStatus { get; set; }
+        public bool LengthyMessageTimeoutMessageStatus { get; set; }
 
         /// <summary>
         /// Type of punishment given for a user second and last offence for a lengthy message.
@@ -606,14 +606,14 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment LenghtyMessageTimeoutPunishment { get; set; }
+        public ModerationPunishment LengthyMessageTimeoutPunishment { get; set; }
 
         /// <summary>
         /// Message said next to the timeout message on a user's second and last offence for a lengthy message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public string LenghtyMessageTimeoutReason { get; set; }
+        public string LengthyMessageTimeoutReason { get; set; }
 
         /// <summary>
         /// How long a user will get timed-out on their second and last offence for a lengthy message.
@@ -621,22 +621,22 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(600)]
-        public uint LenghtyMessageTimeoutTimeSeconds { get; set; }
+        public uint LengthyMessageTimeoutTimeSeconds { get; set; }
 
         /// <summary>
         /// Message said in chat on a user's first offence for a lengthy message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public string LenghtyMessageWarningMessage { get; set; }
+        public string LengthyMessageWarningMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's first offence for a lenghty message.
+        /// If a warning message should be said on a user's first offence for a Lengthy message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(true)]
-        public bool LenghtyMessageWarningMessageStatus { get; set; }
+        public bool LengthyMessageWarningMessageStatus { get; set; }
 
         /// <summary>
         /// Type of punishment given for a user's first offence for a lengthy message.
@@ -644,14 +644,14 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment LenghtyMessageWarningPunishment { get; set; }
+        public ModerationPunishment LengthyMessageWarningPunishment { get; set; }
 
         /// <summary>
         /// Message said next to the timeout message on a user's first offence for a lengthy message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public string LenghtyMessageWarningReason { get; set; }
+        public string LengthyMessageWarningReason { get; set; }
 
         /// <summary>
         /// How long a user will get timed-out on their first offence for a lengthy message.
@@ -659,7 +659,7 @@ namespace StreamActions.Database.Documents
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(5)]
-        public uint LenghtyMessageWarningTimeSeconds { get; set; }
+        public uint LengthyMessageWarningTimeSeconds { get; set; }
 
         #endregion Lengthy Messsage Moderation Properties
 
