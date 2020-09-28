@@ -6730,6 +6730,113 @@ namespace StreamActions.Plugins
                 return null;
             }
 
+            // If "maximummessages or timespan" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the options for the one man spam filter. " +
+                    "Usage: {CommandPrefix}{BotName} moderation onemanspam set [maximummessages, timespan]").ConfigureAwait(false));
+                return null;
+            }
+
+            // Maximum messages allowed in a time span.
+            if (args[4].Equals("maximummessages", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetMaximumMsgUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamMaximumMessages,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the maximum messages allowed in a time span. " +
+                        "Current value: {CurrentValue} messages. " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam set maximummessages [amount]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.OneManSpamMaximumMessages = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpanSetMaximumMsgUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MaximumMessages = document.OneManSpamMaximumMessages,
+                        TimeSpan = document.OneManSpamResetTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The maximum messages allowed in {TimeSpan} seconds has been set to {MaximumMessages} messages.").ConfigureAwait(false));
+
+                return document;
+            }
+
+
+            // Time span for messages
+            if (args[4].Equals("timespan", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetTimeSpanUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamResetTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the time span for the maximum messaged allowed to be sent. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam set timespan [amount]").ConfigureAwait(false));
+                    return null;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+                document.OneManSpamResetTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetTimeSpanUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSpan = document.OneManSpamResetTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The time span for the amount of messages allowed has been set to {TimeSpan} messages.").ConfigureAwait(false));
+
+                return document;
+            }
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the options for the one man spam filter. " +
+                "Usage: {CommandPrefix}{BotName} moderation onemanspam set [maximummessages, timespan]").ConfigureAwait(false));
+
             return null;
         }
 
