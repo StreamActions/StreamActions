@@ -85,29 +85,29 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            // Each command will return a document if a modification has been made.
-            ModerationDocument document = null;
+            // Result returned by the function.
+            bool result = false;
 
             switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
                 case "toggle":
-                    document = await this.UpdateLinkFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    result = await this.UpdateLinkFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "warning":
-                    document = await this.UpdateLinkFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    result = await this.UpdateLinkFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "timeout":
-                    document = await this.UpdateLinkFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    result = await this.UpdateLinkFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "exclude":
-                    document = await this.UpdateLinkFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    result = await this.UpdateLinkFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "whitelist":
-                    document = await this.UpdateLinkFilterWhitelist(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    result = await this.UpdateLinkFilterWhitelist(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 default:
@@ -122,19 +122,6 @@ namespace StreamActions.Plugins
                         },
                         "@{DisplayName}, Manages the bot's link moderation filter. Usage: {CommandPrefix}{BotName} moderation links [toggle, warning, timeout, exclude, whitelist]").ConfigureAwait(false));
                     break;
-            }
-
-            // Update settings.
-            if (!(document is null))
-            {
-                //TODO: Refactor Mongo
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == e.Command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d, document);
-
-                _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
             }
         }
 
@@ -220,7 +207,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
+        /// <returns>If the document was updated true is returned, else false is returned.</returns>
         private async Task<bool> UpdateLinkFilterTimeout(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
@@ -449,7 +436,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
+        /// <returns>If the document was updated true is returned, else false is returned.</returns>
         private async Task<bool> UpdateLinkFilterToggle(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
@@ -525,7 +512,7 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
+        /// <returns>If the document was updated true is returned, else false is returned.</returns>
         private async Task<bool> UpdateLinkFilterWarning(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
@@ -754,12 +741,12 @@ namespace StreamActions.Plugins
         /// </summary>
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateLinkFilterWhitelist(ChatCommand command, List<string> args)
+        /// <returns>If the document was updated true is returned, else false is returned.</returns>
+        private async Task<bool> UpdateLinkFilterWhitelist(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "add, remove, list" hasn't been specified in the arguments.
@@ -776,7 +763,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the excluded links from the link filter. " +
                     "Usage: {CommandPrefix}{BotName} moderation links whitelist [add, remove, list]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Adding a whitelist.
@@ -795,12 +782,17 @@ namespace StreamActions.Plugins
                         },
                         "@{DisplayName}, Add an excluded links to the link filter. " +
                         "Usage: {CommandPrefix}{BotName} moderation links whitelist add [link]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.LinkWhitelist.Add(args[5]);
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Push(d => d.LinkWhitelist, args[5]);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistAddUpdate", command.ChatMessage.RoomId,
                     new
@@ -813,7 +805,8 @@ namespace StreamActions.Plugins
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The following link has been added to the link whitelist \"{WhitelistedLink}\".").ConfigureAwait(false));
-                return document;
+
+                return result.IsAcknowledged;
             }
 
             // Removing a whitelist.
@@ -832,7 +825,7 @@ namespace StreamActions.Plugins
                         },
                         "@{DisplayName}, Removes an excluded links to the link filter. " +
                         "Usage: {CommandPrefix}{BotName} moderation links whitelist remove [link]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
                 //TODO: Refactor Mongo
@@ -840,10 +833,17 @@ namespace StreamActions.Plugins
 
                 string finder = document.LinkWhitelist.Find(u => u.Equals(args[5], StringComparison.OrdinalIgnoreCase));
 
-                if (finder.Any())
-                {
-                    _ = document.LinkWhitelist.Remove(finder);
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.PullFilter(d => d.LinkWhitelist, args[5]);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                if (result.IsAcknowledged)
+                {
                     TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistRemoveUpdate", command.ChatMessage.RoomId,
                         new
                         {
@@ -854,8 +854,8 @@ namespace StreamActions.Plugins
                             WhitelistedLink = args[5],
                             command.ChatMessage.DisplayName
                         },
-                        "@{DisplayName}, The following link has been removed from the link whitelist \"{WhitelistedLink}\".").ConfigureAwait(false));
-                    return document;
+                       "@{DisplayName}, The following link has been removed from the link whitelist \"{WhitelistedLink}\".").ConfigureAwait(false));
+                    return result.IsAcknowledged;
                 }
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistRemove404Usage", command.ChatMessage.RoomId,
@@ -869,19 +869,18 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, You can only remove a link from the whitelist that exists. " +
                     "Usage: {CommandPrefix}{BotName} moderation links whitelist remove [link]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Listing all whitelists.
             if (args[4].Equals("list", StringComparison.OrdinalIgnoreCase))
             {
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                string whitelists = "";
-                int numPages = (int)Math.Ceiling(document.LinkWhitelist.Count / (double)_itemsPerPage);
-                int page = Math.Min(numPages, Math.Max(1, int.Parse(args.GetElementAtOrDefault(5, "1"), NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false))));
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
-                if (document.LinkWhitelist.Count == 0)
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
                 {
                     TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistListNone", command.ChatMessage.RoomId,
                         new
@@ -891,10 +890,18 @@ namespace StreamActions.Plugins
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, There are no whitelisted links.").ConfigureAwait(false));
-                    return null;
+                    return true;
                 }
 
-                foreach (string whitelist in document.LinkWhitelist.Skip((page - 1) * _itemsPerPage).Take(_itemsPerPage))
+                using IAsyncCursor<List<string>> cursor = await collection.FindAsync(filter, new FindOptions<ModerationDocument, List<string>> { Projection = Builders<ModerationDocument>.Projection.Expression(d => d.LinkWhitelist) }).ConfigureAwait(false);
+
+                List<string> whitelist = await cursor.FirstAsync().ConfigureAwait(false);
+
+                string whitelists = "";
+                int numPages = (int)Math.Ceiling(whitelist.Count / (double)_itemsPerPage);
+                int page = Math.Min(numPages, Math.Max(1, int.Parse(args.GetElementAtOrDefault(5, "1"), NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false))));
+
+                foreach (string w in whitelist.Skip((page - 1) * _itemsPerPage).Take(_itemsPerPage))
                 {
                     if (whitelists.Length > 0)
                     {
@@ -916,7 +923,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Whitelist [Page {Page} of {NumPage}]: {Whitelists}").ConfigureAwait(false));
 
-                return null;
+                return true;
             }
 
             // Usage if none of the above have been specified.
@@ -932,7 +939,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, Sets the excluded links from the link filter. " +
                 "Usage: {CommandPrefix}{BotName} moderation links whitelist [add, remove, list]").ConfigureAwait(false));
 
-            return null;
+            return false;
         }
 
         #endregion Link Filter Command Methods
