@@ -85,29 +85,26 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            // Result returned by the function.
-            bool result = false;
-
             switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
                 case "toggle":
-                    result = await this.UpdateLinkFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateLinkFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "warning":
-                    result = await this.UpdateLinkFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateLinkFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "timeout":
-                    result = await this.UpdateLinkFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateLinkFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "exclude":
-                    result = await this.UpdateLinkFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateLinkFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "whitelist":
-                    result = await this.UpdateLinkFilterWhitelist(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateLinkFilterWhitelist(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 default:
@@ -959,29 +956,26 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            // Each command will return a document if a modification has been made.
-            ModerationDocument document = null;
-
             switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
                 case "toggle":
-                    document = await this.UpdateCapFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateCapFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "warning":
-                    document = await this.UpdateCapFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateCapFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "timeout":
-                    document = await this.UpdateCapFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateCapFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "exclude":
-                    document = await this.UpdateCapFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateCapFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "set":
-                    document = await this.UpdateCapFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateCapFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 default:
@@ -997,19 +991,6 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Manages the bot's cap moderation filter. Usage: {CommandPrefix}{BotName} moderation caps [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
                     break;
             }
-
-            // Update settings.
-            if (!(document is null))
-            {
-                //TODO: Refactor Mongo
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == e.Command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d, document);
-
-                _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-            }
         }
 
         /// <summary>
@@ -1019,11 +1000,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateCapFilterExcludes(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateCapFilterExcludes(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
@@ -1042,7 +1023,7 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, Sets the excluded levels for the caps filter. " +
                     "Current value: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation caps exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Make sure it is valid.
@@ -1061,24 +1042,31 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, A valid level must be specified for the excluded levels. " +
                     "Current value: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation caps exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
-            //TODO: Refactor Mongo
-            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-            document.CapExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+            UserLevels capsExcluded = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapExcludedLevels, capsExcluded);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapExcludeUpdate", command.ChatMessage.RoomId,
                 new
                 {
                     User = command.ChatMessage.Username,
                     Sender = command.ChatMessage.Username,
-                    ExcludedLevel = document.CapExcludedLevels,
+                    ExcludedLevel = capsExcluded,
                     command.ChatMessage.DisplayName
                 },
                 "@{DisplayName}, The caps moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
 
-            return document;
+            return result.IsAcknowledged;
         }
 
         /// <summary>
@@ -1088,11 +1076,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateCapFilterOptions(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateCapFilterOptions(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "maximumpercent or minimumlength" hasn't been specified in the arguments.
@@ -1109,7 +1097,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the options for the caps filter. " +
                     "Usage: {CommandPrefix}{BotName} moderation caps set [maximumpercent, minimumlength]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Maximum caps in message setting.
@@ -1130,28 +1118,34 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the maximum percentage of caps allowed in a message. " +
                         "Current value: {CurrentValue}%" +
                         "Usage: {CommandPrefix}{BotName} moderation caps set maximumpercent [0 to 100]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapMaximumPercentage = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint capPercent = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapMaximumPercentage, capPercent);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapSetMaximumPercentUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        MaximumPercent = document.CapMaximumPercentage,
+                        MaximumPercent = capPercent,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps maximum caps percent allowed in a message has been set to {MaximumPercent}%").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Minimum message length before checking for caps setting.
-            // Maximum caps in message setting.
             if (args[4].Equals("minimumlength", StringComparison.OrdinalIgnoreCase))
             {
                 if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
@@ -1169,24 +1163,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the minimum characters required in a message before checking for caps. " +
                         "Current value: {CurrentValue}%" +
                         "Usage: {CommandPrefix}{BotName} moderation caps set minimumlength [minimum length]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapMinimumMessageLength = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint capMinMsgLength = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapMinimumMessageLength, capMinMsgLength);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapSetMinimumLengthUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        MinimumLength = document.CapMinimumMessageLength,
+                        MinimumLength = capMinMsgLength,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps minimum required length has been set to {MinimumLength} characters.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Usage if none of the above.
@@ -1203,7 +1204,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, Sets the options for the caps filter. " +
                 "Usage: {CommandPrefix}{BotName} moderation caps set [maximumpercent, minimumlength]").ConfigureAwait(false));
 
-            return null;
+            return false;
         }
 
         /// <summary>
@@ -1213,11 +1214,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateCapFilterTimeout(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateCapFilterTimeout(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "time, message, reason, punishment" hasn't been specified in the arguments.
@@ -1234,7 +1235,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the values for the timeout offence of the cap moderation. " +
                     "Usage: {CommandPrefix}{BotName} moderation caps timeout [time, message, reason, punishment]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Timeout time setting.
@@ -1255,24 +1256,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
                         "Current value: {CurrentValue} seconds. " +
                         "Usage: {CommandPrefix}{BotName} moderation caps timeout time [1 to 1209600]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint capTimeoutTime = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapTimeoutTimeSeconds, capTimeoutTime);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapTimeoutTimeUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeSeconds = document.CapTimeoutTimeSeconds,
+                        TimeSeconds = capTimeoutTime,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Timeout message setting.
@@ -1293,24 +1301,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation caps timeout message [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string capTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapTimeoutMessage, capTimeoutMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapTimeoutMessageUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutMessage = document.CapTimeoutMessage,
+                        TimeoutMessage = capTimeoutMessage,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Timeout reason setting.
@@ -1331,24 +1346,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation caps timeout reason [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string capTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapTimeoutReason, capTimeoutReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapTimeoutReasonUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutReason = document.CapTimeoutReason,
+                        TimeoutReason = capTimeoutReason,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Timeout punishment setting.
@@ -1371,24 +1393,31 @@ namespace StreamActions.Plugins
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation caps timeout punishment [{Punishments}]").ConfigureAwait(false));
 
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+                ModerationPunishment capTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapTimeoutPunishment, capTimeoutPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutPunishment = document.CapTimeoutPunishment,
+                        TimeoutPunishment = capTimeoutPunishment,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Usage if none of the above match.
@@ -1404,7 +1433,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, Sets the values for the timeout offence of the cap moderation. " +
                 "Usage: {CommandPrefix}{BotName} moderation caps timeout [time, message, reason, punishment]").ConfigureAwait(false));
 
-            return null;
+            return false;
         }
 
         /// <summary>
@@ -1414,11 +1443,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateCapFilterToggle(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateCapFilterToggle(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "on" or "off" hasn't been specified in the arguments.
@@ -1437,7 +1466,7 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, Toggles the caps moderation. " +
                     "Current status: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation caps toggle [on, off]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // If the forth argument isn't "on" or "off" at all.
@@ -1456,12 +1485,19 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, A valid toggle for caps moderation must be specified. " +
                     "Current status: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation caps toggle [on, off]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
-            //TODO: Refactor Mongo
-            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-            document.CapStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+            bool capStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapStatus, capStatus);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapToggle", command.ChatMessage.RoomId,
                 new
@@ -1473,7 +1509,7 @@ namespace StreamActions.Plugins
                 },
                 "@{DisplayName}, The caps moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
 
-            return document;
+            return result.IsAcknowledged;
         }
 
         /// <summary>
@@ -1483,11 +1519,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateCapFilterWarning(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateCapFilterWarning(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "time, message, reason, punishment" hasn't been specified in the arguments.
@@ -1504,7 +1540,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the values for the warning offence of the cap moderation. " +
                     "Usage: {CommandPrefix}{BotName} moderation caps warning [time, message, reason, punishment]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Warning time setting.
@@ -1525,24 +1561,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
                         "Current value: {CurrentValue} seconds. " +
                         "Usage: {CommandPrefix}{BotName} moderation caps warning time [1 to 1209600]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint capWarning = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapWarningTimeSeconds, capWarning);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapWarningTimeUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeSeconds = document.CapWarningTimeSeconds,
+                        TimeSeconds = capWarning,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Warning message setting.
@@ -1563,24 +1606,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation caps warning message [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string capWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapWarningMessage, capWarningMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapWarningMessageUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningMessage = document.CapWarningMessage,
+                        WarningMessage = capWarningMessage,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Warning reason setting.
@@ -1601,24 +1651,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation caps warning reason [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string capWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapWarningReason, capWarningReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapWarningReasonUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningReason = document.CapWarningReason,
+                        WarningReason = capWarningReason,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Warning punishment setting.
@@ -1641,24 +1698,31 @@ namespace StreamActions.Plugins
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation caps warning punishment [{Punishments}]").ConfigureAwait(false));
 
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.CapWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+                ModerationPunishment capWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.CapWarningPunishment, capWarningPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapWarningPunishmentUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningPunishment = document.CapWarningPunishment,
+                        WarningPunishment = capWarningPunishment,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The caps moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Usage if none of the above match.
@@ -1674,7 +1738,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, Sets the values for the warning offence of the cap moderation. " +
                 "Usage: {CommandPrefix}{BotName} moderation caps warning [time, message, reason, punishment]").ConfigureAwait(false));
 
-            return null;
+            return false;
         }
 
         #endregion Cap Filter Command Methods
