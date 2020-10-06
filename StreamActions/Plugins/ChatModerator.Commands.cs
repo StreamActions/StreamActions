@@ -1758,29 +1758,26 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            // Each command will return a document if a modification has been made.
-            ModerationDocument document = null;
-
             switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
                 case "toggle":
-                    document = await this.UpdateRepetitionFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateRepetitionFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "warning":
-                    document = await this.UpdateRepetitionFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateRepetitionFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "timeout":
-                    document = await this.UpdateRepetitionFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateRepetitionFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "exclude":
-                    document = await this.UpdateRepetitionFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateRepetitionFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "set":
-                    document = await this.UpdateRepetitionFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateRepetitionFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 default:
@@ -1796,19 +1793,6 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Manages the bot's link moderation filter. Usage: {CommandPrefix}{BotName} moderation repetition [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
                     break;
             }
-
-            // Update settings.
-            if (!(document is null))
-            {
-                //TODO: Refactor Mongo
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == e.Command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d, document);
-
-                _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-            }
         }
 
         /// <summary>
@@ -1818,11 +1802,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateRepetitionFilterExcludes(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateRepetitionFilterExcludes(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
@@ -1841,7 +1825,7 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, Sets the excluded levels for the repetition filter. " +
                     "Current value: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation repetition exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Make sure it is valid.
@@ -1860,31 +1844,45 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, A valid level must be specified for the excluded levels. " +
                     "Current value: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation repetition exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
-            //TODO: Refactor Mongo
-            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-            document.RepetitionExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+            UserLevels repetitionExcluded = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.RepetitionExcludedLevels, repetitionExcluded);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionExcludeUpdate", command.ChatMessage.RoomId,
                 new
                 {
                     User = command.ChatMessage.Username,
                     Sender = command.ChatMessage.Username,
-                    ExcludedLevel = document.RepetitionExcludedLevels,
+                    ExcludedLevel = repetitionExcluded,
                     command.ChatMessage.DisplayName
                 },
                 "@{DisplayName}, The repetition moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
 
-            return document;
+            return result.IsAcknowledged;
         }
 
-        private async Task<ModerationDocument> UpdateRepetitionFilterOptions(ChatCommand command, List<string> args)
+        /// <summary>
+        /// Method called when we update the repetition filter options.
+        /// Command: !bot moderation repetition set
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>The updated moderation document if an update was made, else it is null.</returns>
+        private async Task<bool> UpdateRepetitionFilterOptions(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "maximumrepeatingcharaters or maximumrepeatingwords or minimumlength" hasn't been specified in the arguments.
@@ -1901,7 +1899,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the options for the repetition filter. " +
                     "Usage: {CommandPrefix}{BotName} moderation repetition set [maximumrepeatingcharaters, maximumrepeatingwords, minimumlength]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Maximum repeating characters setting.
@@ -1922,24 +1920,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the maximum repeating characters allowed in a message. " +
                         "Current value: {CurrentValue} characters. " +
                         "Usage: {CommandPrefix}{BotName} moderation repetition set maximumrepeatingcharaters [amount]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.RepetionMaximumRepeatingCharacters = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint repetitionMaxRepeatingChars = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.RepetionMaximumRepeatingCharacters, repetitionMaxRepeatingChars);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionMaximumCharactersUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        MaximumAmount = document.RepetionMaximumRepeatingCharacters,
+                        MaximumAmount = repetitionMaxRepeatingChars,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The maximum repeating characters allowed in a message has been set to {MaximumAmount} characters.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Maximum repeating words setting.
@@ -1960,24 +1965,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the maximum repeating words allowed in a message. " +
                         "Current value: {CurrentValue} words. " +
                         "Usage: {CommandPrefix}{BotName} moderation repetition set maximumrepeatingwords [amount]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.RepetionMaximumRepeatingWords = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint repetitionMaxWords = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.RepetionMaximumRepeatingWords, repetitionMaxWords);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionMaximumWordsUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        MaximumAmount = document.RepetionMaximumRepeatingWords,
+                        MaximumAmount = repetitionMaxWords,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The maximum repeating words allowed in a message has been set to {MaximumAmount} words.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Minimum length to check for repetition.
@@ -1998,38 +2010,45 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the minimum characters needed to check for repetition. " +
                         "Current value: {CurrentValue} characters. " +
                         "Usage: {CommandPrefix}{BotName} moderation repetition set minimumlength [amount]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.RepetitionMinimumMessageLength = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint repetitionMinMsgLength = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.RepetitionMinimumMessageLength, repetitionMinMsgLength);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionMinimumWordsUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        MinimumAmount = document.RepetitionMinimumMessageLength,
+                        MinimumAmount = repetitionMinMsgLength,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The minimum characters needed to check for repetition has been to to {MinimumAmount} characters.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionSetUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the options for the repetition filter. " +
-                    "Usage: {CommandPrefix}{BotName} moderation repetition set [maximumrepeatingcharaters, maximumrepeatingwords, minimumlength]").ConfigureAwait(false));
-            return null;
+                 new
+                 {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                 },
+                 "@{DisplayName}, Sets the options for the repetition filter. " +
+                 "Usage: {CommandPrefix}{BotName} moderation repetition set [maximumrepeatingcharaters, maximumrepeatingwords, minimumlength]").ConfigureAwait(false));
+            return false;
         }
 
         /// <summary>
