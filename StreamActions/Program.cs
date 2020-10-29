@@ -27,7 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
 
-[assembly: Exceptionless("*/Exceptionless-API-Key/*", ServerUrl = "*/Exceptionless-API-URL/*")]
+[assembly: Exceptionless("API_KEY_HERE", ServerUrl = "*/Exceptionless-API-URL/*")]
 
 namespace StreamActions
 {
@@ -99,6 +99,8 @@ namespace StreamActions
             };
         }
 
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[AppDomainUnhandledException]" + e.ExceptionObject.GetType().FullName, (Exception)e.ExceptionObject, null, false);
+
         /// <summary>
         /// Main member.
         /// </summary>
@@ -112,14 +114,9 @@ namespace StreamActions
             {
                 // Attach shutdown handler.
                 AttachCtrlcSigtermShutdown(shutdownCts, done);
-                // Set Exceptionless to not send GPDR-protected information.
-                ExceptionlessClient.Default.Configuration.IncludeCookies = false;
-                ExceptionlessClient.Default.Configuration.IncludeIpAddress = false;
-                ExceptionlessClient.Default.Configuration.IncludeMachineName = false;
-                ExceptionlessClient.Default.Configuration.IncludePostData = false;
-                ExceptionlessClient.Default.Configuration.IncludeQueryString = false;
-                ExceptionlessClient.Default.Configuration.IncludeUserName = false;
-                ExceptionlessClient.Default.Configuration.IncludePrivateInformation = false;
+
+                AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+                TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
                 _ = Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
 
                 // Load settings.
@@ -134,14 +131,21 @@ namespace StreamActions
                 t.Wait();
                 _settings = t.Result;
 
-                if (Settings.ShowDebugMessages)
-                {
-                    ExceptionlessClient.Default.Configuration.UseTraceLogger(LogLevel.Debug);
-                }
-
                 // Start Exceptionless session, if enabled.
                 if (Settings.SendExceptions)
                 {
+                    // Set Exceptionless to not send GPDR-protected information.
+                    ExceptionlessClient.Default.Configuration.IncludeCookies = false;
+                    ExceptionlessClient.Default.Configuration.IncludeIpAddress = false;
+                    ExceptionlessClient.Default.Configuration.IncludeMachineName = false;
+                    ExceptionlessClient.Default.Configuration.IncludePostData = false;
+                    ExceptionlessClient.Default.Configuration.IncludeQueryString = false;
+                    ExceptionlessClient.Default.Configuration.IncludeUserName = false;
+                    ExceptionlessClient.Default.Configuration.IncludePrivateInformation = false;
+                    if (Settings.ShowDebugMessages)
+                    {
+                        ExceptionlessClient.Default.Configuration.UseTraceLogger(LogLevel.Debug);
+                    }
                     ExceptionlessClient.Default.Configuration.SetUserIdentity(Settings.BotLogin);
                     ExceptionlessClient.Default.Configuration.SetVersion(Version);
                     ExceptionlessClient.Default.Configuration.UseReferenceIds();
@@ -170,6 +174,8 @@ namespace StreamActions
                 done.Set();
             }
         }
+
+        private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[UnobservedTaskException]" + e.Exception.InnerExceptions[0].GetType().FullName, e.Exception.InnerExceptions[0], null, false);
 
         #endregion Private Methods
     }

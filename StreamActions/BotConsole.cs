@@ -98,6 +98,16 @@ namespace StreamActions.BotConsole
                 return;
             }
 
+            if (!ExceptionlessClient.Default.Configuration.IsValid)
+            {
+                Error.WriteLine("Unable to send to Exceptionless");
+                foreach (string msg in ExceptionlessClient.Default.Configuration.Validate().Messages)
+                {
+                    Error.WriteLine(msg);
+                }
+                return;
+            }
+
             if (data is null)
             {
                 data = "N/A";
@@ -112,7 +122,8 @@ namespace StreamActions.BotConsole
         /// <param name="niceDescription">The description printed to the console if debug mode is turned off.</param>
         /// <param name="e">The exception that was thrown.</param>
         /// <param name="data">Any extra data that needs to be sent to the remote Exceptionless server.</param>
-        public static void WriteException(string niceDescription, Exception e, object data)
+        /// <param name="sendException">Whether to send the exception to Exceptionless, if enabled.</param>
+        public static void WriteException(string niceDescription, Exception e, object data, bool sendException = true)
         {
             if (e is null)
             {
@@ -136,7 +147,10 @@ namespace StreamActions.BotConsole
                 Console.Error.WriteLine("--Data: " + data.ToString());
             }
 
-            SendException(e, data);
+            if (sendException)
+            {
+                SendException(e, data);
+            }
         }
 
         #endregion Public Methods
