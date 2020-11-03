@@ -15,6 +15,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -62,27 +63,37 @@ namespace StreamActions.Http
         /// <summary>
         /// The cookies passed to the request.
         /// </summary>
-        internal CookieCollection CookieCollection { get; set; }
+        public CookieCollection CookieCollection { get; internal set; }
 
         /// <summary>
         /// Indicates if the request came from the local host.
         /// </summary>
-        internal bool IsLocal { get; set; }
+        public bool IsLocal { get; internal set; }
+
+        /// <summary>
+        /// A collection of post parameters from the request.
+        /// </summary>
+        public Dictionary<string, List<string>> PostParams { get; } = new Dictionary<string, List<string>>();
+
+        /// <summary>
+        /// A collection of query parameters from the request.
+        /// </summary>
+        public Dictionary<string, List<string>> QueryParams { get; } = new Dictionary<string, List<string>>();
 
         /// <summary>
         /// The underlying Stream of the request.
         /// </summary>
-        internal Stream Stream { get; set; }
+        public Stream Stream { get; internal set; }
 
         /// <summary>
         /// The TcpClient of the request.
         /// </summary>
-        internal TcpClient TcpClient { get; set; }
+        public TcpClient TcpClient { get; internal set; }
 
         /// <summary>
         /// A ClaimsPrincipal representing a user the client is authenticating as; <c>null</c> if no authentication was attempted.
         /// </summary>
-        internal IPrincipal User { get; set; }
+        public IPrincipal User { get; internal set; }
 
         #endregion Internal Properties
     }

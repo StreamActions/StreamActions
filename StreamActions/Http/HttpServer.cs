@@ -436,6 +436,21 @@ namespace StreamActions.Http
                 CookieCollection = new CookieCollection()
             };
 
+            foreach (string s in requestMessage.RequestUri.Query.Split('&'))
+            {
+                string[] query = s.Split('=', 2);
+
+                if (!string.IsNullOrWhiteSpace(query[0]) && !string.IsNullOrWhiteSpace(WebUtility.UrlDecode(query[1])))
+                {
+                    if (!requestMessage.QueryParams.ContainsKey(query[0].ToLowerInvariant()))
+                    {
+                        requestMessage.QueryParams.Add(query[0].ToLowerInvariant(), new List<string>());
+                    }
+
+                    requestMessage.QueryParams[query[0].ToLowerInvariant()].Add(WebUtility.UrlDecode(query[1]));
+                }
+            }
+
             foreach (string line in lines)
             {
                 if (string.IsNullOrEmpty(line))
@@ -527,6 +542,24 @@ namespace StreamActions.Http
                 }
 
                 requestMessage.Content = new StringContent(requestString);
+
+                if (requestMessage.Method == HttpMethod.Post && requestString.Contains("&", StringComparison.Ordinal))
+                {
+                    foreach (string s in requestString.Split('&'))
+                    {
+                        string[] post = s.Split('=', 2);
+
+                        if (!string.IsNullOrWhiteSpace(post[0]) && !string.IsNullOrWhiteSpace(WebUtility.UrlDecode(post[1])))
+                        {
+                            if (!requestMessage.PostParams.ContainsKey(post[0].ToLowerInvariant()))
+                            {
+                                requestMessage.PostParams.Add(post[0].ToLowerInvariant(), new List<string>());
+                            }
+
+                            requestMessage.PostParams[post[0].ToLowerInvariant()].Add(WebUtility.UrlDecode(post[1]));
+                        }
+                    }
+                }
             }
 
             IPEndPoint remoteEndpoint = (IPEndPoint)client.Client.RemoteEndPoint;

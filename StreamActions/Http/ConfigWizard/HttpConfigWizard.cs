@@ -60,17 +60,6 @@ namespace StreamActions.Http.ConfigWizard
         {
             string contentType = "text/html";
             string sContent;
-            Dictionary<string, string> queryParams = new Dictionary<string, string>();
-
-            foreach (string s in request.RequestUri.Query.Split('&'))
-            {
-                string[] query = s.Split('=', 2);
-
-                if (!string.IsNullOrWhiteSpace(query[0]) && !string.IsNullOrWhiteSpace(WebUtility.UrlDecode(query[1])))
-                {
-                    queryParams.Add(query[0].ToLowerInvariant(), WebUtility.UrlDecode(query[1]));
-                }
-            }
 
             if (request.RequestUri.AbsolutePath.EndsWith("ConnectWithTwitch.json", StringComparison.OrdinalIgnoreCase))
             {
@@ -80,9 +69,9 @@ namespace StreamActions.Http.ConfigWizard
 
                 writer.WriteStartObject();
 
-                if (queryParams.ContainsKey("type"))
+                if (request.QueryParams.ContainsKey("type"))
                 {
-                    switch (queryParams["type"])
+                    switch (request.QueryParams["type"][0])
                     {
                         case "bot":
                             CreatedFlow bflow = Program.TwitchApi.ThirdParty.AuthorizationFlow.CreateFlow("StreamActions (Bot)", _broadcasterAuthScopes.Concat(_chatAuthScopes));
@@ -100,15 +89,15 @@ namespace StreamActions.Http.ConfigWizard
 
                         case "check":
                         case "check-bot":
-                            PingResponse response = queryParams.ContainsKey("id")
-                                ? Program.TwitchApi.ThirdParty.AuthorizationFlow.PingStatus(queryParams["id"])
+                            PingResponse response = request.QueryParams.ContainsKey("id")
+                                ? Program.TwitchApi.ThirdParty.AuthorizationFlow.PingStatus(request.QueryParams["id"][0])
                                 : Program.TwitchApi.ThirdParty.AuthorizationFlow.PingStatus();
 
                             writer.WriteString("Id", response.Id);
 
                             if (response.Success)
                             {
-                                if (queryParams["type"] == "check-bot")
+                                if (request.QueryParams["type"][0] == "check-bot")
                                 {
                                     Program.Settings.BotOAuth = response.Token;
                                     Program.Settings.BotRefreshToken = response.Refresh;
@@ -140,9 +129,9 @@ namespace StreamActions.Http.ConfigWizard
 
                 writer.WriteStartObject();
 
-                if (queryParams.ContainsKey("username") && !string.IsNullOrWhiteSpace(queryParams["username"]))
+                if (request.QueryParams.ContainsKey("username") && !string.IsNullOrWhiteSpace(request.QueryParams["username"][0]))
                 {
-                    GetUsersResponse response = await Program.TwitchApi.Helix.Users.GetUsersAsync(null, new List<string> { queryParams["username"] }).ConfigureAwait(false);
+                    GetUsersResponse response = await Program.TwitchApi.Helix.Users.GetUsersAsync(null, new List<string> { request.QueryParams["username"][0] }).ConfigureAwait(false);
 
                     writer.WriteBoolean("valid", response.Users.Length > 0);
                 }
@@ -166,7 +155,7 @@ namespace StreamActions.Http.ConfigWizard
 
             if (request.Method == HttpMethod.Post)
             {
-                sContent = await HandlePost(request, sContent).ConfigureAwait(false);
+                sContent = HandlePost(request, sContent);
             }
 
             sContent = await UpdateFormInputsAsync(sContent).ConfigureAwait(false);
@@ -181,27 +170,16 @@ namespace StreamActions.Http.ConfigWizard
             await HttpServer.SendHTTPResponseAsync(request.TcpClient, request.Stream, HttpStatusCode.OK, content, headers).ConfigureAwait(false);
         }
 
-        private static async Task<string> HandlePost(HttpServerRequestMessage request, string sContent)
+        private static string HandlePost(HttpServerRequestMessage request, string sContent)
         {
-            Dictionary<string, string> postParams = new Dictionary<string, string>();
-
-            foreach (string s in (await request.Content.ReadAsStringAsync().ConfigureAwait(false)).Split('&'))
-            {
-                string[] post = s.Split('=', 2);
-
-                if (!string.IsNullOrWhiteSpace(post[0]) && !string.IsNullOrWhiteSpace(WebUtility.UrlDecode(post[1])))
-                {
-                    postParams.Add(post[0].ToLowerInvariant(), WebUtility.UrlDecode(post[1]));
-                }
-            }
-
             //TODO: Update Settings
             List<string> errors = new List<string>();
 
             #region Twitch Connect
 
-            if (postParams.TryGetValue("BotLogin", out string value))
+            if (request.PostParams.TryGetValue("BotLogin", out List<string> values))
             {
+                string value = values[0];
                 if (_usernameRegex.IsMatch(value))
                 {
                     if (value != Program.Settings.BotLogin)
@@ -227,8 +205,9 @@ namespace StreamActions.Http.ConfigWizard
                 errors.Add("Bot Username is required");
             }
 
-            if (postParams.TryGetValue("BotOAuth", out value))
+            if (request.PostParams.TryGetValue("BotOAuth", out values))
             {
+                string value = values[0];
                 value = value.Replace("oauth:", "", StringComparison.OrdinalIgnoreCase);
                 if (_oauthRegex.IsMatch(value))
                 {
@@ -251,8 +230,9 @@ namespace StreamActions.Http.ConfigWizard
                 errors.Add("Bot OAuth is required");
             }
 
-            if (postParams.TryGetValue("BotRefreshToken", out value))
+            if (request.PostParams.TryGetValue("BotRefreshToken", out values))
             {
+                string value = values[0];
                 if (_oauthRegex.IsMatch(value))
                 {
                     if (value != Program.Settings.BotRefreshToken)
@@ -278,8 +258,9 @@ namespace StreamActions.Http.ConfigWizard
 
             #region Chat
 
-            if (postParams.TryGetValue("ChatCommandIdentifier", out value))
+            if (request.PostParams.TryGetValue("ChatCommandIdentifier", out values))
             {
+                string value = values[0];
                 if (!string.IsNullOrWhiteSpace(value) && value.Length == 1)
                 {
                     if (value[0] != Program.Settings.ChatCommandIdentifier)
@@ -300,8 +281,9 @@ namespace StreamActions.Http.ConfigWizard
                 }
             }
 
-            if (postParams.TryGetValue("WhisperCommandIdentifier", out value))
+            if (request.PostParams.TryGetValue("WhisperCommandIdentifier", out values))
             {
+                string value = values[0];
                 if (!string.IsNullOrWhiteSpace(value) && value.Length == 1)
                 {
                     if (value[0] != Program.Settings.WhisperCommandIdentifier)
@@ -322,8 +304,9 @@ namespace StreamActions.Http.ConfigWizard
                 }
             }
 
-            if (postParams.TryGetValue("GlobalCulture", out value))
+            if (request.PostParams.TryGetValue("GlobalCulture", out values))
             {
+                string value = values[0];
                 try
                 {
                     _ = new CultureInfo(value, false);
@@ -342,25 +325,25 @@ namespace StreamActions.Http.ConfigWizard
 
             #region Channels
 
-            IEnumerable<dynamic> channels = postParams.AsEnumerable().Where(kvp => kvp.Key.StartsWith("ChannelsToJoin", StringComparison.Ordinal) && kvp.Key.Contains("[", StringComparison.Ordinal) && kvp.Key.Contains("]", StringComparison.Ordinal)).GroupBy(kvp => kvp.Key.Substring(kvp.Key.IndexOf("[", StringComparison.Ordinal) + 1, kvp.Key.IndexOf("]", StringComparison.Ordinal) - kvp.Key.IndexOf("[", StringComparison.Ordinal) - 1), (channel, data) =>
+            IEnumerable<dynamic> channels = request.PostParams.AsEnumerable().Where(kvp => kvp.Key.StartsWith("ChannelsToJoin", StringComparison.Ordinal) && kvp.Key.Contains("[", StringComparison.Ordinal) && kvp.Key.Contains("]", StringComparison.Ordinal)).GroupBy(kvp => kvp.Key.Substring(kvp.Key.IndexOf("[", StringComparison.Ordinal) + 1, kvp.Key.IndexOf("]", StringComparison.Ordinal) - kvp.Key.IndexOf("[", StringComparison.Ordinal) - 1), (channel, data) =>
             {
                 string channelLogin = "";
                 string channelOAuth = "";
                 string channelRefresh = "";
 
-                foreach (KeyValuePair<string, string> kvp in data)
+                foreach (KeyValuePair<string, List<string>> kvp in data)
                 {
                     if (kvp.Key == "ChannelsToJoin[" + channel + "]")
                     {
-                        channelLogin = kvp.Value.Trim();
+                        channelLogin = kvp.Value[0].Trim();
                     }
                     else if (kvp.Key == "ChannelsToJoinOAuth[" + channel + "]")
                     {
-                        channelOAuth = kvp.Value.Replace("oauth:", "", StringComparison.OrdinalIgnoreCase).Trim();
+                        channelOAuth = kvp.Value[0].Replace("oauth:", "", StringComparison.OrdinalIgnoreCase).Trim();
                     }
                     else if (kvp.Key == "ChannelsToJoinRefresh[" + channel + "]")
                     {
-                        channelRefresh = kvp.Value.Trim();
+                        channelRefresh = kvp.Value[0].Trim();
                     }
                 }
 
