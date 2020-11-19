@@ -25,6 +25,7 @@ using StreamActions.Plugin;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -82,8 +83,12 @@ namespace StreamActions.Plugins
         }
 
         public bool AlwaysEnabled => true;
-
         public CultureInfo GlobalCulture => this._globalCulture;
+
+        /// <summary>
+        /// A Dictionary of currently loaded I18nDocuments
+        /// </summary>
+        public ReadOnlyDictionary<string, I18nDocument> I18nDocuments => new ReadOnlyDictionary<string, I18nDocument>(this._i18nDocuments);
 
         public string PluginAuthor => "StreamActions Team";
 
@@ -189,6 +194,17 @@ namespace StreamActions.Plugins
         /// <returns>A copy of the i18n replacement string (or <paramref name="defVal"/> if it is not found) in which the format items have been replaced by the string representation of the corresponding objects in <paramref name="source"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="document"/> is null.</exception>
         public static string GetAndFormatWith(string category, string key, I18nDocument document, object source, CultureInfo culture, string defVal = null) => FormatWith(Get(category, key, document, defVal), culture, source);
+
+        /// <summary>
+        /// Attempts to retrieve the specified i18n replacement string, and then formats it, using the global culture.
+        /// </summary>
+        /// <param name="category">The category to select from.</param>
+        /// <param name="key">The string key to select.</param>
+        /// <param name="source">A type that provides the replacement values. Can be <c>Dictionary&lt;string, string&gt;</c>, <c>List&lt;string&gt;</c>, or an anonymous type (eg. <c>new { MyValue = "hello!" }</c>).</param>
+        /// <param name="defVal">The default value to return if either the <paramref name="category"/> or <paramref name="key"/> do not exist; <c>null</c> if not provided</param>
+        /// <returns>A copy of the i18n replacement string (or <paramref name="defVal"/> if it is not found) in which the format items have been replaced by the string representation of the corresponding objects in <paramref name="source"/>.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="document"/> is null.</exception>
+        public static string GetAndFormatWith(string category, string key, object source, string defVal = null) => FormatWith(Get(category, key, I18n.Instance.I18nDocuments.GetValueOrDefault(I18n.Instance.GlobalCulture.Name, I18nDocument.Empty), defVal), I18n.Instance.GlobalCulture, source);
 
         /// <summary>
         /// Loads the i18n files for the specified culture and merges it all into a single <see cref="I18nDocument"/>.

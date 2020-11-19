@@ -15,6 +15,8 @@
  */
 
 using StreamActions.Http.Identity;
+using StreamActions.JsonDocuments;
+using StreamActions.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -69,6 +71,29 @@ namespace StreamActions.Http
         #endregion Internal Constructors
 
         #region Internal Methods
+
+        /// <summary>
+        /// Performs I18N operations on HTML.
+        /// </summary>
+        /// <param name="sContent">The original HTML content.</param>
+        /// <param name="source">A Dictionary of types that provide the replacement values. Key is &quot;Category.Key&quot;. Value can be <c>Dictionary&lt;string, string&gt;</c>, <c>List&lt;string&gt;</c>, or an anonymous type (eg. <c>new { MyValue = "hello!" }</c>).</param>
+        /// <returns>The HTML content with I18N operations performed.</returns>
+        internal static string DoI18N(string sContent, Dictionary<string, object> source)
+        {
+            string sNewContent = "";
+            int offset = 0;
+            foreach (Match m in _i18nRegex.Matches(sContent))
+            {
+                GroupCollection g = m.Groups;
+                string repl = I18n.GetAndFormatWith(g["category"].Value, g["key"].Value, source.GetValueOrDefault(g["category"].Value + "." + g["key"].Value, new { }), g["value"].Value);
+                sNewContent += sContent[offset..g["i18n"].Index] + repl;
+                offset = g["i18n"].Index + g["i18n"].Value.Length;
+            }
+
+            sNewContent += sContent[offset..];
+
+            return sNewContent;
+        }
 
         /// <summary>
         /// Indicates if the specified <see cref="HttpServerRequestMessage"/> contains a possible WebSocket upgrade request.
@@ -251,6 +276,11 @@ namespace StreamActions.Http
         /// Regex for detecting a header line.
         /// </summary>
         private static readonly Regex _headerRegex = new Regex(@"^(?<field>\S*): (?<value>[\S\s]+)$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Regex for an i18n HTML tag.
+        /// </summary>
+        private static readonly Regex _i18nRegex = new Regex(@"(?<i18n><i18n category=""(?< category >[\w -] +)"" key=""(?< key >[\w -] +)"">(?<value>[\s\S]*)<\/i18n>)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         /// <summary>
         /// Regex for detecting a HTTP request line.

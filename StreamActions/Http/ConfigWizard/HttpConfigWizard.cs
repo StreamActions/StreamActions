@@ -160,6 +160,8 @@ namespace StreamActions.Http.ConfigWizard
 
             sContent = await UpdateFormInputsAsync(sContent).ConfigureAwait(false);
 
+            sContent = HttpServer.DoI18N(sContent, new Dictionary<string, object>());
+
             byte[] content = Encoding.UTF8.GetBytes(sContent);
             Dictionary<string, List<string>> headers = new Dictionary<string, List<string>>
             {
