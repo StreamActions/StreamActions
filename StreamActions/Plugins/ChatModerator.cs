@@ -687,26 +687,26 @@ namespace StreamActions.Plugins
             ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
 
             // Check if the filter is enabled.
-            if (document.LenghtyMessageStatus)
+            if (document.LengthyMessageStatus)
             {
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
-                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.LenghtyMessageExcludedLevels).ConfigureAwait(false))
+                if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.LengthyMessageExcludedLevels).ConfigureAwait(false))
                 {
-                    if (this.GetMessageLength(e.ChatMessage.Message) > document.LenghtyMessageMaximumLength)
+                    if (this.GetMessageLength(e.ChatMessage.Message) > document.LengthyMessageMaximumLength)
                     {
                         if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
-                            moderationResult.Punishment = document.LenghtyMessageTimeoutPunishment;
-                            moderationResult.TimeoutSeconds = document.LenghtyMessageTimeoutTimeSeconds;
-                            moderationResult.ModerationReason = document.LenghtyMessageTimeoutReason;
-                            moderationResult.ModerationMessage = document.LenghtyMessageTimeoutMessage;
+                            moderationResult.Punishment = document.LengthyMessageTimeoutPunishment;
+                            moderationResult.TimeoutSeconds = document.LengthyMessageTimeoutTimeSeconds;
+                            moderationResult.ModerationReason = document.LengthyMessageTimeoutReason;
+                            moderationResult.ModerationMessage = document.LengthyMessageTimeoutMessage;
                         }
                         else
                         {
-                            moderationResult.Punishment = document.LenghtyMessageWarningPunishment;
-                            moderationResult.TimeoutSeconds = document.LenghtyMessageWarningTimeSeconds;
-                            moderationResult.ModerationReason = document.LenghtyMessageWarningReason;
-                            moderationResult.ModerationMessage = document.LenghtyMessageWarningMessage;
+                            moderationResult.Punishment = document.LengthyMessageWarningPunishment;
+                            moderationResult.TimeoutSeconds = document.LengthyMessageWarningTimeSeconds;
+                            moderationResult.ModerationReason = document.LengthyMessageWarningReason;
+                            moderationResult.ModerationMessage = document.LengthyMessageWarningMessage;
                         }
                     }
                 }
