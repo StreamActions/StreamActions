@@ -4800,29 +4800,26 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            // Each command will return a document if a modification has been made.
-            ModerationDocument document = null;
-
             switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
                 case "toggle":
-                    document = await this.UpdateEmoteFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateEmoteFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "warning":
-                    document = await this.UpdateEmoteFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateEmoteFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "timeout":
-                    document = await this.UpdateEmoteFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateEmoteFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "exclude":
-                    document = await this.UpdateEmoteFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateEmoteFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "set":
-                    document = await this.UpdateEmoteFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateEmoteFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 default:
@@ -4838,19 +4835,6 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Manages the bot's emote moderation filter. Usage: {CommandPrefix}{BotName} moderation emotes [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
                     break;
             }
-
-            // Update settings.
-            if (!(document is null))
-            {
-                //TODO: Refactor Mongo
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == e.Command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d, document);
-
-                _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-            }
         }
 
         /// <summary>
@@ -4860,11 +4844,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateEmoteFilterExcludes(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateEmoteFilterExcludes(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
@@ -4883,7 +4867,7 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, Sets the excluded levels for the emotes filter. " +
                     "Current value: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation emotes exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Make sure it is valid.
@@ -4902,24 +4886,31 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, A valid level must be specified for the excluded levels. " +
                     "Current value: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation emotes exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
-            //TODO: Refactor Mongo
-            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-            document.EmoteExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+            UserLevels emoteExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteExcludedLevels, emoteExcludedLevels);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteExcludeUpdate", command.ChatMessage.RoomId,
                 new
                 {
                     User = command.ChatMessage.Username,
                     Sender = command.ChatMessage.Username,
-                    ExcludedLevel = document.EmoteExcludedLevels,
+                    ExcludedLevel = emoteExcludedLevels,
                     command.ChatMessage.DisplayName
                 },
                 "@{DisplayName}, The emotes moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
 
-            return document;
+            return result.IsAcknowledged;
         }
 
         /// <summary>
@@ -4929,11 +4920,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateEmoteFilterOptions(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateEmoteFilterOptions(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "maximumpercent or minimumlength" hasn't been specified in the arguments.
@@ -4950,7 +4941,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the options for the emotes filter. " +
                     "Usage: {CommandPrefix}{BotName} moderation emotes set [maximum, removeemotesonly]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Maximum emotes in message setting.
@@ -4971,24 +4962,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the maximum percentage of emotes allowed in a message. " +
                         "Current value: {CurrentValue} emotes" +
                         "Usage: {CommandPrefix}{BotName} moderation emotes set maximumpercent [amount]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteMaximumAllowed = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint emoteMaximumAllowed = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteMaximumAllowed, emoteMaximumAllowed);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetMaximumUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        MaximumEmotes = document.EmoteMaximumAllowed,
+                        MaximumEmotes = emoteMaximumAllowed,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes maximum emotes allowed in a message has been set to {MaximumEmotes} emotes.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Remove messages only containing emotes.
@@ -5009,24 +5007,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets if messages only containing emotes should be deleted. " +
                         "Current value: {CurrentValue}" +
                         "Usage: {CommandPrefix}{BotName} moderation emotes set removeemotesonly [true or false]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteRemoveOnlyEmotes = bool.Parse(args[5]);
+                bool emoteRemoveOnlyEmotes = bool.Parse(args[5]);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteRemoveOnlyEmotes, emoteRemoveOnlyEmotes);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetRemoveAllUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        RemoveOnly = document.EmoteRemoveOnlyEmotes,
+                        RemoveOnly = emoteRemoveOnlyEmotes,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes remove only emotes filter has been set to {RemoveOnly}.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Usage if none of the above.
@@ -5043,7 +5048,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, Sets the options for the emotes filter. " +
                 "Usage: {CommandPrefix}{BotName} moderation emotes set [maximum, removeemotesonly]").ConfigureAwait(false));
 
-            return null;
+            return false;
         }
 
         /// <summary>
@@ -5053,11 +5058,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateEmoteFilterTimeout(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateEmoteFilterTimeout(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "time, message, reason, punishment" hasn't been specified in the arguments.
@@ -5074,7 +5079,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the values for the timeout offence of the emote moderation. " +
                     "Usage: {CommandPrefix}{BotName} moderation emotes timeout [time, message, reason, punishment]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Timeout time setting.
@@ -5095,24 +5100,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
                         "Current value: {CurrentValue} seconds. " +
                         "Usage: {CommandPrefix}{BotName} moderation emotes timeout time [1 to 1209600]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint emoteTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutTimeSeconds, emoteTimeoutTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutTimeUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeSeconds = document.EmoteTimeoutTimeSeconds,
+                        TimeSeconds = emoteTimeoutTimeSeconds,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Timeout message setting.
@@ -5133,24 +5145,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation emotes timeout message [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string emoteTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutMessage, emoteTimeoutMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutMessageUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutMessage = document.EmoteTimeoutMessage,
+                        TimeoutMessage = emoteTimeoutMessage,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Timeout reason setting.
@@ -5171,24 +5190,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation emotes timeout reason [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string emoteTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutReason, emoteTimeoutReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutReasonUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutReason = document.EmoteTimeoutReason,
+                        TimeoutReason = emoteTimeoutReason,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Timeout punishment setting.
@@ -5211,24 +5237,31 @@ namespace StreamActions.Plugins
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation emotes timeout punishment [{Punishments}]").ConfigureAwait(false));
 
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+                ModerationPunishment emoteTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutPunishment, emoteTimeoutPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutPunishment = document.EmoteTimeoutPunishment,
+                        TimeoutPunishment = emoteTimeoutPunishment,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Usage if none of the above match.
@@ -5244,7 +5277,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, Sets the values for the timeout offence of the emote moderation. " +
                 "Usage: {CommandPrefix}{BotName} moderation emotes timeout [time, message, reason, punishment]").ConfigureAwait(false));
 
-            return null;
+            return false;
         }
 
         /// <summary>
@@ -5254,11 +5287,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateEmoteFilterToggle(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateEmoteFilterToggle(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "on" or "off" hasn't been specified in the arguments.
@@ -5277,7 +5310,7 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, Toggles the emotes moderation. " +
                     "Current status: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation emotes toggle [on, off]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // If the forth argument isn't "on" or "off" at all.
@@ -5296,12 +5329,19 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, A valid toggle for emotes moderation must be specified. " +
                     "Current status: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation emotes toggle [on, off]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
-            //TODO: Refactor Mongo
-            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-            document.EmoteStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+            bool emoteStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteStatus, emoteStatus);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteToggle", command.ChatMessage.RoomId,
                 new
@@ -5313,7 +5353,7 @@ namespace StreamActions.Plugins
                 },
                 "@{DisplayName}, The emotes moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
 
-            return document;
+            return result.IsAcknowledged;
         }
 
         /// <summary>
@@ -5323,11 +5363,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateEmoteFilterWarning(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateEmoteFilterWarning(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "time, message, reason, punishment" hasn't been specified in the arguments.
@@ -5344,7 +5384,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the values for the warning offence of the emote moderation. " +
                     "Usage: {CommandPrefix}{BotName} moderation emotes warning [time, message, reason, punishment]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Warning time setting.
@@ -5365,24 +5405,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
                         "Current value: {CurrentValue} seconds. " +
                         "Usage: {CommandPrefix}{BotName} moderation emotes warning time [1 to 1209600]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint emoteWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningTimeSeconds, emoteWarningTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningTimeUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeSeconds = document.EmoteWarningTimeSeconds,
+                        TimeSeconds = emoteWarningTimeSeconds,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Warning message setting.
@@ -5403,24 +5450,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation emotes warning message [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string emoteWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningMessage, emoteWarningMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningMessageUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningMessage = document.EmoteWarningMessage,
+                        WarningMessage = emoteWarningMessage,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Warning reason setting.
@@ -5441,24 +5495,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation emotes warning reason [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string emoteWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningReason, emoteWarningReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningReasonUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningReason = document.EmoteWarningReason,
+                        WarningReason = emoteWarningReason,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Warning punishment setting.
@@ -5481,24 +5542,31 @@ namespace StreamActions.Plugins
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation emotes warning punishment [{Punishments}]").ConfigureAwait(false));
 
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.EmoteWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+                ModerationPunishment emoteWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningPunishment, emoteWarningPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningPunishmentUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningPunishment = document.EmoteWarningPunishment,
+                        WarningPunishment = emoteWarningPunishment,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The emotes moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Usage if none of the above match.
@@ -5514,7 +5582,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, Sets the values for the warning offence of the emote moderation. " +
                 "Usage: {CommandPrefix}{BotName} moderation emotes warning [time, message, reason, punishment]").ConfigureAwait(false));
 
-            return null;
+            return false;
         }
 
         #endregion Emote Filter Command Methods
@@ -5534,25 +5602,22 @@ namespace StreamActions.Plugins
                 return;
             }
 
-            // Each command will return a document if a modification has been made.
-            ModerationDocument document = null;
-
             switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
                 case "toggle":
-                    document = await this.UpdateFakePurgeFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateFakePurgeFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "warning":
-                    document = await this.UpdateFakePurgeFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateFakePurgeFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "timeout":
-                    document = await this.UpdateFakePurgeFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateFakePurgeFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "exclude":
-                    document = await this.UpdateFakePurgeFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await this.UpdateFakePurgeFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 default:
@@ -5568,19 +5633,6 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Manages the bot's fake purge moderation filter. Usage: {CommandPrefix}{BotName} moderation fakepurge [toggle, warning, timeout, exclude]").ConfigureAwait(false));
                     break;
             }
-
-            // Update settings.
-            if (!(document is null))
-            {
-                //TODO: Refactor Mongo
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == e.Command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d, document);
-
-                _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-            }
         }
 
         /// <summary>
@@ -5590,11 +5642,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateFakePurgeFilterExcludes(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateFakePurgeFilterExcludes(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
@@ -5613,7 +5665,7 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, Sets the excluded levels for the fake purge. " +
                     "Current value: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation fakepurge exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Make sure it is valid.
@@ -5632,24 +5684,31 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, A valid level must be specified for the excluded levels. " +
                     "Current value: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation fakepurge exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
-            //TODO: Refactor Mongo
-            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-            document.FakePurgeExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+            UserLevels fakePurgeExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeExcludedLevels, fakePurgeExcludedLevels);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeExcludeUpdate", command.ChatMessage.RoomId,
                 new
                 {
                     User = command.ChatMessage.Username,
                     Sender = command.ChatMessage.Username,
-                    ExcludedLevel = document.FakePurgeExcludedLevels,
+                    ExcludedLevel = fakePurgeExcludedLevels,
                     command.ChatMessage.DisplayName
                 },
                 "@{DisplayName}, The fake purge moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
 
-            return document;
+            return result.IsAcknowledged;
         }
 
         /// <summary>
@@ -5659,11 +5718,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateFakePurgeFilterTimeout(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateFakePurgeFilterTimeout(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "time, message, reason, punishment" hasn't been specified in the arguments.
@@ -5680,7 +5739,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the values for the timeout offence of the fake purge moderation. " +
                     "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout [time, message, reason, punishment]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Timeout time setting.
@@ -5701,24 +5760,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
                         "Current value: {CurrentValue} seconds. " +
                         "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout time [1 to 1209600]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.FakePurgeTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint fakePurgeTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutTimeSeconds, fakePurgeTimeoutTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutTimeUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeSeconds = document.FakePurgeTimeoutTimeSeconds,
+                        TimeSeconds = fakePurgeTimeoutTimeSeconds,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The fake purge moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Timeout message setting.
@@ -5739,24 +5805,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout message [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
-                //TODO: Refactor Mongo
 
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.FakePurgeTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string fakePurgeTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutMessage, fakePurgeTimeoutMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutMessageUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutMessage = document.FakePurgeTimeoutMessage,
+                        TimeoutMessage = fakePurgeTimeoutMessage,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The fake purge moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Timeout reason setting.
@@ -5777,24 +5850,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout reason [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.FakePurgeTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string fakePurgeTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutReason, fakePurgeTimeoutReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutReasonUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutReason = document.FakePurgeTimeoutReason,
+                        TimeoutReason = fakePurgeTimeoutReason,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The fake purge moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Timeout punishment setting.
@@ -5817,24 +5897,31 @@ namespace StreamActions.Plugins
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout punishment [{Punishments}]").ConfigureAwait(false));
 
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.FakePurgeTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+                ModerationPunishment fakePurgeTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutPunishment, fakePurgeTimeoutPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutPunishment = document.FakePurgeTimeoutPunishment,
+                        TimeoutPunishment = fakePurgeTimeoutPunishment,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The fake purge moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Usage if none of the above match.
@@ -5850,7 +5937,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, Sets the values for the timeout offence of the fake purge moderation. " +
                 "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout [time, message, reason, punishment]").ConfigureAwait(false));
 
-            return null;
+            return false;
         }
 
         /// <summary>
@@ -5860,11 +5947,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateFakePurgeFilterToggle(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateFakePurgeFilterToggle(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "on" or "off" hasn't been specified in the arguments.
@@ -5883,7 +5970,7 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, Toggles the fake purge moderation. " +
                     "Current status: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation fakepurge toggle [on, off]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // If the forth argument isn't "on" or "off" at all.
@@ -5902,12 +5989,19 @@ namespace StreamActions.Plugins
                     "@{DisplayName}, A valid toggle for fake purge moderation must be specified. " +
                     "Current status: {CurrentValue}. " +
                     "Usage: {CommandPrefix}{BotName} moderation fakepurge toggle [on, off]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
-            //TODO: Refactor Mongo
-            ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-            document.FakePurgeStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+            bool fakePurgeStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeStatus, fakePurgeStatus);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
             TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeToggle", command.ChatMessage.RoomId,
                 new
@@ -5919,7 +6013,7 @@ namespace StreamActions.Plugins
                 },
                 "@{DisplayName}, The fake purge moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
 
-            return document;
+            return result.IsAcknowledged;
         }
 
         /// <summary>
@@ -5929,11 +6023,11 @@ namespace StreamActions.Plugins
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
         /// <returns>The updated moderation document if an update was made, else it is null.</returns>
-        private async Task<ModerationDocument> UpdateFakePurgeFilterWarning(ChatCommand command, List<string> args)
+        private async Task<bool> UpdateFakePurgeFilterWarning(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return null;
+                return false;
             }
 
             // If "time, message, reason, punishment" hasn't been specified in the arguments.
@@ -5950,7 +6044,7 @@ namespace StreamActions.Plugins
                     },
                     "@{DisplayName}, Sets the values for the warning offence of the fake purge moderation. " +
                     "Usage: {CommandPrefix}{BotName} moderation fakepurge warning [time, message, reason, punishment]").ConfigureAwait(false));
-                return null;
+                return false;
             }
 
             // Warning time setting.
@@ -5971,24 +6065,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
                         "Current value: {CurrentValue} seconds. " +
                         "Usage: {CommandPrefix}{BotName} moderation fakepurge warning time [1 to 1209600]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.FakePurgeWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint fakePurgeWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningTimeSeconds, fakePurgeWarningTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningTimeUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeSeconds = document.FakePurgeWarningTimeSeconds,
+                        TimeSeconds = fakePurgeWarningTimeSeconds,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The fake purge moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Warning message setting.
@@ -6009,24 +6110,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation fakepurge warning message [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.FakePurgeWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string fakePurgeWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningMessage, fakePurgeWarningMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningMessageUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningMessage = document.FakePurgeWarningMessage,
+                        WarningMessage = fakePurgeWarningMessage,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The fake purge moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Warning reason setting.
@@ -6047,24 +6155,31 @@ namespace StreamActions.Plugins
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation fakepurge warning reason [message]").ConfigureAwait(false));
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.FakePurgeWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string fakePurgeWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningReason, fakePurgeWarningReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningReasonUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningReason = document.FakePurgeWarningReason,
+                        WarningReason = fakePurgeWarningReason,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The fake purge moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Warning punishment setting.
@@ -6087,24 +6202,31 @@ namespace StreamActions.Plugins
                         "Current value: \"{CurrentValue}\". " +
                         "Usage: {CommandPrefix}{BotName} moderation fakepurge warning punishment [{Punishments}]").ConfigureAwait(false));
 
-                    return null;
+                    return false;
                 }
 
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-                document.FakePurgeWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+                ModerationPunishment fakePurgeWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningPunishment, fakePurgeWarningPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
                 TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningPunishmentUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningPunishment = document.FakePurgeWarningPunishment,
+                        WarningPunishment = fakePurgeWarningPunishment,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, The fake purge moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
 
-                return document;
+                return result.IsAcknowledged;
             }
 
             // Usage if none of the above match.
@@ -6120,7 +6242,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, Sets the values for the warning offence of the fake purge moderation. " +
                 "Usage: {CommandPrefix}{BotName} moderation fakepurge warning [time, message, reason, punishment]").ConfigureAwait(false));
 
-            return null;
+            return false;
         }
 
         #endregion Fake Purge Command Methods
