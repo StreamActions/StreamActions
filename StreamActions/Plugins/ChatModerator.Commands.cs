@@ -23,6 +23,8 @@ using MongoDB.Driver;
 using StreamActions.Attributes;
 using StreamActions.Database;
 using StreamActions.Database.Documents;
+using StreamActions.Database.Documents.Moderation;
+using StreamActions.Database.Documents.Users;
 using StreamActions.Enums;
 using StreamActions.Plugin;
 using TwitchLib.Client.Events;
@@ -40,6 +42,93 @@ namespace StreamActions.Plugins
         private const int _itemsPerPage = 10;
 
         #endregion Private Fields
+
+        #region Private Methods
+
+        /// <summary>
+        /// Command to permit users to post links.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("permit", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationPermitCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Permission.Can(e.Command, false, 1).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            List<string> args = e.Command.ArgumentsAsList;
+
+            if (args.IsNullWhiteSpaceOrOutOfRange(2))
+            {
+                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "PermitUsage", e.Command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = e.Command.ChatMessage.Username,
+                        Sender = e.Command.ChatMessage.Username,
+                    },
+                    "@{DisplayName}, Permits a user to post links in the chat for a certain amount of time. Usage: !permit [username]").ConfigureAwait(false));
+                return;
+            }
+
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
+
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.DisplayName.Equals(args[2], StringComparison.InvariantCultureIgnoreCase));
+
+            // Make sure the user exists.
+            if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+            {
+                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "PermitUser404", e.Command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = e.Command.ChatMessage.Username,
+                        Sender = e.Command.ChatMessage.Username,
+                        ToUser = args[2]
+                    },
+                    "@{DisplayName}, User {ToUser} doesn't exist in the database.").ConfigureAwait(false));
+                return;
+            }
+
+            using IAsyncCursor<UserDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            List<UserModerationDocument> userModerationDocuments = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration;
+
+            if (!userModerationDocuments.Exists(m => m.ChannelId.Equals(e.Command.ChatMessage.RoomId, StringComparison.OrdinalIgnoreCase)))
+            {
+                userModerationDocuments.Add(new UserModerationDocument
+                {
+                    ChannelId = e.Command.ChatMessage.RoomId,
+                    LastPermitAt = DateTime.Now
+                });
+            }
+            else
+            {
+                userModerationDocuments.Find(m => m.ChannelId.Equals(e.Command.ChatMessage.RoomId, StringComparison.OrdinalIgnoreCase)).LastPermitAt = DateTime.Now;
+            }
+
+            UpdateDefinition<UserDocument> update = Builders<UserDocument>.Update.Set(u => u.UserModeration, userModerationDocuments);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "PermitSuccess", e.Command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = e.Command.ChatMessage.Username,
+                    Sender = e.Command.ChatMessage.Username,
+                    ToUser = args[2],
+                    PermitTime = (await GetFilterDocumentForChannel(e.Command.ChatMessage.RoomId).ConfigureAwait(false)).LinkPermitTimeSeconds,
+                },
+                "@{DisplayName}, {ToUser} is now permitted to post one link for the next {PermitTime} seconds.").ConfigureAwait(false));
+        }
+
+        #endregion Private Methods
 
         #region Moderation Main Methods
 

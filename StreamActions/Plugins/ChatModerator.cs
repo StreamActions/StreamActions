@@ -691,6 +691,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.HasUrl(e.ChatMessage.Message) && !await this.HasWhitelist(e.ChatMessage.Message, e.ChatMessage.RoomId).ConfigureAwait(false))
                     {
+                        // TODO: Remove permit from user/check for permit.
                         if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.LinkTimeoutPunishment;
