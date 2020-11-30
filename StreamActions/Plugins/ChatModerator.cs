@@ -109,7 +109,7 @@ namespace StreamActions.Plugins
 
             // Set the last time the user sent a message.
             UserDocument document;
-            //TODO: Refactor Mongo
+
             IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, e.ChatMessage.UserId);
@@ -123,13 +123,13 @@ namespace StreamActions.Plugins
                     Id = e.ChatMessage.UserId,
                     Login = e.ChatMessage.Username
                 };
-            }
-            else
-            {
-                using IAsyncCursor<UserDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
 
-                document = (await cursor.SingleAsync().ConfigureAwait(false));
+                _ = collection.InsertOneAsync(document).ConfigureAwait(false);
             }
+
+            using IAsyncCursor<UserDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+
+            document = (await cursor.SingleAsync().ConfigureAwait(false));
 
             // We only need to get the first badge.
             // Twitch orders badges from higher level to lower.
@@ -184,7 +184,7 @@ namespace StreamActions.Plugins
 
             UpdateDefinition<UserDocument> update = Builders<UserDocument>.Update.Set(i => i, document);
 
-            _ = await collection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }).ConfigureAwait(false);
+            _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
         }
 
         #endregion Pre moderation event
@@ -334,7 +334,7 @@ namespace StreamActions.Plugins
             foreach (Match match in matches)
             {
                 string val = (match.Value.IndexOf("?", StringComparison.InvariantCulture) != -1 ?
-                    match.Value.Substring(match.Value.IndexOf("?", StringComparison.InvariantCulture)) : match.Value);
+                    match.Value[match.Value.IndexOf("?", StringComparison.InvariantCulture)..] : match.Value);
 
                 if (document.LinkWhitelist.Exists(w => w.Equals(val, StringComparison.InvariantCultureIgnoreCase)))
                 {
@@ -396,37 +396,33 @@ namespace StreamActions.Plugins
         #region Private methods
 
         /// <summary>
-        /// Method for deobfuscating a URL from a message.
-        /// Example: google(dot)com
-        /// </summary>
-        /// <see cref="https://github.com/gmt2001/PhantomBot/blob/master/res/scripts/util/patternDetector.js#L102"/>
-        /// <param name="message">Message to be deobfuscated.</param>
-        /// <returns>The deobfuscated message</returns>
-        private string GetDeobfuscatedUrlFromMessage(string message)
-        {
-            // TODO: Implement this: https://github.com/gmt2001/PhantomBot/blob/master/res/scripts/util/patternDetector.js#L102
-            return null;
-        }
-
-        /// <summary>
         /// If a user currently has a warning.
         /// </summary>
-        /// <param name="document">Moderation document.</param>
+        /// <param name="channelId">ID of the channel.</param>
         /// <param name="userId">User id to check for warnings</param>
         /// <returns>True if the user has a warning.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1307:Specify StringComparison", Justification = "Channel Id is stored as a string.")]
-        private async Task<bool> UserHasWarning(ModerationDocument document, string userId)
+        private async Task<bool> UserHasWarning(string channelId, string userId)
         {
-            //TODO: Refactor Mongo
+            // Get moderation warning seconds.
+            IMongoCollection<ModerationDocument> modCollection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> modFilter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, channelId);
+
+            using IAsyncCursor<ModerationDocument> modCursor = (await modCollection.FindAsync(modFilter).ConfigureAwait(false));
+
+            uint moderationWarningTimeSeconds = (await modCursor.FirstAsync().ConfigureAwait(false)).ModerationWarningTimeSeconds;
+
+            // Get user document.
             IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
 
             FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, userId);
 
             using IAsyncCursor<UserDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
 
-            UserModerationDocument userModerationDocument = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration.FirstOrDefault(m => m.ChannelId.Equals(document.ChannelId));
+            UserModerationDocument userModerationDocument = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration.FirstOrDefault(m => m.ChannelId.Equals(channelId));
 
-            return userModerationDocument.LastModerationWarning.AddSeconds(document.ModerationWarningTimeSeconds) >= DateTime.Now;
+            return userModerationDocument.LastModerationWarning.AddSeconds(moderationWarningTimeSeconds) >= DateTime.Now;
         }
 
         #endregion Private methods
@@ -441,12 +437,18 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnBlacklistCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
             string toMatch;
 
-            foreach (BlacklistDocument blacklist in document.Blacklist)
+            foreach (BlacklistDocument blacklist in (await cursor.FirstAsync().ConfigureAwait(false)).Blacklist)
             {
                 Regex regex = (blacklist.IsRegex ? blacklist.RegexPhrase : new Regex(Regex.Escape(blacklist.Phrase)));
                 toMatch = (blacklist.MatchOn == BlacklistMatchTypes.Message ? e.ChatMessage.Message :
@@ -473,9 +475,17 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnCapsCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
+
             string message = this.RemoveEmotesFromMessage(e.ChatMessage.Message, e.ChatMessage.EmoteSet);
 
             // Check if the filter is enabled.
@@ -488,7 +498,7 @@ namespace StreamActions.Plugins
                     {
                         if (((this.GetNumberOfCaps(message) / this.GetMessageLength(message)) * 100.0) >= document.CapMaximumPercentage)
                         {
-                            if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                            if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                             {
                                 moderationResult.Punishment = document.CapTimeoutPunishment;
                                 moderationResult.TimeoutSeconds = document.CapTimeoutTimeSeconds;
@@ -518,9 +528,16 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnColouredMessageCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
 
             // Check if the filter is enabled.
             if (document.ActionMessageStatus)
@@ -530,7 +547,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.HasTwitchAction(e.ChatMessage.Message))
                     {
-                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                        if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.ActionMessageTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.ActionMessageTimeoutTimeSeconds;
@@ -559,9 +576,16 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnEmotesCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
 
             // Check if the filter is enabled.
             if (document.EmoteStatus)
@@ -571,7 +595,7 @@ namespace StreamActions.Plugins
                 {
                     if ((this.GetNumberOfEmotes(e.ChatMessage.EmoteSet) >= document.EmoteMaximumAllowed) || (document.EmoteRemoveOnlyEmotes && this.RemoveEmotesFromMessage(e.ChatMessage.Message, e.ChatMessage.EmoteSet).Trim().Length == 0))
                     {
-                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                        if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.EmoteTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.EmoteTimeoutTimeSeconds;
@@ -600,9 +624,16 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnFakePurgeCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
 
             // Check if the filter is enabled.
             if (document.FakePurgeStatus)
@@ -612,7 +643,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.HasFakePurge(e.ChatMessage.Message))
                     {
-                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                        if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.FakePurgeTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.FakePurgeTimeoutTimeSeconds;
@@ -641,9 +672,16 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnLinksCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
 
             // Check if the filter is enabled.
             if (document.LinkStatus)
@@ -653,7 +691,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.HasUrl(e.ChatMessage.Message) && !await this.HasWhitelist(e.ChatMessage.Message, e.ChatMessage.RoomId).ConfigureAwait(false))
                     {
-                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                        if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.LinkTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.LinkTimeoutTimeSeconds;
@@ -682,9 +720,16 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnLongMessageCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
 
             // Check if the filter is enabled.
             if (document.LengthyMessageStatus)
@@ -694,7 +739,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.GetMessageLength(e.ChatMessage.Message) > document.LengthyMessageMaximumLength)
                     {
-                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                        if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.LengthyMessageTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.LengthyMessageTimeoutTimeSeconds;
@@ -723,9 +768,16 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnOneManSpamCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
 
             // Check if the filter is enabled.
             if (document.OneManSpamStatus)
@@ -734,7 +786,7 @@ namespace StreamActions.Plugins
                 {
                     if (TwitchMessageCache.Instance.GetNumberOfMessageSentFromUserInPeriod(e.ChatMessage.UserId, e.ChatMessage.RoomId, DateTime.Now.AddSeconds(-document.OneManSpamResetTimeSeconds)) >= document.OneManSpamMaximumMessages)
                     {
-                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                        if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.OneManSpamTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.OneManSpamTimeoutTimeSeconds;
@@ -763,9 +815,16 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnRepetitionCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
 
             // Check if the filter is enabled.
             if (document.RepetitionStatus)
@@ -777,7 +836,7 @@ namespace StreamActions.Plugins
                     {
                         if (this.GetLongestSequenceOfRepeatingCharacters(e.ChatMessage.Message) >= document.RepetionMaximumRepeatingCharacters || this.GetLongestSequenceOfRepeatingWords(e.ChatMessage.Message) >= document.RepetionMaximumRepeatingWords)
                         {
-                            if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                            if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                             {
                                 moderationResult.Punishment = document.RepetitionTimeoutPunishment;
                                 moderationResult.TimeoutSeconds = document.RepetitionTimeoutTimeSeconds;
@@ -807,9 +866,16 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnSymbolsCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
 
             // Check if the filter is enabled.
             if (document.SymbolStatus)
@@ -821,7 +887,7 @@ namespace StreamActions.Plugins
                     {
                         if (((this.GetNumberOfSymbols(e.ChatMessage.Message) / e.ChatMessage.Message.Length) * 100) >= document.SymbolMaximumPercent || this.GetLongestSequenceOfRepeatingSymbols(e.ChatMessage.Message) >= document.SymbolMaximumGrouped)
                         {
-                            if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                            if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                             {
                                 moderationResult.Punishment = document.SymbolTimeoutPunishment;
                                 moderationResult.TimeoutSeconds = document.SymbolTimeoutTimeSeconds;
@@ -851,9 +917,16 @@ namespace StreamActions.Plugins
         /// <returns>The result gotten from this check.</returns>
         private async Task<ModerationResult> ChatModerator_OnZalgoCheck(object sender, OnMessageReceivedArgs e)
         {
-            //TODO: Refactor Mongo
             ModerationResult moderationResult = new ModerationResult();
-            ModerationDocument document = await GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false);
+
+            // Get moderation document settings.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, e.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            ModerationDocument document = (await cursor.FirstAsync().ConfigureAwait(false));
 
             // Check if the filter is enabled.
             if (document.ZalgoStatus)
@@ -863,7 +936,7 @@ namespace StreamActions.Plugins
                 {
                     if (this.HasZalgo(e.ChatMessage.Message))
                     {
-                        if (await this.UserHasWarning(document, e.ChatMessage.UserId).ConfigureAwait(false))
+                        if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
                         {
                             moderationResult.Punishment = document.ZalgoTimeoutPunishment;
                             moderationResult.TimeoutSeconds = document.ZalgoTimeoutTimeSeconds;
