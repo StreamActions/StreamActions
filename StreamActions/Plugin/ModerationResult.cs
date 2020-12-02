@@ -26,6 +26,11 @@ namespace StreamActions.Plugin
         #region Public Properties
 
         /// <summary>
+        /// Option to ignore the moderation result from the filter when set to true.
+        /// </summary>
+        public bool IgnoreOnPermit { get; set; } = false;
+
+        /// <summary>
         /// The message to send to chat after the action is taken.
         /// </summary>
         public string ModerationMessage { get; set; }
