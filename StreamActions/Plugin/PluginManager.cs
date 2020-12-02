@@ -28,7 +28,6 @@ using StreamActions.Database.Documents;
 using MongoDB.Driver;
 using StreamActions.Enums;
 using StreamActions.Database;
-using StreamActions.Plugins;
 using StreamActions.Database.Documents.Commands;
 using StreamActions.Database.Documents.Moderation;
 using System.Globalization;
@@ -359,9 +358,8 @@ namespace StreamActions.Plugin
         /// Method called when to perform a moderation action on a user.
         /// </summary>
         /// <param name="result">The result of the moderation.</param>
-        /// <param name="document">The channel's moderation document.</param>
         /// <param name="message">The chat message.</param>
-        internal async void PerformModerationActionAsync(ModerationResult result, ModerationDocument document, ChatMessage message)
+        internal async void PerformModerationActionAsync(ModerationResult result, ChatMessage message)
         {
             IMongoCollection<ModerationLogDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationLogDocument>(ModerationLogDocument.CollectionName);
 
@@ -411,9 +409,22 @@ namespace StreamActions.Plugin
                     break;
             }
 
-            if (!(result.ModerationMessage is null) && !this.InLockdown && document.LastModerationMessageSent.AddSeconds(document.ModerationMessageCooldownSeconds) < DateTime.Now)
+            // Get the moderation document for this channel.
+            IMongoCollection<ModerationDocument> moderationCollection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> moderationFilter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, message.RoomId);
+
+            using IAsyncCursor<ModerationDocument> moderationCursor = (await moderationCollection.FindAsync(moderationFilter).ConfigureAwait(false));
+
+            ModerationDocument moderationDocument = (await moderationCursor.FirstAsync().ConfigureAwait(false));
+
+            if (!(result.ModerationMessage is null) && !this.InLockdown && moderationDocument.LastModerationMessageSent.AddSeconds(moderationDocument.ModerationMessageCooldownSeconds) < DateTime.Now)
             {
                 TwitchLibClient.Instance.SendMessage(message.RoomId, result.ModerationMessage);
+
+                // Update the last timeout message send time.
+                UpdateDefinition<ModerationDocument> moderationUpdate = Builders<ModerationDocument>.Update.Set(c => c.LastModerationMessageSent, DateTime.Now);
+                _ = await moderationCollection.UpdateOneAsync(moderationFilter, moderationUpdate).ConfigureAwait(false);
             }
 
             // TODO: Update the user's last timeout time.
@@ -549,7 +560,7 @@ namespace StreamActions.Plugin
             {
                 if (harshestModeration.ShouldModerate)
                 {
-                    this.PerformModerationActionAsync(harshestModeration, await ChatModerator.GetFilterDocumentForChannel(e.ChatMessage.RoomId).ConfigureAwait(false), e.ChatMessage);
+                    this.PerformModerationActionAsync(harshestModeration, e.ChatMessage);
                 }
                 else
                 {

@@ -18,7 +18,6 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using StreamActions.Enums;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents
@@ -68,12 +67,6 @@ namespace StreamActions.Database.Documents
         /// </summary>
         [BsonIgnore]
         public DateTime LastModerationMessageSent { get; set; } = DateTime.Now;
-
-        /// <summary>
-        /// Used to store when was the last time a user was worned by a moderation filter.
-        /// </summary>
-        [BsonIgnore]
-        public ConcurrentDictionary<string, DateTime> ModerationLastUserTimeouts { get; } = new ConcurrentDictionary<string, DateTime>();
 
         /// <summary>
         /// The cooldown time in seconds for moderation message to be said in chat. Minimum: 15s
