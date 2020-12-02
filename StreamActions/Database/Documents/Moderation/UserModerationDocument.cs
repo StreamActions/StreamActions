@@ -41,6 +41,14 @@ namespace StreamActions.Database.Documents.Moderation
         public Guid Id { get; }
 
         /// <summary>
+        /// If the user has a permit to post links in the chat.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool IsPermitted { get; set; }
+
+        /// <summary>
         /// Last time a message was sent. This should only be used for moderation purposes.
         /// </summary>
         [BsonElement]
@@ -55,11 +63,11 @@ namespace StreamActions.Database.Documents.Moderation
         public DateTime LastModerationWarning { get; set; } = DateTime.MinValue;
 
         /// <summary>
-        /// What time the user got a permit.
+        /// When the user's permit expires.
         /// </summary>
         [BsonElement]
         [BsonRequired]
-        public DateTime LastPermitAt { get; set; } = DateTime.MinValue;
+        public DateTime PermitExpires { get; set; } = DateTime.MinValue;
 
         #endregion Public Properties
 

@@ -98,19 +98,29 @@ namespace StreamActions.Plugins
 
             List<UserModerationDocument> userModerationDocuments = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration;
 
+            // Get permit time in seconds.
+            IMongoCollection<ModerationDocument> moderationCollection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> moderationFilter = Builders<ModerationDocument>.Filter.Eq(m => m.ChannelId, e.Command.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> moderationCursor = (await moderationCollection.FindAsync(moderationFilter).ConfigureAwait(false);
+
+            uint permitTime = (await moderationCursor.FirstAsync().ConfigureAwait(false)).LinkPermitTimeSeconds;
+
             if (!userModerationDocuments.Exists(m => m.ChannelId.Equals(e.Command.ChatMessage.RoomId, StringComparison.OrdinalIgnoreCase)))
             {
                 userModerationDocuments.Add(new UserModerationDocument
                 {
                     ChannelId = e.Command.ChatMessage.RoomId,
-                    LastPermitAt = DateTime.Now
+                    PermitExpires = DateTime.Now.AddSeconds(permitTime)
                 });
             }
             else
             {
-                userModerationDocuments.Find(m => m.ChannelId.Equals(e.Command.ChatMessage.RoomId, StringComparison.OrdinalIgnoreCase)).LastPermitAt = DateTime.Now;
+                userModerationDocuments.Find(m => m.ChannelId.Equals(e.Command.ChatMessage.RoomId, StringComparison.OrdinalIgnoreCase)).PermitExpires = DateTime.Now.AddSeconds(permitTime);
             }
 
+            // Update user moderation document.
             UpdateDefinition<UserDocument> update = Builders<UserDocument>.Update.Set(u => u.UserModeration, userModerationDocuments);
 
             UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
@@ -123,7 +133,7 @@ namespace StreamActions.Plugins
                     User = e.Command.ChatMessage.Username,
                     Sender = e.Command.ChatMessage.Username,
                     ToUser = args[2],
-                    PermitTime = (await GetFilterDocumentForChannel(e.Command.ChatMessage.RoomId).ConfigureAwait(false)).LinkPermitTimeSeconds,
+                    PermitTime = permitTime,
                 },
                 "@{DisplayName}, {ToUser} is now permitted to post one link for the next {PermitTime} seconds.").ConfigureAwait(false));
         }
