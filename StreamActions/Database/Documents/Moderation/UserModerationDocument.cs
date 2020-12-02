@@ -43,10 +43,8 @@ namespace StreamActions.Database.Documents.Moderation
         /// <summary>
         /// If the user has a permit to post links in the chat.
         /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(false)]
-        public bool IsPermitted { get; set; }
+        [BsonIgnore]
+        public bool IsPermitted => this.PermitExpires <= DateTime.Now;
 
         /// <summary>
         /// Last time a message was sent. This should only be used for moderation purposes.

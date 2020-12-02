@@ -103,7 +103,7 @@ namespace StreamActions.Plugins
 
             FilterDefinition<ModerationDocument> moderationFilter = Builders<ModerationDocument>.Filter.Eq(m => m.ChannelId, e.Command.ChatMessage.RoomId);
 
-            using IAsyncCursor<ModerationDocument> moderationCursor = (await moderationCollection.FindAsync(moderationFilter).ConfigureAwait(false);
+            using IAsyncCursor<ModerationDocument> moderationCursor = (await moderationCollection.FindAsync(moderationFilter).ConfigureAwait(false));
 
             uint permitTime = (await moderationCursor.FirstAsync().ConfigureAwait(false)).LinkPermitTimeSeconds;
 
