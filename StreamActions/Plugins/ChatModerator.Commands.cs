@@ -43,7 +43,49 @@ namespace StreamActions.Plugins
 
         #endregion Private Fields
 
-        #region Private Methods
+        #region Global moderation commands
+
+        /// <summary>
+        /// Global moderation command index.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "global", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationGlobalCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
+            {
+                case "cooldown":
+                    //_ = await ChatModerator.UpdateLinkFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "warningexpire":
+                    // _ = await ChatModerator.UpdateLinkFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "GlobalUsage", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages the bot's global moderation settings. Usage: {CommandPrefix}{BotName} moderation global [cooldown, warningexpire]").ConfigureAwait(false));
+                    break;
+            }
+        }
+
+        #endregion Global moderation commands
+
+        #region Permit command
 
         /// <summary>
         /// Command to permit users to post links.
@@ -138,7 +180,7 @@ namespace StreamActions.Plugins
                 "@{DisplayName}, {ToUser} is now permitted to post one link for the next {PermitTime} seconds.").ConfigureAwait(false));
         }
 
-        #endregion Private Methods
+        #endregion Permit command
 
         #region Moderation Main Methods
 
@@ -164,7 +206,7 @@ namespace StreamActions.Plugins
                     Sender = e.Command.ChatMessage.Username,
                     e.Command.ChatMessage.DisplayName
                 },
-                "@{DisplayName}, Manages the bot's moderation filters. Usage: {CommandPrefix}{BotName} moderation [links, caps, spam, symbols, emotes, zalgo, fakepurge, lengthymessage, onemanspam, blacklist]").ConfigureAwait(false));
+                "@{DisplayName}, Manages the bot's moderation filters. Usage: {CommandPrefix}{BotName} moderation [global, links, caps, spam, symbols, emotes, zalgo, fakepurge, lengthymessage, onemanspam, blacklist]").ConfigureAwait(false));
         }
 
         #endregion Moderation Main Methods
