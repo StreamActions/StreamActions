@@ -16,17 +16,12 @@
 
 using Exceptionless;
 using Exceptionless.Configuration;
-using Exceptionless.Logging;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using StreamActions.JsonDocuments;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
@@ -37,7 +32,7 @@ using TwitchLib.Api;
 
 namespace StreamActions
 {
-    public class Program
+    internal class Program
     {
         #region Public Properties
 
@@ -60,18 +55,18 @@ namespace StreamActions
 
         #region Public Methods
 
-        public static async void Main(string[] args)
-        {
-            await Main().ConfigureAwait(false);
-            CreateHostBuilder(args).Build().Run();
-        }
-
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
                 });
+
+        public static async void Main(string[] args)
+        {
+            await Main().ConfigureAwait(false);
+            CreateHostBuilder(args).Build().Run();
+        }
 
         #endregion Public Methods
 
@@ -167,7 +162,7 @@ namespace StreamActions
                     ExceptionlessClient.Default.Configuration.IncludePrivateInformation = false;
                     if (Settings.ShowDebugMessages)
                     {
-                        ExceptionlessClient.Default.Configuration.UseTraceLogger(LogLevel.Debug);
+                        ExceptionlessClient.Default.Configuration.UseTraceLogger(Exceptionless.Logging.LogLevel.Debug);
                     }
                     ExceptionlessClient.Default.Configuration.SetUserIdentity(Settings.BotLogin);
                     ExceptionlessClient.Default.Configuration.SetVersion(Version);

@@ -15,7 +15,6 @@
  */
 
 using StreamActions.Http.Identity;
-using StreamActions.JsonDocuments;
 using StreamActions.Plugins;
 using System;
 using System.Collections.Generic;
@@ -280,7 +279,7 @@ namespace StreamActions.Http
         /// <summary>
         /// Regex for an i18n HTML tag.
         /// </summary>
-        private static readonly Regex _i18nRegex = new Regex(@"(?<i18n><i18n category=""(?< category >[\w -] +)"" key=""(?< key >[\w -] +)"">(?<value>[\s\S]*)<\/i18n>)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex _i18nRegex = new Regex(@"(?<i18n><i18n category=""(?<category>[\w -] +)"" key=""(?<key>[\w -] +)"">(?<value>[\s\S]*)<\/i18n>)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         /// <summary>
         /// Regex for detecting a HTTP request line.
