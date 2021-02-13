@@ -49,6 +49,8 @@
     <PackageReference Include="FluentScheduler" Version="5.5.1" />
     <PackageReference Include="GraphQL" Version="3.3.2" />
     <PackageReference Include="GraphQL.Authorization" Version="3.1.0" />
+    <PackageReference Include="GraphQL.Server.Transports.AspNetCore.SystemTextJson" Version="4.4.1" />
+    <PackageReference Include="GraphQL.Server.Transports.WebSockets" Version="4.4.1" />
     <PackageReference Include="GraphQL.SystemTextJson" Version="3.3.2" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="3.1.10" />
     <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="5.0.3">
