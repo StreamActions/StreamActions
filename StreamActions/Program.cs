@@ -65,7 +65,7 @@ namespace StreamActions
         public static async void Main(string[] args)
         {
             await Main().ConfigureAwait(false);
-            CreateHostBuilder(args).Build().Run();
+            await CreateHostBuilder(args).Build().RunAsync().ConfigureAwait(false);
         }
 
         #endregion Public Methods
