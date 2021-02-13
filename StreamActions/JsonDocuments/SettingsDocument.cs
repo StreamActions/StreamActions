@@ -56,7 +56,7 @@ namespace StreamActions.JsonDocuments
         /// <summary>
         /// Whether the database connection should use TLS.
         /// </summary>
-        internal bool DBAllowInsecureTls { get; set; } = false;
+        internal bool DBAllowInsecureTls { get; set; }
 
         /// <summary>
         /// The IP address of the database host. <c>null</c> to use the default on localhost.
@@ -76,7 +76,7 @@ namespace StreamActions.JsonDocuments
         /// <summary>
         /// The port of the database host. <c>0</c> to use the default.
         /// </summary>
-        internal int DBPort { get; set; } = 0;
+        internal int DBPort { get; set; }
 
         /// <summary>
         /// The username for the database. <c>null</c> for no authentication.
@@ -86,7 +86,7 @@ namespace StreamActions.JsonDocuments
         /// <summary>
         /// Whether the database connection should use TLS.
         /// </summary>
-        internal bool DBUseTls { get; set; } = false;
+        internal bool DBUseTls { get; set; }
 
         /// <summary>
         /// The global culture. <c>null</c> to use the default.
@@ -101,7 +101,7 @@ namespace StreamActions.JsonDocuments
         /// <summary>
         /// Whether debugging messages should be sent to the console.
         /// </summary>
-        internal bool ShowDebugMessages { get; set; } = false;
+        internal bool ShowDebugMessages { get; set; }
 
         /// <summary>
         /// The Client ID for the Twitch developer app.
@@ -126,7 +126,7 @@ namespace StreamActions.JsonDocuments
         /// <summary>
         /// The port the WebSocket server should listen on. <c>0</c> to use the default (80 for no ssl, 443 for ssl).
         /// </summary>
-        internal int WSListenPort { get; set; } = 0;
+        internal int WSListenPort { get; set; }
 
         /// <summary>
         /// Path to the SSL certificate for the WS Server, if used.
@@ -141,12 +141,12 @@ namespace StreamActions.JsonDocuments
         /// <summary>
         /// The super admin bearer token for the WS Server.
         /// </summary>
-        internal string WSSuperadminBearer { get; set; } = WebSocketServer.GenerateBearer(new ClaimsPrincipal(new GenericIdentity("superadmin", "GlobalToken")));
+        internal string WSSuperadminBearer { get; set; } = Program.GenerateBearer(new ClaimsPrincipal(new GenericIdentity("superadmin", "GlobalToken")));
 
         /// <summary>
         /// Whether the WebSocket server should use SSL.
         /// </summary>
-        internal bool WSUseSsl { get; set; } = false;
+        internal bool WSUseSsl { get; set; }
 
         #endregion Internal Properties
     }

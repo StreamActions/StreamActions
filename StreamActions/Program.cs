@@ -18,11 +18,14 @@ using Exceptionless;
 using Exceptionless.Configuration;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using StreamActions.JsonDocuments;
 using System;
 using System.Diagnostics;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -69,6 +72,28 @@ namespace StreamActions
         }
 
         #endregion Public Methods
+
+        #region Internal Methods
+
+        /// <summary>
+        /// Generates a JWT Bearer token.
+        /// </summary>
+        /// <param name="principal">A ClaimsPrincipal representing the user.</param>
+        /// <param name="notBefore">The validity start timestamp.</param>
+        /// <param name="expires">The validity expiration timestamp.</param>
+        /// <param name="signingCredentials">Credentials for signing the token.</param>
+        /// <returns>A JWT token.</returns>
+        internal static string GenerateBearer(ClaimsPrincipal principal, DateTime? notBefore = null, DateTime? expires = null, SigningCredentials signingCredentials = null)
+        {
+            JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
+            JwtPayload payload = new JwtPayload(typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString(),
+                Program.Settings.BotLogin, principal.Claims, notBefore, expires);
+            JwtHeader header = new JwtHeader(signingCredentials);
+            JwtSecurityToken token = new JwtSecurityToken(header, payload);
+            return tokenHandler.WriteToken(token);
+        }
+
+        #endregion Internal Methods
 
         #region Private Fields
 
