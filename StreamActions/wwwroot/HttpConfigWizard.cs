@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿/*
+ * using MongoDB.Driver;
 using StreamActions.Database;
 using StreamActions.Database.Documents.Users;
 using StreamActions.JsonDocuments;
@@ -390,7 +391,7 @@ namespace StreamActions.Http.ConfigWizard
                     errOut += err;
                 }
 
-                sContent = sContent.Replace("/*ResponseTextValue*/", " + \"" + errOut.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"", StringComparison.Ordinal);
+                sContent = sContent.Replace("/*ResponseTextValue/", " + \"" + errOut.Replace("\"", "\\\"", StringComparison.Ordinal) + "\"", StringComparison.Ordinal);
             }
 
             return sContent;
@@ -513,3 +514,4 @@ namespace StreamActions.Http.ConfigWizard
         #endregion Private Methods
     }
 }
+*/

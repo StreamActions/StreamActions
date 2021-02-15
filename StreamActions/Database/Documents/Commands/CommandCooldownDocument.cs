@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-using EntityGraphQL.Schema;
 using MongoDB.Bson.Serialization.Attributes;
 using System;
 using System.Collections.Generic;
@@ -53,7 +52,7 @@ namespace StreamActions.Database.Documents.Commands
         /// The Guid for referencing this command in the database.
         /// </summary>
         [BsonIgnore]
-        [GraphQLIgnore]
+        //TODO: [GraphQLIgnore]
         public Guid Id { get; internal set; }
 
         /// <summary>
@@ -74,7 +73,7 @@ namespace StreamActions.Database.Documents.Commands
         /// Indicates when the cooldown for a user Id expires.
         /// </summary>
         [BsonIgnore]
-        [GraphQLIgnore]
+        //TODO: [GraphQLIgnore]
         public Dictionary<string, DateTime> UserCooldownExpires
         {
             get
