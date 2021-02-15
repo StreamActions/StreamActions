@@ -14,39 +14,23 @@
  * limitations under the License.
  */
 
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Logging;
-using System;
+using ConcurrentCollections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace StreamActions.Pages
+namespace StreamActions.Security.OAuth.Twitch
 {
-    public class PrivacyModel : PageModel
+    public class TwitchAuthenticationOptions : AspNet.Security.OAuth.Twitch.TwitchAuthenticationOptions
     {
+        #region Public Properties
+
+        public new ICollection<string> Scope { get; } = new ConcurrentHashSet<string>();
+
+        #endregion Public Properties
+
         #region Public Constructors
 
-        public PrivacyModel(ILogger<PrivacyModel> logger)
-        {
-            _logger = logger;
-        }
+        public TwitchAuthenticationOptions() : base() => this.Scope.Add("user:email:read");
 
         #endregion Public Constructors
-
-        #region Public Methods
-
-        public void OnGet()
-        {
-        }
-
-        #endregion Public Methods
-
-        #region Private Fields
-
-        private readonly ILogger<PrivacyModel> _logger;
-
-        #endregion Private Fields
     }
 }

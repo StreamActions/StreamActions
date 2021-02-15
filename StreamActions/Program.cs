@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2020 StreamActions Team
+ * Copyright © 2019-2021 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ namespace StreamActions
         internal static string GenerateBearer(ClaimsPrincipal principal, DateTime? notBefore = null, DateTime? expires = null, SigningCredentials signingCredentials = null)
         {
             JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
-            JwtPayload payload = new JwtPayload(typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString(),
+            JwtPayload payload = new JwtPayload(typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString() + "/" + Program.Settings.BotLogin,
                 Program.Settings.BotLogin, principal.Claims, notBefore, expires);
             JwtHeader header = new JwtHeader(signingCredentials);
             JwtSecurityToken token = new JwtSecurityToken(header, payload);

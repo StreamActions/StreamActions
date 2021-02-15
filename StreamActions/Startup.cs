@@ -1,5 +1,23 @@
+/*
+ * Copyright © 2019-2021 StreamActions Team
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+using AspNet.Security.OAuth.Twitch;
 using GraphQL.Execution;
 using GraphQL.Server;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -49,6 +67,7 @@ namespace StreamActions
 
             _ = app.UseRouting();
 
+            _ = app.UseAuthentication();
             _ = app.UseAuthorization();
 
             _ = app.UseEndpoints(endpoints => endpoints.MapRazorPages());
@@ -59,6 +78,23 @@ namespace StreamActions
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            _ = services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = TwitchAuthenticationDefaults.AuthenticationScheme;
+            })
+                .AddCookie()
+                .AddTwitch(options =>
+                {
+                    options.ClientId = Program.Settings.TwitchApiClientId;
+                    options.ClientSecret = Program.Settings.TwitchApiSecret;
+                })
+                .AddJwtBearer(options =>
+                {
+                    options.Audience = Program.Settings.BotLogin;
+                    options.Authority = typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString() + "/" + Program.Settings.BotLogin;
+                });
+
             _ = services.AddRazorPages();
             _ = services.AddGraphQL((options, provider) =>
                                                                       {
