@@ -62,7 +62,7 @@ namespace StreamActions
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
 
-        public static async void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             await Main().ConfigureAwait(false);
             await CreateHostBuilder(args).Build().RunAsync().ConfigureAwait(false);
