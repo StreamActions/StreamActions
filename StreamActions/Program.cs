@@ -64,7 +64,7 @@ namespace StreamActions
 
         public static async Task Main(string[] args)
         {
-            await Main().ConfigureAwait(false);
+            await BotMain().ConfigureAwait(false);
             await CreateHostBuilder(args).Build().RunAsync().ConfigureAwait(false);
         }
 
@@ -139,13 +139,11 @@ namespace StreamActions
             };
         }
 
-        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[AppDomainUnhandledException]" + e.ExceptionObject.GetType().FullName, (Exception)e.ExceptionObject, null, true);
-
         /// <summary>
         /// Main member.
         /// </summary>
         /// <returns>A Task that can be awaited.</returns>
-        private static async Task Main()
+        private static async Task BotMain()
         {
             using ManualResetEventSlim done = new ManualResetEventSlim(false);
             using CancellationTokenSource shutdownCts = new CancellationTokenSource();
@@ -214,6 +212,8 @@ namespace StreamActions
                 done.Set();
             }
         }
+
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[AppDomainUnhandledException]" + e.ExceptionObject.GetType().FullName, (Exception)e.ExceptionObject, null, true);
 
         private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[UnobservedTaskException]" + e.Exception.InnerExceptions[0].GetType().FullName, e.Exception.InnerExceptions[0], null, true);
 
