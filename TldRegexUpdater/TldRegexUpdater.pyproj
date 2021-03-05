@@ -24,6 +24,7 @@
     <Compile Include="TldRegexUpdater.py" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="requirements.txt" />
     <Content Include="TldRegexUpdater.licenseheader" />
     <Content Include="tlds-anti-workaround-replacements.txt" />
     <Content Include="tlds-anti-workaround-tlds.txt" />
