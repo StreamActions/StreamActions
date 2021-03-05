@@ -32,7 +32,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="wwwroot\ConfigWizard.html" />
-    <EmbeddedResource Include="wwwroot\TwitchConnect.png" />
+    <EmbeddedResource Include="wwwroot\img\TwitchConnect.png" />
   </ItemGroup>
 
   <ItemGroup>
