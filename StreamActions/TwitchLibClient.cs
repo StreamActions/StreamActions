@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+using MongoDB.Driver;
+using StreamActions.Database;
+using StreamActions.Database.Documents.Users;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -805,7 +808,18 @@ namespace StreamActions
         private async void TwitchClient_OnConnected(object sender, OnConnectedArgs e)
         {
             this.OnConnected?.Invoke(this, e);
-            foreach (string channel in Program.Settings.ChannelsToJoin)
+
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
+
+            FilterDefinitionBuilder<UserDocument> builder = Builders<UserDocument>.Filter;
+
+            FilterDefinition<UserDocument> filter = builder.Eq(d => d.ShouldJoin, true);
+
+            using IAsyncCursor<string> cursor = await collection.FindAsync(filter, new FindOptions<UserDocument, string> { Projection = Builders<UserDocument>.Projection.Expression(d => d.Login) }).ConfigureAwait(false);
+
+            List<string> channelsToJoin = await cursor.ToListAsync().ConfigureAwait(false);
+
+            foreach (string channel in channelsToJoin)
             {
                 this.JoinChannel(channel);
             }
