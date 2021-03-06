@@ -14,24 +14,49 @@
  * limitations under the License.
  */
 
-using System.Collections.Generic;
+using System.IO;
 using System.Security.Claims;
 using System.Security.Principal;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace StreamActions.JsonDocuments
 {
     /// <summary>
     /// A document containing the bot's settings.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Build", "CA1812:Avoid uninstantiated internal classes", Justification = "Instantiated by JsonSerializer")]
-    internal class SettingsDocument
+    public class SettingsDocument
     {
-        #region Internal Properties
+        #region Public Properties
 
         /// <summary>
         /// The bot's Twitch login name.
         /// </summary>
-        internal string BotLogin { get; set; } = "";
+        public string BotLogin { get; set; } = "";
+
+        /// <summary>
+        /// The prefix character that identifies chat commands. <c>(char)0</c> to use the default.
+        /// </summary>
+        public char ChatCommandIdentifier { get; set; } = '!';
+
+        /// <summary>
+        /// The global culture. <c>null</c> to use the default.
+        /// </summary>
+        public string GlobalCulture { get; set; } = "en-US";
+
+        /// <summary>
+        /// The Client ID for the Twitch developer app.
+        /// </summary>
+        public string TwitchApiClientId { get; set; } = "";
+
+        /// <summary>
+        /// The prefix character that identifies whisper commands. <c>(char)0</c> to use the default.
+        /// </summary>
+        public char WhisperCommandIdentifier { get; set; } = '!';
+
+        #endregion Public Properties
+
+        #region Internal Properties
 
         /// <summary>
         /// The bot's Twitch OAuth token.
@@ -42,16 +67,6 @@ namespace StreamActions.JsonDocuments
         /// The bot's Twitch OAuth refresh token.
         /// </summary>
         internal string BotRefreshToken { get; set; } = "";
-
-        /// <summary>
-        /// The channels the bot should join.
-        /// </summary>
-        internal List<string> ChannelsToJoin { get; } = new List<string>();
-
-        /// <summary>
-        /// The prefix character that identifies chat commands. <c>(char)0</c> to use the default.
-        /// </summary>
-        internal char ChatCommandIdentifier { get; set; } = '!';
 
         /// <summary>
         /// Whether the database connection should use TLS.
@@ -89,9 +104,14 @@ namespace StreamActions.JsonDocuments
         internal bool DBUseTls { get; set; }
 
         /// <summary>
-        /// The global culture. <c>null</c> to use the default.
+        /// Path to the SSL certificate, in PKCS12 (.pfx) format, for the internal Kestrel server, if used. Relative paths start in the Program.Assembly.Location/settings directory.
         /// </summary>
-        internal string GlobalCulture { get; set; } = "en-US";
+        internal string KestrelSslCert { get; set; } = "";
+
+        /// <summary>
+        /// Password to the SSL certificate for the internal Kestrel server, if used.
+        /// </summary>
+        internal string KestrelSslCertPass { get; set; } = "";
 
         /// <summary>
         /// Whether exceptions should be sent to the remote Exceptionless server.
@@ -104,50 +124,64 @@ namespace StreamActions.JsonDocuments
         internal bool ShowDebugMessages { get; set; }
 
         /// <summary>
-        /// The Client ID for the Twitch developer app.
-        /// </summary>
-        internal string TwitchApiClientId { get; set; } = "";
-
-        /// <summary>
         /// The secret for the Twitch developer app.
         /// </summary>
         internal string TwitchApiSecret { get; set; } = "";
-
-        /// <summary>
-        /// The prefix character that identifies whisper commands. <c>(char)0</c> to use the default.
-        /// </summary>
-        internal char WhisperCommandIdentifier { get; set; } = '!';
-
-        /// <summary>
-        /// The IP address the WebSocket server should listen on. <c>null</c> or <c>""</c> (empty string) to limit to localhost. <c>*</c> for IPAddress.Any.
-        /// </summary>
-        internal string WSListenIp { get; set; } = "";
-
-        /// <summary>
-        /// The port the WebSocket server should listen on. <c>0</c> to use the default (80 for no ssl, 443 for ssl).
-        /// </summary>
-        internal int WSListenPort { get; set; }
-
-        /// <summary>
-        /// Path to the SSL certificate for the WS Server, if used.
-        /// </summary>
-        internal string WSSslCert { get; set; } = "";
-
-        /// <summary>
-        /// Password to the SSL certificate for the WS Server, if used.
-        /// </summary>
-        internal string WSSslCertPass { get; set; } = "";
 
         /// <summary>
         /// The super admin bearer token for the WS Server.
         /// </summary>
         internal string WSSuperadminBearer { get; set; } = Program.GenerateBearer(new ClaimsPrincipal(new GenericIdentity("superadmin", "GlobalToken")));
 
-        /// <summary>
-        /// Whether the WebSocket server should use SSL.
-        /// </summary>
-        internal bool WSUseSsl { get; set; }
-
         #endregion Internal Properties
+
+        #region Internal Methods
+
+        /// <summary>
+        /// Loads the settings from disk. Creates settings.json if it doesn't exist.
+        /// </summary>
+        /// <returns>A <see cref="SettingsDocument"/> with the settings from disk, and default values where no value existed.</returns>
+        internal static async Task<SettingsDocument> Read()
+        {
+            string path = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location), "settings", "settings.json"));
+            SettingsDocument settings;
+            if (File.Exists(path))
+            {
+                using FileStream fs = File.OpenRead(path);
+                JsonSerializerOptions options = new JsonSerializerOptions
+                {
+                    AllowTrailingCommas = true,
+                    PropertyNameCaseInsensitive = true,
+                    ReadCommentHandling = JsonCommentHandling.Skip
+                };
+                using Task<SettingsDocument> t = JsonSerializer.DeserializeAsync<SettingsDocument>(fs, options).AsTask();
+                settings = await t.ConfigureAwait(false);
+            }
+            else
+            {
+                settings = new SettingsDocument();
+                await Write(settings).ConfigureAwait(false);
+            }
+
+            return settings;
+        }
+
+        /// <summary>
+        /// Writes settings to disk.
+        /// </summary>
+        /// <returns></returns>
+        internal static async Task Write(SettingsDocument settings)
+        {
+            string path = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location), "settings", "settings.json"));
+            if (!Directory.Exists(Path.GetDirectoryName(path)))
+            {
+                _ = Directory.CreateDirectory(Path.GetDirectoryName(path));
+            }
+            using FileStream fs = File.OpenWrite(path);
+            using Task t = JsonSerializer.SerializeAsync<SettingsDocument>(fs, settings);
+            await t.ConfigureAwait(false);
+        }
+
+        #endregion Internal Methods
     }
 }

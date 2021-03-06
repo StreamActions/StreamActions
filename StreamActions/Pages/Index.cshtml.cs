@@ -14,13 +14,8 @@
  * limitations under the License.
  */
 
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace StreamActions.Pages
 {
@@ -28,10 +23,7 @@ namespace StreamActions.Pages
     {
         #region Public Constructors
 
-        public IndexModel(ILogger<IndexModel> logger)
-        {
-            _logger = logger;
-        }
+        public IndexModel(ILogger<IndexModel> logger) => this._logger = logger;
 
         #endregion Public Constructors
 

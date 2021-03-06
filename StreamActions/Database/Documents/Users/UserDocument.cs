@@ -97,6 +97,13 @@ namespace StreamActions.Database.Documents.Users
         public List<Guid> PermissionGroupMembership { get; } = new List<Guid>();
 
         /// <summary>
+        /// Indicates whether the bot should join and run in this channel.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        public bool ShouldJoin { get; set; }
+
+        /// <summary>
         /// The users <see cref="TwitchStaff"/>.
         /// </summary>
         [BsonElement]
@@ -149,7 +156,7 @@ namespace StreamActions.Database.Documents.Users
 
             try
             {
-                CreateIndexModel<UserDocument> indexModel = new CreateIndexModel<UserDocument>(indexBuilder.Ascending(d => d.PermissionGroupMembership),
+                CreateIndexModel<UserDocument> indexModel = new CreateIndexModel<UserDocument>(indexBuilder.Combine(indexBuilder.Ascending(d => d.Id), indexBuilder.Ascending(d => d.PermissionGroupMembership)),
                     new CreateIndexOptions { Name = "UserDocument_unique_PermissionGroupMembership", Unique = true });
                 _ = await collection.Indexes.CreateOneAsync(indexModel).ConfigureAwait(false);
             }

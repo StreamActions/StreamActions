@@ -26,7 +26,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Reflection;
 using System.Security.Claims;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Api;
@@ -58,14 +57,31 @@ namespace StreamActions
 
         #region Public Methods
 
+        /// <summary>
+        /// Creates the IHostBuilder for the ASP.Net Core server and loads the SSL certificate settings into Kestrel.
+        /// </summary>
+        /// <param name="args">The command line arguments of the assembly.</param>
+        /// <returns>An IHostBuilder ready to build.</returns>
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
+                .ConfigureWebHostDefaults(webBuilder => webBuilder.ConfigureKestrel(serverOptions =>
+                {
+                    if (!string.IsNullOrWhiteSpace(Program.Settings.KestrelSslCert))
+                    {
+                        string path = Program.Settings.KestrelSslCert;
+                        if (!Path.IsPathFullyQualified(path))
+                        {
+                            path = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location), "settings", Program.Settings.KestrelSslCert));
+                        }
+                        serverOptions.ConfigureEndpointDefaults(listenOptions => listenOptions.UseHttps(Program.Settings.KestrelSslCert, Program.Settings.KestrelSslCertPass));
+                    }
+                }).UseStartup<Startup>());
 
         public static async Task Main(string[] args)
         {
-            await BotMain().ConfigureAwait(false);
+            await BotStartup().ConfigureAwait(false);
             await CreateHostBuilder(args).Build().RunAsync().ConfigureAwait(false);
+            await WaitForShutdown().ConfigureAwait(false);
         }
 
         #endregion Public Methods
@@ -82,9 +98,10 @@ namespace StreamActions
         /// <returns>A JWT token.</returns>
         internal static string GenerateBearer(ClaimsPrincipal principal, DateTime? notBefore = null, DateTime? expires = null, SigningCredentials signingCredentials = null)
         {
+            string botlogin = Program.Settings?.BotLogin ?? "";
             JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
-            JwtPayload payload = new JwtPayload(typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString() + "/" + Program.Settings.BotLogin,
-                Program.Settings.BotLogin, principal.Claims, notBefore, expires);
+            JwtPayload payload = new JwtPayload(typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString() + "/" + botlogin,
+                botlogin, principal.Claims, notBefore, expires);
             JwtHeader header = new JwtHeader(signingCredentials);
             JwtSecurityToken token = new JwtSecurityToken(header, payload);
             return tokenHandler.WriteToken(token);
@@ -93,6 +110,13 @@ namespace StreamActions
         #endregion Internal Methods
 
         #region Private Fields
+
+        /// <summary>
+        ///
+        /// </summary>
+        private static readonly ManualResetEventSlim _done = new ManualResetEventSlim(false);
+
+        private static readonly CancellationTokenSource _shutdownCts = new CancellationTokenSource();
 
         /// <summary>
         /// Field that backs <see cref="Settings"/>.
@@ -140,65 +164,64 @@ namespace StreamActions
         }
 
         /// <summary>
-        /// Main member.
+        /// Initializes and starts the bot.
         /// </summary>
         /// <returns>A Task that can be awaited.</returns>
-        private static async Task BotMain()
+        private static async Task BotStartup()
         {
-            using ManualResetEventSlim done = new ManualResetEventSlim(false);
-            using CancellationTokenSource shutdownCts = new CancellationTokenSource();
+            // Attach shutdown handler.
+            AttachCtrlcSigtermShutdown(Program._shutdownCts, Program._done);
 
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+            _ = Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
+
+            // Load settings.
+            _settings = await SettingsDocument.Read().ConfigureAwait(false);
+
+            // Start Exceptionless session, if enabled.
+            if (Settings.SendExceptions)
+            {
+                // Set Exceptionless to not send GPDR-protected information.
+                ExceptionlessClient.Default.Configuration.IncludeCookies = false;
+                ExceptionlessClient.Default.Configuration.IncludeIpAddress = false;
+                ExceptionlessClient.Default.Configuration.IncludeMachineName = false;
+                ExceptionlessClient.Default.Configuration.IncludePostData = false;
+                ExceptionlessClient.Default.Configuration.IncludeQueryString = false;
+                ExceptionlessClient.Default.Configuration.IncludeUserName = false;
+                ExceptionlessClient.Default.Configuration.IncludePrivateInformation = false;
+                if (Settings.ShowDebugMessages)
+                {
+                    ExceptionlessClient.Default.Configuration.UseTraceLogger(Exceptionless.Logging.LogLevel.Debug);
+                }
+                ExceptionlessClient.Default.Configuration.SetUserIdentity(Settings.BotLogin);
+                ExceptionlessClient.Default.Configuration.SetVersion(Version);
+                ExceptionlessClient.Default.Configuration.UseReferenceIds();
+                ExceptionlessClient.Default.Configuration.UseSessions();
+                ExceptionlessClient.Default.Startup();
+            }
+
+            // Initialize Twitch API.
+            _twitchApi = new TwitchAPI();
+            _twitchApi.Settings.ClientId = _settings.TwitchApiClientId;
+            _twitchApi.Settings.AccessToken = _settings.BotOAuth;
+            _twitchApi.Settings.Secret = _settings.TwitchApiSecret;
+        }
+
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[AppDomainUnhandledException]" + e.ExceptionObject.GetType().FullName, (Exception)e.ExceptionObject, null, true);
+
+        private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[UnobservedTaskException]" + e.Exception.InnerExceptions[0].GetType().FullName, e.Exception.InnerExceptions[0], null, true);
+
+        /// <summary>
+        /// Waits for the shutdown signal and processes shutdown actions.
+        /// </summary>
+        /// <returns>A Task that can be awaited.</returns>
+        private static async Task WaitForShutdown()
+        {
             try
             {
-                // Attach shutdown handler.
-                AttachCtrlcSigtermShutdown(shutdownCts, done);
-
-                AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-                TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
-                _ = Trace.Listeners.Add(new TextWriterTraceListener(Console.Out));
-
-                // Load settings.
-                using FileStream fs = File.OpenRead(Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "settings.json")));
-                JsonSerializerOptions options = new JsonSerializerOptions
-                {
-                    AllowTrailingCommas = true,
-                    PropertyNameCaseInsensitive = true,
-                    ReadCommentHandling = JsonCommentHandling.Skip
-                };
-                using Task<SettingsDocument> t = JsonSerializer.DeserializeAsync<SettingsDocument>(fs, options).AsTask();
-                t.Wait();
-                _settings = t.Result;
-
-                // Start Exceptionless session, if enabled.
-                if (Settings.SendExceptions)
-                {
-                    // Set Exceptionless to not send GPDR-protected information.
-                    ExceptionlessClient.Default.Configuration.IncludeCookies = false;
-                    ExceptionlessClient.Default.Configuration.IncludeIpAddress = false;
-                    ExceptionlessClient.Default.Configuration.IncludeMachineName = false;
-                    ExceptionlessClient.Default.Configuration.IncludePostData = false;
-                    ExceptionlessClient.Default.Configuration.IncludeQueryString = false;
-                    ExceptionlessClient.Default.Configuration.IncludeUserName = false;
-                    ExceptionlessClient.Default.Configuration.IncludePrivateInformation = false;
-                    if (Settings.ShowDebugMessages)
-                    {
-                        ExceptionlessClient.Default.Configuration.UseTraceLogger(Exceptionless.Logging.LogLevel.Debug);
-                    }
-                    ExceptionlessClient.Default.Configuration.SetUserIdentity(Settings.BotLogin);
-                    ExceptionlessClient.Default.Configuration.SetVersion(Version);
-                    ExceptionlessClient.Default.Configuration.UseReferenceIds();
-                    ExceptionlessClient.Default.Configuration.UseSessions();
-                    ExceptionlessClient.Default.Startup();
-                }
-
-                // Initialize Twitch API.
-                _twitchApi = new TwitchAPI();
-                _twitchApi.Settings.ClientId = _settings.TwitchApiClientId;
-                _twitchApi.Settings.AccessToken = _settings.BotOAuth;
-                _twitchApi.Settings.Secret = _settings.TwitchApiSecret;
-
                 // Await shutdown event to fire.
-                await shutdownCts.Token.WaitAsync().ConfigureAwait(false);
+                await Program._shutdownCts.Token.WaitAsync().ConfigureAwait(false);
 
                 // Send all remaining Exceptionless events and shutdown, if enabled.
                 if (Settings.SendExceptions)
@@ -209,13 +232,9 @@ namespace StreamActions
             }
             finally
             {
-                done.Set();
+                Program._done.Set();
             }
         }
-
-        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[AppDomainUnhandledException]" + e.ExceptionObject.GetType().FullName, (Exception)e.ExceptionObject, null, true);
-
-        private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[UnobservedTaskException]" + e.Exception.InnerExceptions[0].GetType().FullName, e.Exception.InnerExceptions[0], null, true);
 
         #endregion Private Methods
     }

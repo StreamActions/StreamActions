@@ -17,11 +17,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace StreamActions.Pages
 {
@@ -30,10 +26,7 @@ namespace StreamActions.Pages
     {
         #region Public Constructors
 
-        public ErrorModel(ILogger<ErrorModel> logger)
-        {
-            _logger = logger;
-        }
+        public ErrorModel(ILogger<ErrorModel> logger) => this._logger = logger;
 
         #endregion Public Constructors
 
@@ -41,16 +34,13 @@ namespace StreamActions.Pages
 
         public string RequestId { get; set; }
 
-        public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+        public bool ShowRequestId => !string.IsNullOrEmpty(this.RequestId);
 
         #endregion Public Properties
 
         #region Public Methods
 
-        public void OnGet()
-        {
-            RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
-        }
+        public void OnGet() => this.RequestId = Activity.Current?.Id ?? this.HttpContext.TraceIdentifier;
 
         #endregion Public Methods
 
