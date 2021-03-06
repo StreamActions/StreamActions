@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 
 namespace StreamActions.Pages
 {
+    [AllowAnonymous]
     public class PrivacyModel : PageModel
     {
         #region Public Constructors
 
-        public PrivacyModel(ILogger<PrivacyModel> logger)
-        {
-            _logger = logger;
-        }
+        public PrivacyModel(ILogger<PrivacyModel> logger) => this._logger = logger;
 
         #endregion Public Constructors
 
