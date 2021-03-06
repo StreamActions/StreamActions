@@ -17,6 +17,7 @@
 using AspNet.Security.OAuth.Twitch;
 using GraphQL.Execution;
 using GraphQL.Server;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -78,22 +79,26 @@ namespace StreamActions
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            _ = services.AddAuthentication(options =>
+            AuthenticationBuilder authBuilder = services.AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = TwitchAuthenticationDefaults.AuthenticationScheme;
             })
                 .AddCookie()
-                .AddTwitch(options =>
-                {
-                    options.ClientId = Program.Settings.TwitchApiClientId;
-                    options.ClientSecret = Program.Settings.TwitchApiSecret;
-                })
                 .AddJwtBearer(options =>
                 {
                     options.Audience = Program.Settings.BotLogin;
                     options.Authority = typeof(Program).Assembly.GetName().FullName + "/" + typeof(Program).Assembly.GetName().Version.ToString() + "/" + Program.Settings.BotLogin;
                 });
+
+            if (!string.IsNullOrWhiteSpace(Program.Settings.TwitchApiClientId) && !string.IsNullOrWhiteSpace(Program.Settings.TwitchApiSecret))
+            {
+                _ = authBuilder.AddTwitch(options =>
+                 {
+                     options.ClientId = Program.Settings.TwitchApiClientId;
+                     options.ClientSecret = Program.Settings.TwitchApiSecret;
+                 });
+            }
 
             _ = services.AddRazorPages();
             _ = services.AddGraphQL((options, provider) =>
