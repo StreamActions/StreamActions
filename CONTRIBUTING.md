@@ -239,15 +239,13 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 * Describing a constructor as just `Constructor` is okay, unless it is doing something complex that should be noted
 
 #### Follow The Styleguide, The Easy Way
-To make following the C# styleguide easier, we recommend using [Visual Studio 2019](https://visualstudio.microsoft.com/) with the following extensions:
+To make following the C# styleguide easier, we recommend using [Visual Studio 2022](https://visualstudio.microsoft.com/) with the following extensions:
  * CodeMaid
- * License Header Manager
- * ~Microsoft Code Analysis 2019~
  * Trailing Whitespace Visualizer
  
  Our included _.editorconfig_ and _StreamActions.ruleset_ files will setup Visual Studio to guide you through these style requirements. Our included _CodeMaid.config_ will setup CodeMaid to correct some common issues on save.
  
- Our included _StreamActions.licenseheader_ file allows you to right-click a _.cs_ file and select to have _License Header Manager_ automatically insert the license header for you.
+ Our included _StreamActions.licenseheader_ file contains the license headers for you to copy/paste into each file
  
  NOTE: Our CodeMaid config will only regionize and then re-order regions the first time the file is saved. You must use the _Remove All Regions (CTRL+M, R)_ feature to remove regions, then re-save to have it run again.
  
