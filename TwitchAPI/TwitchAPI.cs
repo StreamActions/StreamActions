@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-namespace TwitchAPI
+namespace StreamActions.TwitchAPI
 {
     /// <summary>
     /// Handles validation of OAuth tokens and performs HTTP calls for the API.
