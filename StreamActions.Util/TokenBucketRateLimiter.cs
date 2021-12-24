@@ -83,9 +83,19 @@ namespace StreamActions.Util
         public long NextReset => this._nextReset;
 
         /// <summary>
+        /// The timestamp when entire bucket will be reset to full again, as a <see cref="DateTime"/>.
+        /// </summary>
+        public DateTime NextResetDateTime => new DateTime(this._nextReset);
+
+        /// <summary>
         /// The period over which the bucket normally refills from empty to full, in <see cref="TimeSpan.Ticks"/>.
         /// </summary>
         public long Period => this._period;
+
+        /// <summary>
+        /// The period over which the bucket normally refills from empty to full, as a <see cref="TimeSpan"/>.
+        /// </summary>
+        public TimeSpan PeriodTimeSpan => TimeSpan.FromTicks(this._period);
 
         /// <summary>
         /// The remaining limit in the bucket.
