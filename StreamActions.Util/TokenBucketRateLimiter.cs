@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-using System.Net;
+using System.Net.Http.Headers;
 
 namespace StreamActions.Util
 {
@@ -85,7 +85,7 @@ namespace StreamActions.Util
         /// <summary>
         /// The timestamp when entire bucket will be reset to full again, as a <see cref="DateTime"/>.
         /// </summary>
-        public DateTime NextResetDateTime => new DateTime(this._nextReset);
+        public DateTime NextResetDateTime => new(this._nextReset);
 
         /// <summary>
         /// The period over which the bucket normally refills from empty to full, in <see cref="TimeSpan.Ticks"/>.
@@ -102,12 +102,17 @@ namespace StreamActions.Util
         /// </summary>
         public int Remaining => this._remaining;
 
+        /// <summary>
+        /// The number of tasks waiting for a token.
+        /// </summary>
+        public int Waiters => this._waiters;
+
         #endregion Public Properties
 
         #region Public Methods
 
         /// <summary>
-        /// Parses response headers from a <see cref="HttpWebResponse"/> for Rate Limit information.
+        /// Parses response headers from a <see cref="HttpResponseMessage"/> for Rate Limit information.
         /// </summary>
         /// <param name="headers">The response headers.</param>
         /// <param name="headerLimit">The name of the header denoting the current maximum number of tokens the bucket can hold.</param>
@@ -115,12 +120,12 @@ namespace StreamActions.Util
         /// <param name="headerReset">The name of the header denoting the timestamp when the bucket will fully refill to the limit.</param>
         /// <param name="headerResetType">Indicates the type of timestamp provided by the <paramref name="headerReset"/> header.</param>
         /// <exception cref="ArgumentOutOfRangeException">The value of <paramref name="headerResetType"/> is not one of the valid values of <see cref="HeaderResetType"/>.</exception>
-        public void ParseHeaders(WebHeaderCollection headers, string headerLimit = "Ratelimit-Limit", string headerRemaining = "Ratelimit-Remaining",
+        public void ParseHeaders(HttpResponseHeaders headers, string headerLimit = "Ratelimit-Limit", string headerRemaining = "Ratelimit-Remaining",
             string headerReset = "Ratelimit-Reset", HeaderResetType headerResetType = HeaderResetType.Seconds)
         {
-            string? limitS = headers.Get(headerLimit);
-            string? remainingS = headers.Get(headerRemaining);
-            string? resetS = headers.Get(headerReset);
+            string? limitS = headers.GetValues(headerLimit).FirstOrDefault();
+            string? remainingS = headers.GetValues(headerRemaining).FirstOrDefault();
+            string? resetS = headers.GetValues(headerReset).FirstOrDefault();
 
             if (limitS is not null)
             {
@@ -238,21 +243,25 @@ namespace StreamActions.Util
         /// <returns>A <see cref="Task"/> that can be awaited.</returns>
         public async Task WaitForRateLimit()
         {
-            this.RefillBucket();
-            if (this._remaining > 0)
+            _ = Interlocked.Increment(ref this._waiters);
+            while (true)
             {
-                if (Interlocked.Decrement(ref this._remaining) >= 0)
+                this.RefillBucket();
+                if (this._remaining > 0)
                 {
-                    return;
+                    if (Interlocked.Decrement(ref this._remaining) >= 0)
+                    {
+                        _ = Interlocked.Decrement(ref this._waiters);
+                        return;
+                    }
+                    else
+                    {
+                        _ = Interlocked.Exchange(ref this._remaining, 0);
+                    }
                 }
-                else
-                {
-                    _ = Interlocked.Exchange(ref this._remaining, 0);
-                }
-            }
 
-            await Task.Delay(this.GetTimeUntilNextToken()).ConfigureAwait(false);
-            await this.WaitForRateLimit().ConfigureAwait(false);
+                await Task.Delay(this.GetTimeUntilNextToken()).ConfigureAwait(false);
+            }
         }
 
         #endregion Public Methods
@@ -279,6 +288,11 @@ namespace StreamActions.Util
         /// </summary>
         private int _remaining = 1;
 
+        /// <summary>
+        /// The number of tasks waiting for a token.
+        /// </summary>
+        private int _waiters = 0;
+
         #endregion Private Fields
 
         #region Private Methods
@@ -294,6 +308,11 @@ namespace StreamActions.Util
         /// </summary>
         private void RefillBucket()
         {
+            if (this._remaining == this._limit)
+            {
+                return;
+            }
+
             if (DateTime.UtcNow.Ticks >= this._nextReset)
             {
                 _ = Interlocked.Exchange(ref this._remaining, this._limit);

@@ -14,98 +14,78 @@
  * limitations under the License.
  */
 
+using StreamActions.TwitchAPI.Common;
+
 namespace StreamActions.TwitchAPI
 {
     /// <summary>
     /// Handles validation of OAuth tokens and performs HTTP calls for the API.
     /// </summary>
-    public class TwitchAPI
+    public static class TwitchAPI
     {
-        #region Public Constructors
+        #region Public Methods
 
         /// <summary>
-        /// Constructor.
+        /// Initializes the http client.
         /// </summary>
         /// <param name="clientId">A valid Twitch App Client ID.</param>
-        /// <param name="oauth">A valid OAuth token made with via the <paramref name="clientId"/>.</param>
-        public TwitchAPI(string clientId, string oauth)
+        public static void Init(string clientId)
         {
-            this._clientId = clientId;
-            this._oauth = oauth;
+            if (string.IsNullOrWhiteSpace(clientId))
+            {
+                throw new ArgumentNullException(nameof(clientId));
+            }
+
+            _httpClient.DefaultRequestHeaders.Add("Client-Id", clientId);
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "StreamActions/TwitchAPI/" + typeof(TwitchAPI).Assembly.GetName()?.Version?.ToString() ?? "0.0.0");
+            _httpClient.BaseAddress = new Uri("https://api.twitch.tv/helix/");
         }
 
-        #endregion Public Constructors
+        #endregion Public Methods
 
-        #region Public Properties
-
-        /// <summary>
-        /// The current list of scopes for the active OAuth token.
-        /// </summary>
-        public IReadOnlyList<string> Scopes => this._scopes.AsReadOnly();
-
-        #endregion Public Properties
-
-        #region Internal Enums
+        #region Internal Methods
 
         /// <summary>
-        /// HTTP Request Methods.
+        /// Submits a http requeest to the specified uri and returns the response.
         /// </summary>
-        internal enum Request_Method
+        /// <param name="method">The <see cref="HttpMethod"/> of the request.</param>
+        /// <param name="uri">The uri to request. Relative uris resolve against the Helix base.</param>
+        /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+        /// <param name="content">The body of the request, for methods that require it.</param>
+        /// <returns>A <see cref="HttpResponseMessage"/> containing the response data.</returns>
+        /// <exception cref="InvalidOperationException">Did not call <see cref="Init(string)"/> with a valid Client Id.</exception>
+        internal static async Task<HttpResponseMessage> PerformHttpRequest(HttpMethod method, Uri uri, TwitchSession session, HttpContent? content = null)
         {
-            /// <summary>
-            /// HTTP GET.
-            /// </summary>
-            GET,
+            if (!_httpClient.DefaultRequestHeaders.Contains("Client-Id"))
+            {
+                throw new InvalidOperationException("Must call TwitchAPI.Init.");
+            }
 
-            /// <summary>
-            /// HTTP POST.
-            /// </summary>
-            POST,
+            if (string.IsNullOrWhiteSpace(session.OAuth))
+            {
+                throw new InvalidOperationException("Invalid OAuth token in session.");
+            }
 
-            /// <summary>
-            /// HTTP PUT.
-            /// </summary>
-            PUT,
+            await session.RateLimiter.WaitForRateLimit();
 
-            /// <summary>
-            /// HTTP DELETE.
-            /// </summary>
-            DELETE
+            HttpRequestMessage request = new(method, uri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
+            request.Content = content;
+            request.Headers.Add("Authorization", "Bearer " + session.OAuth);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None);
+
+            session.RateLimiter.ParseHeaders(response.Headers);
+
+            return response;
         }
 
-        #endregion Internal Enums
+        #endregion Internal Methods
 
         #region Private Fields
 
         /// <summary>
-        /// Helix base URL.
+        /// The <see cref="HttpClient"/> that is used for all requests.
         /// </summary>
-        private static readonly string _helix_base_url = "https://api.twitch.tv/helix/";
-
-        /// <summary>
-        /// User agent for requests.
-        /// </summary>
-        private static readonly string _user_agent = "StreamActions/TwitchAPI/1.0";
-
-        /// <summary>
-        /// Token validation URL.
-        /// </summary>
-        private static readonly string _validate_url = "https://id.twitch.tv/oauth2/validate";
-
-        /// <summary>
-        /// ClientID for TwitchAPI.
-        /// </summary>
-        private readonly string _clientId;
-
-        /// <summary>
-        /// OAuth for TwitchAPI.
-        /// </summary>
-        private readonly string _oauth;
-
-        /// <summary>
-        /// Backer for <see cref="Scopes"/>.
-        /// </summary>
-        private readonly List<string> _scopes = new List<string>();
+        private static readonly HttpClient _httpClient = new();
 
         #endregion Private Fields
     }
