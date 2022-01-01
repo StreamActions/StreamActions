@@ -17,7 +17,7 @@
 using System.Net;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.TwitchAPI.Common
+namespace StreamActions.Twitch.TwitchAPI.Common
 {
     /// <summary>
     /// Base record for Twitch API responses. Indicates request status code and error message if not success.

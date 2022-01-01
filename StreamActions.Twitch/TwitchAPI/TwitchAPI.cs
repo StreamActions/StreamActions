@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-using StreamActions.TwitchAPI.Common;
+using StreamActions.Twitch.TwitchAPI.Common;
 
-namespace StreamActions.TwitchAPI
+namespace StreamActions.Twitch.TwitchAPI
 {
     /// <summary>
     /// Handles validation of OAuth tokens and performs HTTP calls for the API.

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-using StreamActions.TwitchAPI.Common;
+using StreamActions.Twitch.TwitchAPI.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.TwitchAPI.OAuth
+namespace StreamActions.Twitch.TwitchAPI.OAuth
 {
     /// <summary>
     /// Record containing response data for the Validate endpoint.

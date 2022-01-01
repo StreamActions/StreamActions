@@ -16,7 +16,7 @@
 
 using StreamActions.Util;
 
-namespace StreamActions.TwitchAPI.Common
+namespace StreamActions.Twitch.TwitchAPI.Common
 {
     /// <summary>
     /// Contains parameters for a Twitch API session.
