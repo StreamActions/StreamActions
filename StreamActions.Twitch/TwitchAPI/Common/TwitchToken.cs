@@ -14,32 +14,32 @@
  * limitations under the License.
  */
 
-using StreamActions.Util;
-
 namespace StreamActions.Twitch.TwitchAPI.Common
 {
-    /// <summary>
-    /// Contains parameters for a Twitch API session.
-    /// </summary>
-    public record TwitchSession
+    public record TwitchToken
     {
         /// <summary>
-        /// Rate Limiter for TwitchAPI.
+        /// The OAuth token.
         /// </summary>
-        public TokenBucketRateLimiter RateLimiter { get; init; } = new(1, 60);
-
-        /// <summary>
-        /// The OAuth token data.
-        /// </summary>
-        public TwitchToken? Token
+        public string? OAuth
         {
-            get => this._token;
-            init => this._token = value is null ? throw new ArgumentNullException(nameof(value)) : value;
+            get => this._oauth;
+            init => this._oauth = string.IsNullOrWhiteSpace(value) ? throw new ArgumentNullException(nameof(value)) : value;
         }
 
         /// <summary>
-        /// Backer for <see cref="Token"/>.
+        /// Backer for <see cref="OAuth"/>.
         /// </summary>
-        private TwitchToken? _token;
+        private string? _oauth;
+
+        /// <summary>
+        /// The refresh token.
+        /// </summary>
+        public string? Refresh { get; init; }
+
+        /// <summary>
+        /// The expiration timestamp of the <see cref="OAuth"/>.
+        /// </summary>
+        public DateTime? Expires { get; init; }
     }
 }

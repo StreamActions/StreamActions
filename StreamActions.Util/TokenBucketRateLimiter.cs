@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ using System.Net.Http.Headers;
 namespace StreamActions.Util
 {
     /// <summary>
-    /// Handles Rate Limits using a Token Bucket which trickles back tokens over a set period.
+    /// Handles rate limits using a token bucket which trickles back tokens over a set period.
     /// </summary>
     public class TokenBucketRateLimiter
     {
@@ -32,10 +32,18 @@ namespace StreamActions.Util
         /// <param name="period">The period over which tokens normally refill from 0 to <paramref name="limit"/>.</param>
         public TokenBucketRateLimiter(int limit, long period)
         {
-            _ = Interlocked.Exchange(ref this._limit, Math.Max(limit, 1));
-            _ = Interlocked.Exchange(ref this._remaining, this._limit);
-            _ = Interlocked.Exchange(ref this._period, Math.Max(period, 1));
-            _ = Interlocked.Exchange(ref this._nextReset, DateTime.UtcNow.Ticks + this._period);
+            this._rwl.EnterWriteLock();
+            try
+            {
+                _ = Interlocked.Exchange(ref this._limit, Math.Max(limit, 1));
+                _ = Interlocked.Exchange(ref this._remaining, this._limit);
+                _ = Interlocked.Exchange(ref this._period, Math.Max(period, 1));
+                _ = Interlocked.Exchange(ref this._nextReset, DateTime.UtcNow.Ticks + this._period);
+            }
+            finally
+            {
+                this._rwl.ExitWriteLock();
+            }
         }
 
         #endregion Public Constructors
@@ -75,37 +83,37 @@ namespace StreamActions.Util
         /// <summary>
         /// The maximum number of tokens that can be in the bucket.
         /// </summary>
-        public int Limit => this._limit;
+        public int Limit => this.GetLimit();
 
         /// <summary>
         /// The timestamp when entire bucket will be reset to full again, in <see cref="TimeSpan.Ticks"/>.
         /// </summary>
-        public long NextReset => this._nextReset;
+        public long NextReset => this.GetNextReset();
 
         /// <summary>
         /// The timestamp when entire bucket will be reset to full again, as a <see cref="DateTime"/>.
         /// </summary>
-        public DateTime NextResetDateTime => new(this._nextReset);
+        public DateTime NextResetDateTime => new(this.GetNextReset());
 
         /// <summary>
         /// The period over which the bucket normally refills from empty to full, in <see cref="TimeSpan.Ticks"/>.
         /// </summary>
-        public long Period => this._period;
+        public long Period => this.GetPeriod();
 
         /// <summary>
         /// The period over which the bucket normally refills from empty to full, as a <see cref="TimeSpan"/>.
         /// </summary>
-        public TimeSpan PeriodTimeSpan => TimeSpan.FromTicks(this._period);
+        public TimeSpan PeriodTimeSpan => TimeSpan.FromTicks(this.GetPeriod());
 
         /// <summary>
         /// The remaining limit in the bucket.
         /// </summary>
-        public int Remaining => this._remaining;
+        public int Remaining => this.GetRemaining();
 
         /// <summary>
         /// The number of tasks waiting for a token.
         /// </summary>
-        public int Waiters => this._waiters;
+        public int Waiters => this.GetWaiters();
 
         #endregion Public Properties
 
@@ -121,7 +129,7 @@ namespace StreamActions.Util
         /// <param name="headerResetType">Indicates the type of timestamp provided by the <paramref name="headerReset"/> header.</param>
         /// <exception cref="ArgumentOutOfRangeException">The value of <paramref name="headerResetType"/> is not one of the valid values of <see cref="HeaderResetType"/>.</exception>
         public void ParseHeaders(HttpResponseHeaders headers, string headerLimit = "Ratelimit-Limit", string headerRemaining = "Ratelimit-Remaining",
-            string headerReset = "Ratelimit-Reset", HeaderResetType headerResetType = HeaderResetType.Seconds)
+        string headerReset = "Ratelimit-Reset", HeaderResetType headerResetType = HeaderResetType.Seconds)
         {
             string? limitS = headers.GetValues(headerLimit).FirstOrDefault();
             string? remainingS = headers.GetValues(headerRemaining).FirstOrDefault();
@@ -186,14 +194,30 @@ namespace StreamActions.Util
         /// <remarks>Fails silently if <paramref name="limit"/> is less than 1. Updates <see cref="Remaining"/> if it is higher than the new limit.</remarks>
         public void UpdateLimit(int limit)
         {
-            if (limit >= 1 && this._limit != limit)
+            this._rwl.EnterUpgradeableReadLock();
+            try
             {
-                _ = Interlocked.Exchange(ref this._limit, limit);
-
-                if (limit < this._remaining)
+                if (limit >= 1 && this._limit != limit)
                 {
-                    _ = Interlocked.Exchange(ref this._remaining, limit);
+                    this._rwl.EnterWriteLock();
+                    try
+                    {
+                        _ = Interlocked.Exchange(ref this._limit, limit);
+
+                        if (limit < this._remaining)
+                        {
+                            _ = Interlocked.Exchange(ref this._remaining, limit);
+                        }
+                    }
+                    finally
+                    {
+                        this._rwl.ExitWriteLock();
+                    }
                 }
+            }
+            finally
+            {
+                this._rwl.ExitUpgradeableReadLock();
             }
         }
 
@@ -204,9 +228,25 @@ namespace StreamActions.Util
         /// <remarks>Fails silently if <paramref name="nextReset"/> is earlier than <see cref="DateTime.UtcNow"/>.</remarks>
         public void UpdateNextReset(long nextReset)
         {
-            if (nextReset >= DateTime.UtcNow.Ticks && this._nextReset != nextReset)
+            this._rwl.EnterUpgradeableReadLock();
+            try
             {
-                _ = Interlocked.Exchange(ref this._nextReset, nextReset);
+                if (nextReset >= DateTime.UtcNow.Ticks && this._nextReset != nextReset)
+                {
+                    this._rwl.EnterWriteLock();
+                    try
+                    {
+                        _ = Interlocked.Exchange(ref this._nextReset, nextReset);
+                    }
+                    finally
+                    {
+                        this._rwl.ExitWriteLock();
+                    }
+                }
+            }
+            finally
+            {
+                this._rwl.ExitUpgradeableReadLock();
             }
         }
 
@@ -217,9 +257,25 @@ namespace StreamActions.Util
         /// <remarks>Fails silently if <paramref name="period"/> is less than 1.</remarks>
         public void UpdatePeriod(long period)
         {
-            if (period >= 1 && this._period != period)
+            this._rwl.EnterUpgradeableReadLock();
+            try
             {
-                _ = Interlocked.Exchange(ref this._period, period);
+                if (period >= 1 && this._period != period)
+                {
+                    this._rwl.EnterWriteLock();
+                    try
+                    {
+                        _ = Interlocked.Exchange(ref this._period, period);
+                    }
+                    finally
+                    {
+                        this._rwl.ExitWriteLock();
+                    }
+                }
+            }
+            finally
+            {
+                this._rwl.ExitUpgradeableReadLock();
             }
         }
 
@@ -230,10 +286,26 @@ namespace StreamActions.Util
         /// <remarks>Fails silently if <paramref name="remaining"/> is less than 0. Will set to <see cref="Limit"/> if <paramref name="remaining"/> exceeds it.</remarks>
         public void UpdateRemaining(int remaining)
         {
-            remaining = Math.Min(remaining, this._limit);
-            if (remaining >= 0 && this._remaining != remaining)
+            this._rwl.EnterUpgradeableReadLock();
+            try
             {
-                _ = Interlocked.Exchange(ref this._remaining, remaining);
+                remaining = Math.Min(remaining, this._limit);
+                if (remaining >= 0 && this._remaining != remaining)
+                {
+                    this._rwl.EnterWriteLock();
+                    try
+                    {
+                        _ = Interlocked.Exchange(ref this._remaining, remaining);
+                    }
+                    finally
+                    {
+                        this._rwl.ExitWriteLock();
+                    }
+                }
+            }
+            finally
+            {
+                this._rwl.ExitUpgradeableReadLock();
             }
         }
 
@@ -243,21 +315,46 @@ namespace StreamActions.Util
         /// <returns>A <see cref="Task"/> that can be awaited.</returns>
         public async Task WaitForRateLimit()
         {
-            _ = Interlocked.Increment(ref this._waiters);
+            this._rwl.EnterWriteLock();
+            try
+            {
+                _ = Interlocked.Increment(ref this._waiters);
+            }
+            finally
+            {
+                this._rwl.ExitWriteLock();
+            }
+
             while (true)
             {
                 this.RefillBucket();
-                if (this._remaining > 0)
+                this._rwl.EnterUpgradeableReadLock();
+                try
                 {
-                    if (Interlocked.Decrement(ref this._remaining) >= 0)
+                    if (this._remaining > 0)
                     {
-                        _ = Interlocked.Decrement(ref this._waiters);
-                        return;
+                        this._rwl.EnterWriteLock();
+                        try
+                        {
+                            if (Interlocked.Decrement(ref this._remaining) >= 0)
+                            {
+                                _ = Interlocked.Decrement(ref this._waiters);
+                                return;
+                            }
+                            else
+                            {
+                                _ = Interlocked.Exchange(ref this._remaining, 0);
+                            }
+                        }
+                        finally
+                        {
+                            this._rwl.ExitWriteLock();
+                        }
                     }
-                    else
-                    {
-                        _ = Interlocked.Exchange(ref this._remaining, 0);
-                    }
+                }
+                finally
+                {
+                    this._rwl.ExitUpgradeableReadLock();
                 }
 
                 await Task.Delay(this.GetTimeUntilNextToken()).ConfigureAwait(false);
@@ -267,6 +364,11 @@ namespace StreamActions.Util
         #endregion Public Methods
 
         #region Private Fields
+
+        /// <summary>
+        /// Lock for controlling Read/Write access to the variables.
+        /// </summary>
+        private readonly ReaderWriterLockSlim _rwl = new();
 
         /// <summary>
         /// The maximum number of tokens that can be in the bucket.
@@ -298,10 +400,106 @@ namespace StreamActions.Util
         #region Private Methods
 
         /// <summary>
+        /// Thread-safe getter for <see cref="Limit"/>.
+        /// </summary>
+        /// <returns>The current limit.</returns>
+        private int GetLimit()
+        {
+            this._rwl.EnterReadLock();
+            try
+            {
+                return this._limit;
+            }
+            finally
+            {
+                this._rwl.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Thread-safe getter for <see cref="NextReset"/> and <see cref="NextResetDateTime"/>.
+        /// </summary>
+        /// <returns>The next reset.</returns>
+        private long GetNextReset()
+        {
+            this._rwl.EnterReadLock();
+            try
+            {
+                return this._nextReset;
+            }
+            finally
+            {
+                this._rwl.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Thread-safe getter for <see cref="Period"/> and <see cref="PeriodTimeSpan"/>.
+        /// </summary>
+        /// <returns>The current period.</returns>
+        private long GetPeriod()
+        {
+            this._rwl.EnterReadLock();
+            try
+            {
+                return this._period;
+            }
+            finally
+            {
+                this._rwl.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Thread-safe getter for <see cref="Remaining"/>.
+        /// </summary>
+        /// <returns>The current remaining tokens.</returns>
+        private int GetRemaining()
+        {
+            this._rwl.EnterReadLock();
+            try
+            {
+                return this._remaining;
+            }
+            finally
+            {
+                this._rwl.ExitReadLock();
+            }
+        }
+
+        /// <summary>
         /// Calculates when a new token should be available in the bucket.
         /// </summary>
         /// <returns>The time remaining until a new token is available in the bucket.</returns>
-        private TimeSpan GetTimeUntilNextToken() => TimeSpan.FromTicks((long)Math.Ceiling((this._nextReset - this._period) / (float)this._limit));
+        private TimeSpan GetTimeUntilNextToken()
+        {
+            this._rwl.EnterReadLock();
+            try
+            {
+                return TimeSpan.FromTicks((long)Math.Ceiling((this._nextReset - this._period) / (float)this._limit));
+            }
+            finally
+            {
+                this._rwl.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Thread-safe getter for <see cref="Waiters"/>.
+        /// </summary>
+        /// <returns>The current number of waiters.</returns>
+        private int GetWaiters()
+        {
+            this._rwl.EnterReadLock();
+            try
+            {
+                return this._waiters;
+            }
+            finally
+            {
+                this._rwl.ExitReadLock();
+            }
+        }
 
         /// <summary>
         /// Refills the bucket.
@@ -312,21 +510,44 @@ namespace StreamActions.Util
             {
                 return;
             }
-
-            if (DateTime.UtcNow.Ticks >= this._nextReset)
+            this._rwl.EnterUpgradeableReadLock();
+            try
             {
-                _ = Interlocked.Exchange(ref this._remaining, this._limit);
-                _ = Interlocked.Exchange(ref this._nextReset, DateTime.UtcNow.Ticks + this._period);
-            }
-            else
-            {
-                long elapsed = DateTime.UtcNow.Subtract(TimeSpan.FromTicks(this._nextReset).Subtract(TimeSpan.FromTicks(this._period))).Ticks;
-                float percent = elapsed / (float)this._period;
-                int addedTokens = (int)Math.Floor(percent * this._limit);
-                if (Interlocked.Add(ref this._remaining, addedTokens) > this._limit)
+                if (DateTime.UtcNow.Ticks >= this._nextReset)
                 {
-                    _ = Interlocked.Exchange(ref this._remaining, this._limit);
+                    this._rwl.EnterWriteLock();
+                    try
+                    {
+                        _ = Interlocked.Exchange(ref this._remaining, this._limit);
+                        _ = Interlocked.Exchange(ref this._nextReset, DateTime.UtcNow.Ticks + this._period);
+                    }
+                    finally
+                    {
+                        this._rwl.ExitWriteLock();
+                    }
                 }
+                else
+                {
+                    long elapsed = DateTime.UtcNow.Subtract(TimeSpan.FromTicks(this._nextReset).Subtract(TimeSpan.FromTicks(this._period))).Ticks;
+                    float percent = elapsed / (float)this._period;
+                    int addedTokens = (int)Math.Floor(percent * this._limit);
+                    this._rwl.EnterWriteLock();
+                    try
+                    {
+                        if (Interlocked.Add(ref this._remaining, addedTokens) > this._limit)
+                        {
+                            _ = Interlocked.Exchange(ref this._remaining, this._limit);
+                        }
+                    }
+                    finally
+                    {
+                        this._rwl.ExitWriteLock();
+                    }
+                }
+            }
+            finally
+            {
+                this._rwl.ExitUpgradeableReadLock();
             }
         }
 
