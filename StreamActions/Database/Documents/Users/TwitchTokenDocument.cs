@@ -15,7 +15,6 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using TwitchLib.Api.Core.Enums;
 
 namespace StreamActions.Database.Documents.Users
 {

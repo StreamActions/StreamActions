@@ -16,7 +16,7 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
-using StreamActions.GraphQL.Connections;
+using StreamActions.Interfaces.Database;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -26,7 +26,7 @@ namespace StreamActions.Database.Documents
     /// <summary>
     /// Represents the enabled status of a plugin.
     /// </summary>
-    public class PluginDocument : IDocument, ICursorable
+    public class PluginDocument : IDocument
     {
         #region Public Properties
 
@@ -54,8 +54,6 @@ namespace StreamActions.Database.Documents
         #endregion Public Properties
 
         #region Public Methods
-
-        public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
 
         public async void Initialize()
         {

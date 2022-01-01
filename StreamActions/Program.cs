@@ -208,9 +208,9 @@ namespace StreamActions
             _twitchApi.Settings.Secret = _settings.TwitchApiSecret;
         }
 
-        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[AppDomainUnhandledException]" + e.ExceptionObject.GetType().FullName, (Exception)e.ExceptionObject, null, true);
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e) => ExceptionOut.WriteException("[AppDomainUnhandledException]" + e.ExceptionObject.GetType().FullName, (Exception)e.ExceptionObject, null, true);
 
-        private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e) => BotConsole.ExceptionOut.WriteException("[UnobservedTaskException]" + e.Exception.InnerExceptions[0].GetType().FullName, e.Exception.InnerExceptions[0], null, true);
+        private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e) => ExceptionOut.WriteException("[UnobservedTaskException]" + e.Exception.InnerExceptions[0].GetType().FullName, e.Exception.InnerExceptions[0], null, true);
 
         /// <summary>
         /// Waits for the shutdown signal and processes shutdown actions.

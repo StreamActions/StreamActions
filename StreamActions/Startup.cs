@@ -113,7 +113,7 @@ namespace StreamActions
                 .AddGraphTypes();
         }
 
-        private static void GraphQL_UnhandledException(UnhandledExceptionContext e) => BotConsole.ExceptionOut.WriteException("[GraphQLUnhandledException]" + e.OriginalException.GetType().FullName, e.OriginalException, null, true);
+        private static void GraphQL_UnhandledException(UnhandledExceptionContext e) => ExceptionOut.WriteException("[GraphQLUnhandledException]" + e.OriginalException.GetType().FullName, e.OriginalException, null, true);
 
         #endregion Public Methods
     }

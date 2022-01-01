@@ -16,7 +16,7 @@
 
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace StreamActions.Pages
+namespace StreamActions.Pages.Config
 {
     public class ConfigWizardModel : PageModel
     {

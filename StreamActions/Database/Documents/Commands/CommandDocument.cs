@@ -18,16 +18,15 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using StreamActions.Database.Documents.Users;
 using StreamActions.Enums;
-using StreamActions.GraphQL.Connections;
+using StreamActions.Interfaces.Database;
 using System;
-using System.Globalization;
 
 namespace StreamActions.Database.Documents.Commands
 {
     /// <summary>
     /// A document structure representing a command.
     /// </summary>
-    public class CommandDocument : ICursorable, IDocument
+    public class CommandDocument : IDocument
     {
         #region Public Properties
 
@@ -131,8 +130,6 @@ namespace StreamActions.Database.Documents.Commands
         #endregion Public Properties
 
         #region Public Methods
-
-        public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
 
         public async void Initialize()
         {

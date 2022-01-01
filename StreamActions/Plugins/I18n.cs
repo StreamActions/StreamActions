@@ -20,11 +20,13 @@ using StreamActions.Database;
 using StreamActions.Database.Documents.Users;
 using StreamActions.Enums;
 using StreamActions.EventArgs;
+using StreamActions.Interfaces.Plugin;
 using StreamActions.JsonDocuments;
 using StreamActions.Plugin;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -33,7 +35,6 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using TwitchLib.Client.Events;
 
 namespace StreamActions.Plugins
 {
@@ -83,6 +84,7 @@ namespace StreamActions.Plugins
         }
 
         public bool AlwaysEnabled => true;
+        public IReadOnlyCollection<Guid> Dependencies => ImmutableArray<Guid>.Empty;
         public CultureInfo GlobalCulture => this._globalCulture;
 
         /// <summary>

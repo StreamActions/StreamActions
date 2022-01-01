@@ -15,14 +15,13 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using StreamActions.GraphQL.Connections;
 
 namespace StreamActions.Database.Documents.Permissions
 {
     /// <summary>
     /// Represents a permission assigned to a <see cref="PermissionGroupDocument"/>.
     /// </summary>
-    public class PermissionDocument : ICursorable
+    public class PermissionDocument
     {
         #region Public Properties
 
@@ -43,11 +42,5 @@ namespace StreamActions.Database.Documents.Permissions
         public string PermissionName { get; set; }
 
         #endregion Public Properties
-
-        #region Public Methods
-
-        public string GetCursor() => this.PermissionName;
-
-        #endregion Public Methods
     }
 }

@@ -44,7 +44,9 @@ Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "TldRegexUpdater", "TldRegex
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.TwitchAPI", "TwitchAPI\StreamActions.TwitchAPI.csproj", "{AC92B8A4-E836-4886-A151-BAF00E532B9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamActions.Util", "StreamActions.Util\StreamActions.Util.csproj", "{E416BB72-97C5-453C-99F9-3CD2CC7CD87B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Util", "StreamActions.Util\StreamActions.Util.csproj", "{E416BB72-97C5-453C-99F9-3CD2CC7CD87B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamActions.Interfaces", "StreamActions.Interfaces\StreamActions.Interfaces.csproj", "{3954D3B5-D95D-441B-9C10-F91DB0C85C2B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -66,6 +68,10 @@ Global
 		{E416BB72-97C5-453C-99F9-3CD2CC7CD87B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E416BB72-97C5-453C-99F9-3CD2CC7CD87B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E416BB72-97C5-453C-99F9-3CD2CC7CD87B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3954D3B5-D95D-441B-9C10-F91DB0C85C2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3954D3B5-D95D-441B-9C10-F91DB0C85C2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3954D3B5-D95D-441B-9C10-F91DB0C85C2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3954D3B5-D95D-441B-9C10-F91DB0C85C2B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

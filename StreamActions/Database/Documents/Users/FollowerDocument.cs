@@ -15,7 +15,6 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using StreamActions.GraphQL.Connections;
 using System;
 
 namespace StreamActions.Database.Documents.Users
@@ -23,7 +22,7 @@ namespace StreamActions.Database.Documents.Users
     /// <summary>
     /// A Document representing follower information, stored in <see cref="UserRelationshipDocument"/>.
     /// </summary>
-    public class FollowerDocument : ICursorable
+    public class FollowerDocument
     {
         #region Public Properties
 
@@ -44,11 +43,5 @@ namespace StreamActions.Database.Documents.Users
         public string FollowerId { get; set; }
 
         #endregion Public Properties
-
-        #region Public Methods
-
-        public string GetCursor() => this.FollowerId;
-
-        #endregion Public Methods
     }
 }

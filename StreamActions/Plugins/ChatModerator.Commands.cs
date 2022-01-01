@@ -22,13 +22,10 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using StreamActions.Attributes;
 using StreamActions.Database;
-using StreamActions.Database.Documents;
 using StreamActions.Database.Documents.Moderation;
 using StreamActions.Database.Documents.Users;
 using StreamActions.Enums;
 using StreamActions.Plugin;
-using TwitchLib.Client.Events;
-using TwitchLib.Client.Models;
 
 namespace StreamActions.Plugins
 {
@@ -43,184 +40,16 @@ namespace StreamActions.Plugins
 
         #endregion Private Fields
 
-        #region Global moderation commands
+        #region Private Methods
 
         /// <summary>
-        /// Global moderation command index.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "global", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationGlobalCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
-            {
-                case "cooldown":
-                    //_ = await ChatModerator.UpdateLinkFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "warningexpire":
-                    // _ = await ChatModerator.UpdateLinkFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "GlobalUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages the bot's global moderation settings. Usage: {CommandPrefix}{BotName} moderation global [cooldown, warningexpire]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        #endregion Global moderation commands
-
-        #region Permit command
-
-        /// <summary>
-        /// Command to permit users to post links.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("permit", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationPermitCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 1).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            List<string> args = e.Command.ArgumentsAsList;
-
-            if (args.IsNullWhiteSpaceOrOutOfRange(2))
-            {
-                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "PermitUsage", e.Command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = e.Command.ChatMessage.Username,
-                        Sender = e.Command.ChatMessage.Username,
-                    },
-                    "@{DisplayName}, Permits a user to post links in the chat for a certain amount of time. Usage: !permit [username]").ConfigureAwait(false));
-                return;
-            }
-
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
-
-            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.DisplayName.Equals(args[2], StringComparison.InvariantCultureIgnoreCase));
-
-            // Make sure the user exists.
-            if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
-            {
-                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "PermitUser404", e.Command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = e.Command.ChatMessage.Username,
-                        Sender = e.Command.ChatMessage.Username,
-                        ToUser = args[2]
-                    },
-                    "@{DisplayName}, User {ToUser} doesn't exist in the database.").ConfigureAwait(false));
-                return;
-            }
-
-            using IAsyncCursor<UserDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
-
-            List<UserModerationDocument> userModerationDocuments = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration;
-
-            // Get permit time in seconds.
-            IMongoCollection<ModerationDocument> moderationCollection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> moderationFilter = Builders<ModerationDocument>.Filter.Eq(m => m.ChannelId, e.Command.ChatMessage.RoomId);
-
-            using IAsyncCursor<ModerationDocument> moderationCursor = (await moderationCollection.FindAsync(moderationFilter).ConfigureAwait(false));
-
-            uint permitTime = (await moderationCursor.FirstAsync().ConfigureAwait(false)).LinkPermitTimeSeconds;
-
-            if (!userModerationDocuments.Exists(m => m.ChannelId.Equals(e.Command.ChatMessage.RoomId, StringComparison.OrdinalIgnoreCase)))
-            {
-                userModerationDocuments.Add(new UserModerationDocument
-                {
-                    ChannelId = e.Command.ChatMessage.RoomId,
-                    PermitExpires = DateTime.Now.AddSeconds(permitTime)
-                });
-            }
-            else
-            {
-                userModerationDocuments.Find(m => m.ChannelId.Equals(e.Command.ChatMessage.RoomId, StringComparison.OrdinalIgnoreCase)).PermitExpires = DateTime.Now.AddSeconds(permitTime);
-            }
-
-            // Update user moderation document.
-            UpdateDefinition<UserDocument> update = Builders<UserDocument>.Update.Set(u => u.UserModeration, userModerationDocuments);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "PermitSuccess", e.Command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = e.Command.ChatMessage.Username,
-                    Sender = e.Command.ChatMessage.Username,
-                    ToUser = args[2],
-                    PermitTime = permitTime,
-                },
-                "@{DisplayName}, {ToUser} is now permitted to post one link for the next {PermitTime} seconds.").ConfigureAwait(false));
-        }
-
-        #endregion Permit command
-
-        #region Moderation Main Methods
-
-        /// <summary>
-        /// Chat moderator management commands.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 1).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "Usage", e.Command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = e.Command.ChatMessage.Username,
-                    Sender = e.Command.ChatMessage.Username,
-                    e.Command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Manages the bot's moderation filters. Usage: {CommandPrefix}{BotName} moderation [global, links, caps, spam, symbols, emotes, zalgo, fakepurge, lengthymessage, onemanspam, blacklist]").ConfigureAwait(false));
-        }
-
-        #endregion Moderation Main Methods
-
-        #region Link Filter Command Methods
-
-        /// <summary>
-        /// Method called when we update the link filter exclude via commands.
-        /// Command: !bot moderation links exclude
+        /// Method called when we update the action message exclude via commands.
+        /// Command: !bot moderation action exclude
         /// </summary>
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>If the document was updated true is returned, else false is returned.</returns>
-        private static async Task<bool> UpdateLinkFilterExcludes(ChatCommand command, List<string> args)
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateActionMessageFilterExcludes(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
@@ -230,73 +59,73 @@ namespace StreamActions.Plugins
             // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
             if (args.IsNullEmptyOrOutOfRange(4))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkExcludeUsage", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageExcludeUsage", command.ChatMessage.RoomId,
                     new
                     {
                         CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                         BotName = Program.Settings.BotLogin,
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkExcludedLevels,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageExcludedLevels,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, Sets the excluded levels for the link filter. " +
+                    "@{DisplayName}, Sets the excluded levels for the action message. " +
                     "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation links exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                    "Usage: {CommandPrefix}{BotName} moderation action exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
                 return false;
             }
 
             // Make sure it is valid.
             if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkExcludeOptions", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageExcludeOptions", command.ChatMessage.RoomId,
                     new
                     {
                         CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                         BotName = Program.Settings.BotLogin,
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkExcludedLevels,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageExcludedLevels,
                         command.ChatMessage.DisplayName
                     },
                     "@{DisplayName}, A valid level must be specified for the excluded levels. " +
                     "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation links exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                    "Usage: {CommandPrefix}{BotName} moderation action exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
                 return false;
             }
 
-            UserLevels userLevel = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+            UserLevels actionMessageExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
 
             // Update database.
             IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
             FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkExcludedLevels, userLevel);
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageExcludedLevels, actionMessageExcludedLevels);
 
             UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkExcludeUpdate", command.ChatMessage.RoomId,
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageExcludeUpdate", command.ChatMessage.RoomId,
                 new
                 {
                     User = command.ChatMessage.Username,
                     Sender = command.ChatMessage.Username,
-                    ExcludedLevel = userLevel,
+                    ExcludedLevel = actionMessageExcludedLevels,
                     command.ChatMessage.DisplayName
                 },
-                "@{DisplayName}, The link moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
+                "@{DisplayName}, The action message moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
 
             return result.IsAcknowledged;
         }
 
         /// <summary>
-        /// Method called when we update the link filter timeout via commands.
-        /// Command: !bot moderation links timeout
+        /// Method called when we update the action message timeout via commands.
+        /// Command: !bot moderation action timeout
         /// </summary>
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>If the document was updated true is returned, else false is returned.</returns>
-        private static async Task<bool> UpdateLinkFilterTimeout(ChatCommand command, List<string> args)
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateActionMessageFilterTimeout(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
@@ -306,7 +135,7 @@ namespace StreamActions.Plugins
             // If "time, message, reason, punishment" hasn't been specified in the arguments.
             if (args.IsNullEmptyOrOutOfRange(4))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutUsage", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutUsage", command.ChatMessage.RoomId,
                     new
                     {
                         CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
@@ -315,8 +144,8 @@ namespace StreamActions.Plugins
                         Sender = command.ChatMessage.Username,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, Sets the values for the timeout offence of the link moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation links timeout [time, message, reason, punishment]").ConfigureAwait(false));
+                    "@{DisplayName}, Sets the values for the timeout offence of the action message moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation action timeout [time, message, reason, punishment]").ConfigureAwait(false));
                 return false;
             }
 
@@ -325,42 +154,42 @@ namespace StreamActions.Plugins
             {
                 if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
                 {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutTimeUsage", command.ChatMessage.RoomId,
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutTimeUsage", command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
                             User = command.ChatMessage.Username,
                             Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkTimeoutTimeSeconds,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageTimeoutTimeSeconds,
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
                         "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation links timeout time [1 to 1209600]").ConfigureAwait(false));
+                        "Usage: {CommandPrefix}{BotName} moderation action timeout time [1 to 1209600]").ConfigureAwait(false));
                     return false;
                 }
 
-                uint linkTimeoutTime = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint actionMessageTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
                 // Update database.
                 IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkTimeoutTimeSeconds, linkTimeoutTime);
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageTimeoutTimeSeconds, actionMessageTimeoutTimeSeconds);
 
                 UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutTimeUpdate", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutTimeUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeSeconds = linkTimeoutTime,
+                        TimeSeconds = actionMessageTimeoutTimeSeconds,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, The link moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+                    "@{DisplayName}, The action message moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
 
                 return result.IsAcknowledged;
             }
@@ -370,42 +199,42 @@ namespace StreamActions.Plugins
             {
                 if (args.IsNullEmptyOrOutOfRange(5))
                 {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutMessageUsage", command.ChatMessage.RoomId,
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutMessageUsage", command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
                             User = command.ChatMessage.Username,
                             Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkTimeoutMessage,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageTimeoutMessage,
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation links timeout message [message]").ConfigureAwait(false));
+                        "Usage: {CommandPrefix}{BotName} moderation action timeout message [message]").ConfigureAwait(false));
                     return false;
                 }
 
-                string linkTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string actionMessageTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
                 // Update database.
                 IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkTimeoutMessage, linkTimeoutMessage);
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageTimeoutMessage, actionMessageTimeoutMessage);
 
                 UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutMessageUpdate", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutMessageUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutMessage = linkTimeoutMessage,
+                        TimeoutMessage = actionMessageTimeoutMessage,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, The link moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
+                    "@{DisplayName}, The action message moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
 
                 return result.IsAcknowledged;
             }
@@ -415,42 +244,42 @@ namespace StreamActions.Plugins
             {
                 if (args.IsNullEmptyOrOutOfRange(5))
                 {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutReasonUsage", command.ChatMessage.RoomId,
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutReasonUsage", command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
                             User = command.ChatMessage.Username,
                             Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkTimeoutReason,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageTimeoutReason,
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation links timeout reason [message]").ConfigureAwait(false));
+                        "Usage: {CommandPrefix}{BotName} moderation action timeout reason [message]").ConfigureAwait(false));
                     return false;
                 }
 
-                string linkTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string actionMessageTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
                 // Update database.
                 IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkTimeoutReason, linkTimeoutReason);
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageTimeoutReason, actionMessageTimeoutReason);
 
                 UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutReasonUpdate", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutReasonUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutReason = linkTimeoutReason,
+                        TimeoutReason = actionMessageTimeoutReason,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, The link moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
+                    "@{DisplayName}, The action message moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
 
                 return result.IsAcknowledged;
             }
@@ -460,50 +289,50 @@ namespace StreamActions.Plugins
             {
                 if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
                 {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutPunishmentUsage", command.ChatMessage.RoomId,
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutPunishmentUsage", command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
                             User = command.ChatMessage.Username,
                             Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkTimeoutPunishment,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageTimeoutPunishment,
                             Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation links timeout punishment [{Punishments}]").ConfigureAwait(false));
+                        "Usage: {CommandPrefix}{BotName} moderation action timeout punishment [{Punishments}]").ConfigureAwait(false));
 
                     return false;
                 }
 
-                ModerationPunishment linkTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+                ModerationPunishment actionMessageTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
 
                 // Update database.
                 IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkTimeoutPunishment, linkTimeoutPunishment);
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageTimeoutPunishment, actionMessageTimeoutPunishment);
 
                 UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeoutPunishment = linkTimeoutPunishment,
+                        TimeoutPunishment = actionMessageTimeoutPunishment,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, The link moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
+                    "@{DisplayName}, The action message moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
 
                 return result.IsAcknowledged;
             }
 
             // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutUsage", command.ChatMessage.RoomId,
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutUsage", command.ChatMessage.RoomId,
                 new
                 {
                     CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
@@ -512,20 +341,20 @@ namespace StreamActions.Plugins
                     Sender = command.ChatMessage.Username,
                     command.ChatMessage.DisplayName
                 },
-                "@{DisplayName}, Sets the values for the timeout offence of the link moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation links timeout [time, message, reason, punishment]").ConfigureAwait(false));
+                "@{DisplayName}, Sets the values for the timeout offence of the action message moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation action timeout [time, message, reason, punishment]").ConfigureAwait(false));
 
             return false;
         }
 
         /// <summary>
-        /// Method called when we update the link filter toggle via commands.
-        /// Command: !bot moderation links toggle
+        /// Method called when we update the action message toggle via commands.
+        /// Command: !bot moderation action toggle
         /// </summary>
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>If the document was updated true is returned, else false is returned.</returns>
-        private static async Task<bool> UpdateLinkFilterToggle(ChatCommand command, List<string> args)
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateActionMessageFilterToggle(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
@@ -535,53 +364,53 @@ namespace StreamActions.Plugins
             // If "on" or "off" hasn't been specified in the arguments.
             if (args.IsNullEmptyOrOutOfRange(4))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkToggleUsage", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageToggleUsage", command.ChatMessage.RoomId,
                     new
                     {
                         CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                         BotName = Program.Settings.BotLogin,
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkStatus,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageStatus,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, Toggles the link moderation. " +
+                    "@{DisplayName}, Toggles the action message moderation. " +
                     "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation links toggle [on, off]").ConfigureAwait(false));
+                    "Usage: {CommandPrefix}{BotName} moderation action toggle [on, off]").ConfigureAwait(false));
                 return false;
             }
 
             // If the forth argument isn't "on" or "off" at all.
             if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkToggleOptions", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageToggleOptions", command.ChatMessage.RoomId,
                     new
                     {
                         CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                         BotName = Program.Settings.BotLogin,
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkStatus,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageStatus,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, A valid toggle for link moderation must be specified. " +
+                    "@{DisplayName}, A valid toggle for action message moderation must be specified. " +
                     "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation links toggle [on, off]").ConfigureAwait(false));
+                    "Usage: {CommandPrefix}{BotName} moderation action toggle [on, off]").ConfigureAwait(false));
                 return false;
             }
 
-            bool linkStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+            bool actionMessageStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
 
             // Update database.
             IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
             FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkStatus, linkStatus);
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageStatus, actionMessageStatus);
 
             UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkToggle", command.ChatMessage.RoomId,
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageToggle", command.ChatMessage.RoomId,
                 new
                 {
                     User = command.ChatMessage.Username,
@@ -589,19 +418,19 @@ namespace StreamActions.Plugins
                     ToggleStatus = args[4].ToLowerInvariant(),
                     command.ChatMessage.DisplayName
                 },
-                "@{DisplayName}, The link moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
+                "@{DisplayName}, The action message moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
 
             return result.IsAcknowledged;
         }
 
         /// <summary>
-        /// Method called when we update the link filter warning via commands.
-        /// Command: !bot moderation links warning
+        /// Method called when we update the action message warning via commands.
+        /// Command: !bot moderation action warning
         /// </summary>
         /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
         /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>If the document was updated true is returned, else false is returned.</returns>
-        private static async Task<bool> UpdateLinkFilterWarning(ChatCommand command, List<string> args)
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateActionMessageFilterWarning(ChatCommand command, List<string> args)
         {
             if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
@@ -611,7 +440,7 @@ namespace StreamActions.Plugins
             // If "time, message, reason, punishment" hasn't been specified in the arguments.
             if (args.IsNullEmptyOrOutOfRange(4))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningUsage", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningUsage", command.ChatMessage.RoomId,
                     new
                     {
                         CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
@@ -620,8 +449,8 @@ namespace StreamActions.Plugins
                         Sender = command.ChatMessage.Username,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, Sets the values for the warning offence of the link moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation links warning [time, message, reason, punishment]").ConfigureAwait(false));
+                    "@{DisplayName}, Sets the values for the warning offence of the action message moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation action warning [time, message, reason, punishment]").ConfigureAwait(false));
                 return false;
             }
 
@@ -630,42 +459,42 @@ namespace StreamActions.Plugins
             {
                 if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
                 {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningTimeUsage", command.ChatMessage.RoomId,
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningTimeUsage", command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
                             User = command.ChatMessage.Username,
                             Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkWarningTimeSeconds,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageWarningTimeSeconds,
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
                         "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation links warning time [1 to 1209600]").ConfigureAwait(false));
+                        "Usage: {CommandPrefix}{BotName} moderation action warning time [1 to 1209600]").ConfigureAwait(false));
                     return false;
                 }
 
-                uint linkWarningTime = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+                uint actionMessageWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
 
                 // Update database.
                 IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkWarningTimeSeconds, linkWarningTime);
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageWarningTimeSeconds, actionMessageWarningTimeSeconds);
 
                 UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningTimeUpdate", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningTimeUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        TimeSeconds = linkWarningTime,
+                        TimeSeconds = actionMessageWarningTimeSeconds,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, The link moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+                    "@{DisplayName}, The action message moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
 
                 return result.IsAcknowledged;
             }
@@ -675,42 +504,42 @@ namespace StreamActions.Plugins
             {
                 if (args.IsNullEmptyOrOutOfRange(5))
                 {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningMessageUsage", command.ChatMessage.RoomId,
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningMessageUsage", command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
                             User = command.ChatMessage.Username,
                             Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkWarningMessage,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageWarningMessage,
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation links warning message [message]").ConfigureAwait(false));
+                        "Usage: {CommandPrefix}{BotName} moderation action warning message [message]").ConfigureAwait(false));
                     return false;
                 }
 
-                string linkWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string actionMessageWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
                 // Update database.
                 IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkWarningMessage, linkWarningMessage);
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageWarningMessage, actionMessageWarningMessage);
 
                 UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningMessageUpdate", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningMessageUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningMessage = linkWarningMessage,
+                        WarningMessage = actionMessageWarningMessage,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, The link moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
+                    "@{DisplayName}, The action message moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
 
                 return result.IsAcknowledged;
             }
@@ -720,42 +549,42 @@ namespace StreamActions.Plugins
             {
                 if (args.IsNullEmptyOrOutOfRange(5))
                 {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningReasonUsage", command.ChatMessage.RoomId,
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningReasonUsage", command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
                             User = command.ChatMessage.Username,
                             Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkWarningReason,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageWarningReason,
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation links warning reason [message]").ConfigureAwait(false));
+                        "Usage: {CommandPrefix}{BotName} moderation action warning reason [message]").ConfigureAwait(false));
                     return false;
                 }
 
-                string linkWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+                string actionMessageWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
 
                 // Update database.
                 IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkWarningReason, linkWarningReason);
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageWarningReason, actionMessageWarningReason);
 
                 UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningReasonUpdate", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningReasonUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningReason = linkWarningReason,
+                        WarningReason = actionMessageWarningReason,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, The link moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
+                    "@{DisplayName}, The action message moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
 
                 return result.IsAcknowledged;
             }
@@ -765,50 +594,50 @@ namespace StreamActions.Plugins
             {
                 if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
                 {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningPunishmentUsage", command.ChatMessage.RoomId,
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningPunishmentUsage", command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
                             User = command.ChatMessage.Username,
                             Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkWarningPunishment,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageWarningPunishment,
                             Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
                             command.ChatMessage.DisplayName
                         },
                         "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
                         "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation links warning punishment [{Punishments}]").ConfigureAwait(false));
+                        "Usage: {CommandPrefix}{BotName} moderation action warning punishment [{Punishments}]").ConfigureAwait(false));
 
                     return false;
                 }
 
-                ModerationPunishment linkWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+                ModerationPunishment actionMessageWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
 
                 // Update database.
                 IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
                 FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkWarningPunishment, linkWarningPunishment);
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageWarningPunishment, actionMessageWarningPunishment);
 
                 UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
 
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningPunishmentUpdate", command.ChatMessage.RoomId,
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningPunishmentUpdate", command.ChatMessage.RoomId,
                     new
                     {
                         User = command.ChatMessage.Username,
                         Sender = command.ChatMessage.Username,
-                        WarningPunishment = linkWarningPunishment,
+                        WarningPunishment = actionMessageWarningPunishment,
                         command.ChatMessage.DisplayName
                     },
-                    "@{DisplayName}, The link moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
+                    "@{DisplayName}, The action message moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
 
                 return result.IsAcknowledged;
             }
 
             // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningUsage", command.ChatMessage.RoomId,
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningUsage", command.ChatMessage.RoomId,
                 new
                 {
                     CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
@@ -817,272 +646,11 @@ namespace StreamActions.Plugins
                     Sender = command.ChatMessage.Username,
                     command.ChatMessage.DisplayName
                 },
-                "@{DisplayName}, Sets the values for the warning offence of the link moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation links warning [time, message, reason, punishment]").ConfigureAwait(false));
+                "@{DisplayName}, Sets the values for the warning offence of the action message moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation action warning [time, message, reason, punishment]").ConfigureAwait(false));
 
             return false;
         }
-
-        /// <summary>
-        /// Method called when we update the link filter whitelist via commands.
-        /// Command: !bot moderation links whitelist
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>If the document was updated true is returned, else false is returned.</returns>
-        private static async Task<bool> UpdateLinkFilterWhitelist(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "add, remove, list" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the excluded links from the link filter. " +
-                    "Usage: {CommandPrefix}{BotName} moderation links whitelist [add, remove, list]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Adding a whitelist.
-            if (args[4].Equals("add", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistAddUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Add an excluded links to the link filter. " +
-                        "Usage: {CommandPrefix}{BotName} moderation links whitelist add [link]").ConfigureAwait(false));
-                    return false;
-                }
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Push(d => d.LinkWhitelist, args[5]);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistAddUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WhitelistedLink = args[5],
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The following link has been added to the link whitelist \"{WhitelistedLink}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Removing a whitelist.
-            if (args[4].Equals("remove", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistRemoveUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Removes an excluded links to the link filter. " +
-                        "Usage: {CommandPrefix}{BotName} moderation links whitelist remove [link]").ConfigureAwait(false));
-                    return false;
-                }
-
-                //TODO: Refactor Mongo
-                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
-
-                string finder = document.LinkWhitelist.Find(u => u.Equals(args[5], StringComparison.OrdinalIgnoreCase));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.PullFilter(d => d.LinkWhitelist, args[5]);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                if (result.IsAcknowledged)
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistRemoveUpdate", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            WhitelistedLink = args[5],
-                            command.ChatMessage.DisplayName
-                        },
-                       "@{DisplayName}, The following link has been removed from the link whitelist \"{WhitelistedLink}\".").ConfigureAwait(false));
-                    return result.IsAcknowledged;
-                }
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistRemove404Usage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, You can only remove a link from the whitelist that exists. " +
-                    "Usage: {CommandPrefix}{BotName} moderation links whitelist remove [link]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Listing all whitelists.
-            if (args[4].Equals("list", StringComparison.OrdinalIgnoreCase))
-            {
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistListNone", command.ChatMessage.RoomId,
-                        new
-                        {
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, There are no whitelisted links.").ConfigureAwait(false));
-                    return true;
-                }
-
-                using IAsyncCursor<List<string>> cursor = await collection.FindAsync(filter, new FindOptions<ModerationDocument, List<string>> { Projection = Builders<ModerationDocument>.Projection.Expression(d => d.LinkWhitelist) }).ConfigureAwait(false);
-
-                List<string> whitelist = await cursor.FirstAsync().ConfigureAwait(false);
-
-                string whitelists = "";
-                int numPages = (int)Math.Ceiling(whitelist.Count / (double)_itemsPerPage);
-                int page = Math.Min(numPages, Math.Max(1, int.Parse(args.GetElementAtOrDefault(5, "1"), NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false))));
-
-                foreach (string w in whitelist.Skip((page - 1) * _itemsPerPage).Take(_itemsPerPage))
-                {
-                    if (whitelists.Length > 0)
-                    {
-                        whitelists += ", ";
-                    }
-
-                    whitelists += whitelist;
-                }
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistListShow", command.ChatMessage.RoomId,
-                    new
-                    {
-                        Page = page,
-                        NumPage = numPages,
-                        Whitelists = whitelists,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Whitelist [Page {Page} of {NumPage}]: {Whitelists}").ConfigureAwait(false));
-
-                return true;
-            }
-
-            // Usage if none of the above have been specified.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the excluded links from the link filter. " +
-                "Usage: {CommandPrefix}{BotName} moderation links whitelist [add, remove, list]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Moderation commands for links.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "links", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationLinksCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
-            {
-                case "toggle":
-                    _ = await ChatModerator.UpdateLinkFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "warning":
-                    _ = await ChatModerator.UpdateLinkFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "timeout":
-                    _ = await ChatModerator.UpdateLinkFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "exclude":
-                    _ = await ChatModerator.UpdateLinkFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "whitelist":
-                    _ = await ChatModerator.UpdateLinkFilterWhitelist(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages the bot's link moderation filter. Usage: {CommandPrefix}{BotName} moderation links [toggle, warning, timeout, exclude, whitelist]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        #endregion Link Filter Command Methods
-
-        #region Cap Filter Command Methods
 
         /// <summary>
         /// Method called when we update the cap filter exclude via commands.
@@ -1833,58 +1401,3628 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
-        /// Moderation commands for caps.
+        /// Method called when we update the emote filter exclude via commands.
+        /// Command: !bot moderation emotes exclude
         /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "caps", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationCapsCommand(object sender, OnChatCommandReceivedArgs e)
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateEmoteFilterExcludes(ChatCommand command, List<string> args)
         {
-            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
             {
-                return;
+                return false;
             }
 
-            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
+            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
             {
-                case "toggle":
-                    _ = await ChatModerator.UpdateCapFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteExcludeUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the excluded levels for the emotes filter. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation emotes exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
 
-                case "warning":
-                    _ = await ChatModerator.UpdateCapFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
+            // Make sure it is valid.
+            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteExcludeOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation emotes exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
 
-                case "timeout":
-                    _ = await ChatModerator.UpdateCapFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
+            UserLevels emoteExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
 
-                case "exclude":
-                    _ = await ChatModerator.UpdateCapFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
-                case "set":
-                    _ = await ChatModerator.UpdateCapFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
 
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapsUsage", e.Command.ChatMessage.RoomId,
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteExcludedLevels, emoteExcludedLevels);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteExcludeUpdate", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ExcludedLevel = emoteExcludedLevels,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The emotes moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the emote filter exclude via commands.
+        /// Command: !bot moderation emotes set
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateEmoteFilterOptions(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "maximumpercent or minimumlength" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the options for the emotes filter. " +
+                    "Usage: {CommandPrefix}{BotName} moderation emotes set [maximum, removeemotesonly]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Maximum emotes in message setting.
+            if (args[4].Equals("maximum", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetMaximumUsage", command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteMaximumAllowed,
+                            command.ChatMessage.DisplayName
                         },
-                        "@{DisplayName}, Manages the bot's cap moderation filter. Usage: {CommandPrefix}{BotName} moderation caps [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
-                    break;
+                        "@{DisplayName}, Sets the maximum percentage of emotes allowed in a message. " +
+                        "Current value: {CurrentValue} emotes" +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes set maximumpercent [amount]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint emoteMaximumAllowed = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteMaximumAllowed, emoteMaximumAllowed);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetMaximumUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MaximumEmotes = emoteMaximumAllowed,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes maximum emotes allowed in a message has been set to {MaximumEmotes} emotes.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
             }
+
+            // Remove messages only containing emotes.
+            if (args[4].Equals("removeemotesonly", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !bool.TryParse(args[5], out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetRemoveAllUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteRemoveOnlyEmotes,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets if messages only containing emotes should be deleted. " +
+                        "Current value: {CurrentValue}" +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes set removeemotesonly [true or false]").ConfigureAwait(false));
+                    return false;
+                }
+
+                bool emoteRemoveOnlyEmotes = bool.Parse(args[5]);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteRemoveOnlyEmotes, emoteRemoveOnlyEmotes);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetRemoveAllUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        RemoveOnly = emoteRemoveOnlyEmotes,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes remove only emotes filter has been set to {RemoveOnly}.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteExcludedLevels,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the options for the emotes filter. " +
+                "Usage: {CommandPrefix}{BotName} moderation emotes set [maximum, removeemotesonly]").ConfigureAwait(false));
+
+            return false;
         }
 
-        #endregion Cap Filter Command Methods
+        /// <summary>
+        /// Method called when we update the emote filter timeout via commands.
+        /// Command: !bot moderation emotes timeout
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateEmoteFilterTimeout(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
 
-        #region Repetition Filter Command Methods
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the timeout offence of the emote moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation emotes timeout [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Timeout time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteTimeoutTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes timeout time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint emoteTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutTimeSeconds, emoteTimeoutTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = emoteTimeoutTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteTimeoutMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes timeout message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string emoteTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutMessage, emoteTimeoutMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutMessage = emoteTimeoutMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteTimeoutReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes timeout reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string emoteTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutReason, emoteTimeoutReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutReason = emoteTimeoutReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteTimeoutPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes timeout punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment emoteTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutPunishment, emoteTimeoutPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutPunishment = emoteTimeoutPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the timeout offence of the emote moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation emotes timeout [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the emote filter toggle via commands.
+        /// Command: !bot moderation emotes toggle
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateEmoteFilterToggle(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "on" or "off" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteToggleUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Toggles the emotes moderation. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation emotes toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            // If the forth argument isn't "on" or "off" at all.
+            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteToggleOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid toggle for emotes moderation must be specified. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation emotes toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            bool emoteStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteStatus, emoteStatus);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteToggle", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ToggleStatus = args[4].ToLowerInvariant(),
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The emotes moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the emote filter warning via commands.
+        /// Command: !bot moderation emotes warning
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateEmoteFilterWarning(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the warning offence of the emote moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation emotes warning [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Warning time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteWarningTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes warning time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint emoteWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningTimeSeconds, emoteWarningTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = emoteWarningTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteWarningMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes warning message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string emoteWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningMessage, emoteWarningMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningMessage = emoteWarningMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteWarningReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes warning reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string emoteWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningReason, emoteWarningReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningReason = emoteWarningReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteWarningPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation emotes warning punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment emoteWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningPunishment, emoteWarningPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningPunishment = emoteWarningPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The emotes moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the warning offence of the emote moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation emotes warning [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the fake purge exclude via commands.
+        /// Command: !bot moderation fakepurge exclude
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateFakePurgeFilterExcludes(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeExcludeUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the excluded levels for the fake purge. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation fakepurge exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Make sure it is valid.
+            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeExcludeOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation fakepurge exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
+
+            UserLevels fakePurgeExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeExcludedLevels, fakePurgeExcludedLevels);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeExcludeUpdate", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ExcludedLevel = fakePurgeExcludedLevels,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The fake purge moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the fake purge timeout via commands.
+        /// Command: !bot moderation fakepurge timeout
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateFakePurgeFilterTimeout(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the timeout offence of the fake purge moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Timeout time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeTimeoutTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint fakePurgeTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutTimeSeconds, fakePurgeTimeoutTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = fakePurgeTimeoutTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The fake purge moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeTimeoutMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string fakePurgeTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutMessage, fakePurgeTimeoutMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutMessage = fakePurgeTimeoutMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The fake purge moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeTimeoutReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string fakePurgeTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutReason, fakePurgeTimeoutReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutReason = fakePurgeTimeoutReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The fake purge moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeTimeoutPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment fakePurgeTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutPunishment, fakePurgeTimeoutPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutPunishment = fakePurgeTimeoutPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The fake purge moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the timeout offence of the fake purge moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the fake purge toggle via commands.
+        /// Command: !bot moderation fakepurge toggle
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateFakePurgeFilterToggle(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "on" or "off" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeToggleUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Toggles the fake purge moderation. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation fakepurge toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            // If the forth argument isn't "on" or "off" at all.
+            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeToggleOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid toggle for fake purge moderation must be specified. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation fakepurge toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            bool fakePurgeStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeStatus, fakePurgeStatus);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeToggle", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ToggleStatus = args[4].ToLowerInvariant(),
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The fake purge moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the fake purge warning via commands.
+        /// Command: !bot moderation fakepurge warning
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateFakePurgeFilterWarning(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the warning offence of the fake purge moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation fakepurge warning [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Warning time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeWarningTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation fakepurge warning time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint fakePurgeWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningTimeSeconds, fakePurgeWarningTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = fakePurgeWarningTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The fake purge moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeWarningMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation fakepurge warning message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string fakePurgeWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningMessage, fakePurgeWarningMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningMessage = fakePurgeWarningMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The fake purge moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeWarningReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation fakepurge warning reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string fakePurgeWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningReason, fakePurgeWarningReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningReason = fakePurgeWarningReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The fake purge moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeWarningPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation fakepurge warning punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment fakePurgeWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningPunishment, fakePurgeWarningPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningPunishment = fakePurgeWarningPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The fake purge moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the warning offence of the fake purge moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation fakepurge warning [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the lengthy message filter exclude via commands.
+        /// Command: !bot moderation lengthy exclude
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateLengthyFilterExcludes(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyExcludeUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the excluded levels for the lengthy message filter. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation lengthy exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Make sure it is valid.
+            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyExcludeOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation lengthy exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
+
+            UserLevels lengthyMessageExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageExcludedLevels, lengthyMessageExcludedLevels);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyExcludeUpdate", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ExcludedLevel = lengthyMessageExcludedLevels,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The lengthy message moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the lengthy message filter timeout via commands.
+        /// Command: !bot moderation lengthy timeout
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateLengthyFilterTimeout(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the timeout offence of the lengthy message moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation lengthy timeout [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Timeout time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageTimeoutTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation lengthy timeout time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint lengthyMessageTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageTimeoutTimeSeconds, lengthyMessageTimeoutTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = lengthyMessageTimeoutTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The lengthy message moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageTimeoutMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation lengthy timeout message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string lengthyMessageTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageTimeoutMessage, lengthyMessageTimeoutMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutMessage = lengthyMessageTimeoutMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The lengthy message moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageTimeoutReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation lengthy timeout reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string lengthyMessageTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageTimeoutReason, lengthyMessageTimeoutReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutReason = lengthyMessageTimeoutReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The lengthy message moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageTimeoutPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation lengthy timeout punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment lengthyMessageTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageTimeoutPunishment, lengthyMessageTimeoutPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutPunishment = lengthyMessageTimeoutPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The lengthy message moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the timeout offence of the lengthy message moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation lengthy timeout [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the lengthy message filter toggle via commands.
+        /// Command: !bot moderation lengthy toggle
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateLengthyFilterToggle(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "on" or "off" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyToggleUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Toggles the lengthy message moderation. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation lengthy toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            // If the forth argument isn't "on" or "off" at all.
+            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyToggleOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid toggle for lengthy messages moderation must be specified. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation lengthy toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            bool lengthyMessageStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageStatus, lengthyMessageStatus);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyToggle", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ToggleStatus = args[4].ToLowerInvariant(),
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The lengthy message moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the lengthy message filter warning via commands.
+        /// Command: !bot moderation lengthy warning
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateLengthyFilterWarning(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the warning offence of the lengthy message moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation lengthy warning [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Warning time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageWarningTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation lengthy warning time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint lengthyMessageWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageWarningTimeSeconds, lengthyMessageWarningTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = lengthyMessageWarningTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The lengthy message moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageWarningMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation lengthy warning message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string lengthyMessageWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageWarningMessage, lengthyMessageWarningMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningMessage = lengthyMessageWarningMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The lengthy message moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageWarningReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation lengthy warning reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string lengthyMessageWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageWarningReason, lengthyMessageWarningReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningReason = lengthyMessageWarningReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The lengthy message moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageWarningPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation lengthy warning punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment lengthyMessageWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageWarningPunishment, lengthyMessageWarningPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningPunishment = lengthyMessageWarningPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The lengthy message moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the warning offence of the lengthy message moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation lengthy warning [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the lengthy message filter exclude via commands.
+        /// Command: !bot moderation lengthy set
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateLengthyMessageFilterOptions(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "maximumlength" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthySetUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the options for the lengthy message filter. " +
+                    "Usage: {CommandPrefix}{BotName} moderation lengthy set [maximumlength]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Maximum message length.
+            if (args[4].Equals("maximumlength", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthySetMinimumLengthUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageMaximumLength,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the minimum characters required in a message before checking for lengthy messages. " +
+                        "Current value: {CurrentValue} characters" +
+                        "Usage: {CommandPrefix}{BotName} moderation lengthy set maximumlength [maximum length]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint lengthyMessageMaximumLength = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageMaximumLength, lengthyMessageMaximumLength);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthySetMinimumLengthUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MaximumLength = lengthyMessageMaximumLength,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The maximum message length has been set to {MaximumLength} characters.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthySetUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageExcludedLevels,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the options for the lengthy message filter. " +
+                "Usage: {CommandPrefix}{BotName} moderation lengthy set [maximumlength]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the link filter exclude via commands.
+        /// Command: !bot moderation links exclude
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>If the document was updated true is returned, else false is returned.</returns>
+        private static async Task<bool> UpdateLinkFilterExcludes(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkExcludeUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the excluded levels for the link filter. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation links exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Make sure it is valid.
+            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkExcludeOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation links exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
+
+            UserLevels userLevel = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkExcludedLevels, userLevel);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkExcludeUpdate", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ExcludedLevel = userLevel,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The link moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the link filter timeout via commands.
+        /// Command: !bot moderation links timeout
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>If the document was updated true is returned, else false is returned.</returns>
+        private static async Task<bool> UpdateLinkFilterTimeout(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the timeout offence of the link moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation links timeout [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Timeout time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkTimeoutTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation links timeout time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint linkTimeoutTime = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkTimeoutTimeSeconds, linkTimeoutTime);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = linkTimeoutTime,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The link moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkTimeoutMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation links timeout message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string linkTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkTimeoutMessage, linkTimeoutMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutMessage = linkTimeoutMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The link moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkTimeoutReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation links timeout reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string linkTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkTimeoutReason, linkTimeoutReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutReason = linkTimeoutReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The link moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkTimeoutPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation links timeout punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment linkTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkTimeoutPunishment, linkTimeoutPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutPunishment = linkTimeoutPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The link moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkTimeoutUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the timeout offence of the link moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation links timeout [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the link filter toggle via commands.
+        /// Command: !bot moderation links toggle
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>If the document was updated true is returned, else false is returned.</returns>
+        private static async Task<bool> UpdateLinkFilterToggle(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "on" or "off" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkToggleUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Toggles the link moderation. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation links toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            // If the forth argument isn't "on" or "off" at all.
+            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkToggleOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid toggle for link moderation must be specified. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation links toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            bool linkStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkStatus, linkStatus);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkToggle", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ToggleStatus = args[4].ToLowerInvariant(),
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The link moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the link filter warning via commands.
+        /// Command: !bot moderation links warning
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>If the document was updated true is returned, else false is returned.</returns>
+        private static async Task<bool> UpdateLinkFilterWarning(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the warning offence of the link moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation links warning [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Warning time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkWarningTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation links warning time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint linkWarningTime = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkWarningTimeSeconds, linkWarningTime);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = linkWarningTime,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The link moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkWarningMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation links warning message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string linkWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkWarningMessage, linkWarningMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningMessage = linkWarningMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The link moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkWarningReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation links warning reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string linkWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkWarningReason, linkWarningReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningReason = linkWarningReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The link moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LinkWarningPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation links warning punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment linkWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LinkWarningPunishment, linkWarningPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningPunishment = linkWarningPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The link moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWarningUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the warning offence of the link moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation links warning [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the link filter whitelist via commands.
+        /// Command: !bot moderation links whitelist
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>If the document was updated true is returned, else false is returned.</returns>
+        private static async Task<bool> UpdateLinkFilterWhitelist(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "add, remove, list" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the excluded links from the link filter. " +
+                    "Usage: {CommandPrefix}{BotName} moderation links whitelist [add, remove, list]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Adding a whitelist.
+            if (args[4].Equals("add", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistAddUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Add an excluded links to the link filter. " +
+                        "Usage: {CommandPrefix}{BotName} moderation links whitelist add [link]").ConfigureAwait(false));
+                    return false;
+                }
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Push(d => d.LinkAllowlist, args[5]);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistAddUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WhitelistedLink = args[5],
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The following link has been added to the link whitelist \"{WhitelistedLink}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Removing a whitelist.
+            if (args[4].Equals("remove", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistRemoveUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Removes an excluded links to the link filter. " +
+                        "Usage: {CommandPrefix}{BotName} moderation links whitelist remove [link]").ConfigureAwait(false));
+                    return false;
+                }
+
+                //TODO: Refactor Mongo
+                ModerationDocument document = await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false);
+
+                string finder = document.LinkAllowlist.Find(u => u.Equals(args[5], StringComparison.OrdinalIgnoreCase));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.PullFilter(d => d.LinkAllowlist, args[5]);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                if (result.IsAcknowledged)
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistRemoveUpdate", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            WhitelistedLink = args[5],
+                            command.ChatMessage.DisplayName
+                        },
+                       "@{DisplayName}, The following link has been removed from the link whitelist \"{WhitelistedLink}\".").ConfigureAwait(false));
+                    return result.IsAcknowledged;
+                }
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistRemove404Usage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, You can only remove a link from the whitelist that exists. " +
+                    "Usage: {CommandPrefix}{BotName} moderation links whitelist remove [link]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Listing all whitelists.
+            if (args[4].Equals("list", StringComparison.OrdinalIgnoreCase))
+            {
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistListNone", command.ChatMessage.RoomId,
+                        new
+                        {
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, There are no whitelisted links.").ConfigureAwait(false));
+                    return true;
+                }
+
+                using IAsyncCursor<List<string>> cursor = await collection.FindAsync(filter, new FindOptions<ModerationDocument, List<string>> { Projection = Builders<ModerationDocument>.Projection.Expression(d => d.LinkAllowlist) }).ConfigureAwait(false);
+
+                List<string> whitelist = await cursor.FirstAsync().ConfigureAwait(false);
+
+                string whitelists = "";
+                int numPages = (int)Math.Ceiling(whitelist.Count / (double)_itemsPerPage);
+                int page = Math.Min(numPages, Math.Max(1, int.Parse(args.GetElementAtOrDefault(5, "1"), NumberStyles.Integer, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false))));
+
+                foreach (string w in whitelist.Skip((page - 1) * _itemsPerPage).Take(_itemsPerPage))
+                {
+                    if (whitelists.Length > 0)
+                    {
+                        whitelists += ", ";
+                    }
+
+                    whitelists += whitelist;
+                }
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistListShow", command.ChatMessage.RoomId,
+                    new
+                    {
+                        Page = page,
+                        NumPage = numPages,
+                        Whitelists = whitelists,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Whitelist [Page {Page} of {NumPage}]: {Whitelists}").ConfigureAwait(false));
+
+                return true;
+            }
+
+            // Usage if none of the above have been specified.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkWhitelistUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the excluded links from the link filter. " +
+                "Usage: {CommandPrefix}{BotName} moderation links whitelist [add, remove, list]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the one man spam exclude via commands.
+        /// Command: !bot moderation onemanspam exclude
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateOneManSpamFilterExcludes(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamExcludeUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the excluded levels for the one man spam. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation onemanspam exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Make sure it is valid.
+            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamExcludeOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamExcludedLevels,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
+                    "Current value: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation onemanspam exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
+                return false;
+            }
+
+            UserLevels oneManSpamExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamExcludedLevels, oneManSpamExcludedLevels);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamExcludeUpdate", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ExcludedLevel = oneManSpamExcludedLevels,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The one man spam moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the one man spam filter exclude via commands.
+        /// Command: !bot moderation onemanspam set
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateOneManSpamFilterOptions(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "maximummessages or timespan" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the options for the one man spam filter. " +
+                    "Usage: {CommandPrefix}{BotName} moderation onemanspam set [maximummessages, timespan]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Maximum messages allowed in a time span.
+            if (args[4].Equals("maximummessages", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetMaximumMsgUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamMaximumMessages,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the maximum messages allowed in a time span. " +
+                        "Current value: {CurrentValue} messages. " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam set maximummessages [amount]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint oneManSpamMaximumMessages = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamMaximumMessages, oneManSpamMaximumMessages);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpanSetMaximumMsgUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        MaximumMessages = oneManSpamMaximumMessages,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The maximum messages allowed in x seconds has been set to {MaximumMessages} messages.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Time span for messages
+            if (args[4].Equals("timespan", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetTimeSpanUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamResetTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the time span for the maximum messaged allowed to be sent. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam set timespan [amount]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint oneManSpamResetTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamResetTimeSeconds, oneManSpamResetTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetTimeSpanUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSpan = oneManSpamResetTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The time span for the amount of messages allowed has been set to {TimeSpan} messages.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the options for the one man spam filter. " +
+                "Usage: {CommandPrefix}{BotName} moderation onemanspam set [maximummessages, timespan]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the one man spam timeout via commands.
+        /// Command: !bot moderation onemanspam timeout
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateOneManSpamFilterTimeout(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the timeout offence of the one man spam moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Timeout time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamTimeoutTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint oneManSpamTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamTimeoutTimeSeconds, oneManSpamTimeoutTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = oneManSpamTimeoutTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The one man spam moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamTimeoutMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string oneManSpamTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamTimeoutMessage, oneManSpamTimeoutMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutMessage = oneManSpamTimeoutMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The one man spam moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamTimeoutReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string oneManSpamTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamTimeoutReason, oneManSpamTimeoutReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutReason = oneManSpamTimeoutReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The one man spam moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Timeout punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamTimeoutPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment oneManSpamTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamTimeoutPunishment, oneManSpamTimeoutPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeoutPunishment = oneManSpamTimeoutPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The one man spam moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the timeout offence of the one man spam moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
+
+        /// <summary>
+        /// Method called when we update the one man spam toggle via commands.
+        /// Command: !bot moderation onemanspam toggle
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateOneManSpamFilterToggle(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "on" or "off" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamToggleUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Toggles the one man spam moderation. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation onemanspam toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            // If the forth argument isn't "on" or "off" at all.
+            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamToggleOptions", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamStatus,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, A valid toggle for one man spam moderation must be specified. " +
+                    "Current status: {CurrentValue}. " +
+                    "Usage: {CommandPrefix}{BotName} moderation onemanspam toggle [on, off]").ConfigureAwait(false));
+                return false;
+            }
+
+            bool oneManSpamStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
+
+            // Update database.
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamStatus, oneManSpamStatus);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamToggle", command.ChatMessage.RoomId,
+                new
+                {
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    ToggleStatus = args[4].ToLowerInvariant(),
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, The one man spam moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
+
+            return result.IsAcknowledged;
+        }
+
+        /// <summary>
+        /// Method called when we update the one man spam warning via commands.
+        /// Command: !bot moderation onemanspam warning
+        /// </summary>
+        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
+        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
+        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
+        private static async Task<bool> UpdateOneManSpamFilterWarning(ChatCommand command, List<string> args)
+        {
+            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            {
+                return false;
+            }
+
+            // If "time, message, reason, punishment" hasn't been specified in the arguments.
+            if (args.IsNullEmptyOrOutOfRange(4))
+            {
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningUsage", command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, Sets the values for the warning offence of the one man spam moderation. " +
+                    "Usage: {CommandPrefix}{BotName} moderation onemanspam warning [time, message, reason, punishment]").ConfigureAwait(false));
+                return false;
+            }
+
+            // Warning time setting.
+            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningTimeUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamWarningTimeSeconds,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
+                        "Current value: {CurrentValue} seconds. " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam warning time [1 to 1209600]").ConfigureAwait(false));
+                    return false;
+                }
+
+                uint oneManSpamWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamWarningTimeSeconds, oneManSpamWarningTimeSeconds);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningTimeUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        TimeSeconds = oneManSpamWarningTimeSeconds,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The one man spam moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning message setting.
+            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningMessageUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamWarningMessage,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam warning message [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string oneManSpamWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamWarningMessage, oneManSpamWarningMessage);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningMessageUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningMessage = oneManSpamWarningMessage,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The one man spam moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning reason setting.
+            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningReasonUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamWarningReason,
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam warning reason [message]").ConfigureAwait(false));
+                    return false;
+                }
+
+                string oneManSpamWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamWarningReason, oneManSpamWarningReason);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningReasonUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningReason = oneManSpamWarningReason,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The one man spam moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Warning punishment setting.
+            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
+            {
+                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
+                {
+                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningPunishmentUsage", command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = command.ChatMessage.Username,
+                            Sender = command.ChatMessage.Username,
+                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamWarningPunishment,
+                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
+                            command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
+                        "Current value: \"{CurrentValue}\". " +
+                        "Usage: {CommandPrefix}{BotName} moderation onemanspam warning punishment [{Punishments}]").ConfigureAwait(false));
+
+                    return false;
+                }
+
+                ModerationPunishment oneManSpamWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
+
+                // Update database.
+                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
+
+                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamWarningPunishment, oneManSpamWarningPunishment);
+
+                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningPunishmentUpdate", command.ChatMessage.RoomId,
+                    new
+                    {
+                        User = command.ChatMessage.Username,
+                        Sender = command.ChatMessage.Username,
+                        WarningPunishment = oneManSpamWarningPunishment,
+                        command.ChatMessage.DisplayName
+                    },
+                    "@{DisplayName}, The one man spam moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
+
+                return result.IsAcknowledged;
+            }
+
+            // Usage if none of the above match.
+            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningUsage", command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = command.ChatMessage.Username,
+                    Sender = command.ChatMessage.Username,
+                    command.ChatMessage.DisplayName
+                },
+                "@{DisplayName}, Sets the values for the warning offence of the one man spam moderation. " +
+                "Usage: {CommandPrefix}{BotName} moderation onemanspam warning [time, message, reason, punishment]").ConfigureAwait(false));
+
+            return false;
+        }
 
         /// <summary>
         /// Method called when we update the repetition filter exclude via commands.
@@ -2677,60 +5815,6 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
-        /// Moderation commands for repetition.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "repetition", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationRepetitionCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
-            {
-                case "toggle":
-                    _ = await ChatModerator.UpdateRepetitionFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "warning":
-                    _ = await ChatModerator.UpdateRepetitionFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "timeout":
-                    _ = await ChatModerator.UpdateRepetitionFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "exclude":
-                    _ = await ChatModerator.UpdateRepetitionFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "set":
-                    _ = await ChatModerator.UpdateRepetitionFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages the bot's link moderation filter. Usage: {CommandPrefix}{BotName} moderation repetition [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        #endregion Repetition Filter Command Methods
-
-        #region Symbol Filter Command Methods
-
-        /// <summary>
         /// Method called when we update the symbol filter exclude via commands.
         /// Command: !bot moderation symbols exclude
         /// </summary>
@@ -3521,2939 +6605,6 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
-        /// Moderation commands for symbols.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "symbols", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationSymbolsCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
-            {
-                case "toggle":
-                    _ = await ChatModerator.UpdateSymbolFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "warning":
-                    _ = await ChatModerator.UpdateSymbolFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "timeout":
-                    _ = await ChatModerator.UpdateSymbolFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "exclude":
-                    _ = await ChatModerator.UpdateSymbolFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "set":
-                    _ = await ChatModerator.UpdateSymbolFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages the bot's link moderation filter. Usage: {CommandPrefix}{BotName} moderation symbols [toggle, warning, timeout, exclude]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        #endregion Symbol Filter Command Methods
-
-        #region Lengthy Message Filter Command Methods
-
-        /// <summary>
-        /// Method called when we update the lengthy message filter exclude via commands.
-        /// Command: !bot moderation lengthy exclude
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateLengthyFilterExcludes(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyExcludeUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the excluded levels for the lengthy message filter. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation lengthy exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Make sure it is valid.
-            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyExcludeOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation lengthy exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
-            }
-
-            UserLevels lengthyMessageExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageExcludedLevels, lengthyMessageExcludedLevels);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyExcludeUpdate", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ExcludedLevel = lengthyMessageExcludedLevels,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The lengthy message moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
-        }
-
-        /// <summary>
-        /// Method called when we update the lengthy message filter timeout via commands.
-        /// Command: !bot moderation lengthy timeout
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateLengthyFilterTimeout(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the timeout offence of the lengthy message moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation lengthy timeout [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Timeout time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutTimeUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageTimeoutTimeSeconds,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation lengthy timeout time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint lengthyMessageTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageTimeoutTimeSeconds, lengthyMessageTimeoutTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = lengthyMessageTimeoutTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The lengthy message moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutMessageUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageTimeoutMessage,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation lengthy timeout message [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string lengthyMessageTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageTimeoutMessage, lengthyMessageTimeoutMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutMessage = lengthyMessageTimeoutMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The lengthy message moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutReasonUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageTimeoutReason,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation lengthy timeout reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string lengthyMessageTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageTimeoutReason, lengthyMessageTimeoutReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutReason = lengthyMessageTimeoutReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The lengthy message moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageTimeoutPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation lengthy timeout punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment lengthyMessageTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageTimeoutPunishment, lengthyMessageTimeoutPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutPunishment = lengthyMessageTimeoutPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The lengthy message moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyTimeoutUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the timeout offence of the lengthy message moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation lengthy timeout [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Method called when we update the lengthy message filter toggle via commands.
-        /// Command: !bot moderation lengthy toggle
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateLengthyFilterToggle(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "on" or "off" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyToggleUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Toggles the lengthy message moderation. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation lengthy toggle [on, off]").ConfigureAwait(false));
-                return false;
-            }
-
-            // If the forth argument isn't "on" or "off" at all.
-            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyToggleOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid toggle for lengthy messages moderation must be specified. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation lengthy toggle [on, off]").ConfigureAwait(false));
-                return false;
-            }
-
-            bool lengthyMessageStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageStatus, lengthyMessageStatus);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyToggle", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ToggleStatus = args[4].ToLowerInvariant(),
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The lengthy message moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
-        }
-
-        /// <summary>
-        /// Method called when we update the lengthy message filter warning via commands.
-        /// Command: !bot moderation lengthy warning
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateLengthyFilterWarning(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the warning offence of the lengthy message moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation lengthy warning [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Warning time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningTimeUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageWarningTimeSeconds,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation lengthy warning time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint lengthyMessageWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageWarningTimeSeconds, lengthyMessageWarningTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = lengthyMessageWarningTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The lengthy message moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningMessageUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageWarningMessage,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation lengthy warning message [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string lengthyMessageWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageWarningMessage, lengthyMessageWarningMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningMessage = lengthyMessageWarningMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The lengthy message moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningReasonUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageWarningReason,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation lengthy warning reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string lengthyMessageWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageWarningReason, lengthyMessageWarningReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningReason = lengthyMessageWarningReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The lengthy message moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageWarningPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation lengthy warning punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment lengthyMessageWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageWarningPunishment, lengthyMessageWarningPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningPunishment = lengthyMessageWarningPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The lengthy message moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyWarningUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the warning offence of the lengthy message moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation lengthy warning [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Method called when we update the lengthy message filter exclude via commands.
-        /// Command: !bot moderation lengthy set
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateLengthyMessageFilterOptions(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "maximumlength" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthySetUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the options for the lengthy message filter. " +
-                    "Usage: {CommandPrefix}{BotName} moderation lengthy set [maximumlength]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Maximum message length.
-            if (args[4].Equals("maximumlength", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthySetMinimumLengthUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageMaximumLength,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the minimum characters required in a message before checking for lengthy messages. " +
-                        "Current value: {CurrentValue} characters" +
-                        "Usage: {CommandPrefix}{BotName} moderation lengthy set maximumlength [maximum length]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint lengthyMessageMaximumLength = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.LengthyMessageMaximumLength, lengthyMessageMaximumLength);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthySetMinimumLengthUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        MaximumLength = lengthyMessageMaximumLength,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The maximum message length has been set to {MaximumLength} characters.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthySetUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).LengthyMessageExcludedLevels,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the options for the lengthy message filter. " +
-                "Usage: {CommandPrefix}{BotName} moderation lengthy set [maximumlength]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Moderation commands for lengthy messages.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "lengthy", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationLongMessageCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
-            {
-                case "toggle":
-                    _ = await ChatModerator.UpdateLengthyFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "warning":
-                    _ = await ChatModerator.UpdateLengthyFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "timeout":
-                    _ = await ChatModerator.UpdateLengthyFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "exclude":
-                    _ = await ChatModerator.UpdateLengthyFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "set":
-                    _ = await ChatModerator.UpdateLengthyMessageFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages the bot's lengthy message moderation filter. Usage: {CommandPrefix}{BotName} moderation lengthy [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        #endregion Lengthy Message Filter Command Methods
-
-        #region Action Message Filter Command Methods
-
-        /// <summary>
-        /// Method called when we update the action message exclude via commands.
-        /// Command: !bot moderation action exclude
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateActionMessageFilterExcludes(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageExcludeUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the excluded levels for the action message. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation action exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Make sure it is valid.
-            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageExcludeOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation action exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
-            }
-
-            UserLevels actionMessageExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageExcludedLevels, actionMessageExcludedLevels);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageExcludeUpdate", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ExcludedLevel = actionMessageExcludedLevels,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The action message moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
-        }
-
-        /// <summary>
-        /// Method called when we update the action message timeout via commands.
-        /// Command: !bot moderation action timeout
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateActionMessageFilterTimeout(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the timeout offence of the action message moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation action timeout [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Timeout time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutTimeUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageTimeoutTimeSeconds,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation action timeout time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint actionMessageTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageTimeoutTimeSeconds, actionMessageTimeoutTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = actionMessageTimeoutTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The action message moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutMessageUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageTimeoutMessage,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation action timeout message [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string actionMessageTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageTimeoutMessage, actionMessageTimeoutMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutMessage = actionMessageTimeoutMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The action message moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutReasonUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageTimeoutReason,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation action timeout reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string actionMessageTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageTimeoutReason, actionMessageTimeoutReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutReason = actionMessageTimeoutReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The action message moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageTimeoutPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation action timeout punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment actionMessageTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageTimeoutPunishment, actionMessageTimeoutPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutPunishment = actionMessageTimeoutPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The action message moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageTimeoutUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the timeout offence of the action message moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation action timeout [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Method called when we update the action message toggle via commands.
-        /// Command: !bot moderation action toggle
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateActionMessageFilterToggle(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "on" or "off" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageToggleUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Toggles the action message moderation. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation action toggle [on, off]").ConfigureAwait(false));
-                return false;
-            }
-
-            // If the forth argument isn't "on" or "off" at all.
-            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageToggleOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid toggle for action message moderation must be specified. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation action toggle [on, off]").ConfigureAwait(false));
-                return false;
-            }
-
-            bool actionMessageStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageStatus, actionMessageStatus);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageToggle", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ToggleStatus = args[4].ToLowerInvariant(),
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The action message moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
-        }
-
-        /// <summary>
-        /// Method called when we update the action message warning via commands.
-        /// Command: !bot moderation action warning
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateActionMessageFilterWarning(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the warning offence of the action message moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation action warning [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Warning time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningTimeUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageWarningTimeSeconds,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation action warning time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint actionMessageWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageWarningTimeSeconds, actionMessageWarningTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = actionMessageWarningTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The action message moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningMessageUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageWarningMessage,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation action warning message [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string actionMessageWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageWarningMessage, actionMessageWarningMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningMessage = actionMessageWarningMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The action message moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningReasonUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageWarningReason,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation action warning reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string actionMessageWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageWarningReason, actionMessageWarningReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningReason = actionMessageWarningReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The action message moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).ActionMessageWarningPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation action warning punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment actionMessageWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.ActionMessageWarningPunishment, actionMessageWarningPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningPunishment = actionMessageWarningPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The action message moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageWarningUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the warning offence of the action message moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation action warning [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Moderation commands for action messages.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "action", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationActionMessageCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
-            {
-                case "toggle":
-                    _ = await ChatModerator.UpdateActionMessageFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "warning":
-                    _ = await ChatModerator.UpdateActionMessageFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "timeout":
-                    _ = await ChatModerator.UpdateActionMessageFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "exclude":
-                    _ = await ChatModerator.UpdateActionMessageFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages the bot's action message moderation filter. Usage: {CommandPrefix}{BotName} moderation action [toggle, warning, timeout, exclude]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        #endregion Action Message Filter Command Methods
-
-        #region Emote Filter Command Methods
-
-        /// <summary>
-        /// Method called when we update the emote filter exclude via commands.
-        /// Command: !bot moderation emotes exclude
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateEmoteFilterExcludes(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteExcludeUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the excluded levels for the emotes filter. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation emotes exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Make sure it is valid.
-            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteExcludeOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation emotes exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
-            }
-
-            UserLevels emoteExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteExcludedLevels, emoteExcludedLevels);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteExcludeUpdate", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ExcludedLevel = emoteExcludedLevels,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The emotes moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
-        }
-
-        /// <summary>
-        /// Method called when we update the emote filter exclude via commands.
-        /// Command: !bot moderation emotes set
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateEmoteFilterOptions(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "maximumpercent or minimumlength" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the options for the emotes filter. " +
-                    "Usage: {CommandPrefix}{BotName} moderation emotes set [maximum, removeemotesonly]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Maximum emotes in message setting.
-            if (args[4].Equals("maximum", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetMaximumUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteMaximumAllowed,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the maximum percentage of emotes allowed in a message. " +
-                        "Current value: {CurrentValue} emotes" +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes set maximumpercent [amount]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint emoteMaximumAllowed = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteMaximumAllowed, emoteMaximumAllowed);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetMaximumUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        MaximumEmotes = emoteMaximumAllowed,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes maximum emotes allowed in a message has been set to {MaximumEmotes} emotes.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Remove messages only containing emotes.
-            if (args[4].Equals("removeemotesonly", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !bool.TryParse(args[5], out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetRemoveAllUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteRemoveOnlyEmotes,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets if messages only containing emotes should be deleted. " +
-                        "Current value: {CurrentValue}" +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes set removeemotesonly [true or false]").ConfigureAwait(false));
-                    return false;
-                }
-
-                bool emoteRemoveOnlyEmotes = bool.Parse(args[5]);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteRemoveOnlyEmotes, emoteRemoveOnlyEmotes);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetRemoveAllUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        RemoveOnly = emoteRemoveOnlyEmotes,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes remove only emotes filter has been set to {RemoveOnly}.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteSetUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteExcludedLevels,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the options for the emotes filter. " +
-                "Usage: {CommandPrefix}{BotName} moderation emotes set [maximum, removeemotesonly]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Method called when we update the emote filter timeout via commands.
-        /// Command: !bot moderation emotes timeout
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateEmoteFilterTimeout(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the timeout offence of the emote moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation emotes timeout [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Timeout time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutTimeUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteTimeoutTimeSeconds,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes timeout time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint emoteTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutTimeSeconds, emoteTimeoutTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = emoteTimeoutTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutMessageUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteTimeoutMessage,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes timeout message [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string emoteTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutMessage, emoteTimeoutMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutMessage = emoteTimeoutMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutReasonUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteTimeoutReason,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes timeout reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string emoteTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutReason, emoteTimeoutReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutReason = emoteTimeoutReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteTimeoutPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes timeout punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment emoteTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteTimeoutPunishment, emoteTimeoutPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutPunishment = emoteTimeoutPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteTimeoutUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the timeout offence of the emote moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation emotes timeout [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Method called when we update the emote filter toggle via commands.
-        /// Command: !bot moderation emotes toggle
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateEmoteFilterToggle(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "on" or "off" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteToggleUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Toggles the emotes moderation. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation emotes toggle [on, off]").ConfigureAwait(false));
-                return false;
-            }
-
-            // If the forth argument isn't "on" or "off" at all.
-            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteToggleOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid toggle for emotes moderation must be specified. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation emotes toggle [on, off]").ConfigureAwait(false));
-                return false;
-            }
-
-            bool emoteStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteStatus, emoteStatus);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteToggle", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ToggleStatus = args[4].ToLowerInvariant(),
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The emotes moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
-        }
-
-        /// <summary>
-        /// Method called when we update the emote filter warning via commands.
-        /// Command: !bot moderation emotes warning
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateEmoteFilterWarning(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the warning offence of the emote moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation emotes warning [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Warning time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningTimeUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteWarningTimeSeconds,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes warning time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint emoteWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningTimeSeconds, emoteWarningTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = emoteWarningTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningMessageUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteWarningMessage,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes warning message [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string emoteWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningMessage, emoteWarningMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningMessage = emoteWarningMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningReasonUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteWarningReason,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes warning reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string emoteWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningReason, emoteWarningReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningReason = emoteWarningReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).EmoteWarningPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation emotes warning punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment emoteWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.EmoteWarningPunishment, emoteWarningPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningPunishment = emoteWarningPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The emotes moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteWarningUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the warning offence of the emote moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation emotes warning [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Moderation commands for emotes.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "emotes", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationEmotesCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
-            {
-                case "toggle":
-                    _ = await ChatModerator.UpdateEmoteFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "warning":
-                    _ = await ChatModerator.UpdateEmoteFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "timeout":
-                    _ = await ChatModerator.UpdateEmoteFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "exclude":
-                    _ = await ChatModerator.UpdateEmoteFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "set":
-                    _ = await ChatModerator.UpdateEmoteFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages the bot's emote moderation filter. Usage: {CommandPrefix}{BotName} moderation emotes [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        #endregion Emote Filter Command Methods
-
-        #region Fake Purge Command Methods
-
-        /// <summary>
-        /// Method called when we update the fake purge exclude via commands.
-        /// Command: !bot moderation fakepurge exclude
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateFakePurgeFilterExcludes(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeExcludeUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the excluded levels for the fake purge. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation fakepurge exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Make sure it is valid.
-            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeExcludeOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation fakepurge exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
-            }
-
-            UserLevels fakePurgeExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeExcludedLevels, fakePurgeExcludedLevels);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeExcludeUpdate", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ExcludedLevel = fakePurgeExcludedLevels,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The fake purge moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
-        }
-
-        /// <summary>
-        /// Method called when we update the fake purge timeout via commands.
-        /// Command: !bot moderation fakepurge timeout
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateFakePurgeFilterTimeout(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the timeout offence of the fake purge moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Timeout time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutTimeUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeTimeoutTimeSeconds,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint fakePurgeTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutTimeSeconds, fakePurgeTimeoutTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = fakePurgeTimeoutTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The fake purge moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutMessageUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeTimeoutMessage,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout message [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string fakePurgeTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutMessage, fakePurgeTimeoutMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutMessage = fakePurgeTimeoutMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The fake purge moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutReasonUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeTimeoutReason,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string fakePurgeTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutReason, fakePurgeTimeoutReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutReason = fakePurgeTimeoutReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The fake purge moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeTimeoutPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment fakePurgeTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeTimeoutPunishment, fakePurgeTimeoutPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutPunishment = fakePurgeTimeoutPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The fake purge moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeTimeoutUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the timeout offence of the fake purge moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation fakepurge timeout [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Method called when we update the fake purge toggle via commands.
-        /// Command: !bot moderation fakepurge toggle
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateFakePurgeFilterToggle(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "on" or "off" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeToggleUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Toggles the fake purge moderation. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation fakepurge toggle [on, off]").ConfigureAwait(false));
-                return false;
-            }
-
-            // If the forth argument isn't "on" or "off" at all.
-            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeToggleOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid toggle for fake purge moderation must be specified. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation fakepurge toggle [on, off]").ConfigureAwait(false));
-                return false;
-            }
-
-            bool fakePurgeStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeStatus, fakePurgeStatus);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeToggle", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ToggleStatus = args[4].ToLowerInvariant(),
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The fake purge moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
-        }
-
-        /// <summary>
-        /// Method called when we update the fake purge warning via commands.
-        /// Command: !bot moderation fakepurge warning
-        /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateFakePurgeFilterWarning(ChatCommand command, List<string> args)
-        {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
-            {
-                return false;
-            }
-
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the warning offence of the fake purge moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation fakepurge warning [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Warning time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningTimeUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeWarningTimeSeconds,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation fakepurge warning time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint fakePurgeWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningTimeSeconds, fakePurgeWarningTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = fakePurgeWarningTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The fake purge moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningMessageUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeWarningMessage,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation fakepurge warning message [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string fakePurgeWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningMessage, fakePurgeWarningMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningMessage = fakePurgeWarningMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The fake purge moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningReasonUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeWarningReason,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation fakepurge warning reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string fakePurgeWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningReason, fakePurgeWarningReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningReason = fakePurgeWarningReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The fake purge moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Warning punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).FakePurgeWarningPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation fakepurge warning punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment fakePurgeWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.FakePurgeWarningPunishment, fakePurgeWarningPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningPunishment = fakePurgeWarningPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The fake purge moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeWarningUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the warning offence of the fake purge moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation fakepurge warning [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
-        }
-
-        /// <summary>
-        /// Moderation commands for fake purge.
-        /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "fakepurge", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationFakePurgeCommand(object sender, OnChatCommandReceivedArgs e)
-        {
-            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
-            {
-                case "toggle":
-                    _ = await ChatModerator.UpdateFakePurgeFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "warning":
-                    _ = await ChatModerator.UpdateFakePurgeFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "timeout":
-                    _ = await ChatModerator.UpdateFakePurgeFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                case "exclude":
-                    _ = await ChatModerator.UpdateFakePurgeFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
-                    break;
-
-                default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeUsage", e.Command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = e.Command.ChatMessage.Username,
-                            Sender = e.Command.ChatMessage.Username,
-                            e.Command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Manages the bot's fake purge moderation filter. Usage: {CommandPrefix}{BotName} moderation fakepurge [toggle, warning, timeout, exclude]").ConfigureAwait(false));
-                    break;
-            }
-        }
-
-        #endregion Fake Purge Command Methods
-
-        #region Zalgo Filter Command Methods
-
-        /// <summary>
         /// Method called when we update the zalgo exclude via commands.
         /// Command: !bot moderation zalgo exclude
         /// </summary>
@@ -7064,12 +7215,12 @@ namespace StreamActions.Plugins
         }
 
         /// <summary>
-        /// Moderation commands for zalgo.
+        /// Moderation commands for action messages.
         /// </summary>
         /// <param name="sender">Sender of the event.</param>
         /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
-        [BotnameChatCommand("moderation", "zalgo", UserLevels.Moderator)]
-        private async void ChatModerator_OnModerationZalgoCommand(object sender, OnChatCommandReceivedArgs e)
+        [BotnameChatCommand("moderation", "action", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationActionMessageCommand(object sender, OnChatCommandReceivedArgs e)
         {
             if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
             {
@@ -7079,23 +7230,23 @@ namespace StreamActions.Plugins
             switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
                 case "toggle":
-                    _ = await ChatModerator.UpdateZalgoFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await ChatModerator.UpdateActionMessageFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "warning":
-                    _ = await ChatModerator.UpdateZalgoFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await ChatModerator.UpdateActionMessageFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "timeout":
-                    _ = await ChatModerator.UpdateZalgoFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await ChatModerator.UpdateActionMessageFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 case "exclude":
-                    _ = await ChatModerator.UpdateZalgoFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    _ = await ChatModerator.UpdateActionMessageFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
                     break;
 
                 default:
-                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ZalgoUsage", e.Command.ChatMessage.RoomId,
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ActionMessageUsage", e.Command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
@@ -7104,759 +7255,318 @@ namespace StreamActions.Plugins
                             Sender = e.Command.ChatMessage.Username,
                             e.Command.ChatMessage.DisplayName
                         },
-                        "@{DisplayName}, Manages the bot's zalgo moderation filter. Usage: {CommandPrefix}{BotName} moderation zalgo [toggle, warning, timeout, exclude]").ConfigureAwait(false));
+                        "@{DisplayName}, Manages the bot's action message moderation filter. Usage: {CommandPrefix}{BotName} moderation action [toggle, warning, timeout, exclude]").ConfigureAwait(false));
                     break;
             }
         }
 
-        #endregion Zalgo Filter Command Methods
-
-        #region One Man spam Filter Command Methods
-
         /// <summary>
-        /// Method called when we update the one man spam exclude via commands.
-        /// Command: !bot moderation onemanspam exclude
+        /// Moderation commands for caps.
         /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateOneManSpamFilterExcludes(ChatCommand command, List<string> args)
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "caps", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationCapsCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
             {
-                return false;
+                return;
             }
 
-            // If "subscribers, vips, subscribers vips" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamExcludeUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the excluded levels for the one man spam. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation onemanspam exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
+                case "toggle":
+                    _ = await ChatModerator.UpdateCapFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "warning":
+                    _ = await ChatModerator.UpdateCapFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "timeout":
+                    _ = await ChatModerator.UpdateCapFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "exclude":
+                    _ = await ChatModerator.UpdateCapFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "set":
+                    _ = await ChatModerator.UpdateCapFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "CapsUsage", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages the bot's cap moderation filter. Usage: {CommandPrefix}{BotName} moderation caps [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
+                    break;
             }
-
-            // Make sure it is valid.
-            if (!args[4].Equals("subscribers", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("vips", StringComparison.OrdinalIgnoreCase) && !string.Equals("subscribers vips", string.Join(" ", args.GetRange(4, args.Count - 4)), StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamExcludeOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamExcludedLevels,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid level must be specified for the excluded levels. " +
-                    "Current value: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation onemanspam exclude [subscribers, vips, subscribers vips]").ConfigureAwait(false));
-                return false;
-            }
-
-            UserLevels oneManSpamExcludedLevels = (UserLevels)Enum.Parse(typeof(UserLevels), string.Join(", ", args.GetRange(4, args.Count - 4)), true);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamExcludedLevels, oneManSpamExcludedLevels);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamExcludeUpdate", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ExcludedLevel = oneManSpamExcludedLevels,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The one man spam moderation excluded levels has been set to {ExcludedLevel}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
         }
 
         /// <summary>
-        /// Method called when we update the one man spam filter exclude via commands.
-        /// Command: !bot moderation onemanspam set
+        /// Chat moderator management commands.
         /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateOneManSpamFilterOptions(ChatCommand command, List<string> args)
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            if (!await Permission.Can(e.Command, false, 1).ConfigureAwait(false))
             {
-                return false;
+                return;
             }
 
-            // If "maximummessages or timespan" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the options for the one man spam filter. " +
-                    "Usage: {CommandPrefix}{BotName} moderation onemanspam set [maximummessages, timespan]").ConfigureAwait(false));
-                return false;
-            }
-
-            // Maximum messages allowed in a time span.
-            if (args[4].Equals("maximummessages", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetMaximumMsgUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamMaximumMessages,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the maximum messages allowed in a time span. " +
-                        "Current value: {CurrentValue} messages. " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam set maximummessages [amount]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint oneManSpamMaximumMessages = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamMaximumMessages, oneManSpamMaximumMessages);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpanSetMaximumMsgUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        MaximumMessages = oneManSpamMaximumMessages,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The maximum messages allowed in x seconds has been set to {MaximumMessages} messages.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Time span for messages
-            if (args[4].Equals("timespan", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint val) && val >= 0))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetTimeSpanUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamResetTimeSeconds,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the time span for the maximum messaged allowed to be sent. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam set timespan [amount]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint oneManSpamResetTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamResetTimeSeconds, oneManSpamResetTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetTimeSpanUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSpan = oneManSpamResetTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The time span for the amount of messages allowed has been set to {TimeSpan} messages.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamSetUsage", command.ChatMessage.RoomId,
+            TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "Usage", e.Command.ChatMessage.RoomId,
                 new
                 {
                     CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                     BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
+                    User = e.Command.ChatMessage.Username,
+                    Sender = e.Command.ChatMessage.Username,
+                    e.Command.ChatMessage.DisplayName
                 },
-                "@{DisplayName}, Sets the options for the one man spam filter. " +
-                "Usage: {CommandPrefix}{BotName} moderation onemanspam set [maximummessages, timespan]").ConfigureAwait(false));
-
-            return false;
+                "@{DisplayName}, Manages the bot's moderation filters. Usage: {CommandPrefix}{BotName} moderation [global, links, caps, spam, symbols, emotes, zalgo, fakepurge, lengthymessage, onemanspam, blacklist]").ConfigureAwait(false));
         }
 
         /// <summary>
-        /// Method called when we update the one man spam timeout via commands.
-        /// Command: !bot moderation onemanspam timeout
+        /// Moderation commands for emotes.
         /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateOneManSpamFilterTimeout(ChatCommand command, List<string> args)
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "emotes", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationEmotesCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
             {
-                return false;
+                return;
             }
 
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the timeout offence of the one man spam moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
+                case "toggle":
+                    _ = await ChatModerator.UpdateEmoteFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
 
-            // Timeout time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutTimeUsage", command.ChatMessage.RoomId,
+                case "warning":
+                    _ = await ChatModerator.UpdateEmoteFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "timeout":
+                    _ = await ChatModerator.UpdateEmoteFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "exclude":
+                    _ = await ChatModerator.UpdateEmoteFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "set":
+                    _ = await ChatModerator.UpdateEmoteFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "EmoteUsage", e.Command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamTimeoutTimeSeconds,
-                            command.ChatMessage.DisplayName
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
                         },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
-
-                uint oneManSpamTimeoutTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamTimeoutTimeSeconds, oneManSpamTimeoutTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = oneManSpamTimeoutTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The one man spam moderation timeout time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
+                        "@{DisplayName}, Manages the bot's emote moderation filter. Usage: {CommandPrefix}{BotName} moderation emotes [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
+                    break;
             }
-
-            // Timeout message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutMessageUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamTimeoutMessage,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout message [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string oneManSpamTimeoutMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamTimeoutMessage, oneManSpamTimeoutMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutMessage = oneManSpamTimeoutMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The one man spam moderation timeout message has been set to \"{TimeoutMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutReasonUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamTimeoutReason,
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string oneManSpamTimeoutReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamTimeoutReason, oneManSpamTimeoutReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutReason = oneManSpamTimeoutReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The one man spam moderation timeout reason has been set to \"{TimeoutReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Timeout punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamTimeoutPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment oneManSpamTimeoutPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamTimeoutPunishment, oneManSpamTimeoutPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeoutPunishment = oneManSpamTimeoutPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The one man spam moderation timeout punishment has been set to \"{TimeoutPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamTimeoutUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the timeout offence of the one man spam moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation onemanspam timeout [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
         }
 
         /// <summary>
-        /// Method called when we update the one man spam toggle via commands.
-        /// Command: !bot moderation onemanspam toggle
+        /// Moderation commands for fake purge.
         /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateOneManSpamFilterToggle(ChatCommand command, List<string> args)
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "fakepurge", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationFakePurgeCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
             {
-                return false;
+                return;
             }
 
-            // If "on" or "off" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamToggleUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Toggles the one man spam moderation. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation onemanspam toggle [on, off]").ConfigureAwait(false));
-                return false;
+                case "toggle":
+                    _ = await ChatModerator.UpdateFakePurgeFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "warning":
+                    _ = await ChatModerator.UpdateFakePurgeFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "timeout":
+                    _ = await ChatModerator.UpdateFakePurgeFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "exclude":
+                    _ = await ChatModerator.UpdateFakePurgeFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "FakePurgeUsage", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages the bot's fake purge moderation filter. Usage: {CommandPrefix}{BotName} moderation fakepurge [toggle, warning, timeout, exclude]").ConfigureAwait(false));
+                    break;
             }
-
-            // If the forth argument isn't "on" or "off" at all.
-            if (!args[4].Equals("on", StringComparison.OrdinalIgnoreCase) && !args[4].Equals("off", StringComparison.OrdinalIgnoreCase))
-            {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamToggleOptions", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamStatus,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, A valid toggle for one man spam moderation must be specified. " +
-                    "Current status: {CurrentValue}. " +
-                    "Usage: {CommandPrefix}{BotName} moderation onemanspam toggle [on, off]").ConfigureAwait(false));
-                return false;
-            }
-
-            bool oneManSpamStatus = args[4].Equals("on", StringComparison.OrdinalIgnoreCase);
-
-            // Update database.
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-            UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamStatus, oneManSpamStatus);
-
-            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamToggle", command.ChatMessage.RoomId,
-                new
-                {
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    ToggleStatus = args[4].ToLowerInvariant(),
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, The one man spam moderation status has been toggled {ToggleStatus}.").ConfigureAwait(false));
-
-            return result.IsAcknowledged;
         }
 
         /// <summary>
-        /// Method called when we update the one man spam warning via commands.
-        /// Command: !bot moderation onemanspam warning
+        /// Global moderation command index.
         /// </summary>
-        /// <param name="command">The chat commands used. <see cref="ChatCommand"/></param>
-        /// <param name="args">Arguments of the command. <see cref="ChatCommand.ArgumentsAsList"/></param>
-        /// <returns>Will return true if an update to the database was made, false if none were made.</returns>
-        private static async Task<bool> UpdateOneManSpamFilterWarning(ChatCommand command, List<string> args)
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "global", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationGlobalCommand(object sender, OnChatCommandReceivedArgs e)
         {
-            if (!await Permission.Can(command, false, 4).ConfigureAwait(false))
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
             {
-                return false;
+                return;
             }
 
-            // If "time, message, reason, punishment" hasn't been specified in the arguments.
-            if (args.IsNullEmptyOrOutOfRange(4))
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningUsage", command.ChatMessage.RoomId,
-                    new
-                    {
-                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                        BotName = Program.Settings.BotLogin,
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, Sets the values for the warning offence of the one man spam moderation. " +
-                    "Usage: {CommandPrefix}{BotName} moderation onemanspam warning [time, message, reason, punishment]").ConfigureAwait(false));
-                return false;
-            }
+                case "cooldown":
+                    //_ = await ChatModerator.UpdateLinkFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
 
-            // Warning time setting.
-            if (args[4].Equals("time", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !(uint.TryParse(args[5], out uint value) && value > 0 && value <= 1209600))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningTimeUsage", command.ChatMessage.RoomId,
+                case "warningexpire":
+                    // _ = await ChatModerator.UpdateLinkFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "GlobalUsage", e.Command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamWarningTimeSeconds,
-                            command.ChatMessage.DisplayName
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
                         },
-                        "@{DisplayName}, Sets how long a user will get timed-out for on their first offence in seconds. " +
-                        "Current value: {CurrentValue} seconds. " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam warning time [1 to 1209600]").ConfigureAwait(false));
-                    return false;
-                }
+                        "@{DisplayName}, Manages the bot's global moderation settings. Usage: {CommandPrefix}{BotName} moderation global [cooldown, warningexpire]").ConfigureAwait(false));
+                    break;
+            }
+        }
 
-                uint oneManSpamWarningTimeSeconds = uint.Parse(args[5], NumberStyles.Number, await I18n.Instance.GetCurrentCultureAsync(command.ChatMessage.RoomId).ConfigureAwait(false));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamWarningTimeSeconds, oneManSpamWarningTimeSeconds);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningTimeUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        TimeSeconds = oneManSpamWarningTimeSeconds,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The one man spam moderation warning time has been set to {TimeSeconds} seconds.").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
+        /// <summary>
+        /// Moderation commands for links.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "links", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationLinksCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
             }
 
-            // Warning message setting.
-            if (args[4].Equals("message", StringComparison.OrdinalIgnoreCase))
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningMessageUsage", command.ChatMessage.RoomId,
+                case "toggle":
+                    _ = await ChatModerator.UpdateLinkFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "warning":
+                    _ = await ChatModerator.UpdateLinkFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "timeout":
+                    _ = await ChatModerator.UpdateLinkFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "exclude":
+                    _ = await ChatModerator.UpdateLinkFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "whitelist":
+                    _ = await ChatModerator.UpdateLinkFilterWhitelist(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LinkUsage", e.Command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamWarningMessage,
-                            command.ChatMessage.DisplayName
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
                         },
-                        "@{DisplayName}, Sets the message said in chat when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam warning message [message]").ConfigureAwait(false));
-                    return false;
-                }
+                        "@{DisplayName}, Manages the bot's link moderation filter. Usage: {CommandPrefix}{BotName} moderation links [toggle, warning, timeout, exclude, whitelist]").ConfigureAwait(false));
+                    break;
+            }
+        }
 
-                string oneManSpamWarningMessage = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamWarningMessage, oneManSpamWarningMessage);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningMessageUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningMessage = oneManSpamWarningMessage,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The one man spam moderation warning message has been set to \"{WarningMessage}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
+        /// <summary>
+        /// Moderation commands for lengthy messages.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "lengthy", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationLongMessageCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
             }
 
-            // Warning reason setting.
-            if (args[4].Equals("reason", StringComparison.OrdinalIgnoreCase))
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
             {
-                if (args.IsNullEmptyOrOutOfRange(5))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningReasonUsage", command.ChatMessage.RoomId,
+                case "toggle":
+                    _ = await ChatModerator.UpdateLengthyFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "warning":
+                    _ = await ChatModerator.UpdateLengthyFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "timeout":
+                    _ = await ChatModerator.UpdateLengthyFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "exclude":
+                    _ = await ChatModerator.UpdateLengthyFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "set":
+                    _ = await ChatModerator.UpdateLengthyMessageFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "LengthyUsage", e.Command.ChatMessage.RoomId,
                         new
                         {
                             CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
                             BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamWarningReason,
-                            command.ChatMessage.DisplayName
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
                         },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam warning reason [message]").ConfigureAwait(false));
-                    return false;
-                }
-
-                string oneManSpamWarningReason = string.Join(" ", command.ArgumentsAsList.GetRange(5, command.ArgumentsAsList.Count - 5));
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamWarningReason, oneManSpamWarningReason);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningReasonUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningReason = oneManSpamWarningReason,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The one man spam moderation warning reason has been set to \"{WarningReason}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
+                        "@{DisplayName}, Manages the bot's lengthy message moderation filter. Usage: {CommandPrefix}{BotName} moderation lengthy [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
+                    break;
             }
-
-            // Warning punishment setting.
-            if (args[4].Equals("punishment", StringComparison.OrdinalIgnoreCase))
-            {
-                if (args.IsNullEmptyOrOutOfRange(5) || !Enum.TryParse(typeof(ModerationPunishment), args[5], true, out _))
-                {
-                    TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningPunishmentUsage", command.ChatMessage.RoomId,
-                        new
-                        {
-                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                            BotName = Program.Settings.BotLogin,
-                            User = command.ChatMessage.Username,
-                            Sender = command.ChatMessage.Username,
-                            CurrentValue = (await GetFilterDocumentForChannel(command.ChatMessage.RoomId).ConfigureAwait(false)).OneManSpamWarningPunishment,
-                            Punishments = string.Join(", ", Enum.GetNames(typeof(ModerationPunishment))),
-                            command.ChatMessage.DisplayName
-                        },
-                        "@{DisplayName}, Sets the message said to moderators when a user get timed-out on their first offence. " +
-                        "Current value: \"{CurrentValue}\". " +
-                        "Usage: {CommandPrefix}{BotName} moderation onemanspam warning punishment [{Punishments}]").ConfigureAwait(false));
-
-                    return false;
-                }
-
-                ModerationPunishment oneManSpamWarningPunishment = (ModerationPunishment)Enum.Parse(typeof(ModerationPunishment), args[5], true);
-
-                // Update database.
-                IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-                FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Where(d => d.ChannelId == command.ChatMessage.RoomId);
-
-                UpdateDefinition<ModerationDocument> update = Builders<ModerationDocument>.Update.Set(d => d.OneManSpamWarningPunishment, oneManSpamWarningPunishment);
-
-                UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
-
-                TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningPunishmentUpdate", command.ChatMessage.RoomId,
-                    new
-                    {
-                        User = command.ChatMessage.Username,
-                        Sender = command.ChatMessage.Username,
-                        WarningPunishment = oneManSpamWarningPunishment,
-                        command.ChatMessage.DisplayName
-                    },
-                    "@{DisplayName}, The one man spam moderation warning punishment has been set to \"{WarningPunishment}\".").ConfigureAwait(false));
-
-                return result.IsAcknowledged;
-            }
-
-            // Usage if none of the above match.
-            TwitchLibClient.Instance.SendMessage(command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "OneManSpamWarningUsage", command.ChatMessage.RoomId,
-                new
-                {
-                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
-                    BotName = Program.Settings.BotLogin,
-                    User = command.ChatMessage.Username,
-                    Sender = command.ChatMessage.Username,
-                    command.ChatMessage.DisplayName
-                },
-                "@{DisplayName}, Sets the values for the warning offence of the one man spam moderation. " +
-                "Usage: {CommandPrefix}{BotName} moderation onemanspam warning [time, message, reason, punishment]").ConfigureAwait(false));
-
-            return false;
         }
 
         /// <summary>
@@ -7905,6 +7615,245 @@ namespace StreamActions.Plugins
             }
         }
 
-        #endregion One Man spam Filter Command Methods
+        /// <summary>
+        /// Command to permit users to post links.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("permit", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationPermitCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Permission.Can(e.Command, false, 1).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            List<string> args = e.Command.ArgumentsAsList;
+
+            if (args.IsNullWhiteSpaceOrOutOfRange(2))
+            {
+                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "PermitUsage", e.Command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = e.Command.ChatMessage.Username,
+                        Sender = e.Command.ChatMessage.Username,
+                    },
+                    "@{DisplayName}, Permits a user to post links in the chat for a certain amount of time. Usage: !permit [username]").ConfigureAwait(false));
+                return;
+            }
+
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
+
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Where(u => u.DisplayName.Equals(args[2], StringComparison.InvariantCultureIgnoreCase));
+
+            // Make sure the user exists.
+            if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+            {
+                TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "PermitUser404", e.Command.ChatMessage.RoomId,
+                    new
+                    {
+                        CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                        BotName = Program.Settings.BotLogin,
+                        User = e.Command.ChatMessage.Username,
+                        Sender = e.Command.ChatMessage.Username,
+                        ToUser = args[2]
+                    },
+                    "@{DisplayName}, User {ToUser} doesn't exist in the database.").ConfigureAwait(false));
+                return;
+            }
+
+            using IAsyncCursor<UserDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            List<UserModerationDocument> userModerationDocuments = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration;
+
+            // Get permit time in seconds.
+            IMongoCollection<ModerationDocument> moderationCollection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> moderationFilter = Builders<ModerationDocument>.Filter.Eq(m => m.ChannelId, e.Command.ChatMessage.RoomId);
+
+            using IAsyncCursor<ModerationDocument> moderationCursor = (await moderationCollection.FindAsync(moderationFilter).ConfigureAwait(false));
+
+            uint permitTime = (await moderationCursor.FirstAsync().ConfigureAwait(false)).LinkPermitTimeSeconds;
+
+            if (!userModerationDocuments.Exists(m => m.ChannelId.Equals(e.Command.ChatMessage.RoomId, StringComparison.OrdinalIgnoreCase)))
+            {
+                userModerationDocuments.Add(new UserModerationDocument
+                {
+                    ChannelId = e.Command.ChatMessage.RoomId,
+                    PermitExpires = DateTime.Now.AddSeconds(permitTime)
+                });
+            }
+            else
+            {
+                userModerationDocuments.Find(m => m.ChannelId.Equals(e.Command.ChatMessage.RoomId, StringComparison.OrdinalIgnoreCase)).PermitExpires = DateTime.Now.AddSeconds(permitTime);
+            }
+
+            // Update user moderation document.
+            UpdateDefinition<UserDocument> update = Builders<UserDocument>.Update.Set(u => u.UserModeration, userModerationDocuments);
+
+            UpdateResult result = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+
+            TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "PermitSuccess", e.Command.ChatMessage.RoomId,
+                new
+                {
+                    CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                    BotName = Program.Settings.BotLogin,
+                    User = e.Command.ChatMessage.Username,
+                    Sender = e.Command.ChatMessage.Username,
+                    ToUser = args[2],
+                    PermitTime = permitTime,
+                },
+                "@{DisplayName}, {ToUser} is now permitted to post one link for the next {PermitTime} seconds.").ConfigureAwait(false));
+        }
+
+        /// <summary>
+        /// Moderation commands for repetition.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "repetition", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationRepetitionCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
+            {
+                case "toggle":
+                    _ = await ChatModerator.UpdateRepetitionFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "warning":
+                    _ = await ChatModerator.UpdateRepetitionFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "timeout":
+                    _ = await ChatModerator.UpdateRepetitionFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "exclude":
+                    _ = await ChatModerator.UpdateRepetitionFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "set":
+                    _ = await ChatModerator.UpdateRepetitionFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "RepetitionUsage", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages the bot's link moderation filter. Usage: {CommandPrefix}{BotName} moderation repetition [toggle, warning, timeout, exclude, set]").ConfigureAwait(false));
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Moderation commands for symbols.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "symbols", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationSymbolsCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
+            {
+                case "toggle":
+                    _ = await ChatModerator.UpdateSymbolFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "warning":
+                    _ = await ChatModerator.UpdateSymbolFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "timeout":
+                    _ = await ChatModerator.UpdateSymbolFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "exclude":
+                    _ = await ChatModerator.UpdateSymbolFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "set":
+                    _ = await ChatModerator.UpdateSymbolFilterOptions(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "SymbolUsage", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages the bot's link moderation filter. Usage: {CommandPrefix}{BotName} moderation symbols [toggle, warning, timeout, exclude]").ConfigureAwait(false));
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Moderation commands for zalgo.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments from the Twitch Lib <see cref="OnChatCommandReceivedArgs">/></param>
+        [BotnameChatCommand("moderation", "zalgo", UserLevels.Moderator)]
+        private async void ChatModerator_OnModerationZalgoCommand(object sender, OnChatCommandReceivedArgs e)
+        {
+            if (!await Permission.Can(e.Command, false, 2).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            switch ((e.Command.ArgumentsAsList.IsNullEmptyOrOutOfRange(3) ? "usage" : e.Command.ArgumentsAsList[3]))
+            {
+                case "toggle":
+                    _ = await ChatModerator.UpdateZalgoFilterToggle(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "warning":
+                    _ = await ChatModerator.UpdateZalgoFilterWarning(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "timeout":
+                    _ = await ChatModerator.UpdateZalgoFilterTimeout(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                case "exclude":
+                    _ = await ChatModerator.UpdateZalgoFilterExcludes(e.Command, e.Command.ArgumentsAsList).ConfigureAwait(false);
+                    break;
+
+                default:
+                    TwitchLibClient.Instance.SendMessage(e.Command.ChatMessage.Channel, await I18n.Instance.GetAndFormatWithAsync("ChatModerator", "ZalgoUsage", e.Command.ChatMessage.RoomId,
+                        new
+                        {
+                            CommandPrefix = PluginManager.Instance.ChatCommandIdentifier,
+                            BotName = Program.Settings.BotLogin,
+                            User = e.Command.ChatMessage.Username,
+                            Sender = e.Command.ChatMessage.Username,
+                            e.Command.ChatMessage.DisplayName
+                        },
+                        "@{DisplayName}, Manages the bot's zalgo moderation filter. Usage: {CommandPrefix}{BotName} moderation zalgo [toggle, warning, timeout, exclude]").ConfigureAwait(false));
+                    break;
+            }
+        }
+
+        #endregion Private Methods
     }
 }

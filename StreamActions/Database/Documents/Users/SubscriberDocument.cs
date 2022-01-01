@@ -16,7 +16,6 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.Enums;
-using StreamActions.GraphQL.Connections;
 using System;
 
 namespace StreamActions.Database.Documents.Users
@@ -24,7 +23,7 @@ namespace StreamActions.Database.Documents.Users
     /// <summary>
     /// A document representing subscription information, stored in a <see cref="UserRelationshipDocument"/>.
     /// </summary>
-    public class SubscriberDocument : ICursorable
+    public class SubscriberDocument
     {
         #region Public Properties
 
@@ -76,11 +75,5 @@ namespace StreamActions.Database.Documents.Users
         public int TotalMonths { get; set; }
 
         #endregion Public Properties
-
-        #region Public Methods
-
-        public string GetCursor() => this.SubscriberId;
-
-        #endregion Public Methods
     }
 }

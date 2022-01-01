@@ -16,6 +16,7 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
+using StreamActions.Interfaces.Database;
 using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents.Moderation

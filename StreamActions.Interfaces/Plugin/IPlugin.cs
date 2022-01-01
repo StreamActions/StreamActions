@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-using StreamActions.GraphQL.Connections;
-using System;
-
-namespace StreamActions.Plugin
+namespace StreamActions.Interfaces.Plugin
 {
     /// <summary>
     /// An interface for a plugin that processes messages, commands, and other input.
     /// </summary>
-    public interface IPlugin : ICursorable
+    public interface IPlugin
     {
         #region Public Properties
 
@@ -30,6 +27,11 @@ namespace StreamActions.Plugin
         /// Whether the plugin should always be enabled for all channels. This should only be true in core plugins and special circumstances.
         /// </summary>
         public bool AlwaysEnabled { get; }
+
+        /// <summary>
+        /// A collection of <see cref="Guid"/> of other Plugins, APIs, Chat Backends, etc that this plugin is dependent on.
+        /// </summary>
+        public IReadOnlyCollection<Guid> Dependencies { get; }
 
         /// <summary>
         /// The author of the plugin.

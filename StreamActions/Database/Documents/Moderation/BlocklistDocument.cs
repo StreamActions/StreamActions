@@ -16,29 +16,27 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.Enums;
-using StreamActions.GraphQL.Connections;
 using System;
-using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Moderation
 {
     /// <summary>
-    /// Used for moderation blacklists.
+    /// Used for moderation blocklists.
     /// </summary>
-    public class BlacklistDocument : ICursorable
+    public class BlocklistDocument
     {
         #region Public Properties
 
         /// <summary>
-        /// Message said in chat when the user uses the blacklisted phrase.
+        /// Message said in chat when the user uses the blocklisted phrase.
         /// </summary>
         [BsonElement]
         [BsonRequired]
         public string ChatMessage { get; set; }
 
         /// <summary>
-        /// Id of this blacklist.
+        /// Id of this blocklist.
         /// </summary>
         [BsonElement]
         [BsonRequired]
@@ -46,7 +44,7 @@ namespace StreamActions.Database.Documents
         public Guid Id { get; set; }
 
         /// <summary>
-        /// If this blacklist uses regex.
+        /// If this blocklist uses regex.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -54,22 +52,22 @@ namespace StreamActions.Database.Documents
         public bool IsRegex { get; set; }
 
         /// <summary>
-        /// What the blacklist should match on.
+        /// What the blocklist should match on.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
-        [BsonDefaultValue(BlacklistMatchTypes.Message)]
-        public BlacklistMatchTypes MatchOn { get; set; }
+        [BsonDefaultValue(BlocklistMatchTypes.Message)]
+        public BlocklistMatchTypes MatchOn { get; set; }
 
         /// <summary>
-        /// Name for this blacklist.
+        /// Name for this blocklist.
         /// </summary>
         [BsonElement]
         [BsonRequired]
         public string Name { get; set; }
 
         /// <summary>
-        /// Phrase that is blacklisted, is null when IsRegex is true.
+        /// Phrase that is blocklisted, is null when IsRegex is true.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
@@ -84,14 +82,14 @@ namespace StreamActions.Database.Documents
         public ModerationPunishment Punishment { get; set; }
 
         /// <summary>
-        /// Regex phrase that is blacklisted, is null when IsRegex is false.
+        /// Regex phrase that is blocklisted, is null when IsRegex is false.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
         public Regex RegexPhrase { get; set; }
 
         /// <summary>
-        /// If a message should be said in chat when someone uses the blacklist.
+        /// If a message should be said in chat when someone uses the blocklist.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
@@ -114,11 +112,5 @@ namespace StreamActions.Database.Documents
         public uint TimeoutTimeSeconds { get; set; }
 
         #endregion Public Properties
-
-        #region Public Methods
-
-        public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
-
-        #endregion Public Methods
     }
 }

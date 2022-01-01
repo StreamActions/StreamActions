@@ -17,17 +17,16 @@
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using StreamActions.Database.Documents.Users;
-using StreamActions.GraphQL.Connections;
+using StreamActions.Interfaces.Database;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace StreamActions.Database.Documents.Permissions
 {
     /// <summary>
     /// A document representing a permission group.
     /// </summary>
-    public class PermissionGroupDocument : ICursorable, IDocument
+    public class PermissionGroupDocument : IDocument
     {
         #region Public Properties
 
@@ -70,8 +69,6 @@ namespace StreamActions.Database.Documents.Permissions
         #endregion Public Properties
 
         #region Public Methods
-
-        public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
 
         public async void Initialize()
         {

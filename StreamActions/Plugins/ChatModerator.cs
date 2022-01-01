@@ -18,18 +18,17 @@ using StreamActions.Plugin;
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using TwitchLib.Client.Events;
-using TwitchLib.Client.Models;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Globalization;
-using StreamActions.Database.Documents;
 using MongoDB.Driver;
 using StreamActions.Database;
 using System.Threading.Tasks;
 using StreamActions.Enums;
 using StreamActions.Database.Documents.Users;
 using StreamActions.Database.Documents.Moderation;
+using StreamActions.Interfaces.Plugin;
+using System.Collections.Immutable;
 
 namespace StreamActions.Plugins
 {
@@ -54,6 +53,8 @@ namespace StreamActions.Plugins
 
         public bool AlwaysEnabled => true;
 
+        public IReadOnlyCollection<Guid> Dependencies => ImmutableArray<Guid>.Empty;
+
         public string PluginAuthor => "StreamActions Team";
 
         public string PluginDescription => "Chat Moderation plugin for StreamActions";
@@ -76,7 +77,7 @@ namespace StreamActions.Plugins
 
         public void Enabled()
         {
-            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnBlacklistCheck;
+            PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnBlocklistCheck;
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnCapsCheck;
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnColouredMessageCheck;
             PluginManager.Instance.OnMessageModeration += this.ChatModerator_OnEmotesCheck;
@@ -95,105 +96,28 @@ namespace StreamActions.Plugins
 
         #endregion Public Methods
 
-        #region Pre moderation event
+        #region Internal Methods
 
         /// <summary>
-        /// Event method called before all moderation events.
+        /// Returns the filter settings for a channel.
         /// </summary>
-        /// <param name="sender">Sender of the event.</param>
-        /// <param name="e">Event arguments</param>
-        private async Task ChatModerator_OnMessagePreModeration(object sender, OnMessageReceivedArgs e)
+        /// <param name="channelId">Id of the channel.</param>
+        /// <returns>The document settings.</returns>
+        internal static async Task<ModerationDocument> GetFilterDocumentForChannel(string channelId)
         {
-            // Add the message to our cache to moderation purposes.
-            TwitchMessageCache.Instance.Consume(e.ChatMessage);
+            //TODO: Refactor Mongo
+            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
 
-            // Set the last time the user sent a message.
-            UserDocument document;
+            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(m => m.ChannelId, channelId);
 
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
+            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
 
-            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, e.ChatMessage.UserId);
-
-            // Make sure the user exists.
-            if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
-            {
-                document = new UserDocument
-                {
-                    DisplayName = e.ChatMessage.DisplayName,
-                    Id = e.ChatMessage.UserId,
-                    Login = e.ChatMessage.Username
-                };
-
-                _ = collection.InsertOneAsync(document).ConfigureAwait(false);
-            }
-
-            using IAsyncCursor<UserDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
-
-            document = (await cursor.SingleAsync().ConfigureAwait(false));
-
-            // We only need to get the first badge.
-            // Twitch orders badges from higher level to lower.
-            // Broadcaster, Twitch Staff, Twitch Admin, (Moderator | VIP) Subscriber, (Prime | Turbo | Others)
-            if (e.ChatMessage.Badges.Count > 0)
-            {
-                switch (e.ChatMessage.Badges[0].Key.ToLowerInvariant())
-                {
-                    case "staff":
-                        document.StaffType = TwitchStaff.Staff;
-                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.TwitchStaff;
-                        break;
-
-                    case "admin":
-                        document.StaffType = TwitchStaff.Admin;
-                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.TwitchAdmin;
-                        break;
-
-                    case "broadcaster":
-                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.Broadcaster;
-                        break;
-
-                    case "moderator":
-                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.Moderator;
-                        break;
-
-                    case "subscriber":
-                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.Subscriber;
-                        break;
-
-                    case "vip":
-                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.VIP;
-                        break;
-                }
-            }
-            else
-            {
-                _ = document.UserLevel.Remove(e.ChatMessage.RoomId);
-            }
-
-            if (document.UserModeration.Exists(i => i.ChannelId.Equals(e.ChatMessage.RoomId, StringComparison.Ordinal)))
-            {
-                document.UserModeration.Find(i => i.ChannelId.Equals(e.ChatMessage.RoomId, StringComparison.Ordinal)).LastMessageSent = DateTime.Now;
-            }
-            else
-            {
-                document.UserModeration.Add(new UserModerationDocument
-                {
-                    LastMessageSent = DateTime.Now
-                });
-            }
-
-            UpdateDefinition<UserDocument> update = Builders<UserDocument>.Update.Set(i => i, document);
-
-            _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
+            return (await cursor.FirstAsync().ConfigureAwait(false));
         }
 
-        #endregion Pre moderation event
+        #endregion Internal Methods
 
-        #region Private filter regex
-
-        // Ignore Spelling: cdefgilmnoqrstuwxz, abdefghijmnorstvwyz, acdfghiklmnoruvxyz, ejkmoz, cegrstu, fyi, ijkmor, abdefghilmnpqrstuwy, kmnrtu, delmnoqrst, emop, eghimnrwyz
-        // Ignore Spelling: eghimnrwyz, eghimnrwyz, eghimnrwyz, abcikrstuvy, mobi, moe, acdeghklmnopqrstuvwxyz, acefgilopruz, aefghklmnrstwy, qa, eouw, abcdeghijklmnortuvyz
-        // Ignore Spelling: cdfghjklmnoprtvwz, agkmsyz, ceginu, xxx, fs, etu, amw
+        #region Private Fields
 
         /// <summary>
         /// Regular expression that is used for getting the number of capital letters in a string.
@@ -201,6 +125,9 @@ namespace StreamActions.Plugins
         /// </summary>
         private readonly Regex _capsRegex = new Regex(@"[A-Z]", RegexOptions.Compiled);
 
+        // Ignore Spelling: cdefgilmnoqrstuwxz, abdefghijmnorstvwyz, acdfghiklmnoruvxyz, ejkmoz, cegrstu, fyi, ijkmor, abdefghilmnpqrstuwy, kmnrtu, delmnoqrst, emop, eghimnrwyz
+        // Ignore Spelling: eghimnrwyz, eghimnrwyz, eghimnrwyz, abcikrstuvy, mobi, moe, acdeghklmnopqrstuvwxyz, acefgilopruz, aefghklmnrstwy, qa, eouw, abcdeghijklmnortuvyz
+        // Ignore Spelling: cdfghjklmnoprtvwz, agkmsyz, ceginu, xxx, fs, etu, amw
         /// <summary>
         /// Regular expression that is used to getting the number of repeating characters in a string.
         /// Example: aaaaaaaaaaaaaaaaaaaaaaaa
@@ -242,200 +169,17 @@ namespace StreamActions.Plugins
         /// </summary>
         private readonly Regex _zalgoRegex = new Regex(@"[^\uD83C-\uDBFF\uDC00-\uDFFF\u0401\u0451\u0410-\u044f\u0009-\u02b7\u2000-\u20bf\u2122\u0308]", RegexOptions.Compiled);
 
-        #endregion Private filter regex
+        #endregion Private Fields
 
-        #region Filter check methods
-
-        /// <summary>
-        /// Method that will return the longest sequence amount of repeating characters in the message.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>Length of longest sequence repeating characters in the message.</returns>
-        private int GetLongestSequenceOfRepeatingCharacters(string message) => this._characterRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Length));
+        #region Private Methods
 
         /// <summary>
-        /// Method that will return the longest sequence amount of repeating symbol in the message.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>Length of longest sequence repeating symbols in the message.</returns>
-        private int GetLongestSequenceOfRepeatingSymbols(string message) => this._groupedSymbolsRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Length));
-
-        /// <summary>
-        /// Method that will return the longest sequence amount of repeating words in the message.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>Length of longest sequence repeating words in the message.</returns>
-        private int GetLongestSequenceOfRepeatingWords(string message) => this._wordRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Value.Split(' ').Length));
-
-        /// <summary>
-        /// Method that gets the length of a message
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>The length of the message.</returns>
-        private int GetMessageLength(string message) => message.Length;
-
-        /// <summary>
-        /// Method that gets the number of caps in a message.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>Number of caps in the message.</returns>
-        private int GetNumberOfCaps(string message) => this._capsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m is null ? 0 : m.Length));
-
-        /// <summary>
-        /// Method that gets the number of emotes in a message.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>Number of emotes in the message.</returns>
-        private int GetNumberOfEmotes(EmoteSet emoteSet) => emoteSet.Emotes.Count;
-
-        /// <summary>
-        /// Method that gets the number of symbols in a message.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>Number of symbols in the message.</returns>
-        private int GetNumberOfSymbols(string message) => this._symbolsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m is null ? 0 : m.Length));
-
-        /// <summary>
-        /// Method that checks if the message has a fake purge.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>If the message has a fake purge.</returns>
-        private bool HasFakePurge(string message) =>
-            message.Equals("<message deleted>", StringComparison.OrdinalIgnoreCase) ||
-            message.Equals("<deleted message>", StringComparison.OrdinalIgnoreCase) ||
-            message.Equals("message deleted by a moderator.", StringComparison.OrdinalIgnoreCase) ||
-            message.Equals("message removed by a moderator.", StringComparison.OrdinalIgnoreCase);
-
-        /// <summary>
-        /// Method that is used to check if a message is coloured, meaning it starts with the command /me on Twitch.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>True if the message starts with /me.</returns>
-        private bool HasTwitchAction(string message) => message.StartsWith("/me", StringComparison.OrdinalIgnoreCase);
-
-        /// <summary>
-        /// Method that is used to check if the message contains a URL.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>True if the message has a URL.</returns>
-        private bool HasUrl(string message) => this._linkRegex.IsMatch(message);
-
-        /// <summary>
-        /// Method that checks if the message contains a whitelisted link.
-        /// </summary>
-        /// <param name="message">Message to check for the whitelist.</param>
-        /// <param name="channelId">The channel ID to get the whitelist from.</param>
-        /// <returns>True if a whitelist is found.</returns>
-        private async Task<bool> HasWhitelist(string message, string channelId)
-        {
-            ModerationDocument document = await GetFilterDocumentForChannel(channelId).ConfigureAwait(false);
-            List<Match> matches = this._linkRegex.Matches(message).ToList();
-
-            foreach (Match match in matches)
-            {
-                string val = (match.Value.IndexOf("?", StringComparison.InvariantCulture) != -1 ?
-                    match.Value[match.Value.IndexOf("?", StringComparison.InvariantCulture)..] : match.Value);
-
-                if (document.LinkWhitelist.Exists(w => w.Equals(val, StringComparison.InvariantCultureIgnoreCase)))
-                {
-                    _ = matches.Remove(match);
-                }
-            }
-
-            return matches.Any();
-        }
-
-        /// <summary>
-        /// Method that is used to check if a message contains zalgo characters.
-        /// </summary>
-        /// <param name="message">Message to be checked.</param>
-        /// <returns>True if the message has zalgo characters.</returns>
-        private bool HasZalgo(string message) => this._zalgoRegex.IsMatch(message);
-
-        /// <summary>
-        /// Method that removes Twitch emotes from a string.
-        /// </summary>
-        /// <param name="message">Main message.</param>
-        /// <param name="emoteSet">Emotes in the message.</param>
-        /// <returns>The message without any emotes.</returns>
-        private string RemoveEmotesFromMessage(string message, EmoteSet emoteSet)
-        {
-            List<Emote> emotes = emoteSet.Emotes;
-
-            for (int i = emotes.Count - 1; i >= 0; i--)
-            {
-                message = message.Remove(emotes[i].StartIndex, (emotes[i].EndIndex - emotes[i].StartIndex));
-            }
-
-            return message;
-        }
-
-        #endregion Filter check methods
-
-        #region Internal Methods
-
-        /// <summary>
-        /// Returns the filter settings for a channel.
-        /// </summary>
-        /// <param name="channelId">Id of the channel.</param>
-        /// <returns>The document settings.</returns>
-        internal static async Task<ModerationDocument> GetFilterDocumentForChannel(string channelId)
-        {
-            //TODO: Refactor Mongo
-            IMongoCollection<ModerationDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> filter = Builders<ModerationDocument>.Filter.Eq(m => m.ChannelId, channelId);
-
-            using IAsyncCursor<ModerationDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
-
-            return (await cursor.FirstAsync().ConfigureAwait(false));
-        }
-
-        #endregion Internal Methods
-
-        #region Private methods
-
-        /// <summary>
-        /// If a user currently has a warning.
-        /// </summary>
-        /// <param name="channelId">ID of the channel.</param>
-        /// <param name="userId">User id to check for warnings</param>
-        /// <returns>True if the user has a warning.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1307:Specify StringComparison", Justification = "Channel Id is stored as a string.")]
-        private async Task<bool> UserHasWarning(string channelId, string userId)
-        {
-            // Get moderation warning seconds.
-            IMongoCollection<ModerationDocument> modCollection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
-
-            FilterDefinition<ModerationDocument> modFilter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, channelId);
-
-            using IAsyncCursor<ModerationDocument> modCursor = (await modCollection.FindAsync(modFilter).ConfigureAwait(false));
-
-            uint moderationWarningTimeSeconds = (await modCursor.FirstAsync().ConfigureAwait(false)).ModerationWarningTimeSeconds;
-
-            // Get user document.
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
-
-            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, userId);
-
-            using IAsyncCursor<UserDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
-
-            UserModerationDocument userModerationDocument = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration.FirstOrDefault(m => m.ChannelId.Equals(channelId));
-
-            return userModerationDocument.LastModerationWarning.AddSeconds(moderationWarningTimeSeconds) >= DateTime.Now;
-        }
-
-        #endregion Private methods
-
-        #region Filter events
-
-        /// <summary>
-        /// Method that will check the message for any blacklisted phrases.
+        /// Method that will check the message for any blocklisted phrases.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="OnMessageReceivedArgs"/> object.</param>
         /// <returns>The result gotten from this check.</returns>
-        private async Task<ModerationResult> ChatModerator_OnBlacklistCheck(object sender, OnMessageReceivedArgs e)
+        private async Task<ModerationResult> ChatModerator_OnBlocklistCheck(object sender, OnMessageReceivedArgs e)
         {
             ModerationResult moderationResult = new ModerationResult();
 
@@ -448,18 +192,18 @@ namespace StreamActions.Plugins
 
             string toMatch;
 
-            foreach (BlacklistDocument blacklist in (await cursor.FirstAsync().ConfigureAwait(false)).Blacklist)
+            foreach (BlocklistDocument blocklist in (await cursor.FirstAsync().ConfigureAwait(false)).Blocklist)
             {
-                Regex regex = (blacklist.IsRegex ? blacklist.RegexPhrase : new Regex(Regex.Escape(blacklist.Phrase)));
-                toMatch = (blacklist.MatchOn == BlacklistMatchTypes.Message ? e.ChatMessage.Message :
-                    (blacklist.MatchOn == BlacklistMatchTypes.Username ? e.ChatMessage.Username : e.ChatMessage.Username + " " + e.ChatMessage.Message));
+                Regex regex = (blocklist.IsRegex ? blocklist.RegexPhrase : new Regex(Regex.Escape(blocklist.Phrase)));
+                toMatch = (blocklist.MatchOn == BlocklistMatchTypes.Message ? e.ChatMessage.Message :
+                    (blocklist.MatchOn == BlocklistMatchTypes.Username ? e.ChatMessage.Username : e.ChatMessage.Username + " " + e.ChatMessage.Message));
 
                 if (regex.IsMatch(toMatch))
                 {
-                    moderationResult.Punishment = blacklist.Punishment;
-                    moderationResult.TimeoutSeconds = blacklist.TimeoutTimeSeconds;
-                    moderationResult.ModerationReason = blacklist.TimeoutReason;
-                    moderationResult.ModerationMessage = blacklist.ChatMessage;
+                    moderationResult.Punishment = blocklist.Punishment;
+                    moderationResult.TimeoutSeconds = blocklist.TimeoutTimeSeconds;
+                    moderationResult.ModerationReason = blocklist.TimeoutReason;
+                    moderationResult.ModerationMessage = blocklist.ChatMessage;
                     break;
                 }
             }
@@ -689,7 +433,7 @@ namespace StreamActions.Plugins
                 // User is not a Broadcaster, Moderator, or in the excluded levels.
                 if (!await Permission.Can(e.ChatMessage, UserLevels.Broadcaster | UserLevels.Moderator | document.LinkExcludedLevels).ConfigureAwait(false))
                 {
-                    if (this.HasUrl(e.ChatMessage.Message) && !await this.HasWhitelist(e.ChatMessage.Message, e.ChatMessage.RoomId).ConfigureAwait(false))
+                    if (this.HasUrl(e.ChatMessage.Message) && !await this.HasAllowlist(e.ChatMessage.Message, e.ChatMessage.RoomId).ConfigureAwait(false))
                     {
                         // TODO: Remove permit from user/check for permit.
                         if (await this.UserHasWarning(e.ChatMessage.RoomId, e.ChatMessage.UserId).ConfigureAwait(false))
@@ -759,6 +503,96 @@ namespace StreamActions.Plugins
             }
 
             return moderationResult;
+        }
+
+        /// <summary>
+        /// Event method called before all moderation events.
+        /// </summary>
+        /// <param name="sender">Sender of the event.</param>
+        /// <param name="e">Event arguments</param>
+        private async Task ChatModerator_OnMessagePreModeration(object sender, OnMessageReceivedArgs e)
+        {
+            // Add the message to our cache to moderation purposes.
+            TwitchMessageCache.Instance.Consume(e.ChatMessage);
+
+            // Set the last time the user sent a message.
+            UserDocument document;
+
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
+
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, e.ChatMessage.UserId);
+
+            // Make sure the user exists.
+            if (await collection.CountDocumentsAsync(filter).ConfigureAwait(false) == 0)
+            {
+                document = new UserDocument
+                {
+                    DisplayName = e.ChatMessage.DisplayName,
+                    Id = e.ChatMessage.UserId,
+                    Login = e.ChatMessage.Username
+                };
+
+                _ = collection.InsertOneAsync(document).ConfigureAwait(false);
+            }
+
+            using IAsyncCursor<UserDocument> cursor = await collection.FindAsync(filter).ConfigureAwait(false);
+
+            document = (await cursor.SingleAsync().ConfigureAwait(false));
+
+            // We only need to get the first badge.
+            // Twitch orders badges from higher level to lower.
+            // Broadcaster, Twitch Staff, Twitch Admin, (Moderator | VIP) Subscriber, (Prime | Turbo | Others)
+            if (e.ChatMessage.Badges.Count > 0)
+            {
+                switch (e.ChatMessage.Badges[0].Key.ToLowerInvariant())
+                {
+                    case "staff":
+                        document.StaffType = TwitchStaff.Staff;
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.TwitchStaff;
+                        break;
+
+                    case "admin":
+                        document.StaffType = TwitchStaff.Admin;
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.TwitchAdmin;
+                        break;
+
+                    case "broadcaster":
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.Broadcaster;
+                        break;
+
+                    case "moderator":
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.Moderator;
+                        break;
+
+                    case "subscriber":
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.Subscriber;
+                        break;
+
+                    case "vip":
+                        document.UserLevel[e.ChatMessage.RoomId] = UserLevels.VIP;
+                        break;
+                }
+            }
+            else
+            {
+                _ = document.UserLevel.Remove(e.ChatMessage.RoomId);
+            }
+
+            if (document.UserModeration.Exists(i => i.ChannelId.Equals(e.ChatMessage.RoomId, StringComparison.Ordinal)))
+            {
+                document.UserModeration.Find(i => i.ChannelId.Equals(e.ChatMessage.RoomId, StringComparison.Ordinal)).LastMessageSent = DateTime.Now;
+            }
+            else
+            {
+                document.UserModeration.Add(new UserModerationDocument
+                {
+                    LastMessageSent = DateTime.Now
+                });
+            }
+
+            UpdateDefinition<UserDocument> update = Builders<UserDocument>.Update.Set(i => i, document);
+
+            _ = await collection.UpdateOneAsync(filter, update).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -958,6 +792,160 @@ namespace StreamActions.Plugins
             return moderationResult;
         }
 
-        #endregion Filter events
+        /// <summary>
+        /// Method that will return the longest sequence amount of repeating characters in the message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Length of longest sequence repeating characters in the message.</returns>
+        private int GetLongestSequenceOfRepeatingCharacters(string message) => this._characterRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Length));
+
+        /// <summary>
+        /// Method that will return the longest sequence amount of repeating symbol in the message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Length of longest sequence repeating symbols in the message.</returns>
+        private int GetLongestSequenceOfRepeatingSymbols(string message) => this._groupedSymbolsRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Length));
+
+        /// <summary>
+        /// Method that will return the longest sequence amount of repeating words in the message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Length of longest sequence repeating words in the message.</returns>
+        private int GetLongestSequenceOfRepeatingWords(string message) => this._wordRepetitionRegex.Matches(message).DefaultIfEmpty().Max(m => (m is null ? 0 : m.Value.Split(' ').Length));
+
+        /// <summary>
+        /// Method that gets the length of a message
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>The length of the message.</returns>
+        private int GetMessageLength(string message) => message.Length;
+
+        /// <summary>
+        /// Method that gets the number of caps in a message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Number of caps in the message.</returns>
+        private int GetNumberOfCaps(string message) => this._capsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m is null ? 0 : m.Length));
+
+        /// <summary>
+        /// Method that gets the number of emotes in a message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Number of emotes in the message.</returns>
+        private int GetNumberOfEmotes(EmoteSet emoteSet) => emoteSet.Emotes.Count;
+
+        /// <summary>
+        /// Method that gets the number of symbols in a message.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>Number of symbols in the message.</returns>
+        private int GetNumberOfSymbols(string message) => this._symbolsRegex.Matches(message).DefaultIfEmpty().Sum(m => (m is null ? 0 : m.Length));
+
+        /// <summary>
+        /// Method that checks if the message contains a allowlisted link.
+        /// </summary>
+        /// <param name="message">Message to check for the allowlist.</param>
+        /// <param name="channelId">The channel ID to get the allowlist from.</param>
+        /// <returns>True if a allowlist is found.</returns>
+        private async Task<bool> HasAllowlist(string message, string channelId)
+        {
+            ModerationDocument document = await GetFilterDocumentForChannel(channelId).ConfigureAwait(false);
+            List<Match> matches = this._linkRegex.Matches(message).ToList();
+
+            foreach (Match match in matches)
+            {
+                string val = (match.Value.IndexOf("?", StringComparison.InvariantCulture) != -1 ?
+                    match.Value[match.Value.IndexOf("?", StringComparison.InvariantCulture)..] : match.Value);
+
+                if (document.LinkAllowlist.Exists(w => w.Equals(val, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    _ = matches.Remove(match);
+                }
+            }
+
+            return matches.Any();
+        }
+
+        /// <summary>
+        /// Method that checks if the message has a fake purge.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>If the message has a fake purge.</returns>
+        private bool HasFakePurge(string message) =>
+            message.Equals("<message deleted>", StringComparison.OrdinalIgnoreCase) ||
+            message.Equals("<deleted message>", StringComparison.OrdinalIgnoreCase) ||
+            message.Equals("message deleted by a moderator.", StringComparison.OrdinalIgnoreCase) ||
+            message.Equals("message removed by a moderator.", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Method that is used to check if a message is coloured, meaning it starts with the command /me on Twitch.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>True if the message starts with /me.</returns>
+        private bool HasTwitchAction(string message) => message.StartsWith("/me", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Method that is used to check if the message contains a URL.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>True if the message has a URL.</returns>
+        private bool HasUrl(string message) => this._linkRegex.IsMatch(message);
+
+        /// <summary>
+        /// Method that is used to check if a message contains zalgo characters.
+        /// </summary>
+        /// <param name="message">Message to be checked.</param>
+        /// <returns>True if the message has zalgo characters.</returns>
+        private bool HasZalgo(string message) => this._zalgoRegex.IsMatch(message);
+
+        /// <summary>
+        /// Method that removes Twitch emotes from a string.
+        /// </summary>
+        /// <param name="message">Main message.</param>
+        /// <param name="emoteSet">Emotes in the message.</param>
+        /// <returns>The message without any emotes.</returns>
+        private string RemoveEmotesFromMessage(string message, EmoteSet emoteSet)
+        {
+            List<Emote> emotes = emoteSet.Emotes;
+
+            for (int i = emotes.Count - 1; i >= 0; i--)
+            {
+                message = message.Remove(emotes[i].StartIndex, (emotes[i].EndIndex - emotes[i].StartIndex));
+            }
+
+            return message;
+        }
+
+        /// <summary>
+        /// If a user currently has a warning.
+        /// </summary>
+        /// <param name="channelId">ID of the channel.</param>
+        /// <param name="userId">User id to check for warnings</param>
+        /// <returns>True if the user has a warning.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1307:Specify StringComparison", Justification = "Channel Id is stored as a string.")]
+        private async Task<bool> UserHasWarning(string channelId, string userId)
+        {
+            // Get moderation warning seconds.
+            IMongoCollection<ModerationDocument> modCollection = DatabaseClient.Instance.MongoDatabase.GetCollection<ModerationDocument>(ModerationDocument.CollectionName);
+
+            FilterDefinition<ModerationDocument> modFilter = Builders<ModerationDocument>.Filter.Eq(c => c.ChannelId, channelId);
+
+            using IAsyncCursor<ModerationDocument> modCursor = (await modCollection.FindAsync(modFilter).ConfigureAwait(false));
+
+            uint moderationWarningTimeSeconds = (await modCursor.FirstAsync().ConfigureAwait(false)).ModerationWarningTimeSeconds;
+
+            // Get user document.
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
+
+            FilterDefinition<UserDocument> filter = Builders<UserDocument>.Filter.Eq(u => u.Id, userId);
+
+            using IAsyncCursor<UserDocument> cursor = (await collection.FindAsync(filter).ConfigureAwait(false));
+
+            UserModerationDocument userModerationDocument = (await cursor.FirstAsync().ConfigureAwait(false)).UserModeration.FirstOrDefault(m => m.ChannelId.Equals(channelId));
+
+            return userModerationDocument.LastModerationWarning.AddSeconds(moderationWarningTimeSeconds) >= DateTime.Now;
+        }
+
+        #endregion Private Methods
     }
 }

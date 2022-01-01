@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-namespace StreamActions.Database
+namespace StreamActions.Interfaces.Database
 {
     /// <summary>
     /// An interface for a top-level Document that may require initialization in the database.

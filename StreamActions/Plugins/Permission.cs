@@ -21,16 +21,16 @@ using StreamActions.Database.Documents.Commands;
 using StreamActions.Database.Documents.Permissions;
 using StreamActions.Database.Documents.Users;
 using StreamActions.Enums;
+using StreamActions.Interfaces.Plugin;
 using StreamActions.Plugin;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using TwitchLib.Client.Events;
-using TwitchLib.Client.Models;
 
 namespace StreamActions.Plugins
 {
@@ -62,6 +62,7 @@ namespace StreamActions.Plugins
 
         public bool AlwaysEnabled => true;
 
+        public IReadOnlyCollection<Guid> Dependencies => ImmutableArray<Guid>.Empty;
         public string PluginAuthor => "StreamActions Team";
 
         public string PluginDescription => "Handles user permissions";

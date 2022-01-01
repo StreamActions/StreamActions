@@ -24,7 +24,6 @@ using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
 using StreamActions.Attributes;
 using System.Threading.Tasks;
-using StreamActions.Database.Documents;
 using MongoDB.Driver;
 using StreamActions.Enums;
 using StreamActions.Database;

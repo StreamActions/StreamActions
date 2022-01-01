@@ -17,20 +17,223 @@
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using StreamActions.Enums;
+using StreamActions.Interfaces.Database;
 using System;
 using System.Collections.Generic;
 
-namespace StreamActions.Database.Documents
+namespace StreamActions.Database.Documents.Moderation
 {
     public class ModerationDocument : IDocument
     {
-        #region Main document Properties
+        #region Public Properties
 
         /// <summary>
         /// The name of the collection that holds documents of this type.
         /// </summary>
         [BsonIgnore]
         public static string CollectionName => "moderations";
+
+        /// <summary>
+        /// Which roles are excluded from not using an action message (/me) moderations, note that moderators and above are always excluded.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public UserLevels ActionMessageExcludedLevels { get; set; }
+
+        /// <summary>
+        /// If we should moderate action (/me) messages.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool ActionMessageStatus { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's second and last offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string ActionMessageTimeoutMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's second and last offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool ActionMessageTimeoutMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user second and last offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment ActionMessageTimeoutPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's second and last offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string ActionMessageTimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their second and last offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
+        public uint ActionMessageTimeoutTimeSeconds { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's first offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string ActionMessageWarningMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's first offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool ActionMessageWarningMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user's first offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment ActionMessageWarningPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's first offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string ActionMessageWarningReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their first offence for using an action message (/me).
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
+        public uint ActionMessageWarningTimeSeconds { get; set; }
+
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public List<BlocklistDocument> Blocklist { get; } = new List<BlocklistDocument>();
+
+        /// <summary>
+        /// Which roles are excluded from caps moderations, note that moderators and above are always excluded.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public UserLevels CapExcludedLevels { get; set; }
+
+        /// <summary>
+        /// The maximum percentage of caps allowed in a message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(50)]
+        public uint CapMaximumPercentage { get; set; }
+
+        /// <summary>
+        /// How many characters are required before checking a message for caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(15)]
+        public uint CapMinimumMessageLength { get; set; }
+
+        /// <summary>
+        /// If we should moderate caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool CapStatus { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's second and last offense for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string CapTimeoutMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's second and last offense for caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool CapTimeoutMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user second and last offense for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment CapTimeoutPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's second and last offense for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string CapTimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their second and last offense for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
+        public uint CapTimeoutTimeSeconds { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's first offense for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string CapWarningMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's first offense for caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool CapWarningMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user's first offense for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment CapWarningPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's first offense for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string CapWarningReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their first offense for using caps.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
+        public uint CapWarningTimeSeconds { get; set; }
 
         /// <summary>
         /// Id of the channel these settings belong too.
@@ -40,27 +243,210 @@ namespace StreamActions.Database.Documents
         public string ChannelId { get; set; }
 
         /// <summary>
+        /// Which roles are excluded from excessive emote use moderation, note that moderators and above are always excluded.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public UserLevels EmoteExcludedLevels { get; set; }
+
+        /// <summary>
+        /// How many Twitch emotes can be in a message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(10)]
+        public uint EmoteMaximumAllowed { get; set; }
+
+        /// <summary>
+        /// If a message only containing emotes should be removed.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(10)]
+        public bool EmoteRemoveOnlyEmotes { get; set; }
+
+        /// <summary>
+        /// If we should moderate emotes.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool EmoteStatus { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's second and last offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string EmoteTimeoutMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's second and last offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool EmoteTimeoutMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user second and last offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment EmoteTimeoutPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's second and last offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string EmoteTimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their second and last offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
+        public uint EmoteTimeoutTimeSeconds { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's first offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string EmoteWarningMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's first offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool EmoteWarningMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user's first offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment EmoteWarningPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's first offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string EmoteWarningReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their first offence for excessive emote use.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
+        public uint EmoteWarningTimeSeconds { get; set; }
+
+        /// <summary>
+        /// Which roles are excluded from using fake purges moderation, note that moderators and above are always excluded.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public UserLevels FakePurgeExcludedLevels { get; set; }
+
+        /// <summary>
+        /// If we should moderate fake purge messages.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool FakePurgeStatus { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's second and last offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string FakePurgeTimeoutMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's second and last offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool FakePurgeTimeoutMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user second and last offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment FakePurgeTimeoutPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's second and last offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string FakePurgeTimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their second and last offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
+        public uint FakePurgeTimeoutTimeSeconds { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's first offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string FakePurgeWarningMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's first offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool FakePurgeWarningMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user's first offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment FakePurgeWarningPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's first offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string FakePurgeWarningReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their first offence for using a fake purge.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
+        public uint FakePurgeWarningTimeSeconds { get; set; }
+
+        /// <summary>
         /// Id for these settings.
         /// </summary>
         [BsonElement]
         [BsonRequired]
         [BsonId]
         public Guid Id { get; set; }
-
-        #endregion Main document Properties
-
-        #region Blacklist Moderation Properties
-
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        /// <summary>
-        /// Where all channel blacklists are stored.
-        /// </summary>
-        public List<BlacklistDocument> Blacklist { get; } = new List<BlacklistDocument>();
-
-        #endregion Blacklist Moderation Properties
-
-        #region Global Moderation Properties
 
         /// <summary>
         /// Last time a warning or timeout message was sent
@@ -69,24 +455,110 @@ namespace StreamActions.Database.Documents
         public DateTime LastModerationMessageSent { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// The cooldown time in seconds for moderation message to be said in chat. Minimum: 15s
+        /// Which roles are excluded from Lengthy message moderations, note that moderators and above are always excluded.
         /// </summary>
         [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(30)]
-        public uint ModerationMessageCooldownSeconds { get; set; }
+        [BsonIgnoreIfNull]
+        public UserLevels LengthyMessageExcludedLevels { get; set; }
 
         /// <summary>
-        /// How long a warning lasts on a single user in seconds.
+        /// Maximum length for a message.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
-        [BsonDefaultValue(86400)]
-        public uint ModerationWarningTimeSeconds { get; set; }
+        [BsonDefaultValue(300)]
+        public uint LengthyMessageMaximumLength { get; set; }
 
-        #endregion Global Moderation Properties
+        /// <summary>
+        /// If we should moderate lengthy messages.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(false)]
+        public bool LengthyMessageStatus { get; set; }
 
-        #region Link Moderation Properties
+        /// <summary>
+        /// Message said in chat on a user's second and last offence for a lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string LengthyMessageTimeoutMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's second and last offence for a Lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool LengthyMessageTimeoutMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user second and last offence for a lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment LengthyMessageTimeoutPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's second and last offence for a lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string LengthyMessageTimeoutReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their second and last offence for a lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(600)]
+        public uint LengthyMessageTimeoutTimeSeconds { get; set; }
+
+        /// <summary>
+        /// Message said in chat on a user's first offence for a lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string LengthyMessageWarningMessage { get; set; }
+
+        /// <summary>
+        /// If a warning message should be said on a user's first offence for a Lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(true)]
+        public bool LengthyMessageWarningMessageStatus { get; set; }
+
+        /// <summary>
+        /// Type of punishment given for a user's first offence for a lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(ModerationPunishment.Timeout)]
+        public ModerationPunishment LengthyMessageWarningPunishment { get; set; }
+
+        /// <summary>
+        /// Message said next to the timeout message on a user's first offence for a lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public string LengthyMessageWarningReason { get; set; }
+
+        /// <summary>
+        /// How long a user will get timed-out on their first offence for a lengthy message.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(5)]
+        public uint LengthyMessageWarningTimeSeconds { get; set; }
+
+        /// <summary>
+        /// List to store all of the allowlists.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public List<string> LinkAllowlist { get; } = new List<string>();
 
         /// <summary>
         /// Which roles are excluded from link moderations, note that moderators and above are always excluded.
@@ -196,126 +668,127 @@ namespace StreamActions.Database.Documents
         public uint LinkWarningTimeSeconds { get; set; }
 
         /// <summary>
-        /// List to store all of the whitelists.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public List<string> LinkWhitelist { get; } = new List<string>();
-
-        #endregion Link Moderation Properties
-
-        #region Cap Moderation Properties
-
-        /// <summary>
-        /// Which roles are excluded from caps moderations, note that moderators and above are always excluded.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public UserLevels CapExcludedLevels { get; set; }
-
-        /// <summary>
-        /// The maximum percentage of caps allowed in a message.
+        /// The cooldown time in seconds for moderation message to be said in chat. Minimum: 15s
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
-        [BsonDefaultValue(50)]
-        public uint CapMaximumPercentage { get; set; }
+        [BsonDefaultValue(30)]
+        public uint ModerationMessageCooldownSeconds { get; set; }
 
         /// <summary>
-        /// How many characters are required before checking a message for caps.
+        /// How long a warning lasts on a single user in seconds.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
-        [BsonDefaultValue(15)]
-        public uint CapMinimumMessageLength { get; set; }
+        [BsonDefaultValue(86400)]
+        public uint ModerationWarningTimeSeconds { get; set; }
 
         /// <summary>
-        /// If we should moderate caps.
+        /// Which roles are excluded from one man spam moderation, note that moderators and above are always excluded.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfNull]
+        public UserLevels OneManSpamExcludedLevels { get; set; }
+
+        /// <summary>
+        /// How many messages can a user send in a time periode.
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(20)]
+        public uint OneManSpamMaximumMessages { get; set; }
+
+        /// <summary>
+        /// How many seconds is the time periode for sending messages
+        /// </summary>
+        [BsonElement]
+        [BsonIgnoreIfDefault]
+        [BsonDefaultValue(20)]
+        public uint OneManSpamResetTimeSeconds { get; set; }
+
+        /// <summary>
+        /// If we should moderate one man spam
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(false)]
-        public bool CapStatus { get; set; }
+        public bool OneManSpamStatus { get; set; }
 
         /// <summary>
-        /// Message said in chat on a user's second and last offense for using caps.
+        /// Message said in chat on a user's second and last offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public string CapTimeoutMessage { get; set; }
+        public string OneManSpamTimeoutMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's second and last offense for caps.
+        /// If a warning message should be said on a user's second and last offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(true)]
-        public bool CapTimeoutMessageStatus { get; set; }
+        public bool OneManSpamTimeoutMessageStatus { get; set; }
 
         /// <summary>
-        /// Type of punishment given for a user second and last offense for using caps.
+        /// Type of punishment given for a user second and last offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment CapTimeoutPunishment { get; set; }
+        public ModerationPunishment OneManSpamTimeoutPunishment { get; set; }
 
         /// <summary>
-        /// Message said next to the timeout message on a user's second and last offense for using caps.
+        /// Message said next to the timeout message on a user's second and last offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public string CapTimeoutReason { get; set; }
+        public string OneManSpamTimeoutReason { get; set; }
 
         /// <summary>
-        /// How long a user will get timed-out on their second and last offense for using caps.
+        /// How long a user will get timed-out on their second and last offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(600)]
-        public uint CapTimeoutTimeSeconds { get; set; }
+        public uint OneManSpamTimeoutTimeSeconds { get; set; }
 
         /// <summary>
-        /// Message said in chat on a user's first offense for using caps.
+        /// Message said in chat on a user's first offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public string CapWarningMessage { get; set; }
+        public string OneManSpamWarningMessage { get; set; }
 
         /// <summary>
-        /// If a warning message should be said on a user's first offense for caps.
+        /// If a warning message should be said on a user's first offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(true)]
-        public bool CapWarningMessageStatus { get; set; }
+        public bool OneManSpamWarningMessageStatus { get; set; }
 
         /// <summary>
-        /// Type of punishment given for a user's first offense for using caps.
+        /// Type of punishment given for a user's first offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment CapWarningPunishment { get; set; }
+        public ModerationPunishment OneManSpamWarningPunishment { get; set; }
 
         /// <summary>
-        /// Message said next to the timeout message on a user's first offense for using caps.
+        /// Message said next to the timeout message on a user's first offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfNull]
-        public string CapWarningReason { get; set; }
+        public string OneManSpamWarningReason { get; set; }
 
         /// <summary>
-        /// How long a user will get timed-out on their first offense for using caps.
+        /// How long a user will get timed-out on their first offence for spamming chat with messages.
         /// </summary>
         [BsonElement]
         [BsonIgnoreIfDefault]
         [BsonDefaultValue(5)]
-        public uint CapWarningTimeSeconds { get; set; }
-
-        #endregion Cap Moderation Properties
-
-        #region Repetition Moderation Properties
+        public uint OneManSpamWarningTimeSeconds { get; set; }
 
         /// <summary>
         /// Maximum number of allowed repeating characters in a message.
@@ -432,10 +905,6 @@ namespace StreamActions.Database.Documents
         [BsonDefaultValue(5)]
         public uint RepetitionWarningTimeSeconds { get; set; }
 
-        #endregion Repetition Moderation Properties
-
-        #region Symbol Moderation Properties
-
         /// <summary>
         /// Which roles are excluded from symbols moderations, note that moderators and above are always excluded.
         /// </summary>
@@ -551,414 +1020,6 @@ namespace StreamActions.Database.Documents
         [BsonDefaultValue(true)]
         public bool WarningMessageStatus { get; set; }
 
-        #endregion Symbol Moderation Properties
-
-        #region Lengthy Messsage Moderation Properties
-
-        /// <summary>
-        /// Which roles are excluded from Lengthy message moderations, note that moderators and above are always excluded.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public UserLevels LengthyMessageExcludedLevels { get; set; }
-
-        /// <summary>
-        /// Maximum length for a message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(300)]
-        public uint LengthyMessageMaximumLength { get; set; }
-
-        /// <summary>
-        /// If we should moderate lengthy messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(false)]
-        public bool LengthyMessageStatus { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's second and last offence for a lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string LengthyMessageTimeoutMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's second and last offence for a Lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool LengthyMessageTimeoutMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user second and last offence for a lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment LengthyMessageTimeoutPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's second and last offence for a lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string LengthyMessageTimeoutReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their second and last offence for a lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(600)]
-        public uint LengthyMessageTimeoutTimeSeconds { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's first offence for a lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string LengthyMessageWarningMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's first offence for a Lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool LengthyMessageWarningMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user's first offence for a lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment LengthyMessageWarningPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's first offence for a lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string LengthyMessageWarningReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their first offence for a lengthy message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(5)]
-        public uint LengthyMessageWarningTimeSeconds { get; set; }
-
-        #endregion Lengthy Messsage Moderation Properties
-
-        #region Action Message Moderation Properties
-
-        /// <summary>
-        /// Which roles are excluded from not using an action message (/me) moderations, note that moderators and above are always excluded.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public UserLevels ActionMessageExcludedLevels { get; set; }
-
-        /// <summary>
-        /// If we should moderate action (/me) messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(false)]
-        public bool ActionMessageStatus { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's second and last offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string ActionMessageTimeoutMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's second and last offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool ActionMessageTimeoutMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user second and last offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment ActionMessageTimeoutPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's second and last offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string ActionMessageTimeoutReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their second and last offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(600)]
-        public uint ActionMessageTimeoutTimeSeconds { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's first offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string ActionMessageWarningMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's first offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool ActionMessageWarningMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user's first offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment ActionMessageWarningPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's first offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string ActionMessageWarningReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their first offence for using an action message (/me).
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(5)]
-        public uint ActionMessageWarningTimeSeconds { get; set; }
-
-        #endregion Action Message Moderation Properties
-
-        #region Emote Moderation Properties
-
-        /// <summary>
-        /// Which roles are excluded from excessive emote use moderation, note that moderators and above are always excluded.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public UserLevels EmoteExcludedLevels { get; set; }
-
-        /// <summary>
-        /// How many Twitch emotes can be in a message.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(10)]
-        public uint EmoteMaximumAllowed { get; set; }
-
-        /// <summary>
-        /// If a message only containing emotes should be removed.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(10)]
-        public bool EmoteRemoveOnlyEmotes { get; set; }
-
-        /// <summary>
-        /// If we should moderate emotes.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(false)]
-        public bool EmoteStatus { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's second and last offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string EmoteTimeoutMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's second and last offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool EmoteTimeoutMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user second and last offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment EmoteTimeoutPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's second and last offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string EmoteTimeoutReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their second and last offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(600)]
-        public uint EmoteTimeoutTimeSeconds { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's first offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string EmoteWarningMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's first offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool EmoteWarningMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user's first offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment EmoteWarningPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's first offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string EmoteWarningReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their first offence for excessive emote use.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(5)]
-        public uint EmoteWarningTimeSeconds { get; set; }
-
-        #endregion Emote Moderation Properties
-
-        #region Fake Purge Moderation Properties
-
-        /// <summary>
-        /// Which roles are excluded from using fake purges moderation, note that moderators and above are always excluded.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public UserLevels FakePurgeExcludedLevels { get; set; }
-
-        /// <summary>
-        /// If we should moderate fake purge messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(false)]
-        public bool FakePurgeStatus { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's second and last offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string FakePurgeTimeoutMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's second and last offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool FakePurgeTimeoutMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user second and last offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment FakePurgeTimeoutPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's second and last offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string FakePurgeTimeoutReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their second and last offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(600)]
-        public uint FakePurgeTimeoutTimeSeconds { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's first offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string FakePurgeWarningMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's first offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool FakePurgeWarningMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user's first offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment FakePurgeWarningPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's first offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string FakePurgeWarningReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their first offence for using a fake purge.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(5)]
-        public uint FakePurgeWarningTimeSeconds { get; set; }
-
-        #endregion Fake Purge Moderation Properties
-
-        #region Zalgo Moderation Properties
-
         /// <summary>
         /// Which roles are excluded from using characters or similar moderation, note that moderators and above are always excluded.
         /// </summary>
@@ -1050,118 +1111,7 @@ namespace StreamActions.Database.Documents
         [BsonDefaultValue(5)]
         public uint ZalgoWarningTimeSeconds { get; set; }
 
-        #endregion Zalgo Moderation Properties
-
-        #region One Man Spam Moderation Properties
-
-        /// <summary>
-        /// Which roles are excluded from one man spam moderation, note that moderators and above are always excluded.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public UserLevels OneManSpamExcludedLevels { get; set; }
-
-        /// <summary>
-        /// How many messages can a user send in a time periode.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(20)]
-        public uint OneManSpamMaximumMessages { get; set; }
-
-        /// <summary>
-        /// How many seconds is the time periode for sending messages
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(20)]
-        public uint OneManSpamResetTimeSeconds { get; set; }
-
-        /// <summary>
-        /// If we should moderate one man spam
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(false)]
-        public bool OneManSpamStatus { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's second and last offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string OneManSpamTimeoutMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's second and last offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool OneManSpamTimeoutMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user second and last offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment OneManSpamTimeoutPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's second and last offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string OneManSpamTimeoutReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their second and last offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(600)]
-        public uint OneManSpamTimeoutTimeSeconds { get; set; }
-
-        /// <summary>
-        /// Message said in chat on a user's first offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string OneManSpamWarningMessage { get; set; }
-
-        /// <summary>
-        /// If a warning message should be said on a user's first offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(true)]
-        public bool OneManSpamWarningMessageStatus { get; set; }
-
-        /// <summary>
-        /// Type of punishment given for a user's first offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(ModerationPunishment.Timeout)]
-        public ModerationPunishment OneManSpamWarningPunishment { get; set; }
-
-        /// <summary>
-        /// Message said next to the timeout message on a user's first offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfNull]
-        public string OneManSpamWarningReason { get; set; }
-
-        /// <summary>
-        /// How long a user will get timed-out on their first offence for spamming chat with messages.
-        /// </summary>
-        [BsonElement]
-        [BsonIgnoreIfDefault]
-        [BsonDefaultValue(5)]
-        public uint OneManSpamWarningTimeSeconds { get; set; }
-
-        #endregion One Man Spam Moderation Properties
+        #endregion Public Properties
 
         #region Public Methods
 

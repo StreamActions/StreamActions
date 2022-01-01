@@ -17,6 +17,7 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
+using StreamActions.Interfaces.Database;
 
 namespace StreamActions.Database.Documents.Users
 {

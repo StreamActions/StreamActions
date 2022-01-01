@@ -14,21 +14,29 @@
  * limitations under the License.
  */
 
-namespace StreamActions.GraphQL.Connections
+using System;
+
+namespace StreamActions.Enums
 {
     /// <summary>
-    /// An interface for cursorable types that can be used as edges in a cursor connection.
+    /// What should a blacklist match for.
     /// </summary>
-    public interface ICursorable
+    [Flags]
+    public enum BlocklistMatchTypes
     {
-        #region Public Methods
+        /// <summary>
+        /// Match only the user's name.
+        /// </summary>
+        Username = 0,
 
         /// <summary>
-        /// Returns a valid cursor type as a string, such as an Id. Base64 is recommended, but not required.
+        /// Match only the user's message.
         /// </summary>
-        /// <returns>A string that can be used as a cursor.</returns>
-        public string GetCursor();
+        Message = 1,
 
-        #endregion Public Methods
+        /// <summary>
+        /// Match both the user's name and message.
+        /// </summary>
+        MessageAndUsername = 2
     }
 }

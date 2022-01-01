@@ -15,7 +15,6 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using StreamActions.GraphQL.Connections;
 using System;
 
 namespace StreamActions.Database.Documents.Commands
@@ -23,7 +22,7 @@ namespace StreamActions.Database.Documents.Commands
     /// <summary>
     /// Contains the cooldown information for a user cooldown, for a particular command. Contained in a <see cref="CommandCooldownDocument"/>.
     /// </summary>
-    public class CommandUserCooldownDocument : ICursorable
+    public class CommandUserCooldownDocument
     {
         #region Public Properties
 
@@ -43,11 +42,5 @@ namespace StreamActions.Database.Documents.Commands
         public string UserId { get; set; }
 
         #endregion Public Properties
-
-        #region Public Methods
-
-        public string GetCursor() => this.UserId;
-
-        #endregion Public Methods
     }
 }

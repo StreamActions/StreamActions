@@ -18,7 +18,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using StreamActions.Database.Documents.Moderation;
 using StreamActions.Enums;
-using StreamActions.GraphQL.Connections;
+using StreamActions.Interfaces.Database;
 using System;
 using System.Collections.Generic;
 
@@ -27,7 +27,7 @@ namespace StreamActions.Database.Documents.Users
     /// <summary>
     /// A document representing a Twitch user.
     /// </summary>
-    public class UserDocument : ICursorable, IDocument
+    public class UserDocument : IDocument
     {
         #region Public Properties
 
@@ -128,8 +128,6 @@ namespace StreamActions.Database.Documents.Users
         #endregion Public Properties
 
         #region Public Methods
-
-        public string GetCursor() => this.Id;
 
         public async void Initialize()
         {

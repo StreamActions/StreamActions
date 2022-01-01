@@ -16,13 +16,11 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using StreamActions.Enums;
-using StreamActions.GraphQL.Connections;
 using System;
-using System.Globalization;
 
 namespace StreamActions.Database.Documents.Moderation
 {
-    public class ModerationLogEntryDocument : ICursorable
+    public class ModerationLogEntryDocument
     {
         #region Public Properties
 
@@ -78,11 +76,5 @@ namespace StreamActions.Database.Documents.Moderation
         public uint TimeoutSeconds { get; set; }
 
         #endregion Public Properties
-
-        #region Public Methods
-
-        public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
-
-        #endregion Public Methods
     }
 }

@@ -20,7 +20,7 @@ using System;
 /// <summary>
 /// Contains members that handle console output.
 /// </summary>
-namespace StreamActions.BotConsole
+namespace StreamActions
 {
     /// <summary>
     /// Handles writing debug messages to standard output.

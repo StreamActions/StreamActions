@@ -67,4 +67,8 @@
     <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.15.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StreamActions.Interfaces\StreamActions.Interfaces.csproj" />
+  </ItemGroup>
 </Project>

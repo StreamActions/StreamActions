@@ -15,13 +15,11 @@
  */
 
 using MongoDB.Bson.Serialization.Attributes;
-using StreamActions.GraphQL.Connections;
 using System;
-using System.Globalization;
 
 namespace StreamActions.Database.Documents.Moderation
 {
-    public class UserModerationDocument : ICursorable
+    public class UserModerationDocument
     {
         #region Public Properties
 
@@ -68,11 +66,5 @@ namespace StreamActions.Database.Documents.Moderation
         public DateTime PermitExpires { get; set; } = DateTime.MinValue;
 
         #endregion Public Properties
-
-        #region Public Methods
-
-        public string GetCursor() => this.Id.ToString("D", CultureInfo.InvariantCulture);
-
-        #endregion Public Methods
     }
 }

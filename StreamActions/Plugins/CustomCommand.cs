@@ -19,7 +19,6 @@ using StreamActions.Plugin;
 using MongoDB.Driver;
 using System;
 using System.Runtime.InteropServices;
-using TwitchLib.Client.Events;
 using StreamActions.Enums;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -27,6 +26,8 @@ using System.Collections.Generic;
 using StreamActions.Database;
 using System.Globalization;
 using StreamActions.Database.Documents.Commands;
+using StreamActions.Interfaces.Plugin;
+using System.Collections.Immutable;
 
 namespace StreamActions.Plugins
 {
@@ -51,6 +52,7 @@ namespace StreamActions.Plugins
 
         public bool AlwaysEnabled => true;
 
+        public IReadOnlyCollection<Guid> Dependencies => ImmutableArray<Guid>.Empty;
         public string PluginAuthor => "StreamActions Team";
 
         public string PluginDescription => "Custom Command plugin for StreamActions";
