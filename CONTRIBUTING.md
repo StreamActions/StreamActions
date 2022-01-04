@@ -22,6 +22,11 @@ The following is a set of guidelines and rules for contributing to StreamActions
   * [MongoDB Styleguide](#mongodb-styleguide)
   * [Chat Styleguide](#chat-styleguide)
 
+[Integrated Development Environment](#integrated-development-environment)
+  * [Required Tools](#required-tools)
+  * [Recommended Tools](#recommended-tools)
+  * [Recommended Extensions](#recommended-extensions)
+
 [Additional Notes](#additional-notes)
   * [Issue and Pull Request Labels](#issue-and-pull-request-labels)
   
@@ -109,7 +114,7 @@ Enhancement suggestions are tracked as [GitHub issues](https://guides.github.com
 
 ### Your First Code Contribution
 
-Unsure where to begin contributing to StreamActions? You can start by looking through these [Help wanted issues][help-wanted] issues.
+Unsure where to begin contributing to StreamActions? You can start by looking through these [Help wanted issues][search-streamactions-repo-label-help-wanted] issues.
 
 The issue lists are sorted by total number of comments. While not perfect, number of comments is a reasonable proxy for impact a given change will have.
 
@@ -184,7 +189,7 @@ All C# must adhere to [Microsoft .NET Framework Design Guidelines](https://docs.
          * Methods
          * Structs
          * Classes
-     * Custom regions are okay, as long as they still follow the ordering scheme
+     * Custom regions are okay, as long as they still follow the ordering scheme (Note that if you are using CodeMaid, it will delete these unless that option is turned off)
          
 #### Code
 * Avoid platform-dependent code
@@ -208,6 +213,7 @@ All C# must adhere to [Microsoft .NET Framework Design Guidelines](https://docs.
 * Only suppress warnings when absolutely necessary
 * Use the _Attribute (in source)_ method for suppression unless there is a really good reason to globally suppress the issue
 * All suppressions must have valid justification provided in the _Justification_ parameter of the attribute
+* Generally speaking, anything suggested by IntelliSense in Visual Studio should be done, unless there is a very good reason to ignore it
 
 #### Spacing, Indenting, New Lines
 * No trailing whitespace
@@ -237,17 +243,6 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 * End all XMLDoc tags with a period
 * Allowing tags to be inherited is okay
 * Describing a constructor as just `Constructor` is okay, unless it is doing something complex that should be noted
-
-#### Follow The Styleguide, The Easy Way
-To make following the C# styleguide easier, we recommend using [Visual Studio 2022](https://visualstudio.microsoft.com/) with the following extensions:
- * CodeMaid
- * Trailing Whitespace Visualizer
- 
- Our included _.editorconfig_ and _StreamActions.ruleset_ files will setup Visual Studio to guide you through these style requirements. Our included _CodeMaid.config_ will setup CodeMaid to correct some common issues on save.
- 
- Our included _StreamActions.licenseheader_ file contains the license headers for you to copy/paste into each file
- 
- NOTE: Our CodeMaid config will only regionize and then re-order regions the first time the file is saved. You must use the _Remove All Regions (CTRL+M, R)_ feature to remove regions, then re-save to have it run again.
  
 ### MongoDB Styleguide
 * Collection names should be the plural name of the document in camelCase, with the word _Document_ removed (eg. The collection for _PermissionGroupDocument_ is named _permissionGroups_)
@@ -265,6 +260,60 @@ To make following the C# styleguide easier, we recommend using [Visual Studio 20
 * The format for _Usage_ chat responses is `@{DisplayName}, Description.... Usage: {CommandPrefix}Command subcommand [required-param-1] [optional-param-1 (optional)] ...`
     * Example: `@{DisplayName}, Lists the permissions that are allowed or explicitly denied by a custom group. Usage: {CommandPrefix}{BotName} permissions group listpermissions [page (optional)] [GroupName]`
 * If the output to a command is going to be larger than a single chat message can handle and has the ability to be split into pages (eg. A list of permissions), use the `{CommandPrefix}command page#` convention (See example above)
+
+
+
+## Integrated Development Environment
+
+### Required Tools
+To work on StreamActions, the following tools are required:
+* ASP.NET 6 Runtime/SDK
+* Git
+    * Configured to use GPG if, setup
+* A GitHub account linked to your git commit email address
+* Python 3 (only if testing/running Python scripts)
+* GPG (Optional, but highly recommended to digitally sign your commits)
+
+NOTE: Although not required at this time, the StreamActions team reserves the right to require digitally signed commits in the future.
+
+### Recommended Tools
+If you are working on StreamActions from a Windows 10 or later environment, the following tools are recommended to achieve the requirements above:
+* [Visual Studio 2022](https://visualstudio.microsoft.com/) (Any edition)
+    * Workload: _ASP.NET and web development_
+    * Workload: _Python development_ (If testing/running Python scripts)
+    * Individual Component: _Git for Windows_ (If not being installed separately)
+    * The extensions listed in the next section
+* [Gpg4win](https://gpg4win.org/) (Optional, but highly recommended to digitally sign your commits)
+* [Git for Windows](https://git-scm.com/) (If not installed from the Visual Studio Installer)
+    * Configured to use GPG if Gpg4win is setup
+
+NOTE: If you are using Visual Studio, you must use 2022 or later to access the ASP.NET 6 Runtime/SDK.
+
+### Recommended Extensions
+We have included an _StreamActions.vsext_ file which contains direct references to the below extensions for easy installation. Just install [Extension Manager 2022](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.ExtensionManager2022), restart Visual Studio, and then use the _Extensions > Import and Export Extensions > Import Extensions..._ menu option to import it. The dialog will allow you to select which extensions you want to use. This makes it easy to keep up as our extension set evolves, as you can simply re-run the action to import new extensions.
+
+To make following the C# styleguide and producing good code easier, we recommend using the following extensions with Visual Studio:
+ * CodeMaid VS2022 - Performs a lot of the basic style fixes automatically upon saving the file, such as organizing usings, regions, type sorting, and license headers
+ * Trailing Whitespace Visualizer - Marks red background when there is excess whitespace at the end of the line
+ * Indent Guides for VS 2022 - Displays dotted lines between paired opening and closing braces
+ * Visual Studio Spell Checker (VS2022 and Later) - Spell check for comments and strings, uses our included custom dictionary
+
+ The following extensions are also recommended to improve productivity or user experience with Visual Studio:
+ * File Icons - Adds more file-type icons to _Solution Explorer_
+ * Git Diff Margin - Shows colors in the left margin denoting adds, changes, and removes that are not committed
+ * Multiline Search and Replace - Assists with performing Search/Replace operations containing multiline text
+ * Output enhancer - Color-codes the _Output_ window
+ * Time Stamp Margin 2022 - Adds timestamps to the margin of the _Output_ window
+ * Version Changer 2022 - Assists with performing a synchronized version number change across the entire project
+ * Project System Tools 2022 - Adds an optional window that can log the build process
+ 
+ Our included _.editorconfig_ and _StreamActions.ruleset_ files will setup Visual Studio to guide you through the style requirements.
+ 
+ Our included _CodeMaid.config_ will setup CodeMaid to correct some common issues on save.
+ 
+ Our included _StreamActions.licenseheader_ file contains the license headers for you to copy/paste into each file, in case CodeMaid is not installed or fails to do it.
+ 
+ NOTE: Our CodeMaid config will regionize and then re-order regions every time the file is saved, overwriting existing regions.
 
 ## Additional Notes
 
