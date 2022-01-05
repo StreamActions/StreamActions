@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
-using StreamActions.Interfaces.Database;
+using StreamActions.Common.Interfaces;
 using System.Collections.Generic;
 
 namespace StreamActions.Database.Documents.Moderation

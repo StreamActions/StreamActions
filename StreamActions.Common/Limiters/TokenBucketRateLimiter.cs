@@ -16,7 +16,7 @@
 
 using System.Net.Http.Headers;
 
-namespace StreamActions.Util
+namespace StreamActions.Common.Limiters
 {
     /// <summary>
     /// Handles rate limits using a token bucket which trickles back tokens over a set period.

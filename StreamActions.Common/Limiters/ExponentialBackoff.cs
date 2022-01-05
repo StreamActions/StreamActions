@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-namespace StreamActions.Util
+namespace StreamActions.Common.Limiters
 {
     /// <summary>
     /// Handles backoff timing using an exponentialy increasing duration strategy.

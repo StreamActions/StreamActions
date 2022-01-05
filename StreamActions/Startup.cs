@@ -1,5 +1,5 @@
 /*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 
 using AspNet.Security.OAuth.Twitch;
-using GraphQL.Execution;
-using GraphQL.Server;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
@@ -113,8 +111,12 @@ namespace StreamActions
                 .AddGraphTypes();
         }
 
+        #endregion Public Methods
+
+        #region Private Methods
+
         private static void GraphQL_UnhandledException(UnhandledExceptionContext e) => ExceptionOut.WriteException("[GraphQLUnhandledException]" + e.OriginalException.GetType().FullName, e.OriginalException, null, true);
 
-        #endregion Public Methods
+        #endregion Private Methods
     }
 }

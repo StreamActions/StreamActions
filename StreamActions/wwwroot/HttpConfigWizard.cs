@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,6 @@ namespace StreamActions.Http.ConfigWizard
     /// </summary>
     internal static class HttpConfigWizard
     {
-        #region Internal Methods
-
         /// <summary>
         /// Handles requests for the HTTP configuration wizard.
         /// </summary>
@@ -60,18 +58,10 @@ namespace StreamActions.Http.ConfigWizard
             }
         }
 
-        #endregion Internal Methods
-
-        #region Private Fields
-
         private static readonly List<AuthScopes> _broadcasterAuthScopes = new List<AuthScopes> { AuthScopes.Channel_Check_Subscription, AuthScopes.Channel_Commercial, AuthScopes.Channel_Editor, AuthScopes.Channel_Read, AuthScopes.Channel_Stream, AuthScopes.Channel_Subscriptions, AuthScopes.Helix_Bits_Read, AuthScopes.Helix_Channel_Read_Subscriptions, AuthScopes.Helix_Moderation_Read, AuthScopes.Helix_User_Edit, AuthScopes.Helix_User_Edit_Broadcast, AuthScopes.Helix_User_Read_Email, AuthScopes.User_Read, AuthScopes.User_Subscriptions };
         private static readonly List<AuthScopes> _chatAuthScopes = new List<AuthScopes> { AuthScopes.Chat_Login };
         private static readonly Regex _oauthRegex = new Regex(@"^[a-zA-Z0-9]+$", RegexOptions.Compiled);
         private static readonly Regex _usernameRegex = new Regex(@"^[a-zA-Z0-9_]{4,25}$", RegexOptions.Compiled);
-
-        #endregion Private Fields
-
-        #region Private Methods
 
         private static async Task HandleGet(HttpServerRequestMessage request)
         {
@@ -194,8 +184,6 @@ namespace StreamActions.Http.ConfigWizard
             //TODO: Update Settings
             List<string> errors = new List<string>();
 
-            #region Twitch Connect
-
             if (request.PostParams.TryGetValue("BotLogin", out List<string> values))
             {
                 string value = values[0];
@@ -273,10 +261,6 @@ namespace StreamActions.Http.ConfigWizard
                 errors.Add("Bot Refresh Token is required");
             }
 
-            #endregion Twitch Connect
-
-            #region Chat
-
             if (request.PostParams.TryGetValue("ChatCommandIdentifier", out values))
             {
                 string value = values[0];
@@ -340,10 +324,6 @@ namespace StreamActions.Http.ConfigWizard
                 }
             }
 
-            #endregion Chat
-
-            #region Channels
-
             IEnumerable<dynamic> channels = request.PostParams.AsEnumerable().Where(kvp => kvp.Key.StartsWith("ChannelsToJoin", StringComparison.Ordinal) && kvp.Key.Contains("[", StringComparison.Ordinal) && kvp.Key.Contains("]", StringComparison.Ordinal)).GroupBy(kvp => kvp.Key.Substring(kvp.Key.IndexOf("[", StringComparison.Ordinal) + 1, kvp.Key.IndexOf("]", StringComparison.Ordinal) - kvp.Key.IndexOf("[", StringComparison.Ordinal) - 1), (channel, data) =>
             {
                 string channelLogin = "";
@@ -387,8 +367,6 @@ namespace StreamActions.Http.ConfigWizard
 
                 // TODO: Add user and tokens to MongoDB, if required
             }
-
-            #endregion Channels
 
             using FileStream fs = File.OpenWrite(Path.GetFullPath(Path.Combine(typeof(Program).Assembly.Location, "settings.json")));
             using Task t = JsonSerializer.SerializeAsync<SettingsDocument>(fs, Program.Settings);
@@ -526,8 +504,6 @@ namespace StreamActions.Http.ConfigWizard
 
             return sContent;
         }
-
-        #endregion Private Methods
     }
 }
 */

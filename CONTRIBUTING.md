@@ -307,7 +307,7 @@ To make following the C# styleguide and producing good code easier, we recommend
  * Version Changer 2022 - Assists with performing a synchronized version number change across the entire project
  * Project System Tools 2022 - Adds an optional window that can log the build process
  
- Our included _.editorconfig_ and _StreamActions.ruleset_ files will setup Visual Studio to guide you through the style requirements.
+ Our included _.editorconfig_ file will setup Visual Studio to guide you through the style requirements.
  
  Our included _CodeMaid.config_ will setup CodeMaid to correct some common issues on save.
  

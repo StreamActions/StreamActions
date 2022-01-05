@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-using StreamActions.Attributes;
-using StreamActions.Plugin;
 using MongoDB.Driver;
-using System;
-using System.Runtime.InteropServices;
+using StreamActions.Attributes;
+using StreamActions.Database;
+using StreamActions.Database.Documents.Commands;
 using StreamActions.Enums;
+using StreamActions.Interfaces.Plugin;
+using StreamActions.Plugin;
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using StreamActions.Database;
-using System.Globalization;
-using StreamActions.Database.Documents.Commands;
-using StreamActions.Interfaces.Plugin;
-using System.Collections.Immutable;
 
 namespace StreamActions.Plugins
 {

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using TwitchLib.Client.Events;
-using TwitchLib.Client.Models;
-using StreamActions.Attributes;
-using System.Threading.Tasks;
 using MongoDB.Driver;
-using StreamActions.Enums;
+using StreamActions.Attributes;
 using StreamActions.Database;
 using StreamActions.Database.Documents.Commands;
 using StreamActions.Database.Documents.Moderation;
+using StreamActions.Enums;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace StreamActions.Plugin
 {
@@ -38,6 +36,15 @@ namespace StreamActions.Plugin
     /// </summary>
     public partial class PluginManager
     {
+        #region Public Fields
+
+        /// <summary>
+        /// The default command identifier.
+        /// </summary>
+        public static readonly char DefaultCommandIdentifier = '!';
+
+        #endregion Public Fields
+
         #region Public Delegates
 
         /// <summary>
@@ -102,11 +109,6 @@ namespace StreamActions.Plugin
         #endregion Public Events
 
         #region Public Properties
-
-        /// <summary>
-        /// The default command identifier.
-        /// </summary>
-        public static readonly char DefaultCommandIdentifier = '!';
 
         /// <summary>
         /// Singleton of <see cref="PluginManager"/>.
@@ -631,38 +633,38 @@ namespace StreamActions.Plugin
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="OnWhisperReceivedArgs"/> object.</param>
         private async void Twitch_OnWhisperReceived(object sender, OnWhisperReceivedArgs e) => await Task.Run(() =>
-            {
-                OnWhisperReceived?.Invoke(this, e);
+              {
+                  OnWhisperReceived?.Invoke(this, e);
 
-                if (Equals(e.WhisperMessage.Message[0], this.WhisperCommandIdentifier))
-                {
-                    WhisperCommand whisperCommand = new WhisperCommand(e.WhisperMessage);
-                    WhisperCommandReceivedEventHandler eventHandler;
+                  if (Equals(e.WhisperMessage.Message[0], this.WhisperCommandIdentifier))
+                  {
+                      WhisperCommand whisperCommand = new WhisperCommand(e.WhisperMessage);
+                      WhisperCommandReceivedEventHandler eventHandler;
 
-                    if (string.Equals(whisperCommand.CommandText, Program.Settings.BotLogin, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0] + " " + whisperCommand.ArgumentsAsList[1], out eventHandler))
-                        {
-                            eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                        }
-                        else if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0], out eventHandler))
-                        {
-                            eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                        }
-                    }
-                    else
-                    {
-                        if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText + " " + whisperCommand.ArgumentsAsList[0], out eventHandler))
-                        {
-                            eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                        }
-                        else if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText, out eventHandler))
-                        {
-                            eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
-                        }
-                    }
-                }
-            }).ConfigureAwait(false);
+                      if (string.Equals(whisperCommand.CommandText, Program.Settings.BotLogin, StringComparison.OrdinalIgnoreCase))
+                      {
+                          if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0] + " " + whisperCommand.ArgumentsAsList[1], out eventHandler))
+                          {
+                              eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                          }
+                          else if (this._botnameWhisperCommandEventHandlers.TryGetValue(whisperCommand.ArgumentsAsList[0], out eventHandler))
+                          {
+                              eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                          }
+                      }
+                      else
+                      {
+                          if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText + " " + whisperCommand.ArgumentsAsList[0], out eventHandler))
+                          {
+                              eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                          }
+                          else if (this._whisperCommandEventHandlers.TryGetValue(whisperCommand.CommandText, out eventHandler))
+                          {
+                              eventHandler.Invoke(this, new OnWhisperCommandReceivedArgs { Command = whisperCommand });
+                          }
+                      }
+                  }
+              }).ConfigureAwait(false);
 
         #endregion Private Methods
     }

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using TwitchLib.Client;
-using TwitchLib.Client.Events;
-using TwitchLib.Client.Models;
-using TwitchLib.Communication.Clients;
-using TwitchLib.Communication.Events;
-using TwitchLib.Communication.Models;
 
 namespace StreamActions
 {
@@ -35,72 +29,6 @@ namespace StreamActions
     /// </summary>
     public class TwitchLibClient
     {
-        #region Public Properties
-
-        /// <summary>
-        /// Singleton of <see cref="TwitchLibClient"/>.
-        /// </summary>
-        public static TwitchLibClient Instance => _instance.Value;
-
-        /// <summary>
-        /// The emotes this channel replaces.
-        /// </summary>
-        /// <value>The channel emotes.</value>
-        /// <remarks>Twitch-handled emotes are automatically added to this collection (which also accounts for
-        /// managing user emote permissions such as sub-only emotes). Third-party emotes will have to be manually
-        /// added according to the availability rules defined by the third-party.</remarks>
-        public MessageEmoteCollection ChannelEmotes => this._twitchClient.ChannelEmotes;
-
-        /// <summary>
-        /// The current connection status of the client.
-        /// </summary>
-        /// <value><c>true</c> if this instance is connected; otherwise, <c>false</c>.</value>
-        public bool IsConnected => this._twitchClient.IsConnected;
-
-        /// <summary>
-        /// Checks if underlying client has been initialized.
-        /// </summary>
-        /// <value><c>true</c> if this instance is initialized; otherwise, <c>false</c>.</value>
-        public bool IsInitialized => this._twitchClient.IsInitialized;
-
-        /// <summary>
-        /// A list of all channels the client is currently in.
-        /// </summary>
-        /// <value>The joined channels.</value>
-        public IReadOnlyList<JoinedChannel> JoinedChannels => this._twitchClient.JoinedChannels;
-
-        /// <summary>
-        /// If set to true, the library will not check upon channel join that if BeingHosted event is subscribed, that the bot is connected as broadcaster. Only override if the broadcaster is joining multiple channels, including the broadcaster's.
-        /// </summary>
-        /// <value><c>true</c> if [override being hosted check]; otherwise, <c>false</c>.</value>
-        public bool OverrideBeingHostedCheck => this._twitchClient.OverrideBeingHostedCheck;
-
-        /// <summary>
-        /// The most recent whisper received.
-        /// </summary>
-        /// <value>The previous whisper.</value>
-        public WhisperMessage PreviousWhisper => this._twitchClient.PreviousWhisper;
-
-        /// <summary>
-        /// Username of the user connected via this library.
-        /// </summary>
-        /// <value>The twitch username.</value>
-        public string TwitchUsername => this._twitchClient.TwitchUsername;
-
-        /// <summary>
-        /// Assembly version of TwitchLib.Client.
-        /// </summary>
-        /// <value>The version.</value>
-        public Version Version => this._twitchClient.Version;
-
-        /// <summary>
-        /// Determines whether Emotes will be replaced in messages.
-        /// </summary>
-        /// <value><c>true</c> if [will replace emotes]; otherwise, <c>false</c>.</value>
-        public bool WillReplaceEmotes => this._twitchClient.WillReplaceEmotes;
-
-        #endregion Public Properties
-
         #region Public Events
 
         /// <summary>
@@ -320,6 +248,72 @@ namespace StreamActions
 
         #endregion Public Events
 
+        #region Public Properties
+
+        /// <summary>
+        /// Singleton of <see cref="TwitchLibClient"/>.
+        /// </summary>
+        public static TwitchLibClient Instance => _instance.Value;
+
+        /// <summary>
+        /// The emotes this channel replaces.
+        /// </summary>
+        /// <value>The channel emotes.</value>
+        /// <remarks>Twitch-handled emotes are automatically added to this collection (which also accounts for
+        /// managing user emote permissions such as sub-only emotes). Third-party emotes will have to be manually
+        /// added according to the availability rules defined by the third-party.</remarks>
+        public MessageEmoteCollection ChannelEmotes => this._twitchClient.ChannelEmotes;
+
+        /// <summary>
+        /// The current connection status of the client.
+        /// </summary>
+        /// <value><c>true</c> if this instance is connected; otherwise, <c>false</c>.</value>
+        public bool IsConnected => this._twitchClient.IsConnected;
+
+        /// <summary>
+        /// Checks if underlying client has been initialized.
+        /// </summary>
+        /// <value><c>true</c> if this instance is initialized; otherwise, <c>false</c>.</value>
+        public bool IsInitialized => this._twitchClient.IsInitialized;
+
+        /// <summary>
+        /// A list of all channels the client is currently in.
+        /// </summary>
+        /// <value>The joined channels.</value>
+        public IReadOnlyList<JoinedChannel> JoinedChannels => this._twitchClient.JoinedChannels;
+
+        /// <summary>
+        /// If set to true, the library will not check upon channel join that if BeingHosted event is subscribed, that the bot is connected as broadcaster. Only override if the broadcaster is joining multiple channels, including the broadcaster's.
+        /// </summary>
+        /// <value><c>true</c> if [override being hosted check]; otherwise, <c>false</c>.</value>
+        public bool OverrideBeingHostedCheck => this._twitchClient.OverrideBeingHostedCheck;
+
+        /// <summary>
+        /// The most recent whisper received.
+        /// </summary>
+        /// <value>The previous whisper.</value>
+        public WhisperMessage PreviousWhisper => this._twitchClient.PreviousWhisper;
+
+        /// <summary>
+        /// Username of the user connected via this library.
+        /// </summary>
+        /// <value>The twitch username.</value>
+        public string TwitchUsername => this._twitchClient.TwitchUsername;
+
+        /// <summary>
+        /// Assembly version of TwitchLib.Client.
+        /// </summary>
+        /// <value>The version.</value>
+        public Version Version => this._twitchClient.Version;
+
+        /// <summary>
+        /// Determines whether Emotes will be replaced in messages.
+        /// </summary>
+        /// <value><c>true</c> if [will replace emotes]; otherwise, <c>false</c>.</value>
+        public bool WillReplaceEmotes => this._twitchClient.WillReplaceEmotes;
+
+        #endregion Public Properties
+
         #region Public Methods
 
         /// <summary>
@@ -413,12 +407,12 @@ namespace StreamActions
         /// </summary>
         /// <returns>A Task that can be awaited.</returns>
         internal Task WaitForFinalDisconnect() => Task.Run(async () =>
-                 {
-                     while (!this._shutdown || this.IsConnected)
-                     {
-                         await Task.Delay(1000).ConfigureAwait(false);
-                     }
-                 });
+                  {
+                      while (!this._shutdown || this.IsConnected)
+                      {
+                          await Task.Delay(1000).ConfigureAwait(false);
+                      }
+                  });
 
         #endregion Internal Methods
 
@@ -521,7 +515,7 @@ namespace StreamActions
 
         #endregion Private Constructors
 
-        #region Private Event Passthroughs
+        #region Private Methods
 
         /// <summary>
         /// Passes <see cref="OnBeingHosted"/> events down to subscribed plugins.
@@ -557,6 +551,79 @@ namespace StreamActions
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="OnCommunitySubscriptionArgs"/> object.</param>
         private void TwitchClient_OnCommunitySubscription(object sender, OnCommunitySubscriptionArgs e) => this.OnCommunitySubscription?.Invoke(this, e);
+
+        /// <summary>
+        /// Resets the <see cref="_nextConnectAttemptBackoffKey"/> once a stable connection has been established for 30 seconds.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="OnConnectedArgs"/> object.</param>
+        private async void TwitchClient_OnConnected(object sender, OnConnectedArgs e)
+        {
+            this.OnConnected?.Invoke(this, e);
+
+            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
+
+            FilterDefinitionBuilder<UserDocument> builder = Builders<UserDocument>.Filter;
+
+            FilterDefinition<UserDocument> filter = builder.Eq(d => d.ShouldJoin, true);
+
+            using IAsyncCursor<string> cursor = await collection.FindAsync(filter, new FindOptions<UserDocument, string> { Projection = Builders<UserDocument>.Projection.Expression(d => d.Login) }).ConfigureAwait(false);
+
+            List<string> channelsToJoin = await cursor.ToListAsync().ConfigureAwait(false);
+
+            foreach (string channel in channelsToJoin)
+            {
+                this.JoinChannel(channel);
+            }
+
+            DateTime nextConnectAttempt = this._nextConnectAttempt;
+            await Task.Delay(30000).ConfigureAwait(false);
+
+            if (this.IsConnected && this._nextConnectAttempt.CompareTo(nextConnectAttempt) == 0)
+            {
+                this._nextConnectAttemptBackoffKey = 0;
+            }
+        }
+
+        /// <summary>
+        /// Shuts down the client if a fatal network error occurs.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="OnConnectionErrorArgs"/> object.</param>
+        private void TwitchClient_OnConnectionError(object sender, OnConnectionErrorArgs e)
+        {
+            this.OnConnectionError?.Invoke(this, e);
+            this.Shutdown();
+        }
+
+        /// <summary>
+        /// Detects disconnects outside the shutdown state and attempts to reconnect, using exponential backoff.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="OnDisconnectedEventArgs"/> object.</param>
+        private async void TwitchClient_OnDisconnected(object sender, OnDisconnectedEventArgs e)
+        {
+            this.OnDisconnected?.Invoke(this, e);
+
+            if (!this._shutdown)
+            {
+                await Task.Run(async () =>
+                {
+                    while (DateTime.Now.CompareTo(this._nextConnectAttempt) < 0)
+                    {
+                        await Task.Delay(1000).ConfigureAwait(false);
+                    }
+
+                    this._nextConnectAttempt = DateTime.Now.AddSeconds(_nextConnectAttemptBackoffValues[this._nextConnectAttemptBackoffKey]);
+                    this.Reconnect();
+                    this._nextConnectAttemptBackoffKey++;
+                    if (this._nextConnectAttemptBackoffKey >= _nextConnectAttemptBackoffValues.Length)
+                    {
+                        this._nextConnectAttemptBackoffKey = _nextConnectAttemptBackoffValues.Length - 1;
+                    }
+                }).ConfigureAwait(false);
+            }
+        }
 
         /// <summary>
         /// Passes <see cref="OnError"/> events down to subscribed plugins.
@@ -606,6 +673,17 @@ namespace StreamActions
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An EventArgs object.</param>
         private void TwitchClient_OnHostLeft(object sender, System.EventArgs e) => this.OnHostLeft?.Invoke(this, e);
+
+        /// <summary>
+        /// Shuts down the client if the connection fails with an invalid login error.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="OnIncorrectLoginArgs"/> object.</param>
+        private void TwitchClient_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
+        {
+            this.OnIncorrectLogin?.Invoke(this, e);
+            this.Shutdown();
+        }
 
         /// <summary>
         /// Passes <see cref="OnJoinedChannel"/> events down to subscribed plugins.
@@ -795,94 +873,6 @@ namespace StreamActions
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="OnWhisperThrottledEventArgs"/> object.</param>
         private void TwitchClient_OnWhisperThrottled(object sender, OnWhisperThrottledEventArgs e) => this.OnWhisperThrottled?.Invoke(this, e);
-
-        #endregion Private Event Passthroughs
-
-        #region Private Methods
-
-        /// <summary>
-        /// Resets the <see cref="_nextConnectAttemptBackoffKey"/> once a stable connection has been established for 30 seconds.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="OnConnectedArgs"/> object.</param>
-        private async void TwitchClient_OnConnected(object sender, OnConnectedArgs e)
-        {
-            this.OnConnected?.Invoke(this, e);
-
-            IMongoCollection<UserDocument> collection = DatabaseClient.Instance.MongoDatabase.GetCollection<UserDocument>(UserDocument.CollectionName);
-
-            FilterDefinitionBuilder<UserDocument> builder = Builders<UserDocument>.Filter;
-
-            FilterDefinition<UserDocument> filter = builder.Eq(d => d.ShouldJoin, true);
-
-            using IAsyncCursor<string> cursor = await collection.FindAsync(filter, new FindOptions<UserDocument, string> { Projection = Builders<UserDocument>.Projection.Expression(d => d.Login) }).ConfigureAwait(false);
-
-            List<string> channelsToJoin = await cursor.ToListAsync().ConfigureAwait(false);
-
-            foreach (string channel in channelsToJoin)
-            {
-                this.JoinChannel(channel);
-            }
-
-            DateTime nextConnectAttempt = this._nextConnectAttempt;
-            await Task.Delay(30000).ConfigureAwait(false);
-
-            if (this.IsConnected && this._nextConnectAttempt.CompareTo(nextConnectAttempt) == 0)
-            {
-                this._nextConnectAttemptBackoffKey = 0;
-            }
-        }
-
-        /// <summary>
-        /// Shuts down the client if a fatal network error occurs.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="OnConnectionErrorArgs"/> object.</param>
-        private void TwitchClient_OnConnectionError(object sender, OnConnectionErrorArgs e)
-        {
-            this.OnConnectionError?.Invoke(this, e);
-            this.Shutdown();
-        }
-
-        /// <summary>
-        /// Detects disconnects outside the shutdown state and attempts to reconnect, using exponential backoff.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="OnDisconnectedEventArgs"/> object.</param>
-        private async void TwitchClient_OnDisconnected(object sender, OnDisconnectedEventArgs e)
-        {
-            this.OnDisconnected?.Invoke(this, e);
-
-            if (!this._shutdown)
-            {
-                await Task.Run(async () =>
-                {
-                    while (DateTime.Now.CompareTo(this._nextConnectAttempt) < 0)
-                    {
-                        await Task.Delay(1000).ConfigureAwait(false);
-                    }
-
-                    this._nextConnectAttempt = DateTime.Now.AddSeconds(_nextConnectAttemptBackoffValues[this._nextConnectAttemptBackoffKey]);
-                    this.Reconnect();
-                    this._nextConnectAttemptBackoffKey++;
-                    if (this._nextConnectAttemptBackoffKey >= _nextConnectAttemptBackoffValues.Length)
-                    {
-                        this._nextConnectAttemptBackoffKey = _nextConnectAttemptBackoffValues.Length - 1;
-                    }
-                }).ConfigureAwait(false);
-            }
-        }
-
-        /// <summary>
-        /// Shuts down the client if the connection fails with an invalid login error.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="OnIncorrectLoginArgs"/> object.</param>
-        private void TwitchClient_OnIncorrectLogin(object sender, OnIncorrectLoginArgs e)
-        {
-            this.OnIncorrectLogin?.Invoke(this, e);
-            this.Shutdown();
-        }
 
         #endregion Private Methods
     }

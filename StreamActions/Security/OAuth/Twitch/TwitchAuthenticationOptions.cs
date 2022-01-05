@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,16 +21,16 @@ namespace StreamActions.Security.OAuth.Twitch
 {
     public class TwitchAuthenticationOptions : AspNet.Security.OAuth.Twitch.TwitchAuthenticationOptions
     {
-        #region Public Properties
-
-        public new ICollection<string> Scope { get; } = new ConcurrentHashSet<string>();
-
-        #endregion Public Properties
-
         #region Public Constructors
 
         public TwitchAuthenticationOptions() : base() => this.Scope.Add("user:email:read");
 
         #endregion Public Constructors
+
+        #region Public Properties
+
+        public new ICollection<string> Scope { get; } = new ConcurrentHashSet<string>();
+
+        #endregion Public Properties
     }
 }

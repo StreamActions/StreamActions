@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-using StreamActions.Util;
+using StreamActions.Common.Limiters;
 
 namespace StreamActions.Twitch.TwitchAPI.Common
 {

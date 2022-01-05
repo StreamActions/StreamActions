@@ -15,12 +15,12 @@
     <Authors>StreamActions Team</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <Copyright>Copyright © 2019-2021 StreamActions Team</Copyright>
+    <Copyright>Copyright © 2019-2022 StreamActions Team</Copyright>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryType>git</RepositoryType>
     <NeutralLanguage>en-US</NeutralLanguage>
     <GenerateProgramFile>false</GenerateProgramFile>
-    <CodeAnalysisRuleSet>StreamActions.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet></CodeAnalysisRuleSet>
     <RepositoryUrl>https://github.com/StreamActions/StreamActions</RepositoryUrl>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
     <FileVersion>0.1.0.0</FileVersion>
@@ -69,6 +69,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\StreamActions.Interfaces\StreamActions.Interfaces.csproj" />
+    <ProjectReference Include="..\StreamActions.Common\StreamActions.Common.csproj" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,28 +40,28 @@ namespace StreamActions
         #region Private Methods
 
         private static void ScheduleCommandCooldownCleanupAndSave() => Scheduler.AddJob(async () =>
-            {
-                foreach (KeyValuePair<Guid, CommandCooldownDocument> kvp in _changedCooldowns)
-                {
-                    IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
+              {
+                  foreach (KeyValuePair<Guid, CommandCooldownDocument> kvp in _changedCooldowns)
+                  {
+                      IMongoCollection<CommandDocument> commands = DatabaseClient.Instance.MongoDatabase.GetCollection<CommandDocument>(CommandDocument.CollectionName);
 
-                    FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.Id.Equals(kvp.Key));
+                      FilterDefinition<CommandDocument> filter = Builders<CommandDocument>.Filter.Where(c => c.Id.Equals(kvp.Key));
 
-                    if (await commands.CountDocumentsAsync(filter).ConfigureAwait(false) > 0)
-                    {
-                        kvp.Value.CleanupUserCooldowns(false);
+                      if (await commands.CountDocumentsAsync(filter).ConfigureAwait(false) > 0)
+                      {
+                          kvp.Value.CleanupUserCooldowns(false);
 
-                        using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
-                        CommandDocument commandDocument = await cursor.SingleAsync().ConfigureAwait(false);
+                          using IAsyncCursor<CommandDocument> cursor = await commands.FindAsync(filter).ConfigureAwait(false);
+                          CommandDocument commandDocument = await cursor.SingleAsync().ConfigureAwait(false);
 
-                        UpdateDefinition<CommandDocument> update = Builders<CommandDocument>.Update.Set(c => c.Cooldowns, kvp.Value);
+                          UpdateDefinition<CommandDocument> update = Builders<CommandDocument>.Update.Set(c => c.Cooldowns, kvp.Value);
 
-                        _ = await commands.UpdateOneAsync(filter, update).ConfigureAwait(false);
-                    }
+                          _ = await commands.UpdateOneAsync(filter, update).ConfigureAwait(false);
+                      }
 
-                    _ = _changedCooldowns.TryRemove(kvp.Key, out _);
-                }
-            }, s => s.WithName("CommandCooldownCleanupAndSave").ToRunNow().AndEvery(15).Minutes());
+                      _ = _changedCooldowns.TryRemove(kvp.Key, out _);
+                  }
+              }, s => s.WithName("CommandCooldownCleanupAndSave").ToRunNow().AndEvery(15).Minutes());
 
         #endregion Private Methods
     }

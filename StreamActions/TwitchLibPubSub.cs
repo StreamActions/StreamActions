@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using TwitchLib.PubSub;
-using TwitchLib.PubSub.Events;
 
 namespace StreamActions
 {
@@ -275,7 +273,25 @@ namespace StreamActions
 
         #endregion Private Constructors
 
-        #region Private Event Passthrough
+        #region Private Methods
+
+        /// <summary>
+        /// Method that sets all the PubSub listeners for all channels.
+        /// </summary>
+        private void SetListeners()
+        {
+            // TODO: Get bot ID.
+            string botId = "";
+            // TODO: Get all channel IDs.
+            List<string> channelIds = new List<string>();
+
+            foreach (string channelId in channelIds)
+            {
+                // TODO: Listen to all topics.
+                this._twitchPubSub.ListenToFollows(channelId);
+                this._twitchPubSub.ListenToChatModeratorActions(botId, channelId);
+            }
+        }
 
         /// <summary>
         /// Passes <see cref="OnBan"/> events down to subscribed plugins.
@@ -341,6 +357,21 @@ namespace StreamActions
         private void TwitchPubSub_OnHost(object sender, OnHostArgs e) => OnHost?.Invoke(this, e);
 
         /// <summary>
+        /// Makes sure we were able to listen to a response then passes <see cref="OnListenResponse"/> events down to subscribed plugins.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="OnListenResponseArgs"/> object.</param>
+        private void TwitchPubSub_OnListenResponse(object sender, OnListenResponseArgs e)
+        {
+            OnListenResponse?.Invoke(this, e);
+
+            if (!e.Successful)
+            {
+                // TODO: Handle error/response.
+            }
+        }
+
+        /// <summary>
         /// Passes <see cref="OnLog"/> events down to subscribed plugins.
         /// </summary>
         /// <param name="sender">The source of the event.</param>
@@ -353,6 +384,74 @@ namespace StreamActions
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="OnMessageDeletedArgs"/> object.</param>
         private void TwitchPubSub_OnMessageDeleted(object sender, OnMessageDeletedArgs e) => OnMessageDeleted?.Invoke(this, e);
+
+        /// <summary>
+        /// Handles everything if the PubSub service closes then passes <see cref="System.EventArgs"/> events down to subscribed plugins.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="System.EventArgs"/> object.</param>
+        private async void TwitchPubSub_OnPubSubServiceClosed(object sender, System.EventArgs e)
+        {
+            this.OnPubSubServiceClosed?.Invoke(this, e);
+
+            if (!this._shutdown)
+            {
+                await Task.Run(async () =>
+                {
+                    while (DateTime.Now.CompareTo(this._nextConnectAttempt) < 0)
+                    {
+                        await Task.Delay(1000).ConfigureAwait(false);
+                    }
+
+                    this._nextConnectAttempt = DateTime.Now.AddSeconds(_nextConnectAttemptBackoffValues[this._nextConnectAttemptBackoffKey]);
+
+                    // TODO: Handle reconnect better.
+                    lock (this._lock)
+                    {
+                        this._twitchPubSub.Disconnect();
+                        this.SetListeners();
+                        this._twitchPubSub.Connect();
+                    }
+
+                    this._nextConnectAttemptBackoffKey++;
+                    if (this._nextConnectAttemptBackoffKey >= _nextConnectAttemptBackoffValues.Length)
+                    {
+                        this._nextConnectAttemptBackoffKey = _nextConnectAttemptBackoffValues.Length - 1;
+                    }
+                }).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Handles everything if the PubSub service connects then passes <see cref="System.EventArgs"/> events down to subscribed plugins.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="System.EventArgs"/> object.</param>
+        private async void TwitchPubSub_OnPubSubServiceConnected(object sender, System.EventArgs e)
+        {
+            this.OnPubSubServiceConnected?.Invoke(this, e);
+
+            this._twitchPubSub.SendTopics();
+
+            DateTime nextConnectAttempt = this._nextConnectAttempt;
+            await Task.Delay(30000).ConfigureAwait(false);
+
+            if (this._nextConnectAttempt.CompareTo(nextConnectAttempt) == 0)
+            {
+                this._nextConnectAttemptBackoffKey = 0;
+            }
+        }
+
+        /// <summary>
+        /// Handles everything if the PubSub service fails then passes <see cref="System.EventArgs"/> events down to subscribed plugins.
+        /// </summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An <see cref="OnPubSubServiceErrorArgs"/> object.</param>
+        private void TwitchPubSub_OnPubSubServiceError(object sender, OnPubSubServiceErrorArgs e)
+        {
+            this.OnPubSubServiceError?.Invoke(this, e);
+            this.Shutdown();
+        }
 
         /// <summary>
         /// Passes <see cref="OnR9kBeta"/> events down to subscribed plugins.
@@ -430,111 +529,6 @@ namespace StreamActions
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">An <see cref="OnWhisperArgs"/> object.</param>
         private void TwitchPubSub_OnWhisper(object sender, OnWhisperArgs e) => OnWhisper?.Invoke(this, e);
-
-        #endregion Private Event Passthrough
-
-        #region Private Methods
-
-        /// <summary>
-        /// Method that sets all the PubSub listeners for all channels.
-        /// </summary>
-        private void SetListeners()
-        {
-            // TODO: Get bot ID.
-            string botId = "";
-            // TODO: Get all channel IDs.
-            List<string> channelIds = new List<string>();
-
-            foreach (string channelId in channelIds)
-            {
-                // TODO: Listen to all topics.
-                this._twitchPubSub.ListenToFollows(channelId);
-                this._twitchPubSub.ListenToChatModeratorActions(botId, channelId);
-            }
-        }
-
-        /// <summary>
-        /// Makes sure we were able to listen to a response then passes <see cref="OnListenResponse"/> events down to subscribed plugins.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="OnListenResponseArgs"/> object.</param>
-        private void TwitchPubSub_OnListenResponse(object sender, OnListenResponseArgs e)
-        {
-            OnListenResponse?.Invoke(this, e);
-
-            if (!e.Successful)
-            {
-                // TODO: Handle error/response.
-            }
-        }
-
-        /// <summary>
-        /// Handles everything if the PubSub service closes then passes <see cref="System.EventArgs"/> events down to subscribed plugins.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="System.EventArgs"/> object.</param>
-        private async void TwitchPubSub_OnPubSubServiceClosed(object sender, System.EventArgs e)
-        {
-            this.OnPubSubServiceClosed?.Invoke(this, e);
-
-            if (!this._shutdown)
-            {
-                await Task.Run(async () =>
-                {
-                    while (DateTime.Now.CompareTo(this._nextConnectAttempt) < 0)
-                    {
-                        await Task.Delay(1000).ConfigureAwait(false);
-                    }
-
-                    this._nextConnectAttempt = DateTime.Now.AddSeconds(_nextConnectAttemptBackoffValues[this._nextConnectAttemptBackoffKey]);
-
-                    // TODO: Handle reconnect better.
-                    lock (this._lock)
-                    {
-                        this._twitchPubSub.Disconnect();
-                        this.SetListeners();
-                        this._twitchPubSub.Connect();
-                    }
-
-                    this._nextConnectAttemptBackoffKey++;
-                    if (this._nextConnectAttemptBackoffKey >= _nextConnectAttemptBackoffValues.Length)
-                    {
-                        this._nextConnectAttemptBackoffKey = _nextConnectAttemptBackoffValues.Length - 1;
-                    }
-                }).ConfigureAwait(false);
-            }
-        }
-
-        /// <summary>
-        /// Handles everything if the PubSub service connects then passes <see cref="System.EventArgs"/> events down to subscribed plugins.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="System.EventArgs"/> object.</param>
-        private async void TwitchPubSub_OnPubSubServiceConnected(object sender, System.EventArgs e)
-        {
-            this.OnPubSubServiceConnected?.Invoke(this, e);
-
-            this._twitchPubSub.SendTopics();
-
-            DateTime nextConnectAttempt = this._nextConnectAttempt;
-            await Task.Delay(30000).ConfigureAwait(false);
-
-            if (this._nextConnectAttempt.CompareTo(nextConnectAttempt) == 0)
-            {
-                this._nextConnectAttemptBackoffKey = 0;
-            }
-        }
-
-        /// <summary>
-        /// Handles everything if the PubSub service fails then passes <see cref="System.EventArgs"/> events down to subscribed plugins.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An <see cref="OnPubSubServiceErrorArgs"/> object.</param>
-        private void TwitchPubSub_OnPubSubServiceError(object sender, OnPubSubServiceErrorArgs e)
-        {
-            this.OnPubSubServiceError?.Invoke(this, e);
-            this.Shutdown();
-        }
 
         #endregion Private Methods
     }

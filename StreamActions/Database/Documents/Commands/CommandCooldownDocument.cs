@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,6 @@ namespace StreamActions.Database.Documents.Commands
         /// The Guid for referencing this command in the database.
         /// </summary>
         [BsonIgnore]
-        //TODO: [GraphQLIgnore]
         public Guid Id { get; internal set; }
 
         /// <summary>
@@ -73,7 +72,6 @@ namespace StreamActions.Database.Documents.Commands
         /// Indicates when the cooldown for a user Id expires.
         /// </summary>
         [BsonIgnore]
-        //TODO: [GraphQLIgnore]
         public Dictionary<string, DateTime> UserCooldownExpires
         {
             get

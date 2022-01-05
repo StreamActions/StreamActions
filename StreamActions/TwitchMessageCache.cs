@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright © 2019-2021 StreamActions Team
+ * Copyright © 2019-2022 StreamActions Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,43 +17,14 @@
 using StreamActions.MemoryDocuments;
 using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using TwitchLib.Client.Models;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace StreamActions
 {
     internal class TwitchMessageCache
     {
-        #region Internal Properties
-
-        /// <summary>
-        /// Singleton of <see cref="TwitchMessageCache"/>.
-        /// </summary>
-        internal static TwitchMessageCache Instance => _instance.Value;
-
-        #endregion Internal Properties
-
-        #region Private Fields
-
-        /// <summary>
-        /// Field that backs the <see cref="Instance"/> property.
-        /// </summary>
-        private static readonly Lazy<TwitchMessageCache> _instance = new Lazy<TwitchMessageCache>(() => new TwitchMessageCache());
-
-        /// <summary>
-        /// Used to make the list concurrent.
-        /// </summary>
-        private readonly object _lock = new object();
-
-        /// <summary>
-        /// Message that have been consumed by this cache.
-        /// </summary>
-        private readonly List<ChatMessageDocument> _messages = new List<ChatMessageDocument>();
-
-        #endregion Private Fields
-
-        #region Internal Methods
+        #region Public Methods
 
         /// <summary>
         /// Method that will consume each Twitch message and add it to our cache list.
@@ -125,30 +96,35 @@ namespace StreamActions
             }
         }
 
-        #endregion Internal Methods
+        #endregion Public Methods
 
-        #region Private Methods
+        #region Internal Properties
 
         /// <summary>
-        /// Method that will create the job to remove messages that are older than 5 minutes from the cache.
+        /// Singleton of <see cref="TwitchMessageCache"/>.
         /// </summary>
-        private void ScheduleMessageCacheRemover() => Scheduler.AddJob(() =>
-        {
-            DateTime pastTime = DateTime.Now.AddMinutes(-5);
+        internal static TwitchMessageCache Instance => _instance.Value;
 
-            lock (this._lock)
-            {
-                this._messages.ForEach((m =>
-                {
-                    if (m.SentAt <= pastTime)
-                    {
-                        _ = this._messages.Remove(m);
-                    }
-                }));
-            }
-        }, s => s.WithName("MessageCacheRemover").ToRunEvery(5).Minutes());
+        #endregion Internal Properties
 
-        #endregion Private Methods
+        #region Private Fields
+
+        /// <summary>
+        /// Field that backs the <see cref="Instance"/> property.
+        /// </summary>
+        private static readonly Lazy<TwitchMessageCache> _instance = new Lazy<TwitchMessageCache>(() => new TwitchMessageCache());
+
+        /// <summary>
+        /// Used to make the list concurrent.
+        /// </summary>
+        private readonly object _lock = new object();
+
+        /// <summary>
+        /// Message that have been consumed by this cache.
+        /// </summary>
+        private readonly List<ChatMessageDocument> _messages = new List<ChatMessageDocument>();
+
+        #endregion Private Fields
 
         #region Private Constructors
 
@@ -158,5 +134,28 @@ namespace StreamActions
         private TwitchMessageCache() => this.ScheduleMessageCacheRemover();
 
         #endregion Private Constructors
+
+        #region Private Methods
+
+        /// <summary>
+        /// Method that will create the job to remove messages that are older than 5 minutes from the cache.
+        /// </summary>
+        private void ScheduleMessageCacheRemover() => Scheduler.AddJob(() =>
+         {
+             DateTime pastTime = DateTime.Now.AddMinutes(-5);
+
+             lock (this._lock)
+             {
+                 this._messages.ForEach((m =>
+                 {
+                     if (m.SentAt <= pastTime)
+                     {
+                         _ = this._messages.Remove(m);
+                     }
+                 }));
+             }
+         }, s => s.WithName("MessageCacheRemover").ToRunEvery(5).Minutes());
+
+        #endregion Private Methods
     }
 }
