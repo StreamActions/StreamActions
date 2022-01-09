@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-using StreamActions.Twitch.TwitchAPI.Common;
+using StreamActions.Twitch.API.Common;
 
-namespace StreamActions.Twitch.TwitchAPI
+namespace StreamActions.Twitch.API
 {
     /// <summary>
     /// Handles validation of OAuth tokens and performs HTTP calls for the API.
@@ -26,7 +26,7 @@ namespace StreamActions.Twitch.TwitchAPI
         #region Public Methods
 
         /// <summary>
-        /// Initializes the http client.
+        /// Initializes the HTTP client.
         /// </summary>
         /// <param name="clientId">A valid Twitch App Client ID.</param>
         public static void Init(string clientId)
@@ -35,6 +35,9 @@ namespace StreamActions.Twitch.TwitchAPI
             {
                 throw new ArgumentNullException(nameof(clientId));
             }
+
+            _ = _httpClient.DefaultRequestHeaders.Remove("Client-Id");
+            _ = _httpClient.DefaultRequestHeaders.Remove("User-Agent");
 
             _httpClient.DefaultRequestHeaders.Add("Client-Id", clientId);
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "StreamActions/TwitchAPI/" + typeof(TwitchAPI).Assembly.GetName()?.Version?.ToString() ?? "0.0.0");
@@ -46,10 +49,10 @@ namespace StreamActions.Twitch.TwitchAPI
         #region Internal Methods
 
         /// <summary>
-        /// Submits a http requeest to the specified uri and returns the response.
+        /// Submits a HTTP request to the specified Uri and returns the response.
         /// </summary>
         /// <param name="method">The <see cref="HttpMethod"/> of the request.</param>
-        /// <param name="uri">The uri to request. Relative uris resolve against the Helix base.</param>
+        /// <param name="uri">The Uri to request. Relative Uris resolve against the Helix base.</param>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
         /// <param name="content">The body of the request, for methods that require it.</param>
         /// <returns>A <see cref="HttpResponseMessage"/> containing the response data.</returns>
@@ -61,17 +64,17 @@ namespace StreamActions.Twitch.TwitchAPI
                 throw new InvalidOperationException("Must call TwitchAPI.Init.");
             }
 
-            if (string.IsNullOrWhiteSpace(session.OAuth))
+            if (string.IsNullOrWhiteSpace(session.Token?.OAuth))
             {
                 throw new InvalidOperationException("Invalid OAuth token in session.");
             }
 
-            await session.RateLimiter.WaitForRateLimit();
+            await session.RateLimiter.WaitForRateLimit().ConfigureAwait(false);
 
-            HttpRequestMessage request = new(method, uri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
+            using HttpRequestMessage request = new(method, uri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
             request.Content = content;
-            request.Headers.Add("Authorization", "Bearer " + session.OAuth);
-            HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None);
+            request.Headers.Add("Authorization", "Bearer " + session.Token.OAuth);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
 
             session.RateLimiter.ParseHeaders(response.Headers);
 

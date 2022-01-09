@@ -16,7 +16,7 @@
 
 using StreamActions.Common.Limiters;
 
-namespace StreamActions.Twitch.TwitchAPI.Common
+namespace StreamActions.Twitch.API.Common
 {
     /// <summary>
     /// Contains parameters for a Twitch API session.
