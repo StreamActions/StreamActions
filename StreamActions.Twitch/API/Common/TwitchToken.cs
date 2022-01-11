@@ -21,6 +21,7 @@ namespace StreamActions.Twitch.API.Common
         /// <summary>
         /// The OAuth token.
         /// </summary>
+        /// <exception cref="ArgumentNullException">Attempt to set to null or whitespace.</exception>
         public string? OAuth
         {
             get => this._oauth;

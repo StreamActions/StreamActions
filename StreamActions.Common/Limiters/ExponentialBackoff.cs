@@ -17,7 +17,7 @@
 namespace StreamActions.Common.Limiters
 {
     /// <summary>
-    /// Handles backoff timing using an exponentialy increasing duration strategy.
+    /// Handles backoff timing using an exponentially increasing duration strategy.
     /// </summary>
     public class ExponentialBackoff
     {
@@ -70,63 +70,91 @@ namespace StreamActions.Common.Limiters
         /// <summary>
         /// Resets <see cref="NextDuration"/> to <see cref="InitialDuration"/>.
         /// </summary>
-        public void Reset()
+        /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
+        /// <exception cref="TimeoutException">The lock timed out.</exception>
+        public void Reset(TimeSpan timeout)
         {
-            this._rwl.EnterUpgradeableReadLock();
-            try
+            if (this._rwl.TryEnterUpgradeableReadLock(timeout))
             {
-                if (this._nextDuration.CompareTo(this._initialDuration) != 0)
+                try
                 {
-                    this._rwl.EnterWriteLock();
-                    try
+                    if (this._nextDuration.CompareTo(this._initialDuration) != 0)
                     {
-                        this._nextDuration = TimeSpan.FromTicks(this._initialDuration.Ticks);
-                    }
-                    finally
-                    {
-                        this._rwl.ExitWriteLock();
+                        if (this._rwl.TryEnterWriteLock(timeout))
+                        {
+                            try
+                            {
+                                this._nextDuration = TimeSpan.FromTicks(this._initialDuration.Ticks);
+                            }
+                            finally
+                            {
+                                this._rwl.ExitWriteLock();
+                            }
+                        }
+                        else
+                        {
+                            throw new TimeoutException();
+                        }
                     }
                 }
+                finally
+                {
+                    this._rwl.ExitUpgradeableReadLock();
+                }
             }
-            finally
+            else
             {
-                this._rwl.ExitUpgradeableReadLock();
+                throw new TimeoutException();
             }
         }
 
         /// <summary>
         /// Waits for <see cref="NextDuration"/>, then updates it for the next wait call.
         /// </summary>
+        /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
         /// <returns>A <see cref="Task"/> that can be awaited.</returns>
-        public async Task Wait()
+        /// <exception cref="TimeoutException">The lock timed out.</exception>
+        public async Task Wait(TimeSpan timeout)
         {
-            this._rwl.EnterUpgradeableReadLock();
-            try
+            if (this._rwl.TryEnterUpgradeableReadLock(timeout))
             {
-                await Task.Delay(this._nextDuration);
-                if (this._nextDuration.CompareTo(this._maxDuration) < 0)
+                try
                 {
-                    long ticks = this._nextDuration.Ticks * this._nextDuration.Ticks;
+                    await Task.Delay(this._nextDuration).ConfigureAwait(false);
+                    if (this._nextDuration.CompareTo(this._maxDuration) < 0)
+                    {
+                        long ticks = this._nextDuration.Ticks * this._nextDuration.Ticks;
 
-                    if (ticks > this._maxDuration.Ticks)
-                    {
-                        ticks = this._maxDuration.Ticks;
-                    }
+                        if (ticks > this._maxDuration.Ticks)
+                        {
+                            ticks = this._maxDuration.Ticks;
+                        }
 
-                    this._rwl.EnterWriteLock();
-                    try
-                    {
-                        this._nextDuration = TimeSpan.FromTicks(ticks);
-                    }
-                    finally
-                    {
-                        this._rwl.ExitWriteLock();
+                        if (this._rwl.TryEnterWriteLock(timeout))
+                        {
+                            try
+                            {
+                                this._nextDuration = TimeSpan.FromTicks(ticks);
+                            }
+                            finally
+                            {
+                                this._rwl.ExitWriteLock();
+                            }
+                        }
+                        else
+                        {
+                            throw new TimeoutException();
+                        }
                     }
                 }
+                finally
+                {
+                    this._rwl.ExitUpgradeableReadLock();
+                }
             }
-            finally
+            else
             {
-                this._rwl.ExitUpgradeableReadLock();
+                throw new TimeoutException();
             }
         }
 

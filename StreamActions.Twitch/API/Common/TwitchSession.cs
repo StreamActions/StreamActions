@@ -31,10 +31,11 @@ namespace StreamActions.Twitch.API.Common
         /// <summary>
         /// The OAuth token data.
         /// </summary>
+        /// <exception cref="ArgumentNullException">Attempt to set to null.</exception>
         public TwitchToken? Token
         {
             get => this._token;
-            init => this._token = value is null ? throw new ArgumentNullException(nameof(value)) : value;
+            internal set => this._token = value is null ? throw new ArgumentNullException(nameof(value)) : value;
         }
 
         /// <summary>

@@ -22,7 +22,7 @@ namespace StreamActions.Twitch.API.Common
     /// <summary>
     /// Base record for Twitch API responses. Indicates request status code and error message if not success.
     /// </summary>
-    public abstract record TwitchResponse
+    public record TwitchResponse
     {
         /// <summary>
         /// The HTTP status code as indicated by the response JSON.
@@ -50,7 +50,19 @@ namespace StreamActions.Twitch.API.Common
         /// Indicates if <see cref="Status"/> is in the 200-299 range.
         /// </summary>
         [JsonIgnore]
-        public bool IsSuccessStatusCode => this.Status >= 200 && this.Status <= 299;
+        public bool IsSuccessStatusCode => this.Status is >= 200 and <= 299;
+
+        /// <summary>
+        /// Indicates if <see cref="Status"/> is in the 400-499 range.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsClientErrorStatusCode => this.Status is >= 400 and <= 499;
+
+        /// <summary>
+        /// Indicates if <see cref="Status"/> is in the 500-599 range.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsServerErrorStatusCode => this.Status is >= 500 and <= 599;
 
         /// <summary>
         /// Backing field for <see cref="Error"/>.

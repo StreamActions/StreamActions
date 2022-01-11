@@ -61,17 +61,17 @@ namespace StreamActions.Common.Limiters
             ISO8601,
 
             /// <summary>
-            /// Number of seconds since the unix epoch.
+            /// Number of seconds since the Unix epoch.
             /// </summary>
             Seconds,
 
             /// <summary>
-            /// Number of milliseconds since the unix epoch.
+            /// Number of milliseconds since the Unix epoch.
             /// </summary>
             Milliseconds,
 
             /// <summary>
-            /// Number of .Net <see cref="TimeSpan.Ticks"/> since the unix epoch.
+            /// Number of .Net <see cref="TimeSpan.Ticks"/> since the Unix epoch.
             /// </summary>
             Ticks
         }
@@ -131,9 +131,9 @@ namespace StreamActions.Common.Limiters
         public void ParseHeaders(HttpResponseHeaders headers, string headerLimit = "Ratelimit-Limit", string headerRemaining = "Ratelimit-Remaining",
         string headerReset = "Ratelimit-Reset", HeaderResetType headerResetType = HeaderResetType.Seconds)
         {
-            string? limitS = headers.GetValues(headerLimit).FirstOrDefault();
-            string? remainingS = headers.GetValues(headerRemaining).FirstOrDefault();
-            string? resetS = headers.GetValues(headerReset).FirstOrDefault();
+            string? limitS = headers?.GetValues(headerLimit).FirstOrDefault();
+            string? remainingS = headers?.GetValues(headerRemaining).FirstOrDefault();
+            string? resetS = headers?.GetValues(headerReset).FirstOrDefault();
 
             if (limitS is not null)
             {
@@ -310,54 +310,74 @@ namespace StreamActions.Common.Limiters
         }
 
         /// <summary>
-        /// Waits until a token is available in the bucket, then aquires it.
+        /// Waits until a token is available in the bucket, then acquires it.
         /// </summary>
+        /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
         /// <returns>A <see cref="Task"/> that can be awaited.</returns>
-        public async Task WaitForRateLimit()
+        /// <exception cref="TimeoutException">The lock timed out.</exception>
+        public async Task WaitForRateLimit(TimeSpan timeout)
         {
-            this._rwl.EnterWriteLock();
-            try
+            if (this._rwl.TryEnterWriteLock(timeout))
             {
-                _ = Interlocked.Increment(ref this._waiters);
-            }
-            finally
-            {
-                this._rwl.ExitWriteLock();
-            }
-
-            while (true)
-            {
-                this.RefillBucket();
-                this._rwl.EnterUpgradeableReadLock();
                 try
                 {
-                    if (this._remaining > 0)
+                    _ = Interlocked.Increment(ref this._waiters);
+                }
+                finally
+                {
+                    this._rwl.ExitWriteLock();
+                }
+
+                while (true)
+                {
+                    this.RefillBucket(timeout);
+                    if (this._rwl.TryEnterUpgradeableReadLock(timeout))
                     {
-                        this._rwl.EnterWriteLock();
                         try
                         {
-                            if (Interlocked.Decrement(ref this._remaining) >= 0)
+                            if (this._remaining > 0)
                             {
-                                _ = Interlocked.Decrement(ref this._waiters);
-                                return;
-                            }
-                            else
-                            {
-                                _ = Interlocked.Exchange(ref this._remaining, 0);
+                                if (this._rwl.TryEnterWriteLock(timeout))
+                                {
+                                    try
+                                    {
+                                        if (Interlocked.Decrement(ref this._remaining) >= 0)
+                                        {
+                                            _ = Interlocked.Decrement(ref this._waiters);
+                                            return;
+                                        }
+                                        else
+                                        {
+                                            _ = Interlocked.Exchange(ref this._remaining, 0);
+                                        }
+                                    }
+                                    finally
+                                    {
+                                        this._rwl.ExitWriteLock();
+                                    }
+                                }
+                                else
+                                {
+                                    throw new TimeoutException();
+                                }
                             }
                         }
                         finally
                         {
-                            this._rwl.ExitWriteLock();
+                            this._rwl.ExitUpgradeableReadLock();
                         }
                     }
-                }
-                finally
-                {
-                    this._rwl.ExitUpgradeableReadLock();
-                }
+                    else
+                    {
+                        throw new TimeoutException();
+                    }
 
-                await Task.Delay(this.GetTimeUntilNextToken()).ConfigureAwait(false);
+                    await Task.Delay(this.GetTimeUntilNextToken(timeout)).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                throw new TimeoutException();
             }
         }
 
@@ -393,7 +413,7 @@ namespace StreamActions.Common.Limiters
         /// <summary>
         /// The number of tasks waiting for a token.
         /// </summary>
-        private int _waiters = 0;
+        private int _waiters;
 
         #endregion Private Fields
 
@@ -470,17 +490,25 @@ namespace StreamActions.Common.Limiters
         /// <summary>
         /// Calculates when a new token should be available in the bucket.
         /// </summary>
+        /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
         /// <returns>The time remaining until a new token is available in the bucket.</returns>
-        private TimeSpan GetTimeUntilNextToken()
+        /// <exception cref="TimeoutException">The lock timed out.</exception>
+        private TimeSpan GetTimeUntilNextToken(TimeSpan timeout)
         {
-            this._rwl.EnterReadLock();
-            try
+            if (this._rwl.TryEnterReadLock(timeout))
             {
-                return TimeSpan.FromTicks((long)Math.Ceiling((this._nextReset - this._period) / (float)this._limit));
+                try
+                {
+                    return TimeSpan.FromTicks((long)Math.Ceiling((this._nextReset - this._period) / (float)this._limit));
+                }
+                finally
+                {
+                    this._rwl.ExitReadLock();
+                }
             }
-            finally
+            else
             {
-                this._rwl.ExitReadLock();
+                throw new TimeoutException();
             }
         }
 
@@ -504,50 +532,70 @@ namespace StreamActions.Common.Limiters
         /// <summary>
         /// Refills the bucket.
         /// </summary>
-        private void RefillBucket()
+        /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
+        /// <exception cref="TimeoutException">The lock timed out.</exception>
+        private void RefillBucket(TimeSpan timeout)
         {
             if (this._remaining == this._limit)
             {
                 return;
             }
-            this._rwl.EnterUpgradeableReadLock();
-            try
+            if (this._rwl.TryEnterUpgradeableReadLock(timeout))
             {
-                if (DateTime.UtcNow.Ticks >= this._nextReset)
+                try
                 {
-                    this._rwl.EnterWriteLock();
-                    try
+                    if (DateTime.UtcNow.Ticks >= this._nextReset)
                     {
-                        _ = Interlocked.Exchange(ref this._remaining, this._limit);
-                        _ = Interlocked.Exchange(ref this._nextReset, DateTime.UtcNow.Ticks + this._period);
-                    }
-                    finally
-                    {
-                        this._rwl.ExitWriteLock();
-                    }
-                }
-                else
-                {
-                    long elapsed = DateTime.UtcNow.Subtract(TimeSpan.FromTicks(this._nextReset).Subtract(TimeSpan.FromTicks(this._period))).Ticks;
-                    float percent = elapsed / (float)this._period;
-                    int addedTokens = (int)Math.Floor(percent * this._limit);
-                    this._rwl.EnterWriteLock();
-                    try
-                    {
-                        if (Interlocked.Add(ref this._remaining, addedTokens) > this._limit)
+                        if (this._rwl.TryEnterWriteLock(timeout))
                         {
-                            _ = Interlocked.Exchange(ref this._remaining, this._limit);
+                            try
+                            {
+                                _ = Interlocked.Exchange(ref this._remaining, this._limit);
+                                _ = Interlocked.Exchange(ref this._nextReset, DateTime.UtcNow.Ticks + this._period);
+                            }
+                            finally
+                            {
+                                this._rwl.ExitWriteLock();
+                            }
+                        }
+                        else
+                        {
+                            throw new TimeoutException();
                         }
                     }
-                    finally
+                    else
                     {
-                        this._rwl.ExitWriteLock();
+                        long elapsed = DateTime.UtcNow.Subtract(TimeSpan.FromTicks(this._nextReset).Subtract(TimeSpan.FromTicks(this._period))).Ticks;
+                        float percent = elapsed / (float)this._period;
+                        int addedTokens = (int)Math.Floor(percent * this._limit);
+                        if (this._rwl.TryEnterWriteLock(timeout))
+                        {
+                            try
+                            {
+                                if (Interlocked.Add(ref this._remaining, addedTokens) > this._limit)
+                                {
+                                    _ = Interlocked.Exchange(ref this._remaining, this._limit);
+                                }
+                            }
+                            finally
+                            {
+                                this._rwl.ExitWriteLock();
+                            }
+                        }
+                        else
+                        {
+                            throw new TimeoutException();
+                        }
                     }
                 }
+                finally
+                {
+                    this._rwl.ExitUpgradeableReadLock();
+                }
             }
-            finally
+            else
             {
-                this._rwl.ExitUpgradeableReadLock();
+                throw new TimeoutException();
             }
         }
 

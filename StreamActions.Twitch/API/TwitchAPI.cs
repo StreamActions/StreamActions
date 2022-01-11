@@ -15,6 +15,8 @@
  */
 
 using StreamActions.Twitch.API.Common;
+using StreamActions.Twitch.API.OAuth;
+using System.Text.Json;
 
 namespace StreamActions.Twitch.API
 {
@@ -23,18 +25,32 @@ namespace StreamActions.Twitch.API
     /// </summary>
     public static class TwitchAPI
     {
+        #region Public Properties
+
+        /// <summary>
+        /// The currently initialized Client Id.
+        /// </summary>
+        public static string? ClientId { get; private set; }
+
+        #endregion Public Properties
+
         #region Public Methods
 
         /// <summary>
         /// Initializes the HTTP client.
         /// </summary>
-        /// <param name="clientId">A valid Twitch App Client ID.</param>
-        public static void Init(string clientId)
+        /// <param name="clientId">A valid Twitch App Client Id.</param>
+        /// <param name="clientSecret">A valid Twitch App Client Secret.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="clientId"/> is null or whitespace.</exception>
+        public static void Init(string clientId, string? clientSecret = null)
         {
             if (string.IsNullOrWhiteSpace(clientId))
             {
                 throw new ArgumentNullException(nameof(clientId));
             }
+
+            ClientId = clientId;
+            ClientSecret = clientSecret;
 
             _ = _httpClient.DefaultRequestHeaders.Remove("Client-Id");
             _ = _httpClient.DefaultRequestHeaders.Remove("User-Agent");
@@ -42,9 +58,19 @@ namespace StreamActions.Twitch.API
             _httpClient.DefaultRequestHeaders.Add("Client-Id", clientId);
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "StreamActions/TwitchAPI/" + typeof(TwitchAPI).Assembly.GetName()?.Version?.ToString() ?? "0.0.0");
             _httpClient.BaseAddress = new Uri("https://api.twitch.tv/helix/");
+            _httpClient.Timeout = TimeSpan.FromSeconds(30);
         }
 
         #endregion Public Methods
+
+        #region Internal Properties
+
+        /// <summary>
+        /// The currently initialized Client Secret.
+        /// </summary>
+        internal static string? ClientSecret { get; private set; }
+
+        #endregion Internal Properties
 
         #region Internal Methods
 
@@ -56,7 +82,7 @@ namespace StreamActions.Twitch.API
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
         /// <param name="content">The body of the request, for methods that require it.</param>
         /// <returns>A <see cref="HttpResponseMessage"/> containing the response data.</returns>
-        /// <exception cref="InvalidOperationException">Did not call <see cref="Init(string)"/> with a valid Client Id.</exception>
+        /// <exception cref="InvalidOperationException">Did not call <see cref="Init(string)"/> with a valid Client Id or <paramref name="session"/> does not have an OAuth token.</exception>
         internal static async Task<HttpResponseMessage> PerformHttpRequest(HttpMethod method, Uri uri, TwitchSession session, HttpContent? content = null)
         {
             if (!_httpClient.DefaultRequestHeaders.Contains("Client-Id"))
@@ -69,16 +95,48 @@ namespace StreamActions.Twitch.API
                 throw new InvalidOperationException("Invalid OAuth token in session.");
             }
 
-            await session.RateLimiter.WaitForRateLimit().ConfigureAwait(false);
+            bool retry = false;
+        performhttprequest_start:
+            try
+            {
+                await session.RateLimiter.WaitForRateLimit(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
 
-            using HttpRequestMessage request = new(method, uri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
-            request.Content = content;
-            request.Headers.Add("Authorization", "Bearer " + session.Token.OAuth);
-            HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
+                using HttpRequestMessage request = new(method, uri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
+                request.Content = content;
 
-            session.RateLimiter.ParseHeaders(response.Headers);
+                if (session.Token.OAuth != "__NEW")
+                {
+                    request.Headers.Add("Authorization", "Bearer " + session.Token.OAuth);
+                }
 
-            return response;
+                HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
+
+                if (!retry && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token.OAuth != "__NEW")
+                {
+                    Token? refresh = await Token.RefreshOAuth(session).ConfigureAwait(false);
+
+                    if (refresh is not null && refresh.IsSuccessStatusCode)
+                    {
+                        session.Token = new() { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires };
+                        retry = true;
+                        goto performhttprequest_start;
+                    }
+                }
+
+                if ((int)response.StatusCode is >= 500 and < 599 && response.Content.Headers?.ContentType?.MediaType != "application/json")
+                {
+                    string rcontent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    response.Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse() { Status = (int)response.StatusCode, Message = rcontent }, new JsonSerializerOptions()));
+                }
+
+                session.RateLimiter.ParseHeaders(response.Headers);
+
+                return response;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TimeoutException)
+            {
+                return new(0) { ReasonPhrase = ex.GetType().Name, Content = new StringContent(ex.Message) };
+            }
         }
 
         #endregion Internal Methods

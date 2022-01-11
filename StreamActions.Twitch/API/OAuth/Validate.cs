@@ -67,10 +67,16 @@ namespace StreamActions.Twitch.API.OAuth
         /// <param name="session">The <see cref="TwitchSession"/> to validate.</param>
         /// <returns>A <see cref="Validate"/> with the current token data or a Twitch error.</returns>
         /// <exception cref="JsonException">The response is not valid JSON.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
         public static async Task<Validate?> ValidateOAuth(TwitchSession session)
         {
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri("https://id.twitch.tv/oauth2/validate"), session);
-            return await response.Content.ReadFromJsonAsync<Validate>();
+            if (session is null)
+            {
+                throw new ArgumentNullException(nameof(session));
+            }
+
+            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri("https://id.twitch.tv/oauth2/validate"), session).ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<Validate>().ConfigureAwait(false);
         }
     }
 }
