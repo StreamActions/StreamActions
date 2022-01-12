@@ -16,6 +16,7 @@
 
 using MongoDB.Driver;
 using StreamActions.Attributes;
+using StreamActions.Common;
 using StreamActions.Database;
 using StreamActions.Database.Documents.Moderation;
 using StreamActions.Database.Documents.Users;

@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-using System;
-using System.Collections.Generic;
-
-namespace StreamActions
+namespace StreamActions.Common
 {
     public static class StreamActionsTypeExtensions
     {
@@ -45,6 +42,16 @@ namespace StreamActions
 
             return source.Count > index ? source[index] : defVal;
         }
+
+        /// <summary>
+        /// Invokes an <see cref="EventHandler{TEventArgs}"/> on a background Task thread.
+        /// </summary>
+        /// <typeparam name="TEventArgs">The type of <paramref name="e"/>.</typeparam>
+        /// <param name="eventHandler">The <see cref="EventHandler{TEventArgs}"/> to invoke.</param>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">An object that contains the event data.</param>
+        /// <returns></returns>
+        public static Task InvokeAsync<TEventArgs>(this EventHandler<TEventArgs> eventHandler, object? sender, TEventArgs e) => Task.Run(() => eventHandler?.Invoke(sender, e));
 
         /// <summary>
         /// Determines if the string at the specified index of the <c>List&lt;string></c> is <c>null</c> or an empty string (""), or if the index is out of range.
@@ -93,6 +100,13 @@ namespace StreamActions
                 return true;
             }
         }
+
+        /// <summary>
+        /// Waits for a <see cref="CancellationToken"/> in a background Task thread.
+        /// </summary>
+        /// <param name="token">The <see cref="CancellationToken"/> to wait for.</param>
+        /// <returns>A Task that can be awaited.</returns>
+        public static async Task WaitAsync(this CancellationToken token) => _ = await Task.Run(() => _ = token.WaitHandle.WaitOne()).ConfigureAwait(true);
 
         #endregion Public Methods
     }

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+using StreamActions.Common;
 using StreamActions.Twitch.API.Common;
 using StreamActions.Twitch.API.OAuth;
 using System.Text.Json;
@@ -26,6 +27,15 @@ namespace StreamActions.Twitch.API
     /// </summary>
     public static class TwitchAPI
     {
+        #region Public Events
+
+        /// <summary>
+        /// Fires when a <see cref="TwitchSession"/> has its OAuth token automatically refreshed as a result of a 401 response.
+        /// </summary>
+        public static event EventHandler<TwitchSession>? OnTokenRefreshed;
+
+        #endregion Public Events
+
         #region Public Properties
 
         /// <summary>
@@ -77,8 +87,14 @@ namespace StreamActions.Twitch.API
         #region Internal Methods
 
         /// <summary>
-        /// Submits a HTTP request to the specified Uri and returns the response. Non-JSON responses are converted to the standard <c>{status,error,message}</c> format.
+        /// Submits a HTTP request to the specified Uri and returns the response.
         /// </summary>
+        /// <remarks>
+        /// Non-JSON responses are converted to the standard <c>{status,error,message}</c> format.
+        ///
+        /// If a 401 is returned, one attempt will be made to refresh the OAuth token and try again.
+        /// The <paramref name="session"/> object is updated and <see cref="OnTokenRefreshed"/> is called on refresh success.
+        /// </remarks>
         /// <param name="method">The <see cref="HttpMethod"/> of the request.</param>
         /// <param name="uri">The Uri to request. Relative Uris resolve against the Helix base.</param>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
@@ -120,6 +136,7 @@ namespace StreamActions.Twitch.API
                     if (refresh is not null && refresh.IsSuccessStatusCode)
                     {
                         session.Token = new() { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires };
+                        _ = (OnTokenRefreshed?.InvokeAsync(null, session));
                         retry = true;
                         goto performhttprequest_start;
                     }
