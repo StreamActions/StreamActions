@@ -41,8 +41,9 @@ namespace StreamActions.Twitch.API
         /// </summary>
         /// <param name="clientId">A valid Twitch App Client Id.</param>
         /// <param name="clientSecret">A valid Twitch App Client Secret.</param>
+        /// <param name="baseAddress">The base uri to Helix.</param>
         /// <exception cref="ArgumentNullException"><paramref name="clientId"/> is null or whitespace.</exception>
-        public static void Init(string clientId, string? clientSecret = null)
+        public static void Init(string clientId, string? clientSecret = null, string baseAddress = "https://api.twitch.tv/helix/")
         {
             if (string.IsNullOrWhiteSpace(clientId))
             {
@@ -56,8 +57,8 @@ namespace StreamActions.Twitch.API
             _ = _httpClient.DefaultRequestHeaders.Remove("User-Agent");
 
             _httpClient.DefaultRequestHeaders.Add("Client-Id", clientId);
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "StreamActions/TwitchAPI/" + typeof(TwitchAPI).Assembly.GetName()?.Version?.ToString() ?? "0.0.0");
-            _httpClient.BaseAddress = new Uri("https://api.twitch.tv/helix/");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "StreamActions/TwitchAPI/" + typeof(TwitchAPI).Assembly.GetName()?.Version?.ToString() ?? "0.0.0.0");
+            _httpClient.BaseAddress = new Uri(baseAddress);
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
         }
 

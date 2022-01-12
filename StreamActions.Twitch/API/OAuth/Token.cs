@@ -65,17 +65,18 @@ namespace StreamActions.Twitch.API.OAuth
         /// Attempts to refresh the OAuth token assigned to the specified <see cref="TwitchSession"/>.
         /// </summary>
         /// <param name="session">The <see cref="TwitchSession"/> to refresh.</param>
+        /// <param name="baseAddress">The uri to the Token endpoint.</param>
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
         /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
-        public static async Task<Token?> RefreshOAuth(TwitchSession session)
+        public static async Task<Token?> RefreshOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/token")
         {
             if (session is null)
             {
                 throw new ArgumentNullException(nameof(session));
             }
 
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri("https://id.twitch.tv/oauth2/token?grant_type=refresh_token&refresh_token="
+            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri(baseAddress + "?grant_type=refresh_token&refresh_token="
                 + session.Token?.Refresh + "&client_id=" + TwitchAPI.ClientId + "&client_secret=" + TwitchAPI.ClientSecret), session).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<Token>().ConfigureAwait(false);
         }
@@ -85,10 +86,11 @@ namespace StreamActions.Twitch.API.OAuth
         /// </summary>
         /// <param name="code">The authorization code.</param>
         /// <param name="redirectUri">The redirect Uri that was used.</param>
+        /// <param name="baseAddress">The uri to the Token endpoint.</param>
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
         /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="code"/> is null or whitespace, or <paramref name="redirectUri"/> is null.</exception>
-        public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri)
+        public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string baseAddress = "https://id.twitch.tv/oauth2/token")
         {
             if (string.IsNullOrWhiteSpace(code))
             {
@@ -100,7 +102,7 @@ namespace StreamActions.Twitch.API.OAuth
                 throw new ArgumentNullException(nameof(redirectUri));
             }
 
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri("https://id.twitch.tv/oauth2/token?grant_type=authorization_code&code="
+            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri(baseAddress + "?grant_type=authorization_code&code="
                 + code + "&client_id=" + TwitchAPI.ClientId + "&client_secret=" + TwitchAPI.ClientSecret + "&redirect_uri="
                 + Uri.EscapeDataString(redirectUri.ToString())), new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<Token>().ConfigureAwait(false);
