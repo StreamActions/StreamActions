@@ -17,6 +17,7 @@
 using StreamActions.Twitch.API.Common;
 using StreamActions.Twitch.API.OAuth;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace StreamActions.Twitch.API
 {
@@ -76,7 +77,7 @@ namespace StreamActions.Twitch.API
         #region Internal Methods
 
         /// <summary>
-        /// Submits a HTTP request to the specified Uri and returns the response.
+        /// Submits a HTTP request to the specified Uri and returns the response. Non-JSON responses are converted to the standard <c>{status,error,message}</c> format.
         /// </summary>
         /// <param name="method">The <see cref="HttpMethod"/> of the request.</param>
         /// <param name="uri">The Uri to request. Relative Uris resolve against the Helix base.</param>
@@ -124,10 +125,13 @@ namespace StreamActions.Twitch.API
                     }
                 }
 
-                if ((int)response.StatusCode is >= 500 and < 599 && response.Content.Headers?.ContentType?.MediaType != "application/json")
+                if (response.Content.Headers?.ContentType?.MediaType != "application/json")
                 {
                     string rcontent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    response.Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse() { Status = (int)response.StatusCode, Message = rcontent }, new JsonSerializerOptions()));
+                    if (!Regex.IsMatch(rcontent, @"\s*{.*}\s*"))
+                    {
+                        response.Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse() { Status = (int)response.StatusCode, Message = rcontent }, new JsonSerializerOptions()));
+                    }
                 }
 
                 session.RateLimiter.ParseHeaders(response.Headers);
