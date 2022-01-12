@@ -106,7 +106,7 @@ namespace StreamActions.Common
         /// </summary>
         /// <param name="token">The <see cref="CancellationToken"/> to wait for.</param>
         /// <returns>A Task that can be awaited.</returns>
-        public static async Task WaitAsync(this CancellationToken token) => _ = await Task.Run(() => _ = token.WaitHandle.WaitOne()).ConfigureAwait(true);
+        public static Task WaitAsync(this CancellationToken token) => Task.Run(() => _ = token.WaitHandle.WaitOne());
 
         #endregion Public Methods
     }

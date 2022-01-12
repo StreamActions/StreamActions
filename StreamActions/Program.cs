@@ -17,6 +17,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using StreamActions.Common;
 using StreamActions.JsonDocuments;
 using System;
 using System.Diagnostics;
