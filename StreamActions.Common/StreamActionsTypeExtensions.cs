@@ -28,7 +28,7 @@ namespace StreamActions.Common
         /// <param name="index">The index to attempt to retrieve.</param>
         /// <param name="defVal">The default value to return, if <paramref name="index"/> is out of range.</param>
         /// <returns>The value at <paramref name="index"/>; <paramref name="defVal"/> if index is out of range.</returns>
-        public static T GetElementAtOrDefault<T>(this List<T> source, int index, T defVal = default)
+        public static T? GetElementAtOrDefault<T>(this List<T> source, int index, T? defVal = default)
         {
             if (source is null)
             {
@@ -78,13 +78,13 @@ namespace StreamActions.Common
         }
 
         /// <summary>
-        /// Determines if the string at the specified index of the <c>List&lt;string></c> is <c>null</c>, an empty string (""), or only consists of white-space characters, or if the index is out of range.
+        /// Determines if the string at the specified index of the <c>List&lt;string&rt;</c> is <c>null</c>, an empty string (""), or only consists of white-space characters, or if the index is out of range.
         /// </summary>
-        /// <param name="source">The <c>List&lt;string></c> to check.</param>
-        /// <param name="index">The index of the desired entry in the <c>List&lt;string></c>.</param>
+        /// <param name="source">The <c>List&lt;string&rt;</c> to check.</param>
+        /// <param name="index">The index of the desired entry in the <c>List&lt;string&rt;</c>.</param>
         /// <returns><c>true</c> if the string at the specified index is <c>null</c>, empty, contains only white-space characters, or the index is out of range.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
-        public static bool IsNullWhiteSpaceOrOutOfRange(this List<string> source, int index)
+        public static bool IsNullWhiteSpaceOrOutOfRange(this List<string?> source, int index)
         {
             if (source is null)
             {
