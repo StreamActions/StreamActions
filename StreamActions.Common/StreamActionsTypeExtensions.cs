@@ -16,6 +16,9 @@
 
 namespace StreamActions.Common
 {
+    /// <summary>
+    /// Contains extension members to existing types.
+    /// </summary>
     public static class StreamActionsTypeExtensions
     {
         #region Public Methods
@@ -40,7 +43,14 @@ namespace StreamActions.Common
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
 
-            return source.Count > index ? source[index] : defVal;
+            try
+            {
+                return source[index];
+            }
+            catch (IndexOutOfRangeException)
+            {
+                return defVal;
+            }
         }
 
         /// <summary>
