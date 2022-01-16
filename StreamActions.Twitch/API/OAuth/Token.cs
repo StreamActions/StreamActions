@@ -96,8 +96,9 @@ namespace StreamActions.Twitch.API.OAuth
                 baseAddress = _openIdConnectConfiguration.Value.TokenEndpoint;
             }
 
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri(baseAddress + "?grant_type=refresh_token&refresh_token="
-                + session.Token?.Refresh + "&client_id=" + TwitchAPI.ClientId + "&client_secret=" + TwitchAPI.ClientSecret), session).ConfigureAwait(false);
+            using StringContent content = new("");
+            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, new Uri(baseAddress + "?grant_type=refresh_token&refresh_token="
+                + session.Token?.Refresh + "&client_id=" + TwitchAPI.ClientId + "&client_secret=" + TwitchAPI.ClientSecret), session, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<Token>().ConfigureAwait(false);
         }
 
@@ -127,10 +128,32 @@ namespace StreamActions.Twitch.API.OAuth
                 baseAddress = _openIdConnectConfiguration.Value.TokenEndpoint;
             }
 
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri(baseAddress + "?grant_type=authorization_code&code="
+            using StringContent content = new("");
+            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, new Uri(baseAddress + "?grant_type=authorization_code&code="
                 + code + "&client_id=" + TwitchAPI.ClientId + "&client_secret=" + TwitchAPI.ClientSecret + "&redirect_uri="
-                + Uri.EscapeDataString(redirectUri.ToString())), new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }).ConfigureAwait(false);
+                + Uri.EscapeDataString(redirectUri.ToString())), new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<Token>().ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Revokes the OAuth token.
+        /// </summary>
+        /// <param name="session">The <see cref="TwitchSession"/> to revoke.</param>
+        /// <param name="baseAddress">The uri to the Revoke endpoint.</param>
+        /// <returns>A <see cref="TwitchResponse"/> with the response code.</returns>
+        /// <exception cref="JsonException">The response is not valid JSON.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+        public static async Task<TwitchResponse?> RevokeOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/revoke")
+        {
+            if (session is null)
+            {
+                throw new ArgumentNullException(nameof(session));
+            }
+
+            using StringContent content = new("");
+            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, new Uri(baseAddress + "?client_id=" + TwitchAPI.ClientId
+                + "&token=" + session.Token?.OAuth), session, content).ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<TwitchResponse>().ConfigureAwait(false);
         }
 
         /// <summary>
