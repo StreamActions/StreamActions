@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.IdentityModel.Tokens;
 using StreamActions.Twitch.API.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -56,6 +59,18 @@ namespace StreamActions.Twitch.API.OAuth
         public IReadOnlyCollection<string>? Scopes { get; init; }
 
         /// <summary>
+        /// The OIDC JWT token string, if authorizing with the <c>openid</c> scope.
+        /// </summary>
+        [JsonPropertyName("id_token")]
+        public string? IdToken { get; init; }
+
+        /// <summary>
+        /// The OIDC JWT token, if authorizing with the <c>openid</c> scope.
+        /// </summary>
+        [JsonIgnore]
+        public JsonWebToken? JwtToken => this.GetJsonWebToken();
+
+        /// <summary>
         /// The type of token that <see cref="AccessToken"/> represents.
         /// </summary>
         [JsonPropertyName("token_type")]
@@ -69,11 +84,16 @@ namespace StreamActions.Twitch.API.OAuth
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
         /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
-        public static async Task<Token?> RefreshOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/token")
+        public static async Task<Token?> RefreshOAuth(TwitchSession session, string? baseAddress = null)
         {
             if (session is null)
             {
                 throw new ArgumentNullException(nameof(session));
+            }
+
+            if (baseAddress is null)
+            {
+                baseAddress = _openIdConnectConfiguration.Value.TokenEndpoint;
             }
 
             HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri(baseAddress + "?grant_type=refresh_token&refresh_token="
@@ -90,7 +110,7 @@ namespace StreamActions.Twitch.API.OAuth
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
         /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="code"/> is null or whitespace, or <paramref name="redirectUri"/> is null.</exception>
-        public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string baseAddress = "https://id.twitch.tv/oauth2/token")
+        public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null)
         {
             if (string.IsNullOrWhiteSpace(code))
             {
@@ -102,10 +122,44 @@ namespace StreamActions.Twitch.API.OAuth
                 throw new ArgumentNullException(nameof(redirectUri));
             }
 
+            if (baseAddress is null)
+            {
+                baseAddress = _openIdConnectConfiguration.Value.TokenEndpoint;
+            }
+
             HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new Uri(baseAddress + "?grant_type=authorization_code&code="
                 + code + "&client_id=" + TwitchAPI.ClientId + "&client_secret=" + TwitchAPI.ClientSecret + "&redirect_uri="
                 + Uri.EscapeDataString(redirectUri.ToString())), new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<Token>().ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// The OpenID Connect configuration from Twitch.
+        /// </summary>
+        internal static readonly Lazy<OpenIdConnectConfiguration> _openIdConnectConfiguration = new(() => OpenIdConnectConfigurationRetriever.GetAsync("https://id.twitch.tv/oauth2/.well-known/openid-configuration", CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult());
+
+        /// <summary>
+        /// Validates and converts <see cref="IdToken"/>, if present, to a <see cref="JsonWebToken"/>.
+        /// </summary>
+        /// <returns>A <see cref="JsonWebToken"/> if <see cref="IdToken"/> is a valid JWT, else <c>null</c>.</returns>
+        private JsonWebToken? GetJsonWebToken()
+        {
+            if (this.IdToken is not null)
+            {
+                TokenValidationResult validationResult = new JsonWebTokenHandler().ValidateToken(this.IdToken, new()
+                {
+                    IssuerSigningKeys = _openIdConnectConfiguration.Value.JsonWebKeySet.Keys,
+                    ValidAudience = TwitchAPI.ClientId,
+                    ValidIssuer = _openIdConnectConfiguration.Value.Issuer
+                });
+
+                if (validationResult.IsValid)
+                {
+                    return (JsonWebToken?)validationResult.SecurityToken;
+                }
+            }
+
+            return null;
         }
     }
 }
