@@ -17,6 +17,7 @@
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using StreamActions.Common;
 using StreamActions.Twitch.API.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -97,8 +98,9 @@ namespace StreamActions.Twitch.API.OAuth
             }
 
             using StringContent content = new("");
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, new Uri(baseAddress + "?grant_type=refresh_token&refresh_token="
-                + session.Token?.Refresh + "&client_id=" + TwitchAPI.ClientId + "&client_secret=" + TwitchAPI.ClientSecret), session, content).ConfigureAwait(false);
+            Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, string> { { "grant_type", "refresh_token" }, { "refresh_token", session.Token?.Refresh ?? "" },
+                { "client_id", TwitchAPI.ClientId ?? "" }, { "client_secret", TwitchAPI.ClientSecret ?? "" } });
+            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<Token>().ConfigureAwait(false);
         }
 
@@ -129,9 +131,9 @@ namespace StreamActions.Twitch.API.OAuth
             }
 
             using StringContent content = new("");
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, new Uri(baseAddress + "?grant_type=authorization_code&code="
-                + code + "&client_id=" + TwitchAPI.ClientId + "&client_secret=" + TwitchAPI.ClientSecret + "&redirect_uri="
-                + Uri.EscapeDataString(redirectUri.ToString())), new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }, content).ConfigureAwait(false);
+            Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, string> { { "grant_type", "authorization_code" }, { "code", code },
+                { "client_id", TwitchAPI.ClientId ?? "" }, { "client_secret", TwitchAPI.ClientSecret ?? "" }, { "redirect_uri", redirectUri.ToString() } });
+            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, uri, new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<Token>().ConfigureAwait(false);
         }
 
@@ -151,8 +153,8 @@ namespace StreamActions.Twitch.API.OAuth
             }
 
             using StringContent content = new("");
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, new Uri(baseAddress + "?client_id=" + TwitchAPI.ClientId
-                + "&token=" + session.Token?.OAuth), session, content).ConfigureAwait(false);
+            Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, string> { { "client_id", TwitchAPI.ClientId ?? "" }, { "token", session.Token?.OAuth ?? "" } });
+            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<TwitchResponse>().ConfigureAwait(false);
         }
 
