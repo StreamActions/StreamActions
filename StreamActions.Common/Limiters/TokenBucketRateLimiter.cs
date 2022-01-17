@@ -383,6 +383,48 @@ namespace StreamActions.Common.Limiters
 
         #endregion Public Methods
 
+        #region Internal Methods
+
+        /// <summary>
+        /// Returns a token to the bucket.
+        /// </summary>
+        /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
+        /// <exception cref="TimeoutException">The lock timed out.</exception>
+        internal void ReturnToken(TimeSpan timeout)
+        {
+            if (this._rwl.TryEnterUpgradeableReadLock(timeout))
+            {
+                try
+                {
+                    if (this._rwl.TryEnterWriteLock(timeout))
+                    {
+                        try
+                        {
+                            _ = Interlocked.Increment(ref this._remaining);
+                        }
+                        finally
+                        {
+                            this._rwl.ExitWriteLock();
+                        }
+                    }
+                    else
+                    {
+                        throw new TimeoutException();
+                    }
+                }
+                finally
+                {
+                    this._rwl.ExitUpgradeableReadLock();
+                }
+            }
+            else
+            {
+                throw new TimeoutException();
+            }
+        }
+
+        #endregion Internal Methods
+
         #region Private Fields
 
         /// <summary>
