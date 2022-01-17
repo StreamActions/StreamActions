@@ -42,5 +42,17 @@ namespace StreamActions.Twitch.API.Common
         /// The expiration timestamp of the <see cref="OAuth"/>.
         /// </summary>
         public DateTime? Expires { get; init; }
+
+        /// <summary>
+        /// The scopes that are authorized under the OAuth token.
+        /// </summary>
+        public IReadOnlyCollection<string>? Scopes { get; init; }
+
+        /// <summary>
+        /// Checks if the specified scope is present in <see cref="Scopes"/>.
+        /// </summary>
+        /// <param name="scope">The scope to find.</param>
+        /// <returns><c>true</c> if <see cref="Scopes"/> is null or contains <paramref name="scope"/>.</returns>
+        public bool HasScope(string scope) => this.Scopes is null || this.Scopes.Contains(scope);
     }
 }
