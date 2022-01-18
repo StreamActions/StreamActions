@@ -29,7 +29,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="API\Ads\" />
     <Folder Include="API\Analytics\" />
     <Folder Include="API\Bits\" />
     <Folder Include="API\Channels\" />
