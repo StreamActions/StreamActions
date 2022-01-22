@@ -79,6 +79,33 @@ namespace StreamActions.Common
             return new Uri(baseUri, relativeUri);
         }
 
+        /// <summary>
+        /// Attempts to convert an ISO8601-formatted timestamp into a <see cref="DateTime"/>.
+        /// </summary>
+        /// <param name="iso8601">An ISO8601-formatter timestamp.</param>
+        /// <returns>A <see cref="DateTime"/> on success; <c>null</c> on failure.</returns>
+        public static DateTime? ISO8601ToDateTime(string iso8601)
+        {
+            if (DateTime.TryParseExact(iso8601, "yyyyMMddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result1))
+            {
+                return result1;
+            }
+            else if (DateTime.TryParseExact(iso8601, "yyyyMMddTHHmmss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result2))
+            {
+                return result2;
+            }
+            else if (DateTime.TryParseExact(iso8601, "yyyy-MM-ddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result3))
+            {
+                return result3;
+            }
+            else if (DateTime.TryParseExact(iso8601, "yyyy-MM-ddTHHmmss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result4))
+            {
+                return result4;
+            }
+
+            return null;
+        }
+
         #endregion Public Methods
     }
 }

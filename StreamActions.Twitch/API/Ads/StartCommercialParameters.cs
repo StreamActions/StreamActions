@@ -50,12 +50,12 @@ namespace StreamActions.Twitch.API.Ads
         /// ID of the channel requesting a commercial.
         /// </summary>
         [JsonPropertyName("broadcaster_id")]
-        public string BroadcasterId { get; init; }
+        public string BroadcasterId { get; private init; }
 
         /// <summary>
         /// Desired length of the commercial in seconds. Valid options are 30, 60, 90, 120, 150, 180.
         /// </summary>
         [JsonPropertyName("length")]
-        public int Length { get; init; }
+        public int Length { get; private init; }
     }
 }

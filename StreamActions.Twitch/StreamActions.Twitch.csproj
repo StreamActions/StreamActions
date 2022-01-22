@@ -20,8 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="6.15.0" />
-    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.15.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.1" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="6.15.1" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.15.1" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,7 +33,6 @@
   <ItemGroup>
     <Folder Include="API\Analytics\" />
     <Folder Include="API\Bits\" />
-    <Folder Include="API\Channels\" />
     <Folder Include="API\ChannelPoints\" />
     <Folder Include="API\Chat\" />
     <Folder Include="API\Clips\" />

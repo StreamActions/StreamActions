@@ -156,21 +156,10 @@ namespace StreamActions.Common.Limiters
                 long nextReset = -1;
                 if (headerResetType == HeaderResetType.ISO8601)
                 {
-                    if (DateTime.TryParseExact(resetS, "yyyyMMddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime resetDt1))
+                    DateTime? dt = Util.ISO8601ToDateTime(resetS);
+                    if (dt.HasValue)
                     {
-                        nextReset = resetDt1.Ticks;
-                    }
-                    else if (DateTime.TryParseExact(resetS, "yyyyMMddTHHmmss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime resetDt2))
-                    {
-                        nextReset = resetDt2.Ticks;
-                    }
-                    else if (DateTime.TryParseExact(resetS, "yyyy-MM-ddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime resetDt3))
-                    {
-                        nextReset = resetDt3.Ticks;
-                    }
-                    else if (DateTime.TryParseExact(resetS, "yyyy-MM-ddTHHmmss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime resetDt4))
-                    {
-                        nextReset = resetDt4.Ticks;
+                        nextReset = dt.Value.Ticks;
                     }
                 }
                 else if (long.TryParse(resetS, out long reset))

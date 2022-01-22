@@ -68,7 +68,7 @@ namespace StreamActions.Twitch.API.Ads
                 throw new InvalidOperationException("Missing scope channel:edit:commercial.");
             }
 
-            using JsonContent content = JsonContent.Create<StartCommercialParameters>(parameters);
+            using JsonContent content = JsonContent.Create(parameters);
             HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, new("/channels/commercial"), session, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<Commercial>>().ConfigureAwait(false);
         }
