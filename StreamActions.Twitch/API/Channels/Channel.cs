@@ -15,6 +15,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.API.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -33,7 +34,7 @@ namespace StreamActions.Twitch.API.Channels
         public string? BroadcasterId { get; init; }
 
         /// <summary>
-        /// Broadcaster’s user login name.
+        /// Broadcaster's user login name.
         /// </summary>
         [JsonPropertyName("broadcaster_login")]
         public string? BroadcasterLogin { get; init; }
@@ -93,7 +94,7 @@ namespace StreamActions.Twitch.API.Channels
                 throw new ArgumentNullException(nameof(broadcasterId));
             }
 
-            Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, string> { { "broadcaster_id", broadcasterId } });
+            Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string>() { broadcasterId } } });
             HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<Channel>>().ConfigureAwait(false);
         }
@@ -106,7 +107,7 @@ namespace StreamActions.Twitch.API.Channels
         /// <param name="parameters">The <see cref="ModifyChannelParameters"/> with the request parameters.</param>
         /// <returns>A <see cref="TwitchResponse"/> with the response code.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-        /// <exception cref="InvalidOperationException"><paramref name="session"/> contains a scope list, and <c>channel:manage:broadcast</c> is not present.</exception>
+        /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:manage:broadcast</c> is not present.</exception>
         public static async Task<TwitchResponse?> ModifyChannelInformation(TwitchSession session, string broadcasterId, ModifyChannelParameters parameters)
         {
             if (session is null)
@@ -126,10 +127,10 @@ namespace StreamActions.Twitch.API.Channels
 
             if (!session.Token?.HasScope("channel:manage:broadcast") ?? false)
             {
-                throw new InvalidOperationException("Missing scope channel:manage:broadcast.");
+                throw new ScopeMissingException("channel:manage:broadcast");
             }
 
-            Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, string> { { "broadcaster_id", broadcasterId } });
+            Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string>() { broadcasterId } } });
             using JsonContent content = JsonContent.Create(parameters);
             HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<TwitchResponse>().ConfigureAwait(false);

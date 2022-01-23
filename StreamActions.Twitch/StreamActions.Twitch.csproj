@@ -54,7 +54,6 @@
     <Folder Include="API\Search\" />
     <Folder Include="API\Schedule\" />
     <Folder Include="API\Predictions\" />
-    <Folder Include="API\Polls\" />
   </ItemGroup>
 
 </Project>

@@ -15,6 +15,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.API.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -54,10 +55,10 @@ namespace StreamActions.Twitch.API.Channels
         /// Gets a list of users who have editor permissions for a specific channel.
         /// </summary>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-        /// <param name="broadcasterId">Broadcaster’s user ID associated with the channel.</param>
+        /// <param name="broadcasterId">Broadcaster's user ID associated with the channel.</param>
         /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelEditor"/> containing the response.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-        /// <exception cref="InvalidOperationException"><paramref name="session"/> contains a scope list, and <c>channel:read:editors</c> is not present.</exception>
+        /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:read:editors</c> is not present.</exception>
         public static async Task<ResponseData<ChannelEditor>?> GetChannelEditors(TwitchSession session, string broadcasterId)
         {
             if (session is null)
@@ -72,10 +73,10 @@ namespace StreamActions.Twitch.API.Channels
 
             if (!session.Token?.HasScope("channel:read:editors") ?? false)
             {
-                throw new InvalidOperationException("Missing scope channel:read:editors.");
+                throw new ScopeMissingException("channel:read:editors");
             }
 
-            Uri uri = Util.BuildUri(new("/channels/editors"), new Dictionary<string, string> { { "broadcaster_id", broadcasterId } });
+            Uri uri = Util.BuildUri(new("/channels/editors"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string>() { broadcasterId } } });
             HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<ChannelEditor>>().ConfigureAwait(false);
         }

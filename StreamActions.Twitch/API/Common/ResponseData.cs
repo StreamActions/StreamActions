@@ -24,7 +24,16 @@ namespace StreamActions.Twitch.API.Common
     /// <typeparam name="TDataType">The type representing the returned data.</typeparam>
     public record ResponseData<TDataType> : TwitchResponse
     {
+        /// <summary>
+        /// The data array.
+        /// </summary>
         [JsonPropertyName("data")]
         public IReadOnlyList<TDataType>? Data { get; init; }
+
+        /// <summary>
+        /// The pagination cursor information for multi-page responses.
+        /// </summary>
+        [JsonPropertyName("pagination")]
+        public Pagination? Pagination { get; init; }
     }
 }

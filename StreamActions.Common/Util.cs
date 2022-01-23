@@ -31,7 +31,7 @@ namespace StreamActions.Common
         /// <param name="fragmentParams">The fragment parameters.</param>
         /// <returns>A <see cref="Uri"/> with all query and fragment parameters escaped and appended.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="baseUri"/> is null.</exception>
-        public static Uri BuildUri(Uri baseUri, IEnumerable<KeyValuePair<string, string>>? queryParams = null, IEnumerable<KeyValuePair<string, string>>? fragmentParams = null)
+        public static Uri BuildUri(Uri baseUri, IEnumerable<KeyValuePair<string, IEnumerable<string>>>? queryParams = null, IEnumerable<KeyValuePair<string, IEnumerable<string>>>? fragmentParams = null)
         {
             if (baseUri is null)
             {
@@ -47,14 +47,17 @@ namespace StreamActions.Common
                     relativeUri += "?";
                 }
 
-                foreach (KeyValuePair<string, string> kvp in queryParams)
+                foreach (KeyValuePair<string, IEnumerable<string>> kvp in queryParams)
                 {
                     if (!relativeUri.EndsWith("?", StringComparison.InvariantCulture))
                     {
                         relativeUri += "&";
                     }
 
-                    relativeUri += Uri.EscapeDataString(kvp.Key) + "=" + Uri.EscapeDataString(kvp.Value);
+                    foreach (string value in kvp.Value)
+                    {
+                        relativeUri += Uri.EscapeDataString(kvp.Key) + "=" + Uri.EscapeDataString(value);
+                    }
                 }
             }
 
@@ -65,14 +68,17 @@ namespace StreamActions.Common
                     relativeUri += "#";
                 }
 
-                foreach (KeyValuePair<string, string> kvp in fragmentParams)
+                foreach (KeyValuePair<string, IEnumerable<string>> kvp in fragmentParams)
                 {
                     if (!relativeUri.EndsWith("#", StringComparison.InvariantCulture))
                     {
                         relativeUri += "&";
                     }
 
-                    relativeUri += Uri.EscapeDataString(kvp.Key) + "=" + Uri.EscapeDataString(kvp.Value);
+                    foreach (string value in kvp.Value)
+                    {
+                        relativeUri += Uri.EscapeDataString(kvp.Key) + "=" + Uri.EscapeDataString(value);
+                    }
                 }
             }
 
