@@ -40,7 +40,6 @@
     <Folder Include="API\Extensions\" />
     <Folder Include="API\EventSub\" />
     <Folder Include="API\Games\" />
-    <Folder Include="API\Goals\" />
     <Folder Include="API\HypeTrain\" />
     <Folder Include="API\Moderation\" />
     <Folder Include="API\Music\" />
