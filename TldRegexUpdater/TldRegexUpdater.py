@@ -33,17 +33,17 @@ replacements_marks = {}
 marks = ["!"]
 escapes = ["(", ")", ".", "\\", "[", "]"]
 
-def escape(chr):
+def escape(echr):
     global escapes
-    if chr in escapes:
-        return "\\" + chr
-    return chr
+    if echr in escapes:
+        return "\\" + echr
+    return echr
 
-def getMark(chr):
+def getMark(mchr):
     global replacements_marks
     retval = ""
-    if chr in replacements_marks:
-        for mark in replacements_marks[chr]:
+    if mchr in replacements_marks:
+        for mark in replacements_marks[mchr]:
             if mark == "!":
                 retval = retval + "\\s*"
     return retval
@@ -167,8 +167,8 @@ def compileRegexRecursive(tlds, issame, root):
                 tlen = len(tlds[tld]) - submarkcount
                 if len(regex) > 0:
                     regex = regex + "|"
-                newissame, ahead = lookAheadIsSame(tlds[tld], tld)
-                retval, patterns, tot_patterns, onlysingles = compileRegexRecursive(tlds[tld], newissame, False)
+                newissame = lookAheadIsSame(tlds[tld], tld)
+                retval, patterns, onlysingles = compileRegexRecursive(tlds[tld], newissame, False)
                 max_patterns = max(max_patterns, patterns)
                 if patterns > 1 or root:
                     regex = regex + "(?:"
@@ -209,7 +209,7 @@ def compileRegexRecursive(tlds, issame, root):
     if "_" in tlds and len(regex) > 0:
         regex = regex + "|"
         num_patterns = num_patterns + 1
-    return regex, max(max_patterns, num_patterns), num_patterns, len(singles) == len(tlds) - markcount
+    return regex, max(max_patterns, num_patterns), len(singles) == len(tlds) - markcount
 
 regex = "("
 
