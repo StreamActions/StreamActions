@@ -96,7 +96,7 @@ namespace StreamActions.Common
         /// </summary>
         /// <param name="iso8601">An ISO8601-formatter timestamp.</param>
         /// <returns>A <see cref="DateTime"/> on success; <c>null</c> on failure.</returns>
-        public static DateTime? ISO8601ToDateTime(string iso8601) => DateTime.TryParseExact(iso8601, "yyyyMMddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result1)
+        public static DateTime? Iso8601ToDateTime(string iso8601) => DateTime.TryParseExact(iso8601, "yyyyMMddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result1)
                 ? result1
                 : DateTime.TryParseExact(iso8601, "yyyyMMddTHHmmss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result2)
                     ? result2
