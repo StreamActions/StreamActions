@@ -16,11 +16,11 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
-using StreamActions.Twitch.API.Common;
+using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.Channels
+namespace StreamActions.Twitch.Api.Channels
 {
     /// <summary>
     /// Sends and represents a response element for a request for the channel editors list.
@@ -76,8 +76,8 @@ namespace StreamActions.Twitch.API.Channels
                 throw new ScopeMissingException("channel:read:editors");
             }
 
-            Uri uri = Util.BuildUri(new("/channels/editors"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string>() { broadcasterId } } });
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+            Uri uri = Util.BuildUri(new("/channels/editors"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<ChannelEditor>>().ConfigureAwait(false);
         }
     }

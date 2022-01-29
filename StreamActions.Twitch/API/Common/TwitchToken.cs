@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-namespace StreamActions.Twitch.API.Common
+namespace StreamActions.Twitch.Api.Common
 {
     public record TwitchToken
     {

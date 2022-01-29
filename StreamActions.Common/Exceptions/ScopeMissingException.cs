@@ -26,7 +26,7 @@ namespace StreamActions.Common.Exceptions
         /// <summary>
         /// Default Constructor.
         /// </summary>
-        public ScopeMissingException() : base()
+        public ScopeMissingException()
         {
         }
 

@@ -16,7 +16,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.Polls
+namespace StreamActions.Twitch.Api.Polls
 {
     /// <summary>
     /// Represents the parameters for <see cref="Poll.CreatePoll(Common.TwitchSession, PollCreationParameters)"/>.

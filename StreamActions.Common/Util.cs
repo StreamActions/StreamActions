@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+using System.Text;
+
 namespace StreamActions.Common
 {
     /// <summary>
@@ -38,51 +40,55 @@ namespace StreamActions.Common
                 throw new ArgumentNullException(nameof(baseUri));
             }
 
-            string relativeUri = "";
+            StringBuilder relativeUri = new();
 
             if (queryParams is not null && queryParams.Any())
             {
-                if (!relativeUri.Contains('?', StringComparison.InvariantCulture))
-                {
-                    relativeUri += "?";
-                }
+                _ = relativeUri.Append('?');
 
+                bool first = true;
                 foreach (KeyValuePair<string, IEnumerable<string>> kvp in queryParams)
                 {
-                    if (!relativeUri.EndsWith("?", StringComparison.InvariantCulture))
+                    if (!first)
                     {
-                        relativeUri += "&";
+                        _ = relativeUri.Append('&');
+                    }
+                    else
+                    {
+                        first = false;
                     }
 
                     foreach (string value in kvp.Value)
                     {
-                        relativeUri += Uri.EscapeDataString(kvp.Key) + "=" + Uri.EscapeDataString(value);
+                        _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
                     }
                 }
             }
 
             if (fragmentParams is not null && fragmentParams.Any())
             {
-                if (!relativeUri.Contains('#', StringComparison.InvariantCulture))
-                {
-                    relativeUri += "#";
-                }
+                _ = relativeUri.Append('#');
 
+                bool first = true;
                 foreach (KeyValuePair<string, IEnumerable<string>> kvp in fragmentParams)
                 {
-                    if (!relativeUri.EndsWith("#", StringComparison.InvariantCulture))
+                    if (!first)
                     {
-                        relativeUri += "&";
+                        _ = relativeUri.Append('&');
+                    }
+                    else
+                    {
+                        first = false;
                     }
 
                     foreach (string value in kvp.Value)
                     {
-                        relativeUri += Uri.EscapeDataString(kvp.Key) + "=" + Uri.EscapeDataString(value);
+                        _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
                     }
                 }
             }
 
-            return new Uri(baseUri, relativeUri);
+            return new Uri(baseUri, relativeUri.ToString());
         }
 
         /// <summary>
@@ -90,27 +96,15 @@ namespace StreamActions.Common
         /// </summary>
         /// <param name="iso8601">An ISO8601-formatter timestamp.</param>
         /// <returns>A <see cref="DateTime"/> on success; <c>null</c> on failure.</returns>
-        public static DateTime? ISO8601ToDateTime(string iso8601)
-        {
-            if (DateTime.TryParseExact(iso8601, "yyyyMMddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result1))
-            {
-                return result1;
-            }
-            else if (DateTime.TryParseExact(iso8601, "yyyyMMddTHHmmss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result2))
-            {
-                return result2;
-            }
-            else if (DateTime.TryParseExact(iso8601, "yyyy-MM-ddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result3))
-            {
-                return result3;
-            }
-            else if (DateTime.TryParseExact(iso8601, "yyyy-MM-ddTHHmmss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result4))
-            {
-                return result4;
-            }
-
-            return null;
-        }
+        public static DateTime? ISO8601ToDateTime(string iso8601) => DateTime.TryParseExact(iso8601, "yyyyMMddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result1)
+                ? result1
+                : DateTime.TryParseExact(iso8601, "yyyyMMddTHHmmss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result2)
+                    ? result2
+                    : DateTime.TryParseExact(iso8601, "yyyy-MM-ddTHH:mm:ss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result3)
+                                    ? result3
+                                    : DateTime.TryParseExact(iso8601, "yyyy-MM-ddTHHmmss.FFFZ", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime result4)
+                                                    ? result4
+                                                    : null;
 
         #endregion Public Methods
     }

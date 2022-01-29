@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-using StreamActions.Twitch.API.Common;
+using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.OAuth
+namespace StreamActions.Twitch.Api.OAuth
 {
     /// <summary>
     /// Record containing response data for the Validate endpoint.
@@ -76,7 +76,7 @@ namespace StreamActions.Twitch.API.OAuth
                 throw new ArgumentNullException(nameof(session));
             }
 
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<Validate>().ConfigureAwait(false);
         }
     }

@@ -16,7 +16,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.Common
+namespace StreamActions.Twitch.Api.Common
 {
     /// <summary>
     /// A Helix response with a data array.

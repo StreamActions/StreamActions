@@ -31,28 +31,28 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="API\Analytics\" />
-    <Folder Include="API\Bits\" />
-    <Folder Include="API\ChannelPoints\" />
-    <Folder Include="API\Chat\" />
-    <Folder Include="API\Clips\" />
-    <Folder Include="API\Entitlements\" />
-    <Folder Include="API\Extensions\" />
-    <Folder Include="API\EventSub\" />
-    <Folder Include="API\Games\" />
-    <Folder Include="API\HypeTrain\" />
-    <Folder Include="API\Moderation\" />
-    <Folder Include="API\Music\" />
-    <Folder Include="API\Ingest\" />
-    <Folder Include="API\Videos\" />
-    <Folder Include="API\Users\" />
-    <Folder Include="API\Teams\" />
-    <Folder Include="API\Tags\" />
-    <Folder Include="API\Subscriptions\" />
-    <Folder Include="API\Streams\" />
-    <Folder Include="API\Search\" />
-    <Folder Include="API\Schedule\" />
-    <Folder Include="API\Predictions\" />
+    <Folder Include="Api\Analytics\" />
+    <Folder Include="Api\Bits\" />
+    <Folder Include="Api\ChannelPoints\" />
+    <Folder Include="Api\Chat\" />
+    <Folder Include="Api\Clips\" />
+    <Folder Include="Api\Entitlements\" />
+    <Folder Include="Api\Extensions\" />
+    <Folder Include="Api\EventSub\" />
+    <Folder Include="Api\Games\" />
+    <Folder Include="Api\HypeTrain\" />
+    <Folder Include="Api\Moderation\" />
+    <Folder Include="Api\Music\" />
+    <Folder Include="Api\Ingest\" />
+    <Folder Include="Api\Videos\" />
+    <Folder Include="Api\Users\" />
+    <Folder Include="Api\Teams\" />
+    <Folder Include="Api\Tags\" />
+    <Folder Include="Api\Subscriptions\" />
+    <Folder Include="Api\Streams\" />
+    <Folder Include="Api\Search\" />
+    <Folder Include="Api\Schedule\" />
+    <Folder Include="Api\Predictions\" />
   </ItemGroup>
 
 </Project>

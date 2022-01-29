@@ -16,7 +16,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.Common
+namespace StreamActions.Twitch.Api.Common
 {
     /// <summary>
     /// The pagination object for multi-page API results.

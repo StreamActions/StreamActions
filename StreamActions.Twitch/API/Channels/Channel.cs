@@ -16,11 +16,11 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
-using StreamActions.Twitch.API.Common;
+using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.Channels
+namespace StreamActions.Twitch.Api.Channels
 {
     /// <summary>
     /// Sends and represents a response element for a request for channel information.
@@ -95,7 +95,7 @@ namespace StreamActions.Twitch.API.Channels
             }
 
             Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string>() { broadcasterId } } });
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<Channel>>().ConfigureAwait(false);
         }
 
@@ -130,9 +130,9 @@ namespace StreamActions.Twitch.API.Channels
                 throw new ScopeMissingException("channel:manage:broadcast");
             }
 
-            Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string>() { broadcasterId } } });
+            Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
             using JsonContent content = JsonContent.Create(parameters);
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<TwitchResponse>().ConfigureAwait(false);
         }
     }

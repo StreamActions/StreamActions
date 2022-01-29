@@ -16,7 +16,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.Channels
+namespace StreamActions.Twitch.Api.Channels
 {
     /// <summary>
     /// The parameters for <see cref="Channel.ModifyChannelInformation(Common.TwitchSession, ModifyChannelParameters)"/>.

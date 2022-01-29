@@ -71,6 +71,7 @@ namespace StreamActions.Common.Limiters
             }
             catch (TimeoutException)
             {
+                // Don't need to process exception
             }
 
             bool gotLt = false;
@@ -81,6 +82,7 @@ namespace StreamActions.Common.Limiters
             }
             catch (TimeoutException)
             {
+                // Don't need to process exception
             }
 
             if (gotGt != gotLt)
@@ -93,6 +95,7 @@ namespace StreamActions.Common.Limiters
                     }
                     catch (TimeoutException)
                     {
+                        // Don't need to process exception
                     }
                 }
 
@@ -104,6 +107,7 @@ namespace StreamActions.Common.Limiters
                     }
                     catch (TimeoutException)
                     {
+                        // Don't need to process exception
                     }
                 }
             }

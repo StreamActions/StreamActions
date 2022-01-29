@@ -15,11 +15,11 @@
  */
 
 using StreamActions.Common.Exceptions;
-using StreamActions.Twitch.API.Common;
+using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.Ads
+namespace StreamActions.Twitch.Api.Ads
 {
     /// <summary>
     /// Sends and represents a response element for a request to start a commercial.
@@ -70,7 +70,7 @@ namespace StreamActions.Twitch.API.Ads
             }
 
             using JsonContent content = JsonContent.Create(parameters);
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, new("/channels/commercial"), session, content).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/channels/commercial"), session, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<Commercial>>().ConfigureAwait(false);
         }
     }

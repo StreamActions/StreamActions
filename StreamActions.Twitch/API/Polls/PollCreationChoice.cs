@@ -16,7 +16,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.Polls
+namespace StreamActions.Twitch.Api.Polls
 {
     /// <summary>
     /// Represents a choice in <see cref="PollCreationParameters.Choices"/>.

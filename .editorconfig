@@ -72,7 +72,7 @@ csharp_style_expression_bodied_accessors = true:warning
 csharp_style_expression_bodied_constructors = true:warning
 csharp_style_expression_bodied_indexers = true:warning
 csharp_style_expression_bodied_lambdas = true:warning
-csharp_style_expression_bodied_local_functions = false:warning
+csharp_style_expression_bodied_local_functions =true:warning
 csharp_style_expression_bodied_methods = true:warning
 csharp_style_expression_bodied_operators = true:warning
 csharp_style_expression_bodied_properties = true:warning
@@ -248,13 +248,13 @@ dotnet_naming_style.camel_case_with__.capitalization = camel_case
 
 # IDE0047: Remove unnecessary parentheses
 dotnet_diagnostic.IDE0047.severity =suggestion
-csharp_style_namespace_declarations=block_scoped:silent
+csharp_style_namespace_declarations=block_scoped:warning
 csharp_style_prefer_null_check_over_type_check=true:suggestion
 csharp_style_implicit_object_creation_when_type_is_apparent=true:suggestion
 csharp_style_allow_embedded_statements_on_same_line_experimental=true:silent
 csharp_style_allow_blank_lines_between_consecutive_braces_experimental=true:silent
 csharp_style_allow_blank_line_after_colon_in_constructor_initializer_experimental=true:silent
-csharp_style_prefer_pattern_matching=true:silent
+csharp_style_prefer_pattern_matching=true:suggestion
 csharp_style_prefer_not_pattern=true:suggestion
 dotnet_diagnostic.IDE0051.severity=error
 dotnet_diagnostic.IDE0052.severity=error
@@ -330,9 +330,9 @@ dotnet_diagnostic.CA1000.severity = warning
 
 dotnet_diagnostic.CA1001.severity = warning
 
-dotnet_diagnostic.CA1003.severity = none
+dotnet_diagnostic.CA1003.severity =suggestion
 
-dotnet_diagnostic.CA1008.severity = none
+dotnet_diagnostic.CA1008.severity =suggestion
 
 dotnet_diagnostic.CA1010.severity = warning
 
@@ -360,7 +360,7 @@ dotnet_diagnostic.CA1031.severity =warning
 
 dotnet_diagnostic.CA1032.severity = warning
 
-dotnet_diagnostic.CA1033.severity = none
+dotnet_diagnostic.CA1033.severity =suggestion
 
 dotnet_diagnostic.CA1034.severity = warning
 
@@ -422,23 +422,23 @@ dotnet_diagnostic.CA1309.severity = none
 
 dotnet_diagnostic.CA1401.severity = warning
 
-dotnet_diagnostic.CA1501.severity = none
+dotnet_diagnostic.CA1501.severity =suggestion
 
-dotnet_diagnostic.CA1502.severity = none
+dotnet_diagnostic.CA1502.severity =suggestion
 
-dotnet_diagnostic.CA1505.severity = none
+dotnet_diagnostic.CA1505.severity =suggestion
 
-dotnet_diagnostic.CA1506.severity = none
+dotnet_diagnostic.CA1506.severity =suggestion
 
 dotnet_diagnostic.CA1507.severity = warning
 
-dotnet_diagnostic.CA1508.severity = none
+dotnet_diagnostic.CA1508.severity =suggestion
 
-dotnet_diagnostic.CA1509.severity = none
+dotnet_diagnostic.CA1509.severity =suggestion
 
 dotnet_diagnostic.CA1707.severity = warning
 
-dotnet_diagnostic.CA1708.severity = none
+dotnet_diagnostic.CA1708.severity =error
 
 dotnet_diagnostic.CA1710.severity = warning
 
@@ -472,7 +472,7 @@ dotnet_diagnostic.CA1810.severity = warning
 
 dotnet_diagnostic.CA1812.severity = warning
 
-dotnet_diagnostic.CA1813.severity = none
+dotnet_diagnostic.CA1813.severity =warning
 
 dotnet_diagnostic.CA1814.severity = warning
 
@@ -743,8 +743,8 @@ dotnet_style_operator_placement_when_wrapping=beginning_of_line
 dotnet_style_prefer_simplified_boolean_expressions=true:suggestion
 dotnet_style_prefer_simplified_interpolation=true:suggestion
 dotnet_style_namespace_match_folder=true:suggestion
-dotnet_style_allow_multiple_blank_lines_experimental=true:silent
-dotnet_style_allow_statement_immediately_after_block_experimental=true:silent
+dotnet_style_allow_multiple_blank_lines_experimental=true:suggestion
+dotnet_style_allow_statement_immediately_after_block_experimental=true:suggestion
 dotnet_diagnostic.CA1069.severity=error
 dotnet_diagnostic.CA1700.severity=error
 dotnet_diagnostic.CA1727.severity=warning
@@ -753,4 +753,11 @@ dotnet_diagnostic.IDE0044.severity=suggestion
 dotnet_diagnostic.IDE0070.severity=suggestion
 dotnet_diagnostic.IDE0033.severity=suggestion
 dotnet_diagnostic.CA2215.severity=warning
+dotnet_style_parentheses_in_relational_binary_operators=always_for_clarity:warning
+dotnet_style_parentheses_in_other_binary_operators=always_for_clarity:warning
+dotnet_style_parentheses_in_arithmetic_binary_operators=always_for_clarity:warning
+dotnet_diagnostic.CA1021.severity=warning
+dotnet_diagnostic.CA1848.severity=suggestion
+dotnet_style_prefer_auto_properties=true:warning
+dotnet_style_require_accessibility_modifiers=for_non_interface_members:warning
 

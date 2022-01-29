@@ -15,17 +15,17 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Twitch.API.Common;
-using StreamActions.Twitch.API.OAuth;
+using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.OAuth;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace StreamActions.Twitch.API
+namespace StreamActions.Twitch.Api
 {
     /// <summary>
     /// Handles validation of OAuth tokens and performs HTTP calls for the API.
     /// </summary>
-    public static class TwitchAPI
+    public static class TwitchApi
     {
         #region Public Events
 
@@ -68,7 +68,7 @@ namespace StreamActions.Twitch.API
             _ = _httpClient.DefaultRequestHeaders.Remove("User-Agent");
 
             _httpClient.DefaultRequestHeaders.Add("Client-Id", clientId);
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "StreamActions/TwitchAPI/" + typeof(TwitchAPI).Assembly.GetName()?.Version?.ToString() ?? "0.0.0.0");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "StreamActions/TwitchAPI/" + typeof(TwitchApi).Assembly.GetName()?.Version?.ToString() ?? "0.0.0.0");
             _httpClient.BaseAddress = new Uri(baseAddress);
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
         }
@@ -147,7 +147,7 @@ namespace StreamActions.Twitch.API
                     string rcontent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     if (!Regex.IsMatch(rcontent, @"\s*{.*}\s*"))
                     {
-                        response.Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse() { Status = (int)response.StatusCode, Message = rcontent }, new JsonSerializerOptions()));
+                        response.Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse { Status = (int)response.StatusCode, Message = rcontent }, new JsonSerializerOptions()));
                     }
                 }
 

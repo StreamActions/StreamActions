@@ -16,12 +16,12 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
-using StreamActions.Twitch.API.Common;
+using StreamActions.Twitch.Api.Common;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.API.Polls
+namespace StreamActions.Twitch.Api.Polls
 {
     /// <summary>
     /// Sends and represents a response element for a request for poll information.
@@ -176,8 +176,8 @@ namespace StreamActions.Twitch.API.Polls
 
             Dictionary<string, IEnumerable<string>> queryParams = new()
             {
-                { "broadcaster_id", new List<string>() { broadcasterId } },
-                { "first", new List<string>() { first.ToString(CultureInfo.InvariantCulture) } }
+                { "broadcaster_id", new List<string> { broadcasterId } },
+                { "first", new List<string> { first.ToString(CultureInfo.InvariantCulture) } }
             };
 
             if (id is not null && id.Any())
@@ -193,11 +193,11 @@ namespace StreamActions.Twitch.API.Polls
 
             if (after is not null)
             {
-                queryParams.Add("after", new List<string>() { after });
+                queryParams.Add("after", new List<string> { after });
             }
 
             Uri uri = Util.BuildUri(new("/polls"), queryParams);
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<Poll>>().ConfigureAwait(false);
         }
 
@@ -227,7 +227,7 @@ namespace StreamActions.Twitch.API.Polls
             }
 
             using JsonContent content = JsonContent.Create(parameters);
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Post, new("/polls"), session, content).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/polls"), session, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<Poll>>().ConfigureAwait(false);
         }
 
@@ -257,7 +257,7 @@ namespace StreamActions.Twitch.API.Polls
             }
 
             using JsonContent content = JsonContent.Create(parameters);
-            HttpResponseMessage response = await TwitchAPI.PerformHttpRequest(HttpMethod.Patch, new("/polls"), session, content).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/polls"), session, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<Poll>>().ConfigureAwait(false);
         }
     }

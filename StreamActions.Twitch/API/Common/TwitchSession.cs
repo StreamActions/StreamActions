@@ -16,7 +16,7 @@
 
 using StreamActions.Common.Limiters;
 
-namespace StreamActions.Twitch.API.Common
+namespace StreamActions.Twitch.Api.Common
 {
     /// <summary>
     /// Contains parameters for a Twitch API session.
@@ -35,7 +35,7 @@ namespace StreamActions.Twitch.API.Common
         public TwitchToken? Token
         {
             get => this._token;
-            internal set => this._token = value is null ? throw new ArgumentNullException(nameof(value)) : value;
+            internal set => this._token = value ?? throw new ArgumentNullException(nameof(value));
         }
 
         /// <summary>

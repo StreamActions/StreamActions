@@ -169,8 +169,13 @@ namespace StreamActions.Common.Limiters
                         HeaderResetType.Seconds => TimeSpan.FromSeconds(reset).Ticks,
                         HeaderResetType.Milliseconds => TimeSpan.FromMilliseconds(reset).Ticks,
                         HeaderResetType.Ticks => reset,
+                        HeaderResetType.ISO8601 => throw new InvalidOperationException(),
                         _ => throw new ArgumentOutOfRangeException(nameof(headerResetType)),
                     };
+                }
+                else
+                {
+                    // Allow initial value to pass, which will be a no-op
                 }
                 this.UpdateNextReset(nextReset);
             }
