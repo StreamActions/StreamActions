@@ -123,10 +123,7 @@ namespace StreamActions.Twitch.Api.OAuth
                 throw new ArgumentNullException(nameof(redirectUri));
             }
 
-            if (baseAddress is null)
-            {
-                baseAddress = _openIdConnectConfiguration.Value.TokenEndpoint;
-            }
+            baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
 
             using StringContent content = new("");
             Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, IEnumerable<string>> { { "grant_type", new List<string> { "authorization_code" } },
