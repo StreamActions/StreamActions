@@ -83,7 +83,6 @@ namespace StreamActions.Twitch.Api.OAuth
         /// <param name="session">The <see cref="TwitchSession"/> to refresh.</param>
         /// <param name="baseAddress">The uri to the Token endpoint. <c>null</c> for default.</param>
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
-        /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
         public static async Task<Token?> RefreshOAuth(TwitchSession session, string? baseAddress = null)
         {
@@ -109,7 +108,6 @@ namespace StreamActions.Twitch.Api.OAuth
         /// <param name="redirectUri">The redirect Uri that was used.</param>
         /// <param name="baseAddress">The uri to the Token endpoint. <c>null</c> for default.</param>
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
-        /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="code"/> is null or whitespace, or <paramref name="redirectUri"/> is null.</exception>
         public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null)
         {
@@ -139,7 +137,6 @@ namespace StreamActions.Twitch.Api.OAuth
         /// <param name="session">The <see cref="TwitchSession"/> to revoke.</param>
         /// <param name="baseAddress">The uri to the Revoke endpoint.</param>
         /// <returns>A <see cref="TwitchResponse"/> with the response code.</returns>
-        /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
         public static async Task<TwitchResponse?> RevokeOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/revoke")
         {

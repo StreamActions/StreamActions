@@ -66,7 +66,6 @@ namespace StreamActions.Twitch.Api.Ingest
         /// </summary>
         /// <param name="baseAddress">The uri to the Ingests endpoint.</param>
         /// <returns>A <see cref="IngestResponse"/> containing the response data.</returns>
-        /// <exception cref="JsonException">The response is not valid JSON.</exception>
         public static async Task<IngestResponse?> GetIngestServers(string baseAddress = "https://ingest.twitch.tv/ingests")
         {
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }).ConfigureAwait(false);

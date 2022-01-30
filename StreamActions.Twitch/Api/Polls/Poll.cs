@@ -185,13 +185,19 @@ namespace StreamActions.Twitch.Api.Polls
                 List<string> ids = new();
                 foreach (string pollId in id)
                 {
-                    ids.Add(pollId);
+                    if (!string.IsNullOrWhiteSpace(pollId))
+                    {
+                        ids.Add(pollId);
+                    }
                 }
 
-                queryParams.Add("id", ids);
+                if (ids.Any())
+                {
+                    queryParams.Add("id", ids);
+                }
             }
 
-            if (after is not null)
+            if (!string.IsNullOrWhiteSpace(after))
             {
                 queryParams.Add("after", new List<string> { after });
             }
