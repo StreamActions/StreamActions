@@ -1,6 +1,6 @@
 # Contributing to StreamActions
 
-:+1::tada: First off, thanks for taking the time to contribute! :tada::+1:
+:+1: :tada: First off, thanks for taking the time to contribute! :tada: :+1:
 
 The following is a set of guidelines and rules for contributing to StreamActions and its packages, which are hosted in the [StreamActions Organization](https://github.com/StreamActions) on GitHub. Use your best judgment, and feel free to propose changes to this document in a pull request.
 
@@ -129,7 +129,7 @@ The process described here has several goals:
 
 Please follow these steps to have your contribution considered by the maintainers:
 
-1. Follow all instructions in [the template](PULL_REQUEST_TEMPLATE.md)
+1. Follow all instructions in [the template](.github/PULL_REQUEST_TEMPLATE.md)
 2. Follow the [styleguides](#styleguides)
 3. After you submit your pull request, verify that all [status checks](https://help.github.com/articles/about-status-checks/) are passing <details><summary>What if the status checks are failing?</summary>If a status check is failing, and you believe that the failure is unrelated to your change, please leave a comment on the pull request explaining why you believe the failure is unrelated. A maintainer will re-run the status check for you. If we conclude that the failure was a false positive, then we will open an issue to track that problem with our status check suite.</details>
 
@@ -214,6 +214,7 @@ All C# must adhere to [Microsoft .NET Framework Design Guidelines](https://docs.
 * Use the _Attribute (in source)_ method for suppression unless there is a really good reason to globally suppress the issue
 * All suppressions must have valid justification provided in the _Justification_ parameter of the attribute
 * Generally speaking, anything suggested by IntelliSense in Visual Studio should be done, unless there is a very good reason to ignore it
+* Generally speaking, anything suggested by Codacy in your PR should be done, unless there is a very good reason to ignore it
 
 #### Spacing, Indenting, New Lines
 * No trailing whitespace
@@ -237,18 +238,20 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 * Private or internal fields must use camelCase with a `_` prefix
 
 #### XML Documentation
+* XML Documentation is required on all types and members, regardless of access modifiers
 * Prefer using `<see>` and `<paramref>` tags when referencing types or params from a non-Microsoft type or member
 * Always include a `<exception>` tag if the member throws exceptions
 * Prefer wrapping type keywords, such as _true_, _false_, and _null_ in `<c>` inline code tags
-* End all XMLDoc tags with a period
+* End all XMLDoc tag text with a period (So it looks like a complete sentence)
 * Allowing tags to be inherited is okay
 * Describing a constructor as just `Constructor` is okay, unless it is doing something complex that should be noted
  
-### MongoDB Styleguide
-* Collection names should be the plural name of the document in camelCase, with the word _Document_ removed (eg. The collection for _PermissionGroupDocument_ is named _permissionGroups_)
-* Index names should be in the format of _DocumentName\_indexType\_Field1-Field2-etc_ (eg. _PermissionGroupDocument\_unique\_ChannelId-GroupName_)
-* If the document can only exist once for a given user or channel, make the _id_ field _string UserId_, otherwise, make the _id_ field _Guid Id_ and then have a separate _string UserId_ field with a unique index on it
-    * Exact naming of the _string UserId_ field can be chosen based on context, such as _ChannelId_ for a channel context or _FollowerId_ for a follower context
+### PostgresDB Styleguide
+* Table names should be the plural name of the document in camelCase, with the word _Document_ removed (eg. The table for _PermissionGroupDocument_ is named _permissionGroups_)
+* Index names should be in the format of _tableName\_indexType\_Field1-Field2-etc_ (eg. _permissionGroups\_unique\_ChannelId-GroupName_)
+    * Foreign keys must use _ON UPDATE CASCADE ON DELETE CASCADE_ to prevent orphaned rows
+* All documents must have a unique auto-id for each row. If the document references a specific user/channel, add that as a foreign key to the _users_ table
+    * Exact naming of the _UserId_ field can be chosen based on context, such as _ChannelId_ for a channel context or _FollowerId_ for a follower context
 * Only create indexes across fields that will regularly be used in the _WHERE_, _SORT_, or _GROUP BY_ clauses
 
 ### Chat Styleguide
@@ -301,6 +304,7 @@ To make following the C# styleguide and producing good code easier, we recommend
  The following extensions are also recommended to improve productivity or user experience with Visual Studio:
  * File Icons - Adds more file-type icons to _Solution Explorer_
  * Git Diff Margin - Shows colors in the left margin denoting adds, changes, and removes that are not committed
+ * Markdown Editor v2 - Provides IntelliSense and live preview of Markdown files, including support for GitHub Flavored Markdown (GFM)
  * Multiline Search and Replace - Assists with performing Search/Replace operations containing multiline text
  * Output enhancer - Color-codes the _Output_ window
  * Time Stamp Margin 2022 - Adds timestamps to the margin of the _Output_ window

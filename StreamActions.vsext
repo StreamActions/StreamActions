@@ -25,6 +25,10 @@
       "vsixId": "IndentGuide2022.SteveDower.0a67eb97-becd-451f-aa29-851d9fe5dd2b"
     },
     {
+      "name": "Markdown Editor v2",
+      "vsixId": "MarkdownEditor2022.2347dc70-1875-4775-bf48-f2b9fdfee8d4"
+    },
+    {
       "name": "Multiline Search and Replace",
       "vsixId": "MultiLine.Search.459A0968-D0E0-4a63-83EB-7B6394DD674C"
     },
