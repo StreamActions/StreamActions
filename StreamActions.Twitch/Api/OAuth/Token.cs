@@ -81,7 +81,7 @@ namespace StreamActions.Twitch.Api.OAuth
         /// Attempts to refresh the OAuth token assigned to the specified <see cref="TwitchSession"/>.
         /// </summary>
         /// <param name="session">The <see cref="TwitchSession"/> to refresh.</param>
-        /// <param name="baseAddress">The uri to the Token endpoint.</param>
+        /// <param name="baseAddress">The uri to the Token endpoint. <c>null</c> for default.</param>
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
         /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
@@ -107,7 +107,7 @@ namespace StreamActions.Twitch.Api.OAuth
         /// </summary>
         /// <param name="code">The authorization code.</param>
         /// <param name="redirectUri">The redirect Uri that was used.</param>
-        /// <param name="baseAddress">The uri to the Token endpoint.</param>
+        /// <param name="baseAddress">The uri to the Token endpoint. <c>null</c> for default.</param>
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
         /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="code"/> is null or whitespace, or <paramref name="redirectUri"/> is null.</exception>

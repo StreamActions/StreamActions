@@ -120,7 +120,7 @@ namespace StreamActions.Twitch.Api.OAuth
         /// The UserInfo endpoint allows you to fetch claims originally provided in the authorization request outside of the ID token.
         /// </summary>
         /// <param name="session">The <see cref="TwitchSession"/> to get user info for.</param>
-        /// <param name="baseAddress">The uri to the UserInfo endpoint.</param>
+        /// <param name="baseAddress">The uri to the UserInfo endpoint. <c>null</c> for default.</param>
         /// <returns>A <see cref="UserInfo"/> with the response data.</returns>
         /// <exception cref="JsonException">The response is not valid JSON.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
