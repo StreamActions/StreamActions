@@ -49,7 +49,7 @@ namespace StreamActions.Twitch.Api.Channels
         /// Date and time the editor was given editor permissions.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public DateTime? CreatedAt => Util.ISO8601ToDateTime(this.CreatedAtString ?? "");
+        public DateTime? CreatedAt => Util.Iso8601ToDateTime(this.CreatedAtString ?? "");
 
         /// <summary>
         /// Gets a list of users who have editor permissions for a specific channel.

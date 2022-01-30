@@ -102,7 +102,7 @@ namespace StreamActions.Twitch.Api.Goals
         /// The UTC timestamp in RFC 3339 format, which indicates when the broadcaster created the goal.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public DateTime? CreatedAt => Util.ISO8601ToDateTime(this.CreatedAtString ?? "");
+        public DateTime? CreatedAt => Util.Iso8601ToDateTime(this.CreatedAtString ?? "");
 
         /// <summary>
         /// Gets the broadcaster’s list of active goals. Use this to get the current progress of each goal.

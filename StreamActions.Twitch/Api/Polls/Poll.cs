@@ -119,7 +119,7 @@ namespace StreamActions.Twitch.Api.Polls
         /// UTC timestamp for the poll's start time.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public DateTime? StartedAt => Util.ISO8601ToDateTime(this.StartedAtString ?? "");
+        public DateTime? StartedAt => Util.Iso8601ToDateTime(this.StartedAtString ?? "");
 
         /// <summary>
         /// UTC timestamp for the poll's end time as a string. Set to <c>null</c> if the poll is active.
@@ -131,7 +131,7 @@ namespace StreamActions.Twitch.Api.Polls
         /// UTC timestamp for the poll's end time. Set to <c>null</c> if the poll is active.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public DateTime? EndedAt => Util.ISO8601ToDateTime(this.EndedAtString ?? "");
+        public DateTime? EndedAt => Util.Iso8601ToDateTime(this.EndedAtString ?? "");
 
         /// <summary>
         /// Get information about all polls or specific polls for a Twitch channel. Poll information is available for 90 days.
