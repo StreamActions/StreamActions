@@ -31,7 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Api\Analytics\" />
     <Folder Include="Api\Bits\" />
     <Folder Include="Api\ChannelPoints\" />
     <Folder Include="Api\Chat\" />
