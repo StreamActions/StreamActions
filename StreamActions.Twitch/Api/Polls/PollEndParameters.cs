@@ -50,7 +50,7 @@ namespace StreamActions.Twitch.Api.Polls
 
             if (status is not "TERMINATED" and not "ARCHIVED")
             {
-                throw new ArgumentOutOfRangeException(nameof(status));
+                throw new ArgumentOutOfRangeException(nameof(status), status, "Valid values: TERMINATED or ARCHIVED");
             }
 
             this.BroadcasterId = broadcasterId;

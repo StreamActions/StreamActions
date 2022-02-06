@@ -38,7 +38,7 @@ namespace StreamActions.Twitch.Api.Polls
 
             if (title.Length > 25)
             {
-                throw new ArgumentOutOfRangeException(nameof(title));
+                throw new ArgumentOutOfRangeException(nameof(title), title.Length, "Must be 25 characters or less");
             }
 
             this.Title = title;

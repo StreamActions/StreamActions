@@ -51,7 +51,7 @@ namespace StreamActions.Twitch.Api.Polls
 
             if (title.Length > 60)
             {
-                throw new ArgumentOutOfRangeException(nameof(title));
+                throw new ArgumentOutOfRangeException(nameof(title), title.Length, "Must be 60 characters or less");
             }
 
             if (choices is null)
@@ -61,7 +61,7 @@ namespace StreamActions.Twitch.Api.Polls
 
             if (choices.Count is < 2 or > 5)
             {
-                throw new ArgumentOutOfRangeException(nameof(choices));
+                throw new ArgumentOutOfRangeException(nameof(choices), choices.Count, "Must provide 2-5 choices.");
             }
 
             duration = Math.Clamp(duration, 15, 1800);

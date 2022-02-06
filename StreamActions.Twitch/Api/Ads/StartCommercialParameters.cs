@@ -39,7 +39,7 @@ namespace StreamActions.Twitch.Api.Ads
 
             if (length is not 30 and not 60 and not 90 and not 120 and not 150 and not 180)
             {
-                throw new ArgumentOutOfRangeException(nameof(length));
+                throw new ArgumentOutOfRangeException(nameof(length), length, "Valid options are 30, 60, 90, 120, 150, 180");
             }
 
             this.BroadcasterId = broadcasterId;
