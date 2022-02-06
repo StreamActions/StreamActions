@@ -16,30 +16,23 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Common
+namespace StreamActions.Twitch.Api.Bits
 {
     /// <summary>
-    /// A Helix response with a data array.
+    /// Represents an image set in <see cref="CheermoteImageThemes"/>.
     /// </summary>
-    /// <typeparam name="TDataType">The type representing the returned data.</typeparam>
-    public record ResponseData<TDataType> : TwitchResponse
+    public record CheermoteImageSet
     {
         /// <summary>
-        /// The data array.
+        /// The <see cref="CheermoteImageUris"/> for the animated version of the cheermote.
         /// </summary>
-        [JsonPropertyName("data")]
-        public IReadOnlyList<TDataType>? Data { get; init; }
+        [JsonPropertyName("animated")]
+        public CheermoteImageSet? Animated { get; init; }
 
         /// <summary>
-        /// The pagination cursor information for multi-page responses.
+        /// The <see cref="CheermoteImageUris"/> for the static version of the cheermote.
         /// </summary>
-        [JsonPropertyName("pagination")]
-        public Pagination? Pagination { get; init; }
-
-        /// <summary>
-        /// The total number of results returned.
-        /// </summary>
-        [JsonPropertyName("total")]
-        public int? Total { get; init; }
+        [JsonPropertyName("static")]
+        public CheermoteImageSet? Static { get; init; }
     }
 }

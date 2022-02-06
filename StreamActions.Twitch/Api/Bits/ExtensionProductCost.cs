@@ -16,30 +16,23 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Common
+namespace StreamActions.Twitch.Api.Bits
 {
     /// <summary>
-    /// A Helix response with a data array.
+    /// Represents the cost to acquire the product in a <see cref="ExtensionProductData"/>.
     /// </summary>
-    /// <typeparam name="TDataType">The type representing the returned data.</typeparam>
-    public record ResponseData<TDataType> : TwitchResponse
+    public record ExtensionProductCost
     {
         /// <summary>
-        /// The data array.
+        /// Number of Bits required to acquire the product.
         /// </summary>
-        [JsonPropertyName("data")]
-        public IReadOnlyList<TDataType>? Data { get; init; }
+        [JsonPropertyName("amount")]
+        public int? Amount { get; init; }
 
         /// <summary>
-        /// The pagination cursor information for multi-page responses.
+        /// Identifies the contribution method. Currently only <c>bits</c>.
         /// </summary>
-        [JsonPropertyName("pagination")]
-        public Pagination? Pagination { get; init; }
-
-        /// <summary>
-        /// The total number of results returned.
-        /// </summary>
-        [JsonPropertyName("total")]
-        public int? Total { get; init; }
+        [JsonPropertyName("type")]
+        public string? Type { get; init; }
     }
 }

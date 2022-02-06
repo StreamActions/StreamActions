@@ -62,8 +62,8 @@ namespace StreamActions.Twitch.Api.Analytics
         /// <summary>
         /// Gets a URL that game developers can use to download analytics reports (CSV files) for their games. The URL is valid for 5 minutes.
         /// </summary>
-        /// <param name="session">>The <see cref="TwitchSession"/> to authorize the request.</param>
-        /// <param name="gameId"> 	Game ID. If this is specified, the returned URL points to an analytics report for just the specified game. If this is not specified, the response includes multiple URLs (paginated), pointing to separate analytics reports for each of the authenticated user's games.</param>
+        /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+        /// <param name="gameId">Game ID. If this is specified, the returned URL points to an analytics report for just the specified game. If this is not specified, the response includes multiple URLs (paginated), pointing to separate analytics reports for each of the authenticated user's games.</param>
         /// <param name="after">Cursor for forward pagination: tells the server where to start fetching the next set of results, in a multi-page response. This applies only to queries without <paramref name="gameId"/>.</param>
         /// <param name="first">Maximum number of objects to return. Maximum: 100. Default: 20.</param>
         /// <param name="startedAt">Starting date/time for returned reports. This must be on or after January 31, 2018.</param>

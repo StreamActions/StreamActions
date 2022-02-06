@@ -62,7 +62,7 @@ namespace StreamActions.Twitch.Api.Analytics
         /// <summary>
         /// Gets a URL that Extension developers can use to download analytics reports (CSV files) for their Extensions. The URL is valid for 5 minutes.
         /// </summary>
-        /// <param name="session">>The <see cref="TwitchSession"/> to authorize the request.</param>
+        /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
         /// <param name="extensionId">Client ID value assigned to the extension when it is created. If this is specified, the returned URL points to an analytics report for just the specified extension. If this is not specified, the response includes multiple URLs (paginated), pointing to separate analytics reports for each of the authenticated user's Extensions.</param>
         /// <param name="after">Cursor for forward pagination: tells the server where to start fetching the next set of results, in a multi-page response. This applies only to queries without <paramref name="extensionId"/>.</param>
         /// <param name="first">Maximum number of objects to return. Maximum: 100. Default: 20.</param>
