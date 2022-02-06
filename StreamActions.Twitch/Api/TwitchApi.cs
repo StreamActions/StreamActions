@@ -129,7 +129,7 @@ namespace StreamActions.Twitch.Api
 
                 HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
 
-                if (!retry && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token.OAuth != "__NEW")
+                if (!retry && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token.OAuth != "__NEW" && !string.IsNullOrWhiteSpace(session.Token.Refresh))
                 {
                     Token? refresh = await Token.RefreshOAuth(session).ConfigureAwait(false);
 

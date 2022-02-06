@@ -84,11 +84,17 @@ namespace StreamActions.Twitch.Api.OAuth
         /// <param name="baseAddress">The uri to the Token endpoint. <c>null</c> for default.</param>
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+        /// <exception cref="InvalidOperationException"><paramref name="session"/> does not have a valid refresh token.</exception>
         public static async Task<Token?> RefreshOAuth(TwitchSession session, string? baseAddress = null)
         {
             if (session is null)
             {
                 throw new ArgumentNullException(nameof(session));
+            }
+
+            if (string.IsNullOrWhiteSpace(session.Token?.Refresh))
+            {
+                throw new InvalidOperationException(nameof(TwitchToken.Refresh) + " is not a valid refresh token");
             }
 
             baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
