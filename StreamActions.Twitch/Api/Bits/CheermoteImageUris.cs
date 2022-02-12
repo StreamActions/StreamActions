@@ -24,68 +24,33 @@ namespace StreamActions.Twitch.Api.Bits
     public record CheermoteImageUris
     {
         /// <summary>
-        /// The uri to the 1x size image as a string.
+        /// The uri to the 1x size image.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "API Definition")]
         [JsonPropertyName("1")]
-        public string? Uri1xString { get; init; }
+        public Uri? Uri1x { get; init; }
 
         /// <summary>
-        /// <see cref="Uri1xString"/> as a <see cref="Uri"/>.
+        /// The uri to the 1.5x size image.
         /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public Uri? Uri1x => this.Uri1xString is not null ? new(this.Uri1xString) : null;
-
-        /// <summary>
-        /// The uri to the 1.5x size image as a string.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "API Definition")]
         [JsonPropertyName("1.5")]
-        public string? Uri1p5xString { get; init; }
+        public Uri? Uri1p5x { get; init; }
 
         /// <summary>
-        /// <see cref="Uri1p5xString"/> as a <see cref="Uri"/>.
+        /// The uri to the 2x size image.
         /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public Uri? Uri1p5x => this.Uri1p5xString is not null ? new(this.Uri1p5xString) : null;
-
-        /// <summary>
-        /// The uri to the 2x size image as a string.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "API Definition")]
         [JsonPropertyName("2")]
-        public string? Uri2xString { get; init; }
+        public Uri? Uri2x { get; init; }
 
         /// <summary>
-        /// <see cref="Uri2xString"/> as a <see cref="Uri"/>.
+        /// The uri to the 3x size image.
         /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public Uri? Uri2x => this.Uri2xString is not null ? new(this.Uri2xString) : null;
-
-        /// <summary>
-        /// The uri to the 3x size image as a string.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "API Definition")]
         [JsonPropertyName("3")]
-        public string? Uri3xString { get; init; }
+        public Uri? Uri3x { get; init; }
 
         /// <summary>
-        /// <see cref="Uri3xString"/> as a <see cref="Uri"/>.
+        /// The uri to the 4x size image.
         /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public Uri? Uri3x => this.Uri3xString is not null ? new(this.Uri3xString) : null;
-
-        /// <summary>
-        /// The uri to the 4x size image as a string.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "API Definition")]
         [JsonPropertyName("4")]
-        public string? Uri4xString { get; init; }
-
-        /// <summary>
-        /// <see cref="Uri4xString"/> as a <see cref="Uri"/>.
-        /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public Uri? Uri4x => this.Uri4xString is not null ? new(this.Uri4xString) : null;
+        public Uri? Uri4x { get; init; }
     }
 }

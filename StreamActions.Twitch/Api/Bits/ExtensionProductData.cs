@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-using StreamActions.Common;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Bits
@@ -55,16 +54,10 @@ namespace StreamActions.Twitch.Api.Bits
         public string? DisplayName { get; init; }
 
         /// <summary>
-        /// The expiration timestamp for the product as a string. Currently always empty since only unexpired products can be purchased.
+        /// The expiration timestamp for the product. Currently always empty since only unexpired products can be purchased.
         /// </summary>
         [JsonPropertyName("expiration")]
-        public string? ExpirationString { get; init; }
-
-        /// <summary>
-        /// <see cref="ExpirationString"/> as a <see cref="DateTime"/>. For future use in case products which can expire become available.
-        /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public DateTime? Expiration => this.ExpirationString is not null ? Util.Iso8601ToDateTime(this.ExpirationString) : null;
+        public DateTime? Expiration { get; init; }
 
         /// <summary>
         /// Indicates whether or not the data was sent over the Extension PubSub to all instances of the Extension.

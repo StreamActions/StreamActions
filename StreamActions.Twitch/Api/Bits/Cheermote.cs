@@ -51,16 +51,10 @@ namespace StreamActions.Twitch.Api.Bits
         public int? Order { get; init; }
 
         /// <summary>
-        /// The date when this Cheermote was last updated as a string.
+        /// The date when this Cheermote was last updated.
         /// </summary>
         [JsonPropertyName("last_updated")]
-        public string? LastUpdatedString { get; init; }
-
-        /// <summary>
-        /// <see cref="LastUpdatedString"/> as a <see cref="DateTime"/>.
-        /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public DateTime? LastUpdated => this.LastUpdatedString is not null ? Util.Iso8601ToDateTime(this.LastUpdatedString) : null;
+        public DateTime? LastUpdated { get; init; }
 
         /// <summary>
         /// Indicates whether or not this emote provides a charity contribution match during charity campaigns.

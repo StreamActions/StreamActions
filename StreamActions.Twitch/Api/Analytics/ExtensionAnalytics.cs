@@ -37,15 +37,8 @@ namespace StreamActions.Twitch.Api.Analytics
         /// <summary>
         /// URL to the downloadable CSV file containing analytics data. Valid for 5 minutes.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "API Definition")]
         [JsonPropertyName("URL")]
-        public string? UrlString { get; init; }
-
-        /// <summary>
-        /// <see cref="UrlString"/> as a <see cref="Uri"/>.
-        /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public Uri? Url => this.UrlString is not null ? new(this.UrlString) : null;
+        public Uri? Url { get; init; }
 
         /// <summary>
         /// Type of report.

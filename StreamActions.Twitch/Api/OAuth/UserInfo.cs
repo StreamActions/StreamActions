@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-using StreamActions.Common;
 using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -108,13 +107,7 @@ namespace StreamActions.Twitch.Api.OAuth
         /// Date of the last update to the authorizing user's profile. Only present if the claim was requested for UserInfo.
         /// </summary>
         [JsonPropertyName("updated_at")]
-        public string? UpdatedAtString { get; init; }
-
-        /// <summary>
-        /// <see cref="UpdatedAtString"/> as a <see cref="DateTime"/>. Only present if the claim was requested for UserInfo.
-        /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public DateTime? UpdatedAt => Util.Iso8601ToDateTime(this.UpdatedAtString ?? "");
+        public DateTime? UpdatedAt { get; init; }
 
         /// <summary>
         /// The UserInfo endpoint allows you to fetch claims originally provided in the authorization request outside of the ID token.

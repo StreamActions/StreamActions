@@ -34,16 +34,10 @@ namespace StreamActions.Twitch.Api.Bits
         public string? Id { get; init; }
 
         /// <summary>
-        /// UTC timestamp when this transaction occurred as a string.
+        /// UTC timestamp when this transaction occurred.
         /// </summary>
         [JsonPropertyName("timestamp")]
-        public string? TimestampString { get; init; }
-
-        /// <summary>
-        /// <see cref="TimestampString"/> as a <see cref="DateTime"/>.
-        /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public DateTime? Timestamp => this.TimestampString is not null ? Util.Iso8601ToDateTime(this.TimestampString) : null;
+        public DateTime? Timestamp { get; init; }
 
         /// <summary>
         /// Twitch user ID of the channel the transaction occurred on.

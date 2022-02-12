@@ -40,16 +40,10 @@ namespace StreamActions.Twitch.Api.Channels
         public string? UserName { get; init; }
 
         /// <summary>
-        /// Date and time the editor was given editor permissions as a string.
-        /// </summary>
-        [JsonPropertyName("created_at")]
-        public string? CreatedAtString { get; init; }
-
-        /// <summary>
         /// Date and time the editor was given editor permissions.
         /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-        public DateTime? CreatedAt => Util.Iso8601ToDateTime(this.CreatedAtString ?? "");
+        [JsonPropertyName("created_at")]
+        public DateTime? CreatedAt { get; init; }
 
         /// <summary>
         /// Gets a list of users who have editor permissions for a specific channel.
