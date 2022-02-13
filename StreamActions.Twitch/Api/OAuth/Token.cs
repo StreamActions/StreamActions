@@ -104,7 +104,7 @@ namespace StreamActions.Twitch.Api.OAuth
                 { "refresh_token", new List<string> { session.Token?.Refresh ?? "" } }, { "client_id", new List<string> { TwitchApi.ClientId ?? "" } },
                 { "client_secret", new List<string> { TwitchApi.ClientSecret ?? "" } } });
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<Token>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -134,7 +134,7 @@ namespace StreamActions.Twitch.Api.OAuth
                 { "code", new List<string> { code } }, { "client_id", new List<string> { TwitchApi.ClientId ?? "" } },
                 { "client_secret", new List<string> { TwitchApi.ClientSecret ?? "" } }, { "redirect_uri", new List<string> { redirectUri.ToString() } } });
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }, content).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<Token>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -155,7 +155,7 @@ namespace StreamActions.Twitch.Api.OAuth
             Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, IEnumerable<string>> { { "client_id", new List<string> { TwitchApi.ClientId ?? "" } },
                 { "token", new List<string> { session.Token?.OAuth ?? "" } } });
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<TwitchResponse>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<TwitchResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
 
         /// <summary>

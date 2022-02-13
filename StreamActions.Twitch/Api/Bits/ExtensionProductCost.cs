@@ -30,9 +30,20 @@ namespace StreamActions.Twitch.Api.Bits
         public int? Amount { get; init; }
 
         /// <summary>
-        /// Identifies the contribution method. Currently only <c>bits</c>.
+        /// Identifies the contribution method.
         /// </summary>
         [JsonPropertyName("type")]
-        public string? Type { get; init; }
+        public ExtensionProductCostType? Type { get; init; }
+
+        /// <summary>
+        /// The types of contributions that can be used in a product purchase.
+        /// </summary>
+        public enum ExtensionProductCostType
+        {
+            /// <summary>
+            /// Purchase via bits.
+            /// </summary>
+            Bits
+        }
     }
 }

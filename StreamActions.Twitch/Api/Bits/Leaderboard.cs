@@ -59,33 +59,57 @@ namespace StreamActions.Twitch.Api.Bits
         public string? UserName { get; init; }
 
         /// <summary>
+        /// Time period over which data is aggregated (PST time zone).
+        /// </summary>
+        public enum LeaderboardPeriod
+        {
+            /// <summary>
+            /// The lifetime of the broadcaster's channel.
+            /// </summary>
+            All,
+            /// <summary>
+            /// 00:00:00 on the day specified in <paramref name="startedAt"/>, through 00:00:00 on the following day.
+            /// </summary>
+            Day,
+            /// <summary>
+            /// 00:00:00 on Monday of the week specified in <paramref name="startedAt"/>, through 00:00:00 on the following Monday.
+            /// </summary>
+            Week,
+            /// <summary>
+            /// 00:00:00 on the first day of the month specified in <paramref name="startedAt"/>, through 00:00:00 on the first day of the following month.
+            /// </summary>
+            Month,
+            /// <summary>
+            /// 00:00:00 on the first day of the year specified in <paramref name="startedAt"/>, through 00:00:00 on the first day of the following year.
+            /// </summary>
+            Year
+        }
+
+        /// <summary>
         /// Gets a ranked list of Bits leaderboard information for an authorized broadcaster.
         /// </summary>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
         /// <param name="count">Number of results to be returned. Maximum: 100. Default: 10.</param>
-        /// <param name="period">Time period over which data is aggregated (PST time zone). This parameter interacts with <paramref name="startedAt"/>. Default: <c>all</c>.</param>
-        /// <param name="startedAt">Timestamp for the period over which the returned data is aggregated. Must be in RFC 3339 format. If this is not provided, data is aggregated over the current period; e.g., the current day/week/month/year. Can not be used with a <paramref name="period"/> of <c>all</c>.</param>
+        /// <param name="period">Time period over which data is aggregated (PST time zone). This parameter interacts with <paramref name="startedAt"/>.</param>
+        /// <param name="startedAt">Timestamp for the period over which the returned data is aggregated. Must be in RFC 3339 format. If this is not provided, data is aggregated over the current period; e.g., the current day/week/month/year. Can not be used with a <paramref name="period"/> of <see cref="LeaderboardPeriod.All"/>.</param>
         /// <param name="userId">ID of the user whose results are returned; i.e., the person who paid for the Bits.</param>
         /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Leaderboard"/> containing the response.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
         /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>bits:read</c> is not present.</exception>
-        /// <exception cref="InvalidOperationException">Specified <paramref name="startedAt"/> while the value of <paramref name="period"/> was <c>all</c>.</exception>
+        /// <exception cref="InvalidOperationException">Specified <paramref name="startedAt"/> while the value of <paramref name="period"/> was <see cref="LeaderboardPeriod.All"/>.</exception>
         /// <remarks>
-        /// Valid values for <paramref name="period"/>:
-        /// <c>day</c> – 00:00:00 on the day specified in <paramref name="startedAt"/>, through 00:00:00 on the following day.
-        /// <c>week</c> – 00:00:00 on Monday of the week specified in <paramref name="startedAt"/>, through 00:00:00 on the following Monday.
-        /// <c>month</c> – 00:00:00 on the first day of the month specified in <paramref name="startedAt"/>, through 00:00:00 on the first day of the following month.
-        /// <c>year</c> – 00:00:00 on the first day of the year specified in <paramref name="startedAt"/>, through 00:00:00 on the first day of the following year.
-        /// <c>all</c> – The lifetime of the broadcaster's channel.
-        ///
+        /// <para>
         /// Note for <paramref name="startedAt"/>:
-        /// Currently, the HH:MM:SS part of this value is used only to identify a given day in PST and otherwise ignored. For example, if the <paramref name="startedAt"/> value resolves to 5PM PST yesterday and <paramref name="period"/> is <c>day</c>, data is returned for all of yesterday.
-        ///
+        /// Currently, the HH:MM:SS part of this value is used only to identify a given day in PST and otherwise ignored. For example, if the <paramref name="startedAt"/> value resolves to 5PM PST yesterday and <paramref name="period"/> is <see cref="LeaderboardPeriod.Day"/>, data is returned for all of yesterday.
+        /// </para>
+        /// <para>
         /// Note for <paramref name="userId"/>:
         /// As long as <paramref name="count"/> is greater than 1, the returned data includes additional users, with Bits amounts above and below the user specified by <paramref name="userId"/>.
         /// If <paramref name="userId"/> is not provided, the endpoint returns the Bits leaderboard data across top users (subject to the value of <paramref name="count"/>).
+        /// </para>
         /// </remarks>
-        public static async Task<ResponseData<Leaderboard>?> GetBitsLeaderboard(TwitchSession session, int count = 10, string period = "all", DateTime? startedAt = null, string? userId = null)
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
+        public static async Task<ResponseData<Leaderboard>?> GetBitsLeaderboard(TwitchSession session, int count = 10, LeaderboardPeriod period = LeaderboardPeriod.All, DateTime? startedAt = null, string? userId = null)
         {
             if (session is null)
             {
@@ -102,7 +126,7 @@ namespace StreamActions.Twitch.Api.Bits
             Dictionary<string, IEnumerable<string>> queryParams = new()
             {
                 { "count", new List<string> { count.ToString(CultureInfo.InvariantCulture) } },
-                { "period", new List<string> { period } }
+                { "period", new List<string> { Enum.GetName(period)?.ToLowerInvariant() ?? "" } }
             };
 
             if (!string.IsNullOrWhiteSpace(userId))
@@ -112,7 +136,7 @@ namespace StreamActions.Twitch.Api.Bits
 
             if (startedAt.HasValue)
             {
-                if (period == "all")
+                if (period == LeaderboardPeriod.All)
                 {
                     throw new InvalidOperationException("Can not use " + nameof(startedAt) + " while " + nameof(period) + " is set to all");
                 }
@@ -124,7 +148,7 @@ namespace StreamActions.Twitch.Api.Bits
 
             Uri uri = Util.BuildUri(new("/bits/leaderboard"), queryParams);
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<Leaderboard>>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<Leaderboard>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

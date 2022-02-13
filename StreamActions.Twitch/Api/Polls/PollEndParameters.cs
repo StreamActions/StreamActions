@@ -28,10 +28,10 @@ namespace StreamActions.Twitch.Api.Polls
         /// </summary>
         /// <param name="broadcasterId">The broadcaster running polls. Provided broadcaster_id must match the user_id in the user OAuth token.</param>
         /// <param name="id">ID of the poll.</param>
-        /// <param name="status">The poll status to be set. See the remarks for <see cref="Status"/>. Valid values: <c>TERMINATED</c> or <c>ARCHIVED</c>.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/>, <paramref name="id"/>, or <paramref name="status"/> is null, empty, or whitespace.</exception>
+        /// <param name="status">The poll status to be set. Valid values: <see cref="Poll.PollStatus.TERMINATED"/> or <see cref="Poll.PollStatus.ARCHIVED"/>.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> or <paramref name="id"/> is null, empty, or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="status"/> is not a valid value.</exception>
-        public PollEndParameters(string broadcasterId, string id, string status)
+        public PollEndParameters(string broadcasterId, string id, Poll.PollStatus status)
         {
             if (string.IsNullOrWhiteSpace(broadcasterId))
             {
@@ -43,23 +43,18 @@ namespace StreamActions.Twitch.Api.Polls
                 throw new ArgumentNullException(nameof(id));
             }
 
-            if (string.IsNullOrWhiteSpace(status))
-            {
-                throw new ArgumentNullException(nameof(status));
-            }
-
-            if (status is not "TERMINATED" and not "ARCHIVED")
+            if (status is not Poll.PollStatus.TERMINATED and not Poll.PollStatus.ARCHIVED)
             {
                 throw new ArgumentOutOfRangeException(nameof(status), status, "Valid values: TERMINATED or ARCHIVED");
             }
 
             this.BroadcasterId = broadcasterId;
             this.Id = id;
-            this.Status = status;
+            this.Status = Enum.GetName(status) ?? "";
         }
 
         /// <summary>
-        /// The broadcaster running polls. Provided broadcaster_id must match the user_id in the user OAuth token.
+        /// The broadcaster running polls. Provided <see cref="BroadcasterId"/> must match the user_id authorized in <see cref="Common.TwitchSession.Token"/>.
         /// </summary>
         [JsonPropertyName("broadcaster_id")]
         public string BroadcasterId { get; private init; }

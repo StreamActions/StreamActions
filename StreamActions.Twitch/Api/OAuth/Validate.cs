@@ -76,7 +76,7 @@ namespace StreamActions.Twitch.Api.OAuth
             }
 
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<Validate>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<Validate>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

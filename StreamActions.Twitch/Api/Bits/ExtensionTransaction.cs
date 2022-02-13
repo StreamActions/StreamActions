@@ -76,16 +76,28 @@ namespace StreamActions.Twitch.Api.Bits
         public string? UserName { get; init; }
 
         /// <summary>
-        /// Enum of the product type. Currently only <c>BITS_IN_EXTENSION</c>.
+        /// Enum of the product type.
         /// </summary>
         [JsonPropertyName("product_type")]
-        public string? ProductType { get; init; }
+        public ExtensionProductType? ProductType { get; init; }
 
         /// <summary>
         /// A <see cref="ExtensionProductData"/> that represents the product acquired, as it looked at the time of the transaction.
         /// </summary>
         [JsonPropertyName("product_data")]
         public ExtensionProductData? ProductData { get; init; }
+
+        /// <summary>
+        /// The types of extension products.
+        /// </summary>
+        public enum ExtensionProductType
+        {
+            /// <summary>
+            /// A product which is purchased via bits in an extension.
+            /// </summary>
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
+            BITS_IN_EXTENSION
+        }
 
         /// <summary>
         /// Gets the list of Extension transactions for a given Extension. This allows Extension back-end servers to fetch a list of transactions that have occurred for their Extension across all of Twitch. A transaction is a record of a user exchanging Bits for an in-Extension digital good.
@@ -154,7 +166,7 @@ namespace StreamActions.Twitch.Api.Bits
 
             Uri uri = Util.BuildUri(new("/extensions/transactions"), queryParams);
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<ExtensionTransaction>>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<ExtensionTransaction>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

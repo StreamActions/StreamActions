@@ -27,23 +27,22 @@ namespace StreamActions.Twitch.Api.Ads
         /// Constructor.
         /// </summary>
         /// <param name="broadcasterId">ID of the channel requesting a commercial.</param>
-        /// <param name="length">Desired length of the commercial in seconds. Valid options are 30, 60, 90, 120, 150, 180.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="length"/> is not one of the valid values.</exception>
-        public StartCommercialParameters(string broadcasterId, int length)
+        /// <param name="length">Desired length of the commercial in seconds.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> is null, empty, or whitespace; <paramref name="length"/> is <see cref="CommercialLength.None"/></exception>
+        public StartCommercialParameters(string broadcasterId, CommercialLength length)
         {
             if (string.IsNullOrWhiteSpace(broadcasterId))
             {
                 throw new ArgumentNullException(nameof(broadcasterId));
             }
 
-            if (length is not 30 and not 60 and not 90 and not 120 and not 150 and not 180)
+            if (length == CommercialLength.None)
             {
-                throw new ArgumentOutOfRangeException(nameof(length), length, "Valid options are 30, 60, 90, 120, 150, 180");
+                throw new ArgumentNullException(nameof(length));
             }
 
             this.BroadcasterId = broadcasterId;
-            this.Length = length;
+            this.Length = (int)length;
         }
 
         /// <summary>
@@ -53,9 +52,44 @@ namespace StreamActions.Twitch.Api.Ads
         public string BroadcasterId { get; private init; }
 
         /// <summary>
-        /// Desired length of the commercial in seconds. Valid options are 30, 60, 90, 120, 150, 180.
+        /// Desired length of the commercial in seconds.
         /// </summary>
         [JsonPropertyName("length")]
         public int Length { get; private init; }
+
+        /// <summary>
+        /// Valid lengths for a commercial break.
+        /// </summary>
+        public enum CommercialLength
+        {
+            /// <summary>
+            /// Default value. Not valid for use.
+            /// </summary>
+            None,
+            /// <summary>
+            /// 30 seconds.
+            /// </summary>
+            Thirty = 30,
+            /// <summary>
+            /// 1 minute.
+            /// </summary>
+            Sixty = 60,
+            /// <summary>
+            /// 1 minute, 30 seconds.
+            /// </summary>
+            Ninety = 90,
+            /// <summary>
+            /// 2 minutes.
+            /// </summary>
+            OneTwenty = 120,
+            /// <summary>
+            /// 2 minutes, 30 seconds.
+            /// </summary>
+            OneFifty = 150,
+            /// <summary>
+            /// 3 minutes.
+            /// </summary>
+            OneEighty = 180
+        }
     }
 }

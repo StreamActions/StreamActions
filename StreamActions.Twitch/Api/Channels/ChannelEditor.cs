@@ -72,7 +72,7 @@ namespace StreamActions.Twitch.Api.Channels
 
             Uri uri = Util.BuildUri(new("/channels/editors"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<ChannelEditor>>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<ChannelEditor>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

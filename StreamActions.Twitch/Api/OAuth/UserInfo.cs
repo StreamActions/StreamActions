@@ -126,7 +126,7 @@ namespace StreamActions.Twitch.Api.OAuth
             baseAddress ??= Token._openIdConnectConfiguration.Value.UserInfoEndpoint;
 
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<UserInfo>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<UserInfo>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

@@ -39,7 +39,7 @@ namespace StreamActions.Twitch.Api.Polls
         public PollCreationParameters(string broadcasterId, string title, IReadOnlyList<PollCreationChoice> choices, int duration, bool bitsVotingEnabled = false,
             int bitsPerVote = 0, bool channelPointsVotingEnabled = false, int channelPointsPerVote = 0)
         {
-            if (string.IsNullOrWhiteSpace(broadcasterId)
+            if (string.IsNullOrWhiteSpace(broadcasterId))
             {
                 throw new ArgumentNullException(nameof(broadcasterId));
             }

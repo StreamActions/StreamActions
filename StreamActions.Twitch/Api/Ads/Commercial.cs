@@ -69,9 +69,9 @@ namespace StreamActions.Twitch.Api.Ads
                 throw new ScopeMissingException("channel:edit:commercial");
             }
 
-            using JsonContent content = JsonContent.Create(parameters);
+            using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/channels/commercial"), session, content).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<Commercial>>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<Commercial>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

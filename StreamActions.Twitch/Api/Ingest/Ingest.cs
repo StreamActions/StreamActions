@@ -69,7 +69,7 @@ namespace StreamActions.Twitch.Api.Ingest
         public static async Task<IngestResponse?> GetIngestServers(string baseAddress = "https://ingest.twitch.tv/ingests")
         {
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<IngestResponse>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<IngestResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

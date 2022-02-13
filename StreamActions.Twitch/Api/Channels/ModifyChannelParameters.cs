@@ -26,8 +26,8 @@ namespace StreamActions.Twitch.Api.Channels
         /// <summary>
         /// Constructor. At least 1 parameter must be a valid, non-null value.
         /// </summary>
-        /// <param name="gameId">The current game ID being played on the channel. Use “0” or “” (an empty string) to unset the game. Use <c>null</c> to not change this value.</param>
-        /// <param name="broadcasterLanguage">The language of the channel. A language value must be either the ISO 639-1 two-letter code for a supported stream language or “other”. Use <c>null</c> to not change this value.</param>
+        /// <param name="gameId">The current game ID being played on the channel. Use "0" or "" (an empty string) to unset the game. Use <c>null</c> to not change this value.</param>
+        /// <param name="broadcasterLanguage">The language of the channel. A language value must be either the ISO 639-1 two-letter code for a supported stream language or "other". Use <c>null</c> to not change this value.</param>
         /// <param name="title">The title of the stream. Value must not be an empty string. Use <c>null</c> to not change this value.</param>
         /// <param name="delay">Stream delay in seconds. Stream delay is a Twitch Partner feature; trying to set this value for other account types will return a 400 error. Use <c>null</c> to not change this value.</param>
         /// <exception cref="InvalidOperationException">None of the provided parameters was a valid, non-null value.</exception>
@@ -46,14 +46,14 @@ namespace StreamActions.Twitch.Api.Channels
         }
 
         /// <summary>
-        /// The current game ID being played on the channel. Use “0” or “” (an empty string) to unset the game. Use <c>null</c> to not change this value.
+        /// The current game ID being played on the channel. Use "0" or "" (an empty string) to unset the game. Use <c>null</c> to not change this value.
         /// </summary>
         [JsonPropertyName("game_id")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? GameId { get; private init; }
 
         /// <summary>
-        /// The language of the channel. A language value must be either the ISO 639-1 two-letter code for a supported stream language or “other”. Use <c>null</c> to not change this value.
+        /// The language of the channel. A language value must be either the ISO 639-1 two-letter code for a supported stream language or "other". Use <c>null</c> to not change this value.
         /// </summary>
         [JsonPropertyName("broadcaster_language")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

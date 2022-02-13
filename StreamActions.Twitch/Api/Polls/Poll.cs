@@ -91,17 +91,8 @@ namespace StreamActions.Twitch.Api.Polls
         /// <summary>
         /// Poll status.
         /// </summary>
-        /// <remarks>
-        /// Valid values are:
-        /// <c>ACTIVE</c>: Poll is currently in progress.
-        /// <c>COMPLETED</c>: Poll has reached its ended_at time.
-        /// <c>TERMINATED</c>: Poll has been manually terminated before its <see cref="EndedAt"/> time.
-        /// <c>ARCHIVED</c>: Poll is no longer visible on the channel.
-        /// <c>MODERATED</c>: Poll is no longer visible to any user on Twitch.
-        /// <c>INVALID</c>: Something went wrong determining the state.
-        /// </remarks>
         [JsonPropertyName("status")]
-        public string? Status { get; init; }
+        public PollStatus? Status { get; init; }
 
         /// <summary>
         /// Total duration for the poll (in seconds).
@@ -120,6 +111,37 @@ namespace StreamActions.Twitch.Api.Polls
         /// </summary>
         [JsonPropertyName("ended_at")]
         public DateTime? EndedAt { get; init; }
+
+        /// <summary>
+        /// Poll status.
+        /// </summary>
+        public enum PollStatus
+        {
+            /// <summary>
+            /// Something went wrong determining the state.
+            /// </summary>
+            INVALID,
+            /// <summary>
+            /// Poll is currently in progress.
+            /// </summary>
+            ACTIVE,
+            /// <summary>
+            /// Poll has reached its <see cref="EndedAt"/> time.
+            /// </summary>
+            COMPLETED,
+            /// <summary>
+            /// Poll has been manually terminated before its <see cref="EndedAt"/> time.
+            /// </summary>
+            TERMINATED,
+            /// <summary>
+            /// Poll is no longer visible on the channel.
+            /// </summary>
+            ARCHIVED,
+            /// <summary>
+            /// Poll is no longer visible to any user on Twitch.
+            /// </summary>
+            MODERATED
+        }
 
         /// <summary>
         /// Get information about all polls or specific polls for a Twitch channel. Poll information is available for 90 days.
@@ -187,7 +209,7 @@ namespace StreamActions.Twitch.Api.Polls
 
             Uri uri = Util.BuildUri(new("/polls"), queryParams);
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<Poll>>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<Poll>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -215,9 +237,9 @@ namespace StreamActions.Twitch.Api.Polls
                 throw new ScopeMissingException("channel:manage:polls");
             }
 
-            using JsonContent content = JsonContent.Create(parameters);
+            using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/polls"), session, content).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<Poll>>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<Poll>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -245,9 +267,9 @@ namespace StreamActions.Twitch.Api.Polls
                 throw new ScopeMissingException("channel:manage:polls");
             }
 
-            using JsonContent content = JsonContent.Create(parameters);
+            using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/polls"), session, content).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<Poll>>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<Poll>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

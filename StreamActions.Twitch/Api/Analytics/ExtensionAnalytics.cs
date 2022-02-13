@@ -44,13 +44,25 @@ namespace StreamActions.Twitch.Api.Analytics
         /// Type of report.
         /// </summary>
         [JsonPropertyName("type")]
-        public string? Type { get; init; }
+        public ExtensionReportType? Type { get; init; }
 
         /// <summary>
         /// The date range covered by the report.
         /// </summary>
         [JsonPropertyName("date_range")]
         public DateRange? DateRange { get; init; }
+
+        /// <summary>
+        /// Extension report types.
+        /// </summary>
+        public enum ExtensionReportType
+        {
+            /// <summary>
+            /// <c>overview_v2</c> report.
+            /// </summary>
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
+            Overview_v2
+        }
 
         /// <summary>
         /// Gets a URL that Extension developers can use to download analytics reports (CSV files) for their Extensions. The URL is valid for 5 minutes.
@@ -61,13 +73,14 @@ namespace StreamActions.Twitch.Api.Analytics
         /// <param name="first">Maximum number of objects to return. Maximum: 100. Default: 20.</param>
         /// <param name="startedAt">Starting date/time for returned reports. This must be on or after January 31, 2018.</param>
         /// <param name="endedAt">Ending date/time for returned reports. The report covers the entire ending date. This must be on or after January 31, 2018.</param>
-        /// <param name="type">Type of analytics report that is returned. Currently, this field has no affect on the response as there is only one report type. If additional types were added, using this field would return only the URL for the specified report. Valid values: <c>overview_v2</c>.</param>
+        /// <param name="type">Type of analytics report that is returned. Currently, this field has no affect on the response as there is only one report type. If additional types were added, using this field would return only the URL for the specified report.</param>
         /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ExtensionAnalytics"/> containing the response.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
         /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>analytics:read:extensions</c> is not present.</exception>
         /// <exception cref="InvalidOperationException">Specified only one of <paramref name="startedAt"/>/<paramref name="endedAt"/> without specifying the other.</exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
         public static async Task<ResponseData<ExtensionAnalytics>?> GetExtensionAnalytics(TwitchSession session, string? extensionId = null, string? after = null, int first = 20, DateTime? startedAt = null, DateTime? endedAt = null,
-            string type = "overview_v2")
+            ExtensionReportType type = ExtensionReportType.Overview_v2)
         {
             if (session is null)
             {
@@ -84,7 +97,7 @@ namespace StreamActions.Twitch.Api.Analytics
             Dictionary<string, IEnumerable<string>> queryParams = new()
             {
                 { "first", new List<string> { first.ToString(CultureInfo.InvariantCulture) } },
-                { "type", new List<string> { type } }
+                { "type", new List<string> { Enum.GetName(type)?.ToLowerInvariant() ?? "" } }
             };
 
             if (!string.IsNullOrWhiteSpace(extensionId))

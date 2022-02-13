@@ -40,13 +40,13 @@ namespace StreamActions.Twitch.Api.Goals
         public string? BroadcasterId { get; init; }
 
         /// <summary>
-        /// The broadcaster’s display name.
+        /// The broadcaster's display name.
         /// </summary>
         [JsonPropertyName("broadcaster_name")]
         public string? BroadcasterName { get; init; }
 
         /// <summary>
-        /// The broadcaster’s user handle.
+        /// The broadcaster's user handle.
         /// </summary>
         [JsonPropertyName("broadcaster_login")]
         public string? BroadcasterLogin { get; init; }
@@ -54,14 +54,8 @@ namespace StreamActions.Twitch.Api.Goals
         /// <summary>
         /// The type of goal.
         /// </summary>
-        /// <remarks>
-        /// Possible values are:
-        /// <c>follower</c> — The goal is to increase followers.
-        /// <c>subscription</c> — The goal is to increase subscriptions.This type shows the net increase or decrease in subscriptions.
-        /// <c>new_subscription</c> — The goal is to increase subscriptions.This type shows only the net increase in subscriptions (it does not account for users that stopped subscribing since the goal's inception).
-        /// </remarks>
         [JsonPropertyName("type")]
-        public string? Type { get; init; }
+        public GoalType? Type { get; init; }
 
         /// <summary>
         /// A description of the goal, if specified. The description may contain a maximum of 40 characters.
@@ -87,7 +81,7 @@ namespace StreamActions.Twitch.Api.Goals
         public int? CurrentAmount { get; init; }
 
         /// <summary>
-        /// The goal’s target value. For example, if the broadcaster has 200 followers before creating the goal, and their goal is to double that number, this field is set to 400.
+        /// The goal's target value. For example, if the broadcaster has 200 followers before creating the goal, and their goal is to double that number, this field is set to 400.
         /// </summary>
         [JsonPropertyName("target_amount")]
         public int? TargetAmount { get; init; }
@@ -99,7 +93,27 @@ namespace StreamActions.Twitch.Api.Goals
         public DateTime? CreatedAt { get; init; }
 
         /// <summary>
-        /// Gets the broadcaster’s list of active goals. Use this to get the current progress of each goal.
+        /// The type of goal.
+        /// </summary>
+        public enum GoalType
+        {
+            /// <summary>
+            /// The goal is to increase followers.
+            /// </summary>
+            Follower,
+            /// <summary>
+            /// The goal is to increase subscriptions. This type shows the net increase or decrease in subscriptions.
+            /// </summary>
+            Subscription,
+            /// <summary>
+            /// The goal is to increase subscriptions. This type shows only the net increase in subscriptions (it does not account for users that stopped subscribing since the goal's inception).
+            /// </summary>
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
+            New_subscription
+        }
+
+        /// <summary>
+        /// Gets the broadcaster's list of active goals. Use this to get the current progress of each goal.
         /// </summary>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
         /// <param name="broadcasterId">The ID of the broadcaster that created the goals.</param>
@@ -125,7 +139,7 @@ namespace StreamActions.Twitch.Api.Goals
 
             Uri uri = Util.BuildUri(new("/goals"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<Goal>>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<Goal>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

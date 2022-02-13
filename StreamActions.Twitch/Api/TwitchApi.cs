@@ -18,6 +18,7 @@ using StreamActions.Common;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.OAuth;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace StreamActions.Twitch.Api
@@ -32,7 +33,7 @@ namespace StreamActions.Twitch.Api
         /// <summary>
         /// Fires when a <see cref="TwitchSession"/> has its OAuth token automatically refreshed as a result of a 401 response.
         /// </summary>
-        public static event EventHandler<TwitchSession>? OnTokenRefreshed;
+        public static event EventHandler<TokenRefreshedEventArgs>? OnTokenRefreshed;
 
         #endregion Public Events
 
@@ -42,6 +43,16 @@ namespace StreamActions.Twitch.Api
         /// The currently initialized Client Id.
         /// </summary>
         public static string? ClientId { get; private set; }
+
+        /// <summary>
+        /// The <see cref="JsonSerializerOptions"/> that should be used for all serialization and deserialization.
+        /// </summary>
+        public static JsonSerializerOptions SerializerOptions => new()
+        {
+            Converters = {
+                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+            }
+        };
 
         #endregion Public Properties
 
@@ -89,18 +100,21 @@ namespace StreamActions.Twitch.Api
         /// <summary>
         /// Submits a HTTP request to the specified Uri and returns the response.
         /// </summary>
-        /// <remarks>
-        /// Non-JSON responses are converted to the standard <c>{status,error,message}</c> format.
-        ///
-        /// If a 401 is returned, one attempt will be made to refresh the OAuth token and try again.
-        /// The <paramref name="session"/> object is updated and <see cref="OnTokenRefreshed"/> is called on refresh success.
-        /// </remarks>
         /// <param name="method">The <see cref="HttpMethod"/> of the request.</param>
         /// <param name="uri">The Uri to request. Relative Uris resolve against the Helix base.</param>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
         /// <param name="content">The body of the request, for methods that require it.</param>
         /// <returns>A <see cref="HttpResponseMessage"/> containing the response data.</returns>
         /// <exception cref="InvalidOperationException">Did not call <see cref="Init(string)"/> with a valid Client Id or <paramref name="session"/> does not have an OAuth token.</exception>
+        /// <remarks>
+        /// <para>
+        /// Non-JSON responses are converted to the standard <c>{status,error,message}</c> format.
+        /// </para>
+        /// <para>
+        /// If a 401 is returned, one attempt will be made to refresh the OAuth token and try again.
+        /// The <paramref name="session"/> object is updated and <see cref="OnTokenRefreshed"/> is called on refresh success.
+        /// </para>
+        /// </remarks>
         internal static async Task<HttpResponseMessage> PerformHttpRequest(HttpMethod method, Uri uri, TwitchSession session, HttpContent? content = null)
         {
             if (!_httpClient.DefaultRequestHeaders.Contains("Client-Id"))
@@ -136,7 +150,7 @@ namespace StreamActions.Twitch.Api
                     if (refresh is not null && refresh.IsSuccessStatusCode)
                     {
                         session.Token = new() { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires };
-                        _ = (OnTokenRefreshed?.InvokeAsync(null, session));
+                        _ = (OnTokenRefreshed?.InvokeAsync(null, new(session)));
                         retry = true;
                         goto performhttprequest_start;
                     }
@@ -147,7 +161,7 @@ namespace StreamActions.Twitch.Api
                     string rcontent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     if (!Regex.IsMatch(rcontent, @"\s*{.*}\s*"))
                     {
-                        response.Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse { Status = (int)response.StatusCode, Message = rcontent }, new JsonSerializerOptions()));
+                        response.Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse { Status = response.StatusCode, Message = rcontent }, SerializerOptions));
                     }
                 }
 

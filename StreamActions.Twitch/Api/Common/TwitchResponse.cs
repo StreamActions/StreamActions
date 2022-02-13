@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.Api.Common
         /// The HTTP status code as indicated by the response JSON.
         /// </summary>
         [JsonPropertyName("status")]
-        public int Status { get; init; } = 200;
+        public HttpStatusCode Status { get; init; } = HttpStatusCode.OK;
 
         /// <summary>
         /// The string name of <see cref="Status"/>.
@@ -36,7 +36,7 @@ namespace StreamActions.Twitch.Api.Common
         [JsonPropertyName("error")]
         public string Error
         {
-            get => this._error == null || this._error.Length == 0 ? Enum.GetName(typeof(HttpStatusCode), this.Status) ?? "Unknown" : this._error;
+            get => this._error == null || this._error.Length == 0 ? Enum.GetName(this.Status) ?? "Unknown" : this._error;
             init => this._error = value;
         }
 
@@ -50,19 +50,19 @@ namespace StreamActions.Twitch.Api.Common
         /// Indicates if <see cref="Status"/> is in the 200-299 range.
         /// </summary>
         [JsonIgnore]
-        public bool IsSuccessStatusCode => this.Status is >= 200 and <= 299;
+        public bool IsSuccessStatusCode => (int)this.Status is >= 200 and <= 299;
 
         /// <summary>
         /// Indicates if <see cref="Status"/> is in the 400-499 range.
         /// </summary>
         [JsonIgnore]
-        public bool IsClientErrorStatusCode => this.Status is >= 400 and <= 499;
+        public bool IsClientErrorStatusCode => (int)this.Status is >= 400 and <= 499;
 
         /// <summary>
         /// Indicates if <see cref="Status"/> is in the 500-599 range.
         /// </summary>
         [JsonIgnore]
-        public bool IsServerErrorStatusCode => this.Status is >= 500 and <= 599;
+        public bool IsServerErrorStatusCode => (int)this.Status is >= 500 and <= 599;
 
         /// <summary>
         /// Backing field for <see cref="Error"/>.

@@ -58,7 +58,7 @@ namespace StreamActions.Twitch.Api.Channels
         public string? GameId { get; init; }
 
         /// <summary>
-        /// Language of the channel. A language value is either the ISO 639-1 two-letter code for a supported stream language or “other”.
+        /// Language of the channel. A language value is either the ISO 639-1 two-letter code for a supported stream language or "other".
         /// </summary>
         [JsonPropertyName("broadcaster_language")]
         public string? BroadcasterLanguage { get; init; }
@@ -96,7 +96,7 @@ namespace StreamActions.Twitch.Api.Channels
 
             Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<Channel>>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<Channel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -131,9 +131,9 @@ namespace StreamActions.Twitch.Api.Channels
             }
 
             Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
-            using JsonContent content = JsonContent.Create(parameters);
+            using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<TwitchResponse>().ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<TwitchResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }
