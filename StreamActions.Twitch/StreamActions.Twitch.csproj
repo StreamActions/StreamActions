@@ -45,7 +45,6 @@
     <Folder Include="Api\Users\" />
     <Folder Include="Api\Teams\" />
     <Folder Include="Api\Tags\" />
-    <Folder Include="Api\Subscriptions\" />
     <Folder Include="Api\Streams\" />
     <Folder Include="Api\Search\" />
     <Folder Include="Api\Schedule\" />
