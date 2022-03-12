@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Globalization;
 using System.Net.Http.Headers;
 
 namespace StreamActions.Common.Limiters
@@ -158,7 +159,7 @@ namespace StreamActions.Common.Limiters
                 long nextReset = -1;
                 if (headerResetType == HeaderResetType.ISO8601)
                 {
-                    DateTime? dt = Util.ISO8601ToDateTime(resetS);
+                    DateTime? dt = DateTime.Parse(resetS, CultureInfo.InvariantCulture);
                     if (dt.HasValue)
                     {
                         nextReset = dt.Value.Ticks;
