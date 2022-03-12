@@ -51,13 +51,13 @@ namespace StreamActions.Common.Limiters
         /// <exception cref="TimeoutException">The lock timed out.</exception>
         public void Reset(TimeSpan timeout)
         {
-            if (this._rwl.TryEnterUpgradeableReadLock(timeout))
+            if (this.RWL.TryEnterUpgradeableReadLock(timeout))
             {
                 try
                 {
                     if (this._nextDuration.CompareTo(this._initialDuration) != 0)
                     {
-                        if (this._rwl.TryEnterWriteLock(timeout))
+                        if (this.RWL.TryEnterWriteLock(timeout))
                         {
                             try
                             {
@@ -65,7 +65,7 @@ namespace StreamActions.Common.Limiters
                             }
                             finally
                             {
-                                this._rwl.ExitWriteLock();
+                                this.RWL.ExitWriteLock();
                             }
                         }
                         else
@@ -76,7 +76,7 @@ namespace StreamActions.Common.Limiters
                 }
                 finally
                 {
-                    this._rwl.ExitUpgradeableReadLock();
+                    this.RWL.ExitUpgradeableReadLock();
                 }
             }
             else
@@ -93,7 +93,7 @@ namespace StreamActions.Common.Limiters
         /// <exception cref="TimeoutException">The lock timed out.</exception>
         public async Task Wait(TimeSpan timeout)
         {
-            if (this._rwl.TryEnterUpgradeableReadLock(timeout))
+            if (this.RWL.TryEnterUpgradeableReadLock(timeout))
             {
                 try
                 {
@@ -107,7 +107,7 @@ namespace StreamActions.Common.Limiters
                             ticks = this._maxDuration.Ticks;
                         }
 
-                        if (this._rwl.TryEnterWriteLock(timeout))
+                        if (this.RWL.TryEnterWriteLock(timeout))
                         {
                             try
                             {
@@ -115,7 +115,7 @@ namespace StreamActions.Common.Limiters
                             }
                             finally
                             {
-                                this._rwl.ExitWriteLock();
+                                this.RWL.ExitWriteLock();
                             }
                         }
                         else
@@ -126,7 +126,7 @@ namespace StreamActions.Common.Limiters
                 }
                 finally
                 {
-                    this._rwl.ExitUpgradeableReadLock();
+                    this.RWL.ExitUpgradeableReadLock();
                 }
             }
             else
@@ -149,14 +149,14 @@ namespace StreamActions.Common.Limiters
             this._maxDuration = maxDuration;
             this._initialDuration = initialDuration;
 
-            this._rwl.EnterWriteLock();
+            this.RWL.EnterWriteLock();
             try
             {
                 this._nextDuration = TimeSpan.FromTicks(initialDuration.Ticks);
             }
             finally
             {
-                this._rwl.ExitWriteLock();
+                this.RWL.ExitWriteLock();
             }
         }
 
@@ -165,9 +165,9 @@ namespace StreamActions.Common.Limiters
         #region Protected Properties
 
         /// <summary>
-        /// Provides access to <see cref="_rwl"/> for child types.
+        /// Lock for controlling Read/Write access to the variables.
         /// </summary>
-        protected ReaderWriterLockSlim RWL => this._rwl;
+        protected ReaderWriterLockSlim RWL { get; } = new();
 
         #endregion Protected Properties
 
@@ -192,11 +192,6 @@ namespace StreamActions.Common.Limiters
         /// The maximum allowed backoff duration.
         /// </summary>
         private readonly TimeSpan _maxDuration;
-
-        /// <summary>
-        /// Lock for controlling Read/Write access to the variables.
-        /// </summary>
-        private readonly ReaderWriterLockSlim _rwl = new();
 
         /// <summary>
         /// The duration of the next backoff.
