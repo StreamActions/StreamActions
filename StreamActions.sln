@@ -16,6 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		LICENSE = LICENSE
 		README.md = README.md
 		SECURITY.md = SECURITY.md
+		StreamActions.dic = StreamActions.dic
 		StreamActions.licenseheader = StreamActions.licenseheader
 		StreamActions.sln.vsspell = StreamActions.sln.vsspell
 		StreamActions.vsext = StreamActions.vsext
@@ -50,7 +51,7 @@ Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "TldRegexUpdater", "TldRegex
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Twitch", "StreamActions.Twitch\StreamActions.Twitch.csproj", "{AC92B8A4-E836-4886-A151-BAF00E532B9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamActions.Common", "StreamActions.Common\StreamActions.Common.csproj", "{E0CC157B-5800-4E3B-8961-332E78B3D096}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Common", "StreamActions.Common\StreamActions.Common.csproj", "{E0CC157B-5800-4E3B-8961-332E78B3D096}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
