@@ -1,6 +1,4 @@
-﻿extensions: designer.cs generated.cs
-extensions: .cs
-extensions: .js .css
+﻿extensions: .cs .js .css designer.cs generated.cs
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2022 StreamActions Team (streamactions.github.io)
