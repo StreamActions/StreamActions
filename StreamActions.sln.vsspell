@@ -142,4 +142,7 @@
     <TreatCasingExceptionsAsIgnoredWords>False</TreatCasingExceptionsAsIgnoredWords>
     <RecognizedWordHandling>IgnoreAllWords</RecognizedWordHandling>
   </CadOptions>
+  <AdditionalDictionaryFolders>
+    <Folder>.\</Folder>
+  </AdditionalDictionaryFolders>
 </SpellCheckerConfiguration>

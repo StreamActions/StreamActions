@@ -32,7 +32,6 @@
 
   <ItemGroup>
     <Folder Include="Api\ChannelPoints\" />
-    <Folder Include="Api\Chat\" />
     <Folder Include="Api\Clips\" />
     <Folder Include="Api\Entitlements\" />
     <Folder Include="Api\Extensions\" />

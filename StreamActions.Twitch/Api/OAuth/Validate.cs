@@ -55,7 +55,7 @@ namespace StreamActions.Twitch.Api.OAuth
         /// The scopes that are authorized under the OAuth token.
         /// </summary>
         [JsonPropertyName("scopes")]
-        public IReadOnlyCollection<string>? Scopes { get; init; }
+        public IReadOnlyList<string>? Scopes { get; init; }
 
         /// <summary>
         /// The User Id associated with the OAuth token.

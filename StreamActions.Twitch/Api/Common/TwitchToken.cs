@@ -48,7 +48,7 @@ namespace StreamActions.Twitch.Api.Common
         /// <summary>
         /// The scopes that are authorized under the OAuth token.
         /// </summary>
-        public IReadOnlyCollection<string>? Scopes { get; init; }
+        public IReadOnlyList<string>? Scopes { get; init; }
 
         /// <summary>
         /// Checks if the specified scope is present in <see cref="Scopes"/>.

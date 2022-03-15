@@ -59,7 +59,7 @@ namespace StreamActions.Twitch.Api.OAuth
         /// The scopes that are authorized under the OAuth token.
         /// </summary>
         [JsonPropertyName("scope")]
-        public IReadOnlyCollection<string>? Scopes { get; init; }
+        public IReadOnlyList<string>? Scopes { get; init; }
 
         /// <summary>
         /// The OIDC JWT token string, if authorizing with the <c>openid</c> scope.

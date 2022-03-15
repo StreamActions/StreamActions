@@ -103,7 +103,7 @@ namespace StreamActions.Twitch.Api
         /// Submits a HTTP request to the specified Uri and returns the response.
         /// </summary>
         /// <param name="method">The <see cref="HttpMethod"/> of the request.</param>
-        /// <param name="uri">The Uri to request. Relative Uris resolve against the Helix base.</param>
+        /// <param name="uri">The uri to request. Relative uris resolve against the Helix base.</param>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
         /// <param name="content">The body of the request, for methods that require it.</param>
         /// <returns>A <see cref="HttpResponseMessage"/> containing the response data.</returns>
