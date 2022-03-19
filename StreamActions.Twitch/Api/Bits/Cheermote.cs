@@ -109,7 +109,7 @@ namespace StreamActions.Twitch.Api.Bits
                 throw new ArgumentNullException(nameof(session));
             }
 
-            Dictionary<string, IEnumerable<string>> queryParams = new() { };
+            Dictionary<string, IEnumerable<string>> queryParams = new();
 
             if (!string.IsNullOrWhiteSpace(broadcasterId))
             {

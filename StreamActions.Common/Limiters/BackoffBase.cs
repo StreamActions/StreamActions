@@ -51,13 +51,13 @@ namespace StreamActions.Common.Limiters
         /// <exception cref="TimeoutException">The lock timed out.</exception>
         public void Reset(TimeSpan timeout)
         {
-            if (this.RWL.TryEnterUpgradeableReadLock(timeout))
+            if (this.Rwl.TryEnterUpgradeableReadLock(timeout))
             {
                 try
                 {
                     if (this._nextDuration.CompareTo(this._initialDuration) != 0)
                     {
-                        if (this.RWL.TryEnterWriteLock(timeout))
+                        if (this.Rwl.TryEnterWriteLock(timeout))
                         {
                             try
                             {
@@ -65,7 +65,7 @@ namespace StreamActions.Common.Limiters
                             }
                             finally
                             {
-                                this.RWL.ExitWriteLock();
+                                this.Rwl.ExitWriteLock();
                             }
                         }
                         else
@@ -76,7 +76,7 @@ namespace StreamActions.Common.Limiters
                 }
                 finally
                 {
-                    this.RWL.ExitUpgradeableReadLock();
+                    this.Rwl.ExitUpgradeableReadLock();
                 }
             }
             else
@@ -93,7 +93,7 @@ namespace StreamActions.Common.Limiters
         /// <exception cref="TimeoutException">The lock timed out.</exception>
         public async Task Wait(TimeSpan timeout)
         {
-            if (this.RWL.TryEnterUpgradeableReadLock(timeout))
+            if (this.Rwl.TryEnterUpgradeableReadLock(timeout))
             {
                 try
                 {
@@ -107,7 +107,7 @@ namespace StreamActions.Common.Limiters
                             ticks = this._maxDuration.Ticks;
                         }
 
-                        if (this.RWL.TryEnterWriteLock(timeout))
+                        if (this.Rwl.TryEnterWriteLock(timeout))
                         {
                             try
                             {
@@ -115,7 +115,7 @@ namespace StreamActions.Common.Limiters
                             }
                             finally
                             {
-                                this.RWL.ExitWriteLock();
+                                this.Rwl.ExitWriteLock();
                             }
                         }
                         else
@@ -126,7 +126,7 @@ namespace StreamActions.Common.Limiters
                 }
                 finally
                 {
-                    this.RWL.ExitUpgradeableReadLock();
+                    this.Rwl.ExitUpgradeableReadLock();
                 }
             }
             else
@@ -149,14 +149,14 @@ namespace StreamActions.Common.Limiters
             this._maxDuration = maxDuration;
             this._initialDuration = initialDuration;
 
-            this.RWL.EnterWriteLock();
+            this.Rwl.EnterWriteLock();
             try
             {
                 this._nextDuration = TimeSpan.FromTicks(initialDuration.Ticks);
             }
             finally
             {
-                this.RWL.ExitWriteLock();
+                this.Rwl.ExitWriteLock();
             }
         }
 
@@ -167,7 +167,7 @@ namespace StreamActions.Common.Limiters
         /// <summary>
         /// Lock for controlling Read/Write access to the variables.
         /// </summary>
-        protected ReaderWriterLockSlim RWL { get; } = new();
+        protected ReaderWriterLockSlim Rwl { get; } = new();
 
         #endregion Protected Properties
 
