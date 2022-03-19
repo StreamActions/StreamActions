@@ -81,22 +81,28 @@ namespace StreamActions.Twitch.Api.Channels
         /// Gets channel information for users.
         /// </summary>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-        /// <param name="broadcasterId">User ID for the channel.</param>
+        /// <param name="broadcasterId">The ID of the broadcaster whose channel you want to get. You may specify a maximum of 100 IDs.</param>
         /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Channel"/> containing the response.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-        public static async Task<ResponseData<Channel>?> GetChannelInformation(TwitchSession session, string broadcasterId)
+        /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null or has 0 elements.</exception>
+        /// <exception cref="InvalidOperationException"><paramref name="broadcasterId"/> has more than 100 elements.</exception>
+        public static async Task<ResponseData<Channel>?> GetChannelInformation(TwitchSession session, IEnumerable<string> broadcasterId)
         {
             if (session is null)
             {
                 throw new ArgumentNullException(nameof(session));
             }
 
-            if (string.IsNullOrWhiteSpace(broadcasterId))
+            if (broadcasterId is null || !broadcasterId.Any())
             {
                 throw new ArgumentNullException(nameof(broadcasterId));
             }
 
-            Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
+            if (broadcasterId.Count() > 100)
+            {
+                throw new InvalidOperationException(nameof(broadcasterId) + " must have a count <= 100");
+            }
+
+            Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", broadcasterId } });
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ResponseData<Channel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
