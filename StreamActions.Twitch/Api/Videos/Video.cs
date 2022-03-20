@@ -246,7 +246,7 @@ namespace StreamActions.Twitch.Api.Videos
                 throw new ArgumentNullException(nameof(session));
             }
 
-            if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(userId) && (id is null || !id.Any()))
+            if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
             {
                 throw new ArgumentNullException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Must provide at least one value of id, userId, or gameId");
             }
