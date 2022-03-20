@@ -114,6 +114,13 @@ namespace StreamActions.Common
         }
 
         /// <summary>
+        /// Converts the <see cref="DateTime"/> to an RFC3339 representation of its value.
+        /// </summary>
+        /// <param name="dt">The <see cref="DateTime"/> to convert.</param>
+        /// <returns>The value of <paramref name="dt"/> as an RFC3339-formatted string.</returns>
+        public static string ToRfc3339(this DateTime dt) => dt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture);
+
+        /// <summary>
         /// Waits for a <see cref="CancellationToken"/> in a background Task thread.
         /// </summary>
         /// <param name="token">The <see cref="CancellationToken"/> to wait for.</param>

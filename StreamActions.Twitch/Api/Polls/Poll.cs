@@ -155,7 +155,7 @@ namespace StreamActions.Twitch.Api.Polls
         /// <param name="first">Maximum number of objects to return. Maximum: 20. Default: 20.</param>
         /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Poll"/> containing the response.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-        /// <exception cref="InvalidOperationException"><paramref name="id"/> is not null and has more than 100 elements.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not null and has more than 100 elements.</exception>
         /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:read:polls</c> is not present.</exception>
         public static async Task<ResponseData<Poll>?> GetPolls(TwitchSession session, string broadcasterId, IEnumerable<string>? id = null, string? after = null, int first = 20)
         {
@@ -171,7 +171,7 @@ namespace StreamActions.Twitch.Api.Polls
 
             if (id is not null && id.Count() > 100)
             {
-                throw new InvalidOperationException(nameof(id) + " must have a count <= 100");
+                throw new ArgumentOutOfRangeException(nameof(id), "must have a count <= 100");
             }
 
             if (!session.Token?.HasScope("channel:read:polls") ?? false)

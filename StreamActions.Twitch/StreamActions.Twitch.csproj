@@ -40,7 +40,6 @@
     <Folder Include="Api\HypeTrain\" />
     <Folder Include="Api\Moderation\" />
     <Folder Include="Api\Music\" />
-    <Folder Include="Api\Videos\" />
     <Folder Include="Api\Users\" />
     <Folder Include="Api\Teams\" />
     <Folder Include="Api\Tags\" />

@@ -16,7 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace StreamActions.Common
 {
@@ -94,12 +96,41 @@ namespace StreamActions.Common
         }
 
         /// <summary>
-        /// Converts the <see cref="DateTime"/> to an RFC3339 representation of its value.
+        /// Converts a duration string in the format <c>1w2d3h4m5s</c> into a <see cref="TimeSpan"/>.
         /// </summary>
-        /// <param name="dt">The <see cref="DateTime"/> to convert.</param>
-        /// <returns>The value of <paramref name="dt"/> as an RFC3339-formatted string.</returns>
-        public static string ToRfc3339(this DateTime dt) => dt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture);
+        /// <param name="duration">A duration string in the format <c>1w2d3h4m5s</c>. 0-valued segments can be excluded.</param>
+        /// <returns>A <see cref="TimeSpan"/> representing the time passed in.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">An unknown capture group was returned by <see cref="_durationRegex"/>.</exception>
+        public static TimeSpan DurationStringToTimeSpan(string duration)
+        {
+            TimeSpan t = new(0);
+            Match m = _durationRegex.Match(duration);
+
+            foreach (Group g in m.Groups)
+            {
+                t = g.Name switch
+                {
+                    "weeks" => t.Add(TimeSpan.FromDays(7 * int.Parse(g.Value, CultureInfo.InvariantCulture))),
+                    "days" => t.Add(TimeSpan.FromDays(int.Parse(g.Value, CultureInfo.InvariantCulture))),
+                    "hours" => t.Add(TimeSpan.FromHours(int.Parse(g.Value, CultureInfo.InvariantCulture))),
+                    "minutes" => t.Add(TimeSpan.FromMinutes(int.Parse(g.Value, CultureInfo.InvariantCulture))),
+                    "seconds" => t.Add(TimeSpan.FromSeconds(int.Parse(g.Value, CultureInfo.InvariantCulture))),
+                    _ => throw new ArgumentOutOfRangeException(nameof(duration)),
+                };
+            }
+
+            return t;
+        }
 
         #endregion Public Methods
+
+        #region Private Fields
+
+        /// <summary>
+        /// The <see cref="Regex"/> capturing time segments for <see cref="DurationStringToTimeSpan(string)"/>.
+        /// </summary>
+        private static readonly Regex _durationRegex = new("((?<weeks>[0-9]*)w)?((?<days>[0-9]*)d)?((?<hours>[0-9]*)h)?((?<minutes>[0-9]*)m)?((?<seconds>[0-9]*)s)?");
+
+        #endregion Private Fields
     }
 }

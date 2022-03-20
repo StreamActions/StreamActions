@@ -84,7 +84,7 @@ namespace StreamActions.Twitch.Api.Channels
         /// <param name="broadcasterId">The ID of the broadcaster whose channel you want to get. You may specify a maximum of 100 IDs.</param>
         /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Channel"/> containing the response.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null or has 0 elements.</exception>
-        /// <exception cref="InvalidOperationException"><paramref name="broadcasterId"/> has more than 100 elements.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="broadcasterId"/> has more than 100 elements.</exception>
         public static async Task<ResponseData<Channel>?> GetChannelInformation(TwitchSession session, IEnumerable<string> broadcasterId)
         {
             if (session is null)
@@ -99,7 +99,7 @@ namespace StreamActions.Twitch.Api.Channels
 
             if (broadcasterId.Count() > 100)
             {
-                throw new InvalidOperationException(nameof(broadcasterId) + " must have a count <= 100");
+                throw new ArgumentOutOfRangeException(nameof(broadcasterId), "must have a count <= 100");
             }
 
             Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", broadcasterId } });

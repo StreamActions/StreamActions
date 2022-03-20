@@ -135,7 +135,8 @@ namespace StreamActions.Twitch.Api.Subscriptions
         /// <param name="first">Maximum number of objects to return. Maximum: 100. Default: 20.</param>
         /// <returns>A <see cref="SubscriptionResponse"/> with elements of type <see cref="Subscription"/> containing the response.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-        /// <exception cref="InvalidOperationException"><paramref name="userId"/> is defined and has more than 100 elements; <paramref name="userId"/> and <paramref name="after"/> are both defined.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> is defined and has more than 100 elements.</exception>
+        /// <exception cref="InvalidOperationException"><paramref name="userId"/> and <paramref name="after"/> are both defined.</exception>
         /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:read:subscriptions</c> is not present.</exception>
         public static async Task<SubscriptionResponse?> GetBroadcasterSubscriptions(TwitchSession session, string broadcasterId, IEnumerable<string>? userId = null, string? after = null, int first = 20)
         {
@@ -151,7 +152,7 @@ namespace StreamActions.Twitch.Api.Subscriptions
 
             if (userId is not null && userId.Count() > 100)
             {
-                throw new InvalidOperationException(nameof(userId) + " must have a count <= 100");
+                throw new ArgumentOutOfRangeException(nameof(userId), "must have a count <= 100");
             }
 
             if (!session.Token?.HasScope("channel:read:subscriptions") ?? false)
