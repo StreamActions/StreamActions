@@ -2,7 +2,7 @@
   "id": "cc56eb8d-e805-4d4a-9340-473ea02a8a84",
   "name": "StreamActions Visual Studio Extensions",
   "description": "The recommended extensions for developing StreamActions with Visual Studio 2022",
-  "version": "1.5",
+  "version": "1.6",
   "extensions": [
     {
       "name": "Add New File (64-bit)",
@@ -27,6 +27,10 @@
     {
       "name": "Indent Guides for VS 2022",
       "vsixId": "IndentGuide2022.SteveDower.0a67eb97-becd-451f-aa29-851d9fe5dd2b"
+    },
+    {
+      "name": "License Header Manager",
+      "vsixId": "4c570677-8476-4d33-bd0c-da36c89287c8"
     },
     {
       "name": "Markdown Editor v2",
