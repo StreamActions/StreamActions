@@ -17,7 +17,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-extensions: .cshtml
+extensions: .cshtml .html
 <!--
 /*
  * This file is part of StreamActions.
@@ -38,7 +38,7 @@ extensions: .cshtml
  */
 -->
 
-extensions: .py
+extensions: .py .ps1
 #
 # This file is part of StreamActions.
 # Copyright © 2019-2022 StreamActions Team (streamactions.github.io)
@@ -56,3 +56,43 @@ extensions: .py
 # You should have received a copy of the GNU Affero General Public License
 # along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
 #
+
+extensions: .sh
+#!/bin/bash
+#
+# This file is part of StreamActions.
+# Copyright © 2019-2022 StreamActions Team (streamactions.github.io)
+#
+# StreamActions is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# StreamActions is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+extensions: .bat
+@echo off
+REM
+REM This file is part of StreamActions.
+REM Copyright © 2019-2022 StreamActions Team (streamactions.github.io)
+REM
+REM StreamActions is free software: you can redistribute it and/or modify
+REM it under the terms of the GNU Affero General Public License as published by
+REM the Free Software Foundation, either version 3 of the License, or
+REM (at your option) any later version.
+REM
+REM StreamActions is distributed in the hope that it will be useful,
+REM but WITHOUT ANY WARRANTY; without even the implied warranty of
+REM MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+REM GNU Affero General Public License for more details.
+REM
+REM You should have received a copy of the GNU Affero General Public License
+REM along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+REM
