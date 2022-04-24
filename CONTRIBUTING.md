@@ -5,36 +5,43 @@
 The following is a set of guidelines and rules for contributing to StreamActions and its packages, which are hosted in the [StreamActions Organization](https://github.com/StreamActions) on GitHub. Use your best judgment, and feel free to propose changes to this document in a pull request.
 
 #### Table Of Contents
-
-[Code of Conduct](#code-of-conduct)
-
-[I don't want to read this whole thing, I just have a question!!!](#i-dont-want-to-read-this-whole-thing-i-just-have-a-question)
-
-[How Can I Contribute?](#how-can-i-contribute)
-  * [Reporting Bugs](#reporting-bugs)
-  * [Suggesting Enhancements](#suggesting-enhancements)
-  * [Your First Code Contribution](#your-first-code-contribution)
-  * [Pull Requests](#pull-requests)
-
-[Styleguides](#styleguides)
-  * [Git Commit Messages](#git-commit-messages)
-  * [C# Styleguide](#c-styleguide)
-  * [MongoDB Styleguide](#mongodb-styleguide)
-  * [Chat Styleguide](#chat-styleguide)
-
-[Integrated Development Environment](#integrated-development-environment)
-  * [Required Tools](#required-tools)
-  * [Recommended Tools](#recommended-tools)
-  * [Recommended Extensions](#recommended-extensions)
-
-[Additional Notes](#additional-notes)
-  * [Issue and Pull Request Labels](#issue-and-pull-request-labels)
-  
-[Acknowledgments](#acknowledgments)
+<!--TOC-->
+  - [Code of Conduct](#code-of-conduct)
+  - [I don't want to read this whole thing I just have a question!!!](#i-dont-want-to-read-this-whole-thing-i-just-have-a-question)
+  - [How Can I Contribute?](#how-can-i-contribute)
+    - [Reporting Bugs](#reporting-bugs)
+      - [Before Submitting a Bug Report](#before-submitting-a-bug-report)
+      - [How Do I Submit A (Good) Bug Report?](#how-do-i-submit-a-good-bug-report)
+    - [Suggesting Enhancements](#suggesting-enhancements)
+      - [Before Submitting an Enhancement Suggestion](#before-submitting-an-enhancement-suggestion)
+      - [How Do I Submit A (Good) Enhancement Suggestion?](#how-do-i-submit-a-good-enhancement-suggestion)
+    - [Your First Code Contribution](#your-first-code-contribution)
+    - [Pull Requests](#pull-requests)
+  - [Styleguides](#styleguides)
+    - [Git Commit Messages](#git-commit-messages)
+    - [C# Styleguide](#c-styleguide)
+      - [Types and Type Members](#types-and-type-members)
+      - [Code](#code)
+      - [Spacing, Indenting, New Lines](#spacing-indenting-new-lines)
+      - [Naming](#naming)
+      - [XML Documentation](#xml-documentation)
+      - [Output](#output)
+      - [Testing](#testing)
+    - [PostgresDB Styleguide](#postgresdb-styleguide)
+    - [Chat Styleguide](#chat-styleguide)
+  - [Integrated Development Environment](#integrated-development-environment)
+    - [Required Tools](#required-tools)
+    - [Recommended Tools](#recommended-tools)
+    - [Recommended Extensions](#recommended-extensions)
+  - [Additional Notes](#additional-notes)
+    - [Issue and Pull Request Labels](#issue-and-pull-request-labels)
+      - [Type of Issue and Issue State](#type-of-issue-and-issue-state)
+  - [Acknowledgments](#acknowledgments)
+<!--/TOC-->
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the [StreamActions Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to _community /AT streamactions /DOT hopto /DOT org_.
+This project and everyone participating in it are governed by the [StreamActions Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to _community /AT streamactions /DOT hopto /DOT org_.
 
 ## I don't want to read this whole thing I just have a question!!!
 
@@ -54,7 +61,7 @@ Before creating bug reports, please check [this list](#before-submitting-a-bug-r
 
 > **Note:** If you find a **Closed** issue that seems like it is the same thing that you're experiencing, open a new issue and include a link to the original issue in the body of your new one.
 
-#### Before Submitting A Bug Report
+#### Before Submitting a Bug Report
 
 * **Perform a [cursory search](https://github.com/search?q=+is%3Aissue+user%3AStreamActions)** to see if the problem has already been reported. If it has **and the issue is still open**, add a comment to the existing issue instead of opening a new one.
 
@@ -65,18 +72,18 @@ Bugs are tracked as [GitHub issues](https://guides.github.com/features/issues/).
 Explain the problem and include additional details to help maintainers reproduce the problem:
 
 * **Use a clear and descriptive title** for the issue to identify the problem.
-* **Describe the exact steps which reproduce the problem** in as many details as possible. For example, start by explaining how you started StreamActions, e.g. which command exactly you used in the terminal, or how you started StreamActions otherwise. When listing steps, **don't just say what you did, but explain how you did it**. For example, if you executed a chat command, explain if you used the console, Twitch chat, Discord, or GraphQL.
-* **Provide specific examples to demonstrate the steps**. Include links to files or GitHub projects, or copy/pasteable snippets, which you use in those examples. If you're providing snippets in the issue, use [Markdown code blocks](https://help.github.com/articles/markdown-basics/#multiple-lines).
+* **Describe the exact steps which reproduce the problem** in as many details as possible. For example, start by explaining how you started StreamActions, e.g., which command exactly you used in the terminal, or how you started StreamActions otherwise. When listing steps, **don't just say what you did, but explain how you did it**. For example, if you executed a chat command, explain if you used the console, Twitch chat, Discord, or SignalR.
+* **Provide specific examples to demonstrate the steps**. Include links to files or GitHub projects, or copy/paste able snippets, which you use in those examples. If you're providing snippets in the issue, use [Markdown code blocks](https://help.github.com/articles/markdown-basics/#multiple-lines).
 * **Describe the behavior you observed after following the steps** and point out what exactly is the problem with that behavior.
 * **Explain which behavior you expected to see instead and why.**
-* **Include screenshots and animated GIFs** which show you following the described steps and clearly demonstrate the problem.  You can use [this tool](https://www.cockos.com/licecap/) to record GIFs on macOS and Windows, and [this tool](https://github.com/colinkeenan/silentcast) or [this tool](https://github.com/GNOME/byzanz) on Linux.
+* **Include screenshots and animated GIFs** which show you following the described steps and clearly demonstrate the problem. You can use [this tool](https://www.cockos.com/licecap/) to record GIFs on macOS and Windows, and [this tool](https://github.com/colinkeenan/silentcast) or [this tool](https://github.com/GNOME/byzanz) on Linux.
 * **If you're reporting that StreamActions crashed**, include a crash report with a stack trace from the operating system. Include the crash report in the issue in a [code block](https://help.github.com/articles/markdown-basics/#multiple-lines), a [file attachment](https://help.github.com/articles/file-attachments-on-issues-and-pull-requests/), or put it in a [gist](https://gist.github.com/) and provide link to that gist.
 * **If the problem is related to performance or memory**, include a [CPU profile capture](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/) with your report.
 * **If the problem wasn't triggered by a specific action**, describe what you were doing before the problem happened and share more information using the guidelines below.
 
 Provide more context by answering these questions:
 
-* **Did the problem start happening recently** (e.g. after updating to a new version of StreamActions) or was this always a problem?
+* **Did the problem start happening recently** (e.g., after updating to a new version of StreamActions) or was this always a problem?
 * If the problem started happening recently, **can you reproduce the problem in an older version of StreamActions?** What's the most recent version in which the problem doesn't happen? You can download older versions of StreamActions from [the releases page](https://github.com/StreamActions/StreamActions/releases).
 * **Can you reliably reproduce the issue?** If not, provide details about how often the problem happens and under which conditions it normally happens.
 
@@ -84,7 +91,7 @@ Include details about your configuration and environment:
 
 * **Which version of StreamActions are you using?**
 * **What's the name and version of the OS you're using**?
-* **Are you running StreamActions in a virtual machine?** If so, which VM software are you using and which operating systems and versions are used for the host and the guest?
+* **Are you running StreamActions in a virtual machine?** If so, which VM software are you using, and which operating systems and versions are used for the host and the guest?
 * **Are you using a remote MongoDB?** If so, does reconfiguring to run MongoDB on the same machine as the bot fix the issue?
 * **Are you running the bot in multiple channels from a single instance?** If so, does reconfiguring to only run in a single channel fix the issue?
 
@@ -94,7 +101,7 @@ This section guides you through submitting an enhancement suggestion for StreamA
 
 Before creating enhancement suggestions, please check [this list](#before-submitting-an-enhancement-suggestion) as you might find out that you don't need to create one. When you are creating an enhancement suggestion, please [include as many details as possible](#how-do-i-submit-a-good-enhancement-suggestion). Fill in [the template](.github/ISSUE_TEMPLATE/feature_request.md), including the steps that you imagine you would take if the feature you're requesting existed.
 
-#### Before Submitting An Enhancement Suggestion
+#### Before Submitting an Enhancement Suggestion
 
 * **Perform a [cursory search](https://github.com/search?q=+is%3Aissue+user%3AStreamActions)** to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
 
@@ -104,7 +111,7 @@ Enhancement suggestions are tracked as [GitHub issues](https://guides.github.com
 
 * **Use a clear and descriptive title** for the issue to identify the suggestion.
 * **Provide a step-by-step description of the suggested enhancement** in as many details as possible.
-* **Provide specific examples to demonstrate the steps**. Include copy/pasteable snippets which you use in those examples, as [Markdown code blocks](https://help.github.com/articles/markdown-basics/#multiple-lines).
+* **Provide specific examples to demonstrate the steps**. Include copy/paste able snippets which you use in those examples, as [Markdown code blocks](https://help.github.com/articles/markdown-basics/#multiple-lines).
 * **Describe the current behavior** and **explain which behavior you expected to see instead** and why.
 * **Include screenshots and animated GIFs** which help you demonstrate the steps or point out the part of StreamActions which the suggestion is related to. You can use [this tool](https://www.cockos.com/licecap/) to record GIFs on macOS and Windows, and [this tool](https://github.com/colinkeenan/silentcast) or [this tool](https://github.com/GNOME/byzanz) on Linux.
 * **Explain why this enhancement would be useful** to most StreamActions users and isn't something that can or should be implemented as a community package.
@@ -122,7 +129,7 @@ The issue lists are sorted by total number of comments. While not perfect, numbe
 
 The process described here has several goals:
 
-- Maintain StreamActions's quality
+- Maintain StreamActions' quality
 - Fix problems that are important to users
 - Engage the community in working toward the best possible StreamActions
 - Enable a sustainable system for StreamActions' maintainers to review contributions
@@ -133,7 +140,7 @@ Please follow these steps to have your contribution considered by the maintainer
 2. Follow the [styleguides](#styleguides)
 3. After you submit your pull request, verify that all [status checks](https://help.github.com/articles/about-status-checks/) are passing <details><summary>What if the status checks are failing?</summary>If a status check is failing, and you believe that the failure is unrelated to your change, please leave a comment on the pull request explaining why you believe the failure is unrelated. A maintainer will re-run the status check for you. If we conclude that the failure was a false positive, then we will open an issue to track that problem with our status check suite.</details>
 
-While the prerequisites above must be satisfied prior to having your pull request reviewed, the reviewer(s) may ask you to complete additional design work, tests, or other changes before your pull request can be ultimately accepted.
+While the prerequisites above must be satisfied prior to having your pull request reviewed, the reviewer(s) may ask you to complete additional design work, tests, or other changes before your pull request can be accepted.
 
 ## Styleguides
 
@@ -189,14 +196,14 @@ All C# must adhere to [Microsoft .NET Framework Design Guidelines](https://docs.
          * Methods
          * Structs
          * Classes
-     * Custom regions are okay, as long as they still follow the ordering scheme (Note that if you are using CodeMaid, it will delete these unless that option is turned off)
+     * Custom regions are okay, if they still follow the ordering scheme (Note that if you are using CodeMaid, it will delete these unless that option is turned off)
          
 #### Code
 * Avoid platform-dependent code
 * P/Invoke is strictly prohibited
 * All files must have the license header added as a comment at the top, if the file format allows
 * Qualify field, property, method, and event access with `this.`
-* Prefer predefined types (string, int, etc)
+* Prefer predefined types (string, int, etc.)
 * Use explicit types instead of `var`
 * Always use braces
 * Always use parenthesis for clarity in arithmetic, binary, and relational operators
@@ -211,10 +218,10 @@ All C# must adhere to [Microsoft .NET Framework Design Guidelines](https://docs.
 * Prefer `readonly` fields
 * Avoid unused parameters
 * Only suppress warnings when absolutely necessary
-* Use the _Attribute (in source)_ method for suppression unless there is a really good reason to globally suppress the issue
+* Use the _Attribute (in source)_ method for suppression unless there is a good reason to globally suppress the issue
 * All suppressions must have valid justification provided in the _Justification_ parameter of the attribute
-* Generally speaking, anything suggested by IntelliSense in Visual Studio should be done, unless there is a very good reason to ignore it
-* Generally speaking, anything suggested by Codacy in your PR should be done, unless there is a very good reason to ignore it
+* Generally speaking, anything suggested by IntelliSense in Visual Studio should be done, unless there is an exceptionally good reason to ignore it
+* Generally speaking, anything suggested by Codacy in your PR should be done, unless there is an exceptionally good reason to ignore it
 
 #### Spacing, Indenting, New Lines
 * No trailing whitespace
@@ -241,14 +248,30 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 * XML Documentation is required on all types and members, regardless of access modifiers
 * Prefer using `<see>` and `<paramref>` tags when referencing types or params from a non-Microsoft type or member
 * Always include a `<exception>` tag if the member throws exceptions
-* Prefer wrapping type keywords, such as _true_, _false_, and _null_ in `<c>` inline code tags
+* Prefer wrapping language keywords, such as _true_, _false_, and _null_ in `<see langword>` inline code tags
 * End all XMLDoc tag text with a period (So it looks like a complete sentence)
 * Allowing tags to be inherited is okay
 * Describing a constructor as just `Constructor` is okay, unless it is doing something complex that should be noted
  
+#### Output
+* Only use an ILogger provided by `StreamActions.Common.Logger.Logger` to provide output to a log or console
+* Output not going to an ILogger must use the I18N facilities provided for the output destination
+* Output going to an ILogger must use US English and formatting, except for timestamps
+    * This rule only applies to the hard-coded portion of the output
+* Timestamps going to an ILogger should use the ISO 8601 format, with optional fractions of a second
+    * If the timestamp is being written to debug the output of a timestamp format operation, this rule does not apply
+* Only necessary output should be written to an ILogger at a LogLevel of Information or higher
+* Output at a LogLevel of Debug should be concise, reserve extraneous detail and spammy levels of debugging output for LogLevel.Trace
+* Use a LoggerMessage method, such as those provided by the `StreamActions.Common.Logger` namespace to write ILogger output when possible
+
+#### Testing
+* XUnit tests are required on all public members
+* Non-public members should also be tested, to the greatest practical extent
+* Tests must be in a separate test project
+
 ### PostgresDB Styleguide
-* Table names should be the plural name of the document in camelCase, with the word _Document_ removed (eg. The table for _PermissionGroupDocument_ is named _permissionGroups_)
-* Index names should be in the format of _tableName\_indexType\_Field1-Field2-etc_ (eg. _permissionGroups\_unique\_ChannelId-GroupName_)
+* Table names should be the plural name of the document in camelCase, with the word _Document_ removed (e.g., The table for _PermissionGroupDocument_ is named _permissionGroups_)
+* Index names should be in the format of _tableName\_indexType\_Field1-Field2-etc_ (e.g., _permissionGroups\_unique\_ChannelId-GroupName_)
     * Foreign keys must use _ON UPDATE CASCADE ON DELETE CASCADE_ to prevent orphaned rows
 * All documents must have a unique auto-id for each row. If the document references a specific user/channel, add that as a foreign key to the _users_ table
     * Exact naming of the _UserId_ field can be chosen based on context, such as _ChannelId_ for a channel context or _FollowerId_ for a follower context
@@ -262,7 +285,7 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 * All hard-coded chat responses must be passed through `I18n.Instance.GetAndFormatWithAsync` (preferred), `I18n.GetAndFormatWith`, or `I18n.Get` to provide an opportunity for I18n/translation
 * The format for _Usage_ chat responses is `@{DisplayName}, Description.... Usage: {CommandPrefix}Command subcommand [required-param-1] [optional-param-1 (optional)] ...`
     * Example: `@{DisplayName}, Lists the permissions that are allowed or explicitly denied by a custom group. Usage: {CommandPrefix}{BotName} permissions group listpermissions [page (optional)] [GroupName]`
-* If the output to a command is going to be larger than a single chat message can handle and has the ability to be split into pages (eg. A list of permissions), use the `{CommandPrefix}command page#` convention (See example above)
+* If the output to a command is going to be larger than a single chat message can handle and can be split into pages (e.g., A list of permissions), use the `{CommandPrefix}command page#` convention (See example above)
 
 
 
@@ -277,7 +300,7 @@ To work on StreamActions, the following tools are required:
 * Python 3 (only if testing/running Python scripts)
 * GPG (Optional, but highly recommended to digitally sign your commits)
 
-NOTE: Although not required at this time, the StreamActions team reserves the right to require digitally signed commits in the future.
+:information_source: NOTE: Although not required at this time, the StreamActions team reserves the right to require digitally signed commits in the future.
 
 ### Recommended Tools
 If you are working on StreamActions from a Windows 10 or later environment, the following tools are recommended to achieve the requirements above:
@@ -302,6 +325,7 @@ To make following the C# styleguide and producing good code easier, we recommend
  * Visual Studio Spell Checker (VS2022 and Later) - Spell check for comments and strings, uses our included custom dictionary
 
  The following extensions are also recommended to improve productivity or user experience with Visual Studio:
+ * License Header Manager - Provides a right-click menu entry in _Solution Explorer_ to automatically add the license header
  * File Icons - Adds more file-type icons to _Solution Explorer_
  * Git Diff Margin - Shows colors in the left margin denoting adds, changes, and removes that are not committed
  * Markdown Editor v2 - Provides IntelliSense and live preview of Markdown files, including support for GitHub Flavored Markdown (GFM)
@@ -317,7 +341,7 @@ To make following the C# styleguide and producing good code easier, we recommend
  
  Our included _StreamActions.licenseheader_ file contains the license headers for you to copy/paste into each file, in case CodeMaid is not installed or fails to do it.
  
- NOTE: Our CodeMaid config will regionize and then re-order regions every time the file is saved, overwriting existing regions.
+ :information_source: NOTE: Our CodeMaid config will regionize and then re-order regions every time the file is saved, overwriting existing regions.
 
 ## Additional Notes
 
