@@ -47,6 +47,11 @@ namespace StreamActions.Common.Limiters
         public TokenBucketRateLimiter GlobalBucket { get; init; }
 
         /// <summary>
+        /// Indicates if both <see cref="GlobalBucket"/> and <see cref="LocalBucket"/> are full.
+        /// </summary>
+        public bool IsBothFull => this.GlobalBucket.IsFull && this.LocalBucket.IsFull;
+
+        /// <summary>
         /// The local <see cref="TokenBucketRateLimiter"/>.
         /// </summary>
         public TokenBucketRateLimiter LocalBucket { get; init; }
@@ -56,7 +61,7 @@ namespace StreamActions.Common.Limiters
         #region Public Methods
 
         /// <summary>
-        /// Waits until a token is available in each bucket, then acquires them. If either token is not acquired, the other one is returned to its bucket.
+        /// Waits until a token is available in both buckets, then acquires them. If either token is not acquired, the other one is returned to its bucket.
         /// </summary>
         /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
         /// <returns><see langword="true"/> if both tokens were acquired; <see langword="false"/> otherwise.</returns>

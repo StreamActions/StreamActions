@@ -40,7 +40,7 @@ namespace StreamActions.Common.Limiters
         /// Calculates the next value for <see cref="NextDuration"/>, in ticks.
         /// </summary>
         /// <returns>The next value that will be set for <see cref="NextDuration"/>, in ticks.</returns>
-        protected override long CalcNextDurationTicks() => this.NextDuration.Ticks * this.NextDuration.Ticks;
+        protected override long CalcNextDurationTicks() => this.NextDuration.Ticks * 2;
 
         #endregion Protected Methods
     }

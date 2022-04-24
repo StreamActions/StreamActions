@@ -31,6 +31,16 @@ namespace StreamActions.Common.Limiters
         public TimeSpan IntialDuration => TimeSpan.FromTicks(this._initialDuration.Ticks);
 
         /// <summary>
+        /// Indicates if the current value of <see cref="NextDuration"/> is equal to <see cref="MaxDuration"/>.
+        /// </summary>
+        public bool IsMaxDuration => this.NextDuration.Ticks == this._maxDuration.Ticks;
+
+        /// <summary>
+        /// Indicates if the current value of <see cref="NextDuration"/> is equal to <see cref="InitialDuration"/>.
+        /// </summary>
+        public bool IsReset => this.NextDuration.Ticks == this._initialDuration.Ticks;
+
+        /// <summary>
         /// The maximum allowed backoff duration.
         /// </summary>
         public TimeSpan MaxDuration => TimeSpan.FromTicks(this._maxDuration.Ticks);
@@ -38,7 +48,7 @@ namespace StreamActions.Common.Limiters
         /// <summary>
         /// The duration of the next backoff.
         /// </summary>
-        public TimeSpan NextDuration => TimeSpan.FromTicks(this._nextDuration.Ticks);
+        public TimeSpan NextDuration => this.GetNextDuration();
 
         #endregion Public Properties
 
@@ -70,7 +80,7 @@ namespace StreamActions.Common.Limiters
                         }
                         else
                         {
-                            throw new TimeoutException();
+                            throw new TimeoutException("Timed out attempting to aquire write lock.");
                         }
                     }
                 }
@@ -81,7 +91,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException();
+                throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
             }
         }
 
@@ -120,7 +130,7 @@ namespace StreamActions.Common.Limiters
                         }
                         else
                         {
-                            throw new TimeoutException();
+                            throw new TimeoutException("Timed out attempting to aquire write lock.");
                         }
                     }
                 }
@@ -131,7 +141,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException();
+                throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
             }
         }
 
@@ -199,5 +209,26 @@ namespace StreamActions.Common.Limiters
         private TimeSpan _nextDuration;
 
         #endregion Private Fields
+
+        #region Private Methods
+
+        /// <summary>
+        /// Thread-safe getter for <see cref="NextDuration"/>.
+        /// </summary>
+        /// <returns>The next duration.</returns>
+        private TimeSpan GetNextDuration()
+        {
+            this.Rwl.EnterReadLock();
+            try
+            {
+                return TimeSpan.FromTicks(this._nextDuration.Ticks);
+            }
+            finally
+            {
+                this.Rwl.ExitReadLock();
+            }
+        }
+
+        #endregion Private Methods
     }
 }

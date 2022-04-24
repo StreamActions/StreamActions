@@ -84,6 +84,11 @@ namespace StreamActions.Common.Limiters
         #region Public Properties
 
         /// <summary>
+        /// Indicates if the bucket is full.
+        /// </summary>
+        public bool IsFull => this.GetRemaining() == this.GetLimit();
+
+        /// <summary>
         /// The maximum number of tokens that can be in the bucket.
         /// </summary>
         public int Limit => this.GetLimit();
@@ -355,7 +360,7 @@ namespace StreamActions.Common.Limiters
                                 }
                                 else
                                 {
-                                    throw new TimeoutException();
+                                    throw new TimeoutException("Timed out attempting to aquire write lock.");
                                 }
                             }
                         }
@@ -366,7 +371,7 @@ namespace StreamActions.Common.Limiters
                     }
                     else
                     {
-                        throw new TimeoutException();
+                        throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
                     }
 
                     await Task.Delay(this.GetTimeUntilNextToken(timeout)).ConfigureAwait(false);
@@ -374,7 +379,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException();
+                throw new TimeoutException("Timed out attempting to aquire write lock.");
             }
         }
 
@@ -406,7 +411,7 @@ namespace StreamActions.Common.Limiters
                     }
                     else
                     {
-                        throw new TimeoutException();
+                        throw new TimeoutException("Timed out attempting to aquire write lock.");
                     }
                 }
                 finally
@@ -416,7 +421,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException();
+                throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
             }
         }
 
@@ -547,7 +552,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException();
+                throw new TimeoutException("Timed out attempting to aquire read lock.");
             }
         }
 
@@ -599,7 +604,7 @@ namespace StreamActions.Common.Limiters
                         }
                         else
                         {
-                            throw new TimeoutException();
+                            throw new TimeoutException("Timed out attempting to aquire write lock.");
                         }
                     }
                     else
@@ -623,7 +628,7 @@ namespace StreamActions.Common.Limiters
                         }
                         else
                         {
-                            throw new TimeoutException();
+                            throw new TimeoutException("Timed out attempting to aquire write lock.");
                         }
                     }
                 }
@@ -634,7 +639,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException();
+                throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
             }
         }
 
