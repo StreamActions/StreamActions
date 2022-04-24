@@ -59,7 +59,7 @@ namespace StreamActions.Common.Limiters
         /// Waits until a token is available in each bucket, then acquires them. If either token is not acquired, the other one is returned to its bucket.
         /// </summary>
         /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
-        /// <returns><c>true</c> if both tokens were acquired; <c>false</c> otherwise.</returns>
+        /// <returns><see langword="true"/> if both tokens were acquired; <see langword="false"/> otherwise.</returns>
         public async Task<bool> WaitForRateLimit(TimeSpan timeout)
         {
             Task gt = this.GlobalBucket.WaitForRateLimit(timeout);

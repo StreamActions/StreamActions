@@ -66,11 +66,11 @@ namespace StreamActions.Common
         public static Task InvokeAsync<TEventArgs>(this EventHandler<TEventArgs> eventHandler, object? sender, TEventArgs e) => Task.Run(() => eventHandler?.Invoke(sender, e));
 
         /// <summary>
-        /// Determines if the string at the specified index of the <c>List&lt;string></c> is <c>null</c> or an empty string (""), or if the index is out of range.
+        /// Determines if the string at the specified index of the <c>List&lt;string></c> is <see langword="null"/> or an empty string (""), or if the index is out of range.
         /// </summary>
         /// <param name="source">The <c>List&lt;string></c> to check.</param>
         /// <param name="index">The index of the desired entry in the <c>List&lt;string></c>.</param>
-        /// <returns><c>true</c> if the string at the specified index is <c>null</c>, empty, or the index is out of range.</returns>
+        /// <returns><see langword="true"/> if the string at the specified index is <see langword="null"/>, empty, or the index is out of range.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
         public static bool IsNullEmptyOrOutOfRange(this List<string> source, int index)
         {
@@ -90,11 +90,11 @@ namespace StreamActions.Common
         }
 
         /// <summary>
-        /// Determines if the string at the specified index of the <c>List&lt;string&rt;</c> is <c>null</c>, an empty string (""), or only consists of white-space characters, or if the index is out of range.
+        /// Determines if the string at the specified index of the <c>List&lt;string&rt;</c> is <see langword="null"/>, an empty string (""), or only consists of white-space characters, or if the index is out of range.
         /// </summary>
         /// <param name="source">The <c>List&lt;string&rt;</c> to check.</param>
         /// <param name="index">The index of the desired entry in the <c>List&lt;string&rt;</c>.</param>
-        /// <returns><c>true</c> if the string at the specified index is <c>null</c>, empty, contains only white-space characters, or the index is out of range.</returns>
+        /// <returns><see langword="true"/> if the string at the specified index is <see langword="null"/>, empty, contains only white-space characters, or the index is out of range.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
         public static bool IsNullWhiteSpaceOrOutOfRange(this List<string?> source, int index)
         {

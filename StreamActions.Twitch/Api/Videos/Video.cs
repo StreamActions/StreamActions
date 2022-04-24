@@ -37,7 +37,7 @@ namespace StreamActions.Twitch.Api.Videos
         public string? Id { get; init; }
 
         /// <summary>
-        /// ID of the stream that the video originated from if the <see cref="Type"/> is <see cref="VideoType.Archive"/>. Otherwise set to <c>null</c>.
+        /// ID of the stream that the video originated from if the <see cref="Type"/> is <see cref="VideoType.Archive"/>. Otherwise set to <see langword="null"/>.
         /// </summary>
         [JsonPropertyName("stream_id")]
         public string? StreamId { get; init; }
@@ -134,7 +134,7 @@ namespace StreamActions.Twitch.Api.Videos
         public TimeSpan? Duration => this.DurationString is not null ? Util.DurationStringToTimeSpan(this.DurationString) : null;
 
         /// <summary>
-        /// Array of muted segments in the video. If there are no muted segments, the value will be <c>null</c>.
+        /// Array of muted segments in the video. If there are no muted segments, the value will be <see langword="null"/>.
         /// </summary>
         [JsonPropertyName("muted_segments")]
         public IEnumerable<MutedVideoSegment>? MutedSegments { get; init; }

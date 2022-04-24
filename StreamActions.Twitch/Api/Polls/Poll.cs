@@ -109,7 +109,7 @@ namespace StreamActions.Twitch.Api.Polls
         public DateTime? StartedAt { get; init; }
 
         /// <summary>
-        /// UTC timestamp for the poll's end time. Set to <c>null</c> if the poll is active.
+        /// UTC timestamp for the poll's end time. Set to <see langword="null"/> if the poll is active.
         /// </summary>
         [JsonPropertyName("ended_at")]
         public DateTime? EndedAt { get; init; }

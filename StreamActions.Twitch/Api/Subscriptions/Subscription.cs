@@ -67,7 +67,7 @@ namespace StreamActions.Twitch.Api.Subscriptions
         public string? GifterName { get; init; }
 
         /// <summary>
-        /// Is <c>true</c> if the subscription is a gift subscription.
+        /// Is <see langword="true"/> if the subscription is a gift subscription.
         /// </summary>
         [JsonPropertyName("is_gift")]
         public bool? IsGift { get; init; }

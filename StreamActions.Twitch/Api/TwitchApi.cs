@@ -16,7 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using Microsoft.Extensions.Logging;
 using StreamActions.Common;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.OAuth;
 using System.Text.Json;
@@ -71,6 +73,7 @@ namespace StreamActions.Twitch.Api
         {
             if (string.IsNullOrWhiteSpace(clientId))
             {
+                _logger.ArgumentNull(nameof(TwitchApi), nameof(Init), nameof(clientId));
                 throw new ArgumentNullException(nameof(clientId));
             }
 
@@ -121,11 +124,13 @@ namespace StreamActions.Twitch.Api
         {
             if (!_httpClient.DefaultRequestHeaders.Contains("Client-Id"))
             {
+                _logger.InvalidOperation(nameof(TwitchApi), nameof(PerformHttpRequest), "Must call Init first");
                 throw new InvalidOperationException("Must call TwitchAPI.Init.");
             }
 
             if (string.IsNullOrWhiteSpace(session.Token?.OAuth))
             {
+                _logger.InvalidOperation(nameof(TwitchApi), nameof(PerformHttpRequest), "OAuth token was null, blank, or whitespace");
                 throw new InvalidOperationException("Invalid OAuth token in session.");
             }
 
@@ -185,6 +190,11 @@ namespace StreamActions.Twitch.Api
         /// The <see cref="HttpClient"/> that is used for all requests.
         /// </summary>
         private static readonly HttpClient _httpClient = new();
+
+        /// <summary>
+        /// The <see cref="ILogger"/> for logging.
+        /// </summary>
+        private static readonly ILogger _logger = Logger.GetLogger(typeof(TwitchApi));
 
         #endregion Private Fields
     }

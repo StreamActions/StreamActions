@@ -83,7 +83,7 @@ namespace StreamActions.Twitch.Api.OAuth
         /// Attempts to refresh the OAuth token assigned to the specified <see cref="TwitchSession"/>.
         /// </summary>
         /// <param name="session">The <see cref="TwitchSession"/> to refresh.</param>
-        /// <param name="baseAddress">The uri to the Token endpoint. <c>null</c> for default.</param>
+        /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> for default.</param>
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="session"/> does not have a valid refresh token.</exception>
@@ -114,7 +114,7 @@ namespace StreamActions.Twitch.Api.OAuth
         /// </summary>
         /// <param name="code">The authorization code.</param>
         /// <param name="redirectUri">The redirect Uri that was used.</param>
-        /// <param name="baseAddress">The uri to the Token endpoint. <c>null</c> for default.</param>
+        /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> for default.</param>
         /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="code"/> is null or whitespace, or <paramref name="redirectUri"/> is null.</exception>
         public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null)
@@ -168,7 +168,7 @@ namespace StreamActions.Twitch.Api.OAuth
         /// <summary>
         /// Validates and converts <see cref="IdToken"/>, if present, to a <see cref="JsonWebToken"/>.
         /// </summary>
-        /// <returns>A <see cref="JsonWebToken"/> if <see cref="IdToken"/> is a valid JWT, else <c>null</c>.</returns>
+        /// <returns>A <see cref="JsonWebToken"/> if <see cref="IdToken"/> is a valid JWT, else <see langword="null"/>.</returns>
         private JsonWebToken? GetJsonWebToken()
         {
             if (this.IdToken is not null)
