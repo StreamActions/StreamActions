@@ -21,44 +21,10 @@ using Microsoft.Extensions.Logging;
 namespace StreamActions.Common.Logger
 {
     /// <summary>
-    /// Provides <see cref="LoggerMessage"/> and <see cref="EventId"/> instances for wriring generic log messages.
+    /// Provides <see cref="LoggerMessage"/> members for writing generic log messages.
     /// </summary>
-    public static class GenericLogger
+    public static partial class GenericLogger
     {
-        #region Public Properties
-
-        /// <summary>
-        /// A generic critical event.
-        /// </summary>
-        public static EventId CriticalId => new(9999, "Critical");
-
-        /// <summary>
-        /// A generic debug event.
-        /// </summary>
-        public static EventId DebugId => new(9995, "Debug");
-
-        /// <summary>
-        /// A generic error event.
-        /// </summary>
-        public static EventId ErrorId => new(9998, "Error");
-
-        /// <summary>
-        /// A generic information event.
-        /// </summary>
-        public static EventId InformationId => new(9996, "Information");
-
-        /// <summary>
-        /// A generic trace event.
-        /// </summary>
-        public static EventId TraceId => new(9994, "Trace");
-
-        /// <summary>
-        /// A generic warning event.
-        /// </summary>
-        public static EventId WarningId => new(9997, "Warning");
-
-        #endregion Public Properties
-
         #region Public Methods
 
         /// <summary>
@@ -69,7 +35,11 @@ namespace StreamActions.Common.Logger
         /// <param name="member">The member that is logging the message.</param>
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
-        public static void Critical(this ILogger logger, string type, string member, string message, Exception? exception = null) => _critical(logger, type, member, message, exception);
+        [LoggerMessage(
+            EventId = 9999,
+            Level = LogLevel.Critical,
+            Message = "[{Type}.{Member}] {Message}")]
+        public static partial void Critical(this ILogger logger, string type, string member, string message, Exception? exception = null);
 
         /// <summary>
         /// Logs a generic debug message.
@@ -79,7 +49,11 @@ namespace StreamActions.Common.Logger
         /// <param name="member">The member that is logging the message.</param>
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
-        public static void Debug(this ILogger logger, string type, string member, string message, Exception? exception = null) => _debug(logger, type, member, message, exception);
+        [LoggerMessage(
+            EventId = 9999,
+            Level = LogLevel.Debug,
+            Message = "[{Type}.{Member}] {Message}")]
+        public static partial void Debug(this ILogger logger, string type, string member, string message, Exception? exception = null);
 
         /// <summary>
         /// Logs a generic error message.
@@ -89,7 +63,11 @@ namespace StreamActions.Common.Logger
         /// <param name="member">The member that is logging the message.</param>
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
-        public static void Error(this ILogger logger, string type, string member, string message, Exception? exception = null) => _error(logger, type, member, message, exception);
+        [LoggerMessage(
+            EventId = 9999,
+            Level = LogLevel.Error,
+            Message = "[{Type}.{Member}] {Message}")]
+        public static partial void Error(this ILogger logger, string type, string member, string message, Exception? exception = null);
 
         /// <summary>
         /// Logs a generic information message.
@@ -99,7 +77,11 @@ namespace StreamActions.Common.Logger
         /// <param name="member">The member that is logging the message.</param>
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
-        public static void Information(this ILogger logger, string type, string member, string message, Exception? exception = null) => _information(logger, type, member, message, exception);
+        [LoggerMessage(
+            EventId = 9999,
+            Level = LogLevel.Information,
+            Message = "[{Type}.{Member}] {Message}")]
+        public static partial void Information(this ILogger logger, string type, string member, string message, Exception? exception = null);
 
         /// <summary>
         /// Logs a generic trace message.
@@ -109,7 +91,11 @@ namespace StreamActions.Common.Logger
         /// <param name="member">The member that is logging the message.</param>
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
-        public static void Trace(this ILogger logger, string type, string member, string message, Exception? exception = null) => _trace(logger, type, member, message, exception);
+        [LoggerMessage(
+            EventId = 9999,
+            Level = LogLevel.Trace,
+            Message = "[{Type}.{Member}] {Message}")]
+        public static partial void Trace(this ILogger logger, string type, string member, string message, Exception? exception = null);
 
         /// <summary>
         /// Logs a generic warning message.
@@ -119,42 +105,12 @@ namespace StreamActions.Common.Logger
         /// <param name="member">The member that is logging the message.</param>
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
-        public static void Warning(this ILogger logger, string type, string member, string message, Exception? exception = null) => _warning(logger, type, member, message, exception);
+        [LoggerMessage(
+            EventId = 9999,
+            Level = LogLevel.Warning,
+            Message = "[{Type}.{Member}] {Message}")]
+        public static partial void Warning(this ILogger logger, string type, string member, string message, Exception? exception = null);
 
         #endregion Public Methods
-
-        #region Private Fields
-
-        /// <summary>
-        /// A <see cref="LoggerMessage"/> for a generic critical message.
-        /// </summary>
-        private static readonly Action<ILogger, string, string, string, Exception?> _critical = LoggerMessage.Define<string, string, string>(LogLevel.Critical, CriticalId, "[{Type}.{Member}] {Message}");
-
-        /// <summary>
-        /// A <see cref="LoggerMessage"/> for a generic debug message.
-        /// </summary>
-        private static readonly Action<ILogger, string, string, string, Exception?> _debug = LoggerMessage.Define<string, string, string>(LogLevel.Debug, DebugId, "[{Type}.{Member}] {Message}");
-
-        /// <summary>
-        /// A <see cref="LoggerMessage"/> for a generic error message.
-        /// </summary>
-        private static readonly Action<ILogger, string, string, string, Exception?> _error = LoggerMessage.Define<string, string, string>(LogLevel.Error, ErrorId, "[{Type}.{Member}] {Message}");
-
-        /// <summary>
-        /// A <see cref="LoggerMessage"/> for a generic informaion message.
-        /// </summary>
-        private static readonly Action<ILogger, string, string, string, Exception?> _information = LoggerMessage.Define<string, string, string>(LogLevel.Information, InformationId, "[{Type}.{Member}] {Message}");
-
-        /// <summary>
-        /// A <see cref="LoggerMessage"/> for a generic trace message.
-        /// </summary>
-        private static readonly Action<ILogger, string, string, string, Exception?> _trace = LoggerMessage.Define<string, string, string>(LogLevel.Trace, TraceId, "[{Type}.{Member}] {Message}");
-
-        /// <summary>
-        /// A <see cref="LoggerMessage"/> for a generic warning message.
-        /// </summary>
-        private static readonly Action<ILogger, string, string, string, Exception?> _warning = LoggerMessage.Define<string, string, string>(LogLevel.Warning, WarningId, "[{Type}.{Member}] {Message}");
-
-        #endregion Private Fields
     }
 }
