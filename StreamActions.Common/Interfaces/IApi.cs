@@ -21,7 +21,7 @@ namespace StreamActions.Common.Interfaces
     /// <summary>
     /// An interface for a component which interacts with an API.
     /// </summary>
-    public interface IApi : IComponent
+    public abstract class IApi : IComponent
     {
     }
 }

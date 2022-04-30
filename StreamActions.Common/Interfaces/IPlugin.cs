@@ -21,7 +21,7 @@ namespace StreamActions.Common.Interfaces
     /// <summary>
     /// An interface for a plugin that processes messages, commands, and other input.
     /// </summary>
-    public interface IPlugin : IComponent
+    public abstract class IPlugin : IComponent
     {
         #region Public Properties
 
@@ -37,12 +37,12 @@ namespace StreamActions.Common.Interfaces
         /// <summary>
         /// Called when the plugin is disabled either globally, or by all channels. EventHandler delegates must be unsubscribed here.
         /// </summary>
-        public void Disabled();
+        public abstract void Disabled();
 
         /// <summary>
         /// Called when the plugin is enabled either globally, or by at least one channel. EventHandler delegates must be subscribed here.
         /// </summary>
-        public void Enabled();
+        public abstract void Enabled();
 
         #endregion Public Methods
     }

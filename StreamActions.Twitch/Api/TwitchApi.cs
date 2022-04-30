@@ -18,9 +18,11 @@
 
 using Microsoft.Extensions.Logging;
 using StreamActions.Common;
+using StreamActions.Common.Interfaces;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.OAuth;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -30,7 +32,8 @@ namespace StreamActions.Twitch.Api
     /// <summary>
     /// Handles validation of OAuth tokens and performs HTTP calls for the API.
     /// </summary>
-    public static class TwitchApi
+    [Guid("996E35EC-638A-4E5B-AEFC-84C800E16520")]
+    public class TwitchApi : IApi
     {
         #region Public Events
 
@@ -44,9 +47,29 @@ namespace StreamActions.Twitch.Api
         #region Public Properties
 
         /// <summary>
+        /// <inheritdoc cref="IComponent.Author"/>
+        /// </summary>
+        public static new string? Author => "StreamActions Team";
+
+        /// <summary>
         /// The currently initialized Client Id.
         /// </summary>
         public static string? ClientId { get; private set; }
+
+        /// <summary>
+        /// <inheritdoc cref="IComponent.Description"/>
+        /// </summary>
+        public static new string? Description => "Interacts with the Twitch Helix API";
+
+        /// <summary>
+        /// <inheritdoc cref="IComponent.Id"/>
+        /// </summary>
+        public static new Guid? Id => typeof(TwitchApi).GUID;
+
+        /// <summary>
+        /// <inheritdoc cref="IComponent.Name"/>
+        /// </summary>
+        public static new string? Name => nameof(TwitchApi);
 
         /// <summary>
         /// The <see cref="JsonSerializerOptions"/> that should be used for all serialization and deserialization.
@@ -57,6 +80,16 @@ namespace StreamActions.Twitch.Api
                 new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
             }
         };
+
+        /// <summary>
+        /// <inheritdoc cref="IComponent.Uri"/>
+        /// </summary>
+        public static new Uri? Uri => new("https://github.com/StreamActions/StreamActions");
+
+        /// <summary>
+        /// <inheritdoc cref="IComponent.Version"/>
+        /// </summary>
+        public static new Version? Version => new(1, 0, 0, 0);
 
         #endregion Public Properties
 
@@ -197,5 +230,15 @@ namespace StreamActions.Twitch.Api
         private static readonly ILogger _logger = Logger.GetLogger(typeof(TwitchApi));
 
         #endregion Private Fields
+
+        #region Private Constructors
+
+        /// <summary>
+        /// Disabled constructor.
+        /// </summary>
+        private TwitchApi()
+        { }
+
+        #endregion Private Constructors
     }
 }

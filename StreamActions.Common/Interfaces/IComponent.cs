@@ -16,12 +16,14 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Collections.Immutable;
+
 namespace StreamActions.Common.Interfaces
 {
     /// <summary>
     /// A base interface containing common properties for sub-interfaces.
     /// </summary>
-    public interface IComponent
+    public abstract class IComponent
     {
         #region Public Properties
 
@@ -33,7 +35,7 @@ namespace StreamActions.Common.Interfaces
         /// <summary>
         /// A collection of <see cref="Guid"/> of other components that this component is dependent on.
         /// </summary>
-        public static IReadOnlyCollection<Guid>? Dependencies { get; }
+        public static IReadOnlyCollection<Guid>? Dependencies => ImmutableArray<Guid>.Empty;
 
         /// <summary>
         /// A description of the component.
