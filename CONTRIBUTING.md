@@ -25,6 +25,7 @@ The following is a set of guidelines and rules for contributing to StreamActions
       - [Spacing, Indenting, New Lines](#spacing-indenting-new-lines)
       - [Naming](#naming)
       - [XML Documentation](#xml-documentation)
+      - [Versioning and GUIDs](#versioning-and-guids)
       - [Output](#output)
       - [Testing](#testing)
     - [PostgresDB Styleguide](#postgresdb-styleguide)
@@ -253,6 +254,22 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 * Allowing tags to be inherited is okay
 * Describing a constructor as just `Constructor` is okay, unless it is doing something complex that should be noted
  
+#### Versioning and GUIDs
+* Components such as plugins, APIs, chat backends, etc are required to have a static Version property and a static Guid property, inherited through the `StreamActions.Common.Interfaces.IComponent` interface
+* Assemblies are required to have a Version attribute, provided using `AssemblyVersionAttribute` or a csproj file
+* Versioning must follow the scheme _Major.Minor.Patch[.HotFix]_ according to the following convention:
+    * _Major_: Assemblies and components with the same name but different major versions are not interchangeable. A higher version number might indicate a major rewrite of a product where backward compatibility cannot be assumed
+    * _Minor_: If the name and major version number on two assemblies or components are the same, but the minor version number is different, this indicates significant enhancement with the intention of backward compatibility. This higher minor version number might indicate a point release of a product or a fully backward-compatible new version of a product
+    * _Patch_: If the name, major version number, and minor version number on two assemblies or components are the same, but the patch version number is different, this indicates a patch that fixes a bug or security hole in a previous release of a product. Other than the behaviors that are changed by patching the bug or security hole, this should be a fully backward-compatible new version of the product
+    * _HotFix_: The hot fix number should only be changed for hot fixes of a previously released patch of the same patch version number. A patch is considered a hot fix if the previous patch broke the functionality of the module it was intended to fix and an immediate patch is required to restore the module to functionality
+* The _HotFix_ section of the version may be omitted if the current hot fix number is `0`
+* Version numbers must be reset using the following rules:
+    * _Major_: This number may never decrease or be reset
+    * _Minor_: This number resets to `0` whenever the major version number is increased
+    * _Patch_: This number resets to `0` whenever the major or minor version numbers are increased
+    * _HotFix_: This number resets to `0`, and may be omitted, whenever the major, minor, or patch version numbers are increased
+* Guids must be randomly generated using the GUIDv4 scheme. The recommended way to do this is using Visual Studio's _Tools > Create GUID_ option
+* The recommended way to apply the Guid to a type is using the GuidAttribute, then making it accessible to the Guid property using `typeof(myType).GUID`
 #### Output
 * Only use an ILogger provided by `StreamActions.Common.Logger.Logger` to provide output to a log or console
 * Output not going to an ILogger must use the I18N facilities provided for the output destination

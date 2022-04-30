@@ -21,7 +21,7 @@ namespace StreamActions.Common.Interfaces
     /// <summary>
     /// An interface for a plugin that processes messages, commands, and other input.
     /// </summary>
-    public interface IPlugin
+    public interface IPlugin : IComponent
     {
         #region Public Properties
 
@@ -29,41 +29,6 @@ namespace StreamActions.Common.Interfaces
         /// Whether the plugin should always be enabled for all channels. This should only be true in core plugins and special circumstances.
         /// </summary>
         public bool AlwaysEnabled { get; }
-
-        /// <summary>
-        /// A collection of <see cref="Guid"/> of other Plugins, APIs, Chat Backends, etc that this plugin is dependent on.
-        /// </summary>
-        public IReadOnlyCollection<Guid> Dependencies { get; }
-
-        /// <summary>
-        /// The author of the plugin.
-        /// </summary>
-        public string PluginAuthor { get; }
-
-        /// <summary>
-        /// A description of the plugin.
-        /// </summary>
-        public string PluginDescription { get; }
-
-        /// <summary>
-        /// A Guid used to identify the plugin.
-        /// </summary>
-        public Guid PluginId { get; }
-
-        /// <summary>
-        /// The name of the plugin.
-        /// </summary>
-        public string PluginName { get; }
-
-        /// <summary>
-        /// The Uri of the plugin.
-        /// </summary>
-        public Uri PluginUri { get; }
-
-        /// <summary>
-        /// The plugin version. Usage of semver is highly preferred.
-        /// </summary>
-        public string PluginVersion { get; }
 
         #endregion Public Properties
 
