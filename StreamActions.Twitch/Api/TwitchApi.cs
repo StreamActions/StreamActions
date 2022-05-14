@@ -141,6 +141,12 @@ namespace StreamActions.Twitch.Api
         #region Internal Methods
 
         /// <summary>
+        /// Gets the logger for TwitchApi.
+        /// </summary>
+        /// <returns>An <see cref="ILogger"/>.</returns>
+        internal static ILogger GetLogger() => _logger;
+
+        /// <summary>
         /// Submits a HTTP request to the specified Uri and returns the response.
         /// </summary>
         /// <param name="method">The <see cref="HttpMethod"/> of the request.</param>
