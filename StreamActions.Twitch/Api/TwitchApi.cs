@@ -33,7 +33,7 @@ namespace StreamActions.Twitch.Api
     /// Handles validation of OAuth tokens and performs HTTP calls for the API.
     /// </summary>
     [Guid("996E35EC-638A-4E5B-AEFC-84C800E16520")]
-    public class TwitchApi : IApi
+    public class TwitchApi : StreamActions.Common.Interfaces.Api
     {
         #region Public Events
 
@@ -47,7 +47,12 @@ namespace StreamActions.Twitch.Api
         #region Public Properties
 
         /// <summary>
-        /// <inheritdoc cref="IComponent.Author"/>
+        /// <inheritdoc cref="StreamActions.Common.Interfaces.Api.ApiDate"/>
+        /// </summary>
+        public static new DateTime? ApiDate => new(2022, 05, 09);
+
+        /// <summary>
+        /// <inheritdoc cref="Component.Author"/>
         /// </summary>
         public static new string? Author => "StreamActions Team";
 
@@ -57,17 +62,17 @@ namespace StreamActions.Twitch.Api
         public static string? ClientId { get; private set; }
 
         /// <summary>
-        /// <inheritdoc cref="IComponent.Description"/>
+        /// <inheritdoc cref="Component.Description"/>
         /// </summary>
         public static new string? Description => "Interacts with the Twitch Helix API";
 
         /// <summary>
-        /// <inheritdoc cref="IComponent.Id"/>
+        /// <inheritdoc cref="Component.Id"/>
         /// </summary>
         public static new Guid? Id => typeof(TwitchApi).GUID;
 
         /// <summary>
-        /// <inheritdoc cref="IComponent.Name"/>
+        /// <inheritdoc cref="Component.Name"/>
         /// </summary>
         public static new string? Name => nameof(TwitchApi);
 
@@ -82,12 +87,12 @@ namespace StreamActions.Twitch.Api
         };
 
         /// <summary>
-        /// <inheritdoc cref="IComponent.Uri"/>
+        /// <inheritdoc cref="Component.Uri"/>
         /// </summary>
         public static new Uri? Uri => new("https://github.com/StreamActions/StreamActions");
 
         /// <summary>
-        /// <inheritdoc cref="IComponent.Version"/>
+        /// <inheritdoc cref="Component.Version"/>
         /// </summary>
         public static new Version? Version => new(1, 0, 0, 0);
 

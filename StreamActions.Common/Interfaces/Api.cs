@@ -21,7 +21,20 @@ namespace StreamActions.Common.Interfaces
     /// <summary>
     /// An interface for a component which interacts with an API.
     /// </summary>
-    public abstract class IApi : IComponent
+    public abstract class Api : Component
     {
+        #region Public Properties
+
+        /// <summary>
+        /// Defines the timestamp of the latest API update that is included in the type.
+        /// </summary>
+        public static DateTime? ApiDate { get; }
+
+        /// <summary>
+        /// The API level that is defined in the type, as defined by the API publisher, such as a version number.
+        /// </summary>
+        public static string? ApiLevel { get; }
+
+        #endregion Public Properties
     }
 }

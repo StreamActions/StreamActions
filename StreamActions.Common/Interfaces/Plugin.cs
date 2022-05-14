@@ -21,7 +21,7 @@ namespace StreamActions.Common.Interfaces
     /// <summary>
     /// An interface for a plugin that processes messages, commands, and other input.
     /// </summary>
-    public abstract class IPlugin : IComponent
+    public abstract class Plugin : Component
     {
         #region Public Properties
 
