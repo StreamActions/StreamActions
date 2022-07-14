@@ -63,12 +63,13 @@ namespace StreamActions.Common.Limiters
         /// <summary>
         /// Waits until a token is available in both buckets, then acquires them. If either token is not acquired, the other one is returned to its bucket.
         /// </summary>
-        /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
+        /// <param name="timeout">The interval to wait for the lock and rate limit, or -1 milliseconds to wait indefinitely.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the wait.</param>
         /// <returns><see langword="true"/> if both tokens were acquired; <see langword="false"/> otherwise.</returns>
-        public async Task<bool> WaitForRateLimit(TimeSpan timeout)
+        public async Task<bool> WaitForRateLimit(TimeSpan timeout, CancellationToken? cancellationToken = null)
         {
-            Task gt = this.GlobalBucket.WaitForRateLimit(timeout);
-            Task lt = this.LocalBucket.WaitForRateLimit(timeout);
+            Task gt = this.GlobalBucket.WaitForRateLimit(timeout, cancellationToken);
+            Task lt = this.LocalBucket.WaitForRateLimit(timeout, cancellationToken);
 
             bool gotGt = false;
             try
@@ -80,6 +81,10 @@ namespace StreamActions.Common.Limiters
             {
                 // Don't need to process exception
             }
+            catch (OperationCanceledException)
+            {
+                // Don't need to process exception
+            }
 
             bool gotLt = false;
             try
@@ -88,6 +93,10 @@ namespace StreamActions.Common.Limiters
                 gotLt = true;
             }
             catch (TimeoutException)
+            {
+                // Don't need to process exception
+            }
+            catch (OperationCanceledException)
             {
                 // Don't need to process exception
             }
