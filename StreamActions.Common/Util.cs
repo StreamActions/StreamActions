@@ -62,9 +62,16 @@ namespace StreamActions.Common
                         first = false;
                     }
 
-                    foreach (string value in kvp.Value)
+                    if (kvp.Value.Any())
                     {
-                        _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
+                        foreach (string value in kvp.Value)
+                        {
+                            _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
+                        }
+                    }
+                    else
+                    {
+                        _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key));
                     }
                 }
             }
@@ -85,9 +92,16 @@ namespace StreamActions.Common
                         first = false;
                     }
 
-                    foreach (string value in kvp.Value)
+                    if (kvp.Value.Any())
                     {
-                        _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
+                        foreach (string value in kvp.Value)
+                        {
+                            _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
+                        }
+                    }
+                    else
+                    {
+                        _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key));
                     }
                 }
             }
