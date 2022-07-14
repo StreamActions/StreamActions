@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http.Headers;
 
@@ -33,14 +34,14 @@ namespace StreamActions.Common.Limiters
         /// </summary>
         /// <param name="limit">The maximum number of tokens the bucket can hold.</param>
         /// <param name="period">The period over which tokens normally refill from 0 to <paramref name="limit"/>.</param>
-        public TokenBucketRateLimiter(int limit, long period)
+        public TokenBucketRateLimiter(int limit, TimeSpan period)
         {
             this._rwl.EnterWriteLock();
             try
             {
                 _ = Interlocked.Exchange(ref this._limit, Math.Max(limit, 1));
                 _ = Interlocked.Exchange(ref this._remaining, this._limit);
-                _ = Interlocked.Exchange(ref this._period, Math.Max(period, 1));
+                _ = Interlocked.Exchange(ref this._period, Math.Max(period.Ticks, 1));
                 _ = Interlocked.Exchange(ref this._nextReset, DateTime.UtcNow.Ticks + this._period);
             }
             finally
@@ -117,11 +118,6 @@ namespace StreamActions.Common.Limiters
         /// The remaining limit in the bucket.
         /// </summary>
         public int Remaining => this.GetRemaining();
-
-        /// <summary>
-        /// The number of tasks waiting for a token.
-        /// </summary>
-        public int Waiters => this.GetWaiters();
 
         #endregion Public Properties
 
@@ -255,6 +251,13 @@ namespace StreamActions.Common.Limiters
         /// <summary>
         /// Changes the period over which the bucket normally refills from empty to full.
         /// </summary>
+        /// <param name="period">The period.</param>
+        /// <remarks>Fails silently if <paramref name="period"/> is less than 1.</remarks>
+        public void UpdatePeriod(TimeSpan period) => this.UpdatePeriod(period.Ticks);
+
+        /// <summary>
+        /// Changes the period over which the bucket normally refills from empty to full.
+        /// </summary>
         /// <param name="period">The period, in <see cref="TimeSpan.Ticks"/>.</param>
         /// <remarks>Fails silently if <paramref name="period"/> is less than 1.</remarks>
         public void UpdatePeriod(long period)
@@ -314,72 +317,65 @@ namespace StreamActions.Common.Limiters
         /// <summary>
         /// Waits until a token is available in the bucket, then acquires it.
         /// </summary>
-        /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
+        /// <param name="timeout">The interval to wait for the lock and rate limit, or -1 milliseconds to wait indefinitely.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the wait.</param>
         /// <returns>A <see cref="Task"/> that can be awaited.</returns>
-        /// <exception cref="TimeoutException">The lock timed out.</exception>
-        public async Task WaitForRateLimit(TimeSpan timeout)
+        /// <exception cref="TimeoutException">The lock timed out; unable to acquire a token within <paramref name="timeout"/>.</exception>
+        /// <exception cref="OperationCanceledException">A cancellation was requested via <paramref name="cancellationToken"/> before a rate limit token could be acquired.</exception>
+        public async Task WaitForRateLimit(TimeSpan timeout, CancellationToken? cancellationToken = null)
         {
-            if (this._rwl.TryEnterWriteLock(timeout))
+            Stopwatch timer = Stopwatch.StartNew();
+            while (true)
             {
-                try
+                if (timer.Elapsed > timeout)
                 {
-                    _ = Interlocked.Increment(ref this._waiters);
-                }
-                finally
-                {
-                    this._rwl.ExitWriteLock();
+                    throw new TimeoutException("Timed out waiting for the rate limit.");
                 }
 
-                while (true)
+                cancellationToken?.ThrowIfCancellationRequested();
+
+                this.RefillBucket(timeout);
+                if (this._rwl.TryEnterUpgradeableReadLock(timeout))
                 {
-                    this.RefillBucket(timeout);
-                    if (this._rwl.TryEnterUpgradeableReadLock(timeout))
+                    try
                     {
-                        try
+                        if (this._remaining > 0)
                         {
-                            if (this._remaining > 0)
+                            if (this._rwl.TryEnterWriteLock(timeout))
                             {
-                                if (this._rwl.TryEnterWriteLock(timeout))
+                                try
                                 {
-                                    try
+                                    if (Interlocked.Decrement(ref this._remaining) >= 0)
                                     {
-                                        if (Interlocked.Decrement(ref this._remaining) >= 0)
-                                        {
-                                            _ = Interlocked.Decrement(ref this._waiters);
-                                            return;
-                                        }
-                                        else
-                                        {
-                                            _ = Interlocked.Exchange(ref this._remaining, 0);
-                                        }
+                                        return;
                                     }
-                                    finally
+                                    else
                                     {
-                                        this._rwl.ExitWriteLock();
+                                        _ = Interlocked.Exchange(ref this._remaining, 0);
                                     }
                                 }
-                                else
+                                finally
                                 {
-                                    throw new TimeoutException("Timed out attempting to aquire write lock.");
+                                    this._rwl.ExitWriteLock();
                                 }
                             }
-                        }
-                        finally
-                        {
-                            this._rwl.ExitUpgradeableReadLock();
+                            else
+                            {
+                                throw new TimeoutException("Timed out attempting to acquire write lock.");
+                            }
                         }
                     }
-                    else
+                    finally
                     {
-                        throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
+                        this._rwl.ExitUpgradeableReadLock();
                     }
-
-                    await Task.Delay(this.GetTimeUntilNextToken(timeout)).ConfigureAwait(false);
                 }
-            }
-            else
-            {
-                throw new TimeoutException("Timed out attempting to aquire write lock.");
+                else
+                {
+                    throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
+                }
+
+                await Task.Delay(this.GetTimeUntilNextToken(timeout), cancellationToken.GetValueOrDefault()).ConfigureAwait(false);
             }
         }
 
@@ -411,7 +407,7 @@ namespace StreamActions.Common.Limiters
                     }
                     else
                     {
-                        throw new TimeoutException("Timed out attempting to aquire write lock.");
+                        throw new TimeoutException("Timed out attempting to acquire write lock.");
                     }
                 }
                 finally
@@ -421,7 +417,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
+                throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
             }
         }
 
@@ -453,11 +449,6 @@ namespace StreamActions.Common.Limiters
         /// The remaining limit in the bucket.
         /// </summary>
         private int _remaining = 1;
-
-        /// <summary>
-        /// The number of tasks waiting for a token.
-        /// </summary>
-        private int _waiters;
 
         #endregion Private Fields
 
@@ -552,24 +543,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException("Timed out attempting to aquire read lock.");
-            }
-        }
-
-        /// <summary>
-        /// Thread-safe getter for <see cref="Waiters"/>.
-        /// </summary>
-        /// <returns>The current number of waiters.</returns>
-        private int GetWaiters()
-        {
-            this._rwl.EnterReadLock();
-            try
-            {
-                return this._waiters;
-            }
-            finally
-            {
-                this._rwl.ExitReadLock();
+                throw new TimeoutException("Timed out attempting to acquire read lock.");
             }
         }
 
@@ -580,9 +554,23 @@ namespace StreamActions.Common.Limiters
         /// <exception cref="TimeoutException">The lock timed out.</exception>
         private void RefillBucket(TimeSpan timeout)
         {
-            if (this._remaining == this._limit)
+            if (this._rwl.TryEnterReadLock(timeout))
             {
-                return;
+                try
+                {
+                    if (this._remaining == this._limit)
+                    {
+                        return;
+                    }
+                }
+                finally
+                {
+                    this._rwl.ExitReadLock();
+                }
+            }
+            else
+            {
+                throw new TimeoutException("Timed out attempting to acquire read lock.");
             }
             if (this._rwl.TryEnterUpgradeableReadLock(timeout))
             {
@@ -604,7 +592,7 @@ namespace StreamActions.Common.Limiters
                         }
                         else
                         {
-                            throw new TimeoutException("Timed out attempting to aquire write lock.");
+                            throw new TimeoutException("Timed out attempting to acquire write lock.");
                         }
                     }
                     else
@@ -628,7 +616,7 @@ namespace StreamActions.Common.Limiters
                         }
                         else
                         {
-                            throw new TimeoutException("Timed out attempting to aquire write lock.");
+                            throw new TimeoutException("Timed out attempting to acquire write lock.");
                         }
                     }
                 }
@@ -639,7 +627,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
+                throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
             }
         }
 

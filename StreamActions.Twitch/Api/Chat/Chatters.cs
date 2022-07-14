@@ -96,7 +96,7 @@ namespace StreamActions.Twitch.Api.Chat
             }
 
             Uri uri = Util.BuildUri(new(string.Format(CultureInfo.InvariantCulture, baseAddress, channelLogin)));
-            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, new() { RateLimiter = new(1, TimeSpan.FromSeconds(1)), Token = new() { OAuth = "__NEW" } }).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<ChattersResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }

@@ -80,7 +80,7 @@ namespace StreamActions.Common.Limiters
                         }
                         else
                         {
-                            throw new TimeoutException("Timed out attempting to aquire write lock.");
+                            throw new TimeoutException("Timed out attempting to acquire write lock.");
                         }
                     }
                 }
@@ -91,7 +91,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
+                throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
             }
         }
 
@@ -99,15 +99,17 @@ namespace StreamActions.Common.Limiters
         /// Waits for <see cref="NextDuration"/>, then updates it for the next wait call.
         /// </summary>
         /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the wait.</param>
         /// <returns>A <see cref="Task"/> that can be awaited.</returns>
         /// <exception cref="TimeoutException">The lock timed out.</exception>
-        public async Task Wait(TimeSpan timeout)
+        /// <exception cref="OperationCanceledException">A cancellation was requested via <paramref name="cancellationToken"/> before a rate limit token could be acquired.</exception>
+        public async Task Wait(TimeSpan timeout, CancellationToken? cancellationToken = null)
         {
             if (this.Rwl.TryEnterUpgradeableReadLock(timeout))
             {
                 try
                 {
-                    await Task.Delay(this._nextDuration).ConfigureAwait(false);
+                    await Task.Delay(this._nextDuration, cancellationToken.GetValueOrDefault()).ConfigureAwait(false);
                     if (this._nextDuration.CompareTo(this._maxDuration) < 0)
                     {
                         long ticks = this.CalcNextDurationTicks();
@@ -130,7 +132,7 @@ namespace StreamActions.Common.Limiters
                         }
                         else
                         {
-                            throw new TimeoutException("Timed out attempting to aquire write lock.");
+                            throw new TimeoutException("Timed out attempting to acquire write lock.");
                         }
                     }
                 }
@@ -141,7 +143,7 @@ namespace StreamActions.Common.Limiters
             }
             else
             {
-                throw new TimeoutException("Timed out attempting to aquire upgradeable read lock.");
+                throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
             }
         }
 

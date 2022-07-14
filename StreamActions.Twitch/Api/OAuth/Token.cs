@@ -135,7 +135,7 @@ namespace StreamActions.Twitch.Api.OAuth
             Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, IEnumerable<string>> { { "grant_type", new List<string> { "authorization_code" } },
                 { "code", new List<string> { code } }, { "client_id", new List<string> { TwitchApi.ClientId ?? "" } },
                 { "client_secret", new List<string> { TwitchApi.ClientSecret ?? "" } }, { "redirect_uri", new List<string> { redirectUri.ToString() } } });
-            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, new() { RateLimiter = new(1, 1), Token = new() { OAuth = "__NEW" } }, content).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, new() { RateLimiter = new(1, TimeSpan.FromSeconds(1)), Token = new() { OAuth = "__NEW" } }, content).ConfigureAwait(false);
             return await response.Content.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
 

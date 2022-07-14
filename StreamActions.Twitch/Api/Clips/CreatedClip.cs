@@ -34,7 +34,7 @@ namespace StreamActions.Twitch.Api.Clips
         /// The rate limiter for <see cref="CreateClip(TwitchSession, string, bool)"/>.
         /// </summary>
         [JsonIgnore]
-        public static TokenBucketRateLimiter RateLimiter { get; } = new(1, 60);
+        public static TokenBucketRateLimiter RateLimiter { get; } = new(1, TimeSpan.FromSeconds(60));
 
         /// <summary>
         /// ID of the clip that was created.

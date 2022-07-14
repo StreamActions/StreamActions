@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.Api.Common
         /// <summary>
         /// Rate Limiter for TwitchAPI.
         /// </summary>
-        public TokenBucketRateLimiter RateLimiter { get; init; } = new(1, 60);
+        public TokenBucketRateLimiter RateLimiter { get; init; } = new(1, TimeSpan.FromSeconds(60));
 
         /// <summary>
         /// The OAuth token data.
