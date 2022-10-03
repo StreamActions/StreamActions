@@ -200,7 +200,8 @@ namespace StreamActions.Twitch.Api
 
                     if (refresh is not null && refresh.IsSuccessStatusCode)
                     {
-                        session.Token = new() { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires, Scopes = refresh.Scopes };
+                        TwitchToken oldToken = session.Token;
+                        session.Token = new() { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires, Scopes = refresh.Scopes, Login = oldToken.Login, UserId = oldToken.UserId };
                         _ = OnTokenRefreshed?.InvokeAsync(null, new(session));
                         retry = true;
                         goto performhttprequest_start;

@@ -16,6 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Text.Json.Serialization;
+
 namespace StreamActions.Twitch.Api.Common
 {
     public record TwitchToken
@@ -49,6 +51,16 @@ namespace StreamActions.Twitch.Api.Common
         /// The scopes that are authorized under the OAuth token.
         /// </summary>
         public IReadOnlyList<string>? Scopes { get; init; }
+
+        /// <summary>
+        /// The login name associated with the OAuth token.
+        /// </summary>
+        public string? Login { get; init; }
+
+        /// <summary>
+        /// The User Id associated with the OAuth token.
+        /// </summary>
+        public string? UserId { get; init; }
 
         /// <summary>
         /// Checks if the specified scope is present in <see cref="Scopes"/>.
