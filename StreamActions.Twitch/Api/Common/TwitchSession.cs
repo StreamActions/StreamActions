@@ -41,6 +41,11 @@ namespace StreamActions.Twitch.Api.Common
         }
 
         /// <summary>
+        /// Used as a locking object by <see cref="TwitchApi.PerformHttpRequest(HttpMethod, Uri, TwitchSession, HttpContent?, bool)"/> to prevent multiple simultaneous or back-to-back OAuth Refreshes.
+        /// </summary>
+        internal Mutex _refreshLock = new();
+
+        /// <summary>
         /// Backer for <see cref="Token"/>.
         /// </summary>
         private TwitchToken? _token;

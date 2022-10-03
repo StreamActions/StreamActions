@@ -153,6 +153,7 @@ namespace StreamActions.Twitch.Api
         /// <param name="uri">The uri to request. Relative uris resolve against the Helix base.</param>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
         /// <param name="content">The body of the request, for methods that require it.</param>
+        /// <param name="dontRefresh">Used by <see cref="Token.RefreshOAuth(TwitchSession, string?)"/> to prevent cyclic refresh loops.</param>
         /// <returns>A <see cref="HttpResponseMessage"/> containing the response data.</returns>
         /// <exception cref="InvalidOperationException">Did not call <see cref="Init(string)"/> with a valid Client Id or <paramref name="session"/> does not have an OAuth token.</exception>
         /// <remarks>
@@ -164,7 +165,7 @@ namespace StreamActions.Twitch.Api
         /// The <paramref name="session"/> object is updated and <see cref="OnTokenRefreshed"/> is called on refresh success.
         /// </para>
         /// </remarks>
-        internal static async Task<HttpResponseMessage> PerformHttpRequest(HttpMethod method, Uri uri, TwitchSession session, HttpContent? content = null)
+        internal static async Task<HttpResponseMessage> PerformHttpRequest(HttpMethod method, Uri uri, TwitchSession session, HttpContent? content = null, bool dontRefresh = false)
         {
             if (!_httpClient.DefaultRequestHeaders.Contains("Client-Id"))
             {
@@ -194,16 +195,39 @@ namespace StreamActions.Twitch.Api
 
                 HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
 
-                if (!retry && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token.OAuth != "__NEW" && !string.IsNullOrWhiteSpace(session.Token.Refresh))
+                if (!retry && !dontRefresh && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token.OAuth != "__NEW" && !string.IsNullOrWhiteSpace(session.Token.Refresh))
                 {
-                    Token? refresh = await Token.RefreshOAuth(session).ConfigureAwait(false);
-
-                    if (refresh is not null && refresh.IsSuccessStatusCode)
+                    string oldRefresh = session.Token.Refresh;
+                    if (session._refreshLock.WaitOne(TimeSpan.FromSeconds(30)))
                     {
-                        TwitchToken oldToken = session.Token;
-                        session.Token = new() { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires, Scopes = refresh.Scopes, Login = oldToken.Login, UserId = oldToken.UserId };
-                        _ = OnTokenRefreshed?.InvokeAsync(null, new(session));
-                        retry = true;
+                        try
+                        {
+                            if (session.Token.Refresh == oldRefresh)
+                            {
+                                Token? refresh = await Token.RefreshOAuth(session).ConfigureAwait(false);
+
+                                if (refresh is not null && refresh.IsSuccessStatusCode)
+                                {
+                                    TwitchToken oldToken = session.Token;
+                                    session.Token = new() { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires, Scopes = refresh.Scopes, Login = oldToken.Login, UserId = oldToken.UserId };
+                                    _ = OnTokenRefreshed?.InvokeAsync(null, new(session));
+                                    retry = true;
+                                }
+                            }
+                            else
+                            {
+                                retry = true;
+                            }
+                        }
+                        finally
+                        {
+                            session._refreshLock.ReleaseMutex();
+                        }
+                    }
+
+                    if (retry)
+                    {
+
                         goto performhttprequest_start;
                     }
                 }
