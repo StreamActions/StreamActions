@@ -31,9 +31,9 @@ namespace StreamActions.Common.Interfaces
         public static DateTime? ApiDate { get; }
 
         /// <summary>
-        /// The API level that is defined in the type, as defined by the API publisher, such as a version number.
+        /// The API version.
         /// </summary>
-        public static string? ApiLevel { get; }
+        public static string? ApiVersion { get; }
 
         #endregion Public Properties
     }

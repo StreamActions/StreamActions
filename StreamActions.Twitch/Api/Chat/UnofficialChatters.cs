@@ -24,9 +24,9 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.Chat
 {
     /// <summary>
-    /// Represents a response object containing the chatter role lists.
+    /// Represents a response object containing the unofficial chatter role lists.
     /// </summary>
-    public record Chatters
+    public record UnofficialChatters
     {
         /// <summary>
         /// The broadcaster.
@@ -71,14 +71,14 @@ namespace StreamActions.Twitch.Api.Chat
         public IReadOnlyList<string>? Viewers { get; init; }
 
         /// <summary>
-        /// Retrieves the list of current chatters, sorted by role.
+        /// Retrieves the list of current chatters from the unofficial endpoint, sorted by role.
         /// </summary>
         /// <param name="channelLogin">The login name of the channel to query.</param>
         /// <param name="baseAddress">The uri to the chatters endpoint. Must include <c>{0}</c> where <paramref name="channelLogin"/> should be inserted.</param>
-        /// <returns>A <see cref="ChattersResponse"/> containing the chatters.</returns>
+        /// <returns>A <see cref="UnofficialChattersResponse"/> containing the chatters.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="channelLogin"/> or <paramref name="baseAddress"/> is null, empty, or whitespace.</exception>
         /// <exception cref="InvalidOperationException"><paramref name="baseAddress"/> does not contain <c>{0}</c>.</exception>
-        public static async Task<ChattersResponse?> GetChatters(string channelLogin, string baseAddress = "https://tmi.twitch.tv/group/user/{0}/chatters")
+        public static async Task<UnofficialChattersResponse?> GetUnofficialChatters(string channelLogin, string baseAddress = "https://tmi.twitch.tv/group/user/{0}/chatters")
         {
             if (string.IsNullOrWhiteSpace(channelLogin))
             {
@@ -97,7 +97,7 @@ namespace StreamActions.Twitch.Api.Chat
 
             Uri uri = Util.BuildUri(new(string.Format(CultureInfo.InvariantCulture, baseAddress, channelLogin)));
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, new() { RateLimiter = new(1, TimeSpan.FromSeconds(1)), Token = new() { OAuth = "__NEW" } }).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ChattersResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<UnofficialChattersResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }

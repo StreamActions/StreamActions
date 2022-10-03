@@ -32,14 +32,11 @@ namespace StreamActions.Twitch.Api.Polls
         /// <param name="title">Question displayed for the poll. Maximum: 60 characters.</param>
         /// <param name="choices">Array of the poll choices. Minimum: 2 choices.Maximum: 5 choices.</param>
         /// <param name="duration">Total duration for the poll (in seconds). Minimum: 15. Maximum: 1800.</param>
-        /// <param name="bitsVotingEnabled">Indicates if Bits can be used for voting. Default: <see langword="false"/>.</param>
-        /// <param name="bitsPerVote">Number of Bits required to vote once with Bits. Minimum: 0. Maximum: 10000.</param>
         /// <param name="channelPointsVotingEnabled">Indicates if Channel Points can be used for voting. Default: <see langword="false"/>.</param>
         /// <param name="channelPointsPerVote">Number of Channel Points required to vote once with Channel Points. Minimum: 0. Maximum: 1000000.</param>
         /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> or <paramref name="title"/> is null, empty, or whitespace; <paramref name="choices"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="choices"/> has less than 2 or more than 5 elements; <paramref name="title"/> is more than 60 characters.</exception>
-        public PollCreationParameters(string broadcasterId, string title, IReadOnlyList<PollCreationChoice> choices, int duration, bool bitsVotingEnabled = false,
-            int bitsPerVote = 0, bool channelPointsVotingEnabled = false, int channelPointsPerVote = 0)
+        public PollCreationParameters(string broadcasterId, string title, IReadOnlyList<PollCreationChoice> choices, int duration, bool channelPointsVotingEnabled = false, int channelPointsPerVote = 0)
         {
             if (string.IsNullOrWhiteSpace(broadcasterId))
             {
@@ -67,15 +64,12 @@ namespace StreamActions.Twitch.Api.Polls
             }
 
             duration = Math.Clamp(duration, 15, 1800);
-            bitsPerVote = Math.Clamp(bitsPerVote, 0, 10000);
             channelPointsPerVote = Math.Clamp(channelPointsPerVote, 0, 1000000);
 
             this.BroadcasterId = broadcasterId;
             this.Title = title;
             this.Choices = choices;
             this.Duration = duration;
-            this.BitsVotingEnabled = bitsVotingEnabled;
-            this.BitsPerVote = bitsPerVote;
             this.ChannelPointsVotingEnabled = channelPointsVotingEnabled;
             this.ChannelPointsPerVote = channelPointsPerVote;
         }
@@ -103,18 +97,6 @@ namespace StreamActions.Twitch.Api.Polls
         /// </summary>
         [JsonPropertyName("duration")]
         public int Duration { get; private init; }
-
-        /// <summary>
-        /// Indicates if Bits can be used for voting. Default: <see langword="false"/>.
-        /// </summary>
-        [JsonPropertyName("bits_voting_enabled")]
-        public bool BitsVotingEnabled { get; private init; }
-
-        /// <summary>
-        /// Number of Bits required to vote once with Bits. Minimum: 0. Maximum: 10000.
-        /// </summary>
-        [JsonPropertyName("bits_per_vote")]
-        public int BitsPerVote { get; private init; }
 
         /// <summary>
         /// Indicates if Channel Points can be used for voting. Default: <see langword="false"/>.

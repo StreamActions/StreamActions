@@ -67,18 +67,6 @@ namespace StreamActions.Twitch.Api.Polls
         public IReadOnlyList<PollChoice>? Choices { get; init; }
 
         /// <summary>
-        /// Indicates if Bits can be used for voting.
-        /// </summary>
-        [JsonPropertyName("bits_voting_enabled")]
-        public bool? BitsVotingEnabled { get; init; }
-
-        /// <summary>
-        /// Number of Bits required to vote once with Bits.
-        /// </summary>
-        [JsonPropertyName("bits_per_vote")]
-        public int? BitsPerVote { get; init; }
-
-        /// <summary>
         /// Indicates if Channel Points can be used for voting.
         /// </summary>
         [JsonPropertyName("channel_points_voting_enabled")]

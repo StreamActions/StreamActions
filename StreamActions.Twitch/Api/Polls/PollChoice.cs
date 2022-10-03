@@ -48,11 +48,5 @@ namespace StreamActions.Twitch.Api.Polls
         /// </summary>
         [JsonPropertyName("channel_points_votes")]
         public int? ChannelPointsVotes { get; init; }
-
-        /// <summary>
-        /// Number of votes received via Bits.
-        /// </summary>
-        [JsonPropertyName("bits_votes")]
-        public int? BitsVotes { get; init; }
     }
 }

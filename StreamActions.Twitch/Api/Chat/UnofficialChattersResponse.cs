@@ -22,9 +22,9 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.Chat
 {
     /// <summary>
-    /// A response object for a <see cref="Chatters.GetChatters"/> request.
+    /// A response object for a <see cref="UnofficialChatters.GetUnofficialChatters"/> request.
     /// </summary>
-    public record ChattersResponse : TwitchResponse
+    public record UnofficialChattersResponse : TwitchResponse
     {
         /// <summary>
         /// The number of chatters contained in <see cref="Chatters"/>.
@@ -36,6 +36,6 @@ namespace StreamActions.Twitch.Api.Chat
         /// The current chatters, by role.
         /// </summary>
         [JsonPropertyName("chatters")]
-        public Chatters? Chatters { get; init; }
+        public UnofficialChatters? Chatters { get; init; }
     }
 }
