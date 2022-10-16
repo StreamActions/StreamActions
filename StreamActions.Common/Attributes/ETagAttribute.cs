@@ -32,11 +32,11 @@ public sealed class ETagAttribute : Attribute
     /// <param name="uri">The URI of the source documentation for this component.</param>
     /// <param name="eTag">The ETag of the latest version of the documentation that this component conforms to.</param>
     /// <param name="differParameters">Parameters for <c>diff.py</c>.</param>
-    public ETagAttribute(string uri, string eTag, IReadOnlyCollection<string> differParameters)
+    public ETagAttribute(string uri, string eTag, string[] differParameters)
     {
         this.Uri = uri;
         this.ETag = eTag;
-        this.DifferParameters = differParameters;
+        this.DifferParameters = differParameters.ToList();
     }
 
     #endregion Public Constructors
