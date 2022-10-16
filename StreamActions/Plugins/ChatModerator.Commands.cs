@@ -17,7 +17,7 @@
  */
 
 using StreamActions.Attributes;
-using StreamActions.Common;
+using StreamActions.Common.Extensions;
 using StreamActions.Database;
 using StreamActions.Database.Documents.Moderation;
 using StreamActions.Database.Documents.Users;

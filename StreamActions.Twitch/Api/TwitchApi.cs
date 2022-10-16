@@ -17,7 +17,7 @@
  */
 
 using Microsoft.Extensions.Logging;
-using StreamActions.Common;
+using StreamActions.Common.Extensions;
 using StreamActions.Common.Interfaces;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;

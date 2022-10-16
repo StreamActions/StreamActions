@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Extensions;
 using StreamActions.Twitch.Api.Common;
 using System.Globalization;
 using System.Net.Http.Json;

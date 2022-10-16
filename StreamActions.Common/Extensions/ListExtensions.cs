@@ -16,12 +16,12 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common
+namespace StreamActions.Common.Extensions
 {
     /// <summary>
-    /// Contains extension members to existing types.
+    /// Contains extension members to <see cref="List{T}"/>.
     /// </summary>
-    public static class StreamActionsTypeExtensions
+    public static class ListExtensions
     {
         #region Public Methods
 
@@ -54,16 +54,6 @@ namespace StreamActions.Common
                 return defVal;
             }
         }
-
-        /// <summary>
-        /// Invokes an <see cref="EventHandler{TEventArgs}"/> on a background Task thread.
-        /// </summary>
-        /// <typeparam name="TEventArgs">The type of <paramref name="e"/>.</typeparam>
-        /// <param name="eventHandler">The <see cref="EventHandler{TEventArgs}"/> to invoke.</param>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An object that contains the event data.</param>
-        /// <returns></returns>
-        public static Task InvokeAsync<TEventArgs>(this EventHandler<TEventArgs> eventHandler, object? sender, TEventArgs e) => Task.Run(() => eventHandler?.Invoke(sender, e));
 
         /// <summary>
         /// Determines if the string at the specified index of the <c>List&lt;string></c> is <see langword="null"/> or an empty string (""), or if the index is out of range.
@@ -112,20 +102,6 @@ namespace StreamActions.Common
                 return true;
             }
         }
-
-        /// <summary>
-        /// Converts the <see cref="DateTime"/> to an RFC3339 representation of its value.
-        /// </summary>
-        /// <param name="dt">The <see cref="DateTime"/> to convert.</param>
-        /// <returns>The value of <paramref name="dt"/> as an RFC3339-formatted string.</returns>
-        public static string ToRfc3339(this DateTime dt) => dt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture);
-
-        /// <summary>
-        /// Waits for a <see cref="CancellationToken"/> in a background Task thread.
-        /// </summary>
-        /// <param name="token">The <see cref="CancellationToken"/> to wait for.</param>
-        /// <returns>A Task that can be awaited.</returns>
-        public static Task WaitAsync(this CancellationToken token) => Task.Run(() => _ = token.WaitHandle.WaitOne());
 
         #endregion Public Methods
     }
