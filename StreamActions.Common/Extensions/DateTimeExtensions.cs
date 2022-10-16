@@ -16,22 +16,21 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Extensions
+namespace StreamActions.Common.Extensions;
+
+/// <summary>
+/// Contains extension members to <see cref="DateTime"/>.
+/// </summary>
+public static class DateTimeExtensions
 {
+    #region Public Methods
+
     /// <summary>
-    /// Contains extension members to <see cref="DateTime"/>.
+    /// Converts the <see cref="DateTime"/> to an RFC3339 representation of its value.
     /// </summary>
-    public static class DateTimeExtensions
-    {
-        #region Public Methods
+    /// <param name="dt">The <see cref="DateTime"/> to convert.</param>
+    /// <returns>The value of <paramref name="dt"/> as an RFC3339-formatted string.</returns>
+    public static string ToRfc3339(this DateTime dt) => dt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture);
 
-        /// <summary>
-        /// Converts the <see cref="DateTime"/> to an RFC3339 representation of its value.
-        /// </summary>
-        /// <param name="dt">The <see cref="DateTime"/> to convert.</param>
-        /// <returns>The value of <paramref name="dt"/> as an RFC3339-formatted string.</returns>
-        public static string ToRfc3339(this DateTime dt) => dt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture);
-
-        #endregion Public Methods
-    }
+    #endregion Public Methods
 }

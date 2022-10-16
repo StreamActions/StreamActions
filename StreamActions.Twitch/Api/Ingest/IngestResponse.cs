@@ -19,17 +19,16 @@
 using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Ingest
+namespace StreamActions.Twitch.Api.Ingest;
+
+/// <summary>
+/// An Ingests response.
+/// </summary>
+public record IngestResponse : TwitchResponse
 {
     /// <summary>
-    /// An Ingests response.
+    /// The data array.
     /// </summary>
-    public record IngestResponse : TwitchResponse
-    {
-        /// <summary>
-        /// The data array.
-        /// </summary>
-        [JsonPropertyName("ingests")]
-        public IReadOnlyList<Ingest>? Ingests { get; init; }
-    }
+    [JsonPropertyName("ingests")]
+    public IReadOnlyList<Ingest>? Ingests { get; init; }
 }

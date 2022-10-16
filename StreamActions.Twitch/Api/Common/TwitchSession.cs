@@ -18,36 +18,35 @@
 
 using StreamActions.Common.Limiters;
 
-namespace StreamActions.Twitch.Api.Common
+namespace StreamActions.Twitch.Api.Common;
+
+/// <summary>
+/// Contains parameters for a Twitch API session.
+/// </summary>
+public record TwitchSession
 {
     /// <summary>
-    /// Contains parameters for a Twitch API session.
+    /// Rate Limiter for TwitchAPI.
     /// </summary>
-    public record TwitchSession
+    public TokenBucketRateLimiter RateLimiter { get; init; } = new(1, TimeSpan.FromSeconds(60));
+
+    /// <summary>
+    /// The OAuth token data.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Attempt to set to null.</exception>
+    public TwitchToken? Token
     {
-        /// <summary>
-        /// Rate Limiter for TwitchAPI.
-        /// </summary>
-        public TokenBucketRateLimiter RateLimiter { get; init; } = new(1, TimeSpan.FromSeconds(60));
-
-        /// <summary>
-        /// The OAuth token data.
-        /// </summary>
-        /// <exception cref="ArgumentNullException">Attempt to set to null.</exception>
-        public TwitchToken? Token
-        {
-            get => this._token;
-            internal set => this._token = value ?? throw new ArgumentNullException(nameof(value));
-        }
-
-        /// <summary>
-        /// Used as a locking object by <see cref="TwitchApi.PerformHttpRequest(HttpMethod, Uri, TwitchSession, HttpContent?, bool)"/> to prevent multiple simultaneous or back-to-back OAuth Refreshes.
-        /// </summary>
-        internal Mutex _refreshLock = new();
-
-        /// <summary>
-        /// Backer for <see cref="Token"/>.
-        /// </summary>
-        private TwitchToken? _token;
+        get => this._token;
+        internal set => this._token = value ?? throw new ArgumentNullException(nameof(value));
     }
+
+    /// <summary>
+    /// Used as a locking object by <see cref="TwitchApi.PerformHttpRequest(HttpMethod, Uri, TwitchSession, HttpContent?, bool)"/> to prevent multiple simultaneous or back-to-back OAuth Refreshes.
+    /// </summary>
+    internal Mutex _refreshLock = new();
+
+    /// <summary>
+    /// Backer for <see cref="Token"/>.
+    /// </summary>
+    private TwitchToken? _token;
 }

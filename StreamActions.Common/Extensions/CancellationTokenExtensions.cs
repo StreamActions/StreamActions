@@ -16,22 +16,21 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Extensions
+namespace StreamActions.Common.Extensions;
+
+/// <summary>
+/// Contains extension members to <see cref="CancellationToken"/>.
+/// </summary>
+public static class CancellationTokenExtensions
 {
+    #region Public Methods
+
     /// <summary>
-    /// Contains extension members to <see cref="CancellationToken"/>.
+    /// Waits for a <see cref="CancellationToken"/> in a background Task thread.
     /// </summary>
-    public static class CancellationTokenExtensions
-    {
-        #region Public Methods
+    /// <param name="token">The <see cref="CancellationToken"/> to wait for.</param>
+    /// <returns>A Task that can be awaited.</returns>
+    public static Task WaitAsync(this CancellationToken token) => Task.Run(() => _ = token.WaitHandle.WaitOne());
 
-        /// <summary>
-        /// Waits for a <see cref="CancellationToken"/> in a background Task thread.
-        /// </summary>
-        /// <param name="token">The <see cref="CancellationToken"/> to wait for.</param>
-        /// <returns>A Task that can be awaited.</returns>
-        public static Task WaitAsync(this CancellationToken token) => Task.Run(() => _ = token.WaitHandle.WaitOne());
-
-        #endregion Public Methods
-    }
+    #endregion Public Methods
 }

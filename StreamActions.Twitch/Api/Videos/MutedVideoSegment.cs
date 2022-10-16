@@ -18,35 +18,34 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Videos
+namespace StreamActions.Twitch.Api.Videos;
+
+/// <summary>
+/// Represents a muted video segment in a <see cref="Video"/>.
+/// </summary>
+public record MutedVideoSegment
 {
     /// <summary>
-    /// Represents a muted video segment in a <see cref="Video"/>.
+    /// Duration of the muted segment, in seconds.
     /// </summary>
-    public record MutedVideoSegment
-    {
-        /// <summary>
-        /// Duration of the muted segment, in seconds.
-        /// </summary>
-        [JsonPropertyName("duration")]
-        public int? DurationSeconds { get; init; }
+    [JsonPropertyName("duration")]
+    public int? DurationSeconds { get; init; }
 
-        /// <summary>
-        /// <see cref="DurationSeconds"/> as a <see cref="TimeSpan"/>.
-        /// </summary>
-        [JsonIgnore]
-        public TimeSpan? Duration => this.DurationSeconds.HasValue ? TimeSpan.FromSeconds(this.DurationSeconds.Value) : null;
+    /// <summary>
+    /// <see cref="DurationSeconds"/> as a <see cref="TimeSpan"/>.
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan? Duration => this.DurationSeconds.HasValue ? TimeSpan.FromSeconds(this.DurationSeconds.Value) : null;
 
-        /// <summary>
-        /// Offset in the video at which the muted segment begins, in seconds.
-        /// </summary>
-        [JsonPropertyName("offset")]
-        public int? OffsetSeconds { get; init; }
+    /// <summary>
+    /// Offset in the video at which the muted segment begins, in seconds.
+    /// </summary>
+    [JsonPropertyName("offset")]
+    public int? OffsetSeconds { get; init; }
 
-        /// <summary>
-        /// <see cref="OffsetSeconds"/> as a <see cref="TimeSpan"/>.
-        /// </summary>
-        [JsonIgnore]
-        public TimeSpan? Offset => this.OffsetSeconds.HasValue ? TimeSpan.FromSeconds(this.OffsetSeconds.Value) : null;
-    }
+    /// <summary>
+    /// <see cref="OffsetSeconds"/> as a <see cref="TimeSpan"/>.
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan? Offset => this.OffsetSeconds.HasValue ? TimeSpan.FromSeconds(this.OffsetSeconds.Value) : null;
 }

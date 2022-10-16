@@ -16,39 +16,38 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Exceptions
+namespace StreamActions.Common.Exceptions;
+
+/// <summary>
+/// The exception that is thrown when a required OAuth scope is missing.
+/// </summary>
+public class ScopeMissingException : InvalidOperationException
 {
+    #region Public Constructors
+
     /// <summary>
-    /// The exception that is thrown when a required OAuth scope is missing.
+    /// Default Constructor.
     /// </summary>
-    public class ScopeMissingException : InvalidOperationException
+    public ScopeMissingException()
     {
-        #region Public Constructors
-
-        /// <summary>
-        /// Default Constructor.
-        /// </summary>
-        public ScopeMissingException()
-        {
-        }
-
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        /// <param name="scope">The scope that is missing from the OAuth token.</param>
-        public ScopeMissingException(string scope) : base("Missing scope " + scope + ".")
-        {
-        }
-
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        /// <param name="scope">The scope that is missing from the OAuth token.</param>
-        /// <param name="innerException">The inner exception that caused the current exception.</param>
-        public ScopeMissingException(string scope, Exception innerException) : base("Missing scope " + scope + ".", innerException)
-        {
-        }
-
-        #endregion Public Constructors
     }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scope">The scope that is missing from the OAuth token.</param>
+    public ScopeMissingException(string scope) : base("Missing scope " + scope + ".")
+    {
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scope">The scope that is missing from the OAuth token.</param>
+    /// <param name="innerException">The inner exception that caused the current exception.</param>
+    public ScopeMissingException(string scope, Exception innerException) : base("Missing scope " + scope + ".", innerException)
+    {
+    }
+
+    #endregion Public Constructors
 }

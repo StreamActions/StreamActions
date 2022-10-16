@@ -16,32 +16,31 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Limiters
+namespace StreamActions.Common.Limiters;
+
+/// <summary>
+/// Handles backoff timing using an exponentially increasing duration strategy.
+/// </summary>
+public sealed class ExponentialBackoff : BackoffBase
 {
+    #region Public Constructors
+
     /// <summary>
-    /// Handles backoff timing using an exponentially increasing duration strategy.
+    /// Constructor.
     /// </summary>
-    public sealed class ExponentialBackoff : BackoffBase
-    {
-        #region Public Constructors
+    /// <param name="initialDuration">The initial duration of the backoff, after a reset.</param>
+    /// <param name="maxDuration">The maximum allowed backoff duration.</param>
+    public ExponentialBackoff(TimeSpan initialDuration, TimeSpan maxDuration) : base(initialDuration, maxDuration) { }
 
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        /// <param name="initialDuration">The initial duration of the backoff, after a reset.</param>
-        /// <param name="maxDuration">The maximum allowed backoff duration.</param>
-        public ExponentialBackoff(TimeSpan initialDuration, TimeSpan maxDuration) : base(initialDuration, maxDuration) { }
+    #endregion Public Constructors
 
-        #endregion Public Constructors
+    #region Protected Methods
 
-        #region Protected Methods
+    /// <summary>
+    /// Calculates the next value for <see cref="NextDuration"/>, in ticks.
+    /// </summary>
+    /// <returns>The next value that will be set for <see cref="NextDuration"/>, in ticks.</returns>
+    protected override long CalcNextDurationTicks() => this.NextDuration.Ticks * 2;
 
-        /// <summary>
-        /// Calculates the next value for <see cref="NextDuration"/>, in ticks.
-        /// </summary>
-        /// <returns>The next value that will be set for <see cref="NextDuration"/>, in ticks.</returns>
-        protected override long CalcNextDurationTicks() => this.NextDuration.Ticks * 2;
-
-        #endregion Protected Methods
-    }
+    #endregion Protected Methods
 }

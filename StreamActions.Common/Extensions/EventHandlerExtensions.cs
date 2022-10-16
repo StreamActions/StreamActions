@@ -16,25 +16,24 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Extensions
+namespace StreamActions.Common.Extensions;
+
+/// <summary>
+/// Contains extension members to <see cref="EventHandler{TEventArgs}"/>.
+/// </summary>
+public static class EventHandlerExtensions
 {
+    #region Public Methods
+
     /// <summary>
-    /// Contains extension members to <see cref="EventHandler{TEventArgs}"/>.
+    /// Invokes an <see cref="EventHandler{TEventArgs}"/> on a background Task thread.
     /// </summary>
-    public static class EventHandlerExtensions
-    {
-        #region Public Methods
+    /// <typeparam name="TEventArgs">The type of <paramref name="e"/>.</typeparam>
+    /// <param name="eventHandler">The <see cref="EventHandler{TEventArgs}"/> to invoke.</param>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">An object that contains the event data.</param>
+    /// <returns></returns>
+    public static Task InvokeAsync<TEventArgs>(this EventHandler<TEventArgs> eventHandler, object? sender, TEventArgs e) => Task.Run(() => eventHandler?.Invoke(sender, e));
 
-        /// <summary>
-        /// Invokes an <see cref="EventHandler{TEventArgs}"/> on a background Task thread.
-        /// </summary>
-        /// <typeparam name="TEventArgs">The type of <paramref name="e"/>.</typeparam>
-        /// <param name="eventHandler">The <see cref="EventHandler{TEventArgs}"/> to invoke.</param>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An object that contains the event data.</param>
-        /// <returns></returns>
-        public static Task InvokeAsync<TEventArgs>(this EventHandler<TEventArgs> eventHandler, object? sender, TEventArgs e) => Task.Run(() => eventHandler?.Invoke(sender, e));
-
-        #endregion Public Methods
-    }
+    #endregion Public Methods
 }

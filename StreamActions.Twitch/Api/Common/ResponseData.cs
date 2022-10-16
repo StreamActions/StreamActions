@@ -18,30 +18,29 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Common
+namespace StreamActions.Twitch.Api.Common;
+
+/// <summary>
+/// A Helix response with a data array.
+/// </summary>
+/// <typeparam name="TDataType">The type representing the returned data.</typeparam>
+public record ResponseData<TDataType> : TwitchResponse
 {
     /// <summary>
-    /// A Helix response with a data array.
+    /// The data array.
     /// </summary>
-    /// <typeparam name="TDataType">The type representing the returned data.</typeparam>
-    public record ResponseData<TDataType> : TwitchResponse
-    {
-        /// <summary>
-        /// The data array.
-        /// </summary>
-        [JsonPropertyName("data")]
-        public IReadOnlyList<TDataType>? Data { get; init; }
+    [JsonPropertyName("data")]
+    public IReadOnlyList<TDataType>? Data { get; init; }
 
-        /// <summary>
-        /// The pagination cursor information for multi-page responses.
-        /// </summary>
-        [JsonPropertyName("pagination")]
-        public Pagination? Pagination { get; init; }
+    /// <summary>
+    /// The pagination cursor information for multi-page responses.
+    /// </summary>
+    [JsonPropertyName("pagination")]
+    public Pagination? Pagination { get; init; }
 
-        /// <summary>
-        /// The total number of results returned.
-        /// </summary>
-        [JsonPropertyName("total")]
-        public int? Total { get; init; }
-    }
+    /// <summary>
+    /// The total number of results returned.
+    /// </summary>
+    [JsonPropertyName("total")]
+    public int? Total { get; init; }
 }

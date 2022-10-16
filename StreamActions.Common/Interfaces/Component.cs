@@ -18,50 +18,49 @@
 
 using System.Collections.Immutable;
 
-namespace StreamActions.Common.Interfaces
+namespace StreamActions.Common.Interfaces;
+
+/// <summary>
+/// A base interface containing common properties for sub-interfaces.
+/// </summary>
+public abstract class Component
 {
+    #region Public Properties
+
     /// <summary>
-    /// A base interface containing common properties for sub-interfaces.
+    /// The author of the component.
     /// </summary>
-    public abstract class Component
-    {
-        #region Public Properties
+    public static string? Author { get; }
 
-        /// <summary>
-        /// The author of the component.
-        /// </summary>
-        public static string? Author { get; }
+    /// <summary>
+    /// A collection of <see cref="Guid"/> of other components that this component is dependent on.
+    /// </summary>
+    public static IReadOnlyCollection<Guid>? Dependencies => ImmutableArray<Guid>.Empty;
 
-        /// <summary>
-        /// A collection of <see cref="Guid"/> of other components that this component is dependent on.
-        /// </summary>
-        public static IReadOnlyCollection<Guid>? Dependencies => ImmutableArray<Guid>.Empty;
+    /// <summary>
+    /// A description of the component.
+    /// </summary>
+    public static string? Description { get; }
 
-        /// <summary>
-        /// A description of the component.
-        /// </summary>
-        public static string? Description { get; }
+    /// <summary>
+    /// A <see cref="Guid"/> used to identify the component.
+    /// </summary>
+    public static Guid? Id { get; }
 
-        /// <summary>
-        /// A <see cref="Guid"/> used to identify the component.
-        /// </summary>
-        public static Guid? Id { get; }
+    /// <summary>
+    /// The name of the component.
+    /// </summary>
+    public static string? Name { get; }
 
-        /// <summary>
-        /// The name of the component.
-        /// </summary>
-        public static string? Name { get; }
+    /// <summary>
+    /// The Uri of the component.
+    /// </summary>
+    public static Uri? Uri { get; }
 
-        /// <summary>
-        /// The Uri of the component.
-        /// </summary>
-        public static Uri? Uri { get; }
+    /// <summary>
+    /// The component version. Usage of semver as defined in CONTRIBUTING.md is preferred.
+    /// </summary>
+    public static Version? Version { get; }
 
-        /// <summary>
-        /// The component version. Usage of semver as defined in CONTRIBUTING.md is preferred.
-        /// </summary>
-        public static Version? Version { get; }
-
-        #endregion Public Properties
-    }
+    #endregion Public Properties
 }

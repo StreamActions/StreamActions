@@ -16,34 +16,33 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Interfaces
+namespace StreamActions.Common.Interfaces;
+
+/// <summary>
+/// An interface for a plugin that processes messages, commands, and other input.
+/// </summary>
+public abstract class Plugin : Component
 {
+    #region Public Properties
+
     /// <summary>
-    /// An interface for a plugin that processes messages, commands, and other input.
+    /// Whether the plugin should always be enabled for all channels. This should only be true in core plugins and special circumstances.
     /// </summary>
-    public abstract class Plugin : Component
-    {
-        #region Public Properties
+    public bool AlwaysEnabled { get; }
 
-        /// <summary>
-        /// Whether the plugin should always be enabled for all channels. This should only be true in core plugins and special circumstances.
-        /// </summary>
-        public bool AlwaysEnabled { get; }
+    #endregion Public Properties
 
-        #endregion Public Properties
+    #region Public Methods
 
-        #region Public Methods
+    /// <summary>
+    /// Called when the plugin is disabled either globally, or by all channels. EventHandler delegates must be unsubscribed here.
+    /// </summary>
+    public abstract void Disabled();
 
-        /// <summary>
-        /// Called when the plugin is disabled either globally, or by all channels. EventHandler delegates must be unsubscribed here.
-        /// </summary>
-        public abstract void Disabled();
+    /// <summary>
+    /// Called when the plugin is enabled either globally, or by at least one channel. EventHandler delegates must be subscribed here.
+    /// </summary>
+    public abstract void Enabled();
 
-        /// <summary>
-        /// Called when the plugin is enabled either globally, or by at least one channel. EventHandler delegates must be subscribed here.
-        /// </summary>
-        public abstract void Enabled();
-
-        #endregion Public Methods
-    }
+    #endregion Public Methods
 }

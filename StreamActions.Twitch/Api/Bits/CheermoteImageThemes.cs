@@ -18,23 +18,22 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Bits
+namespace StreamActions.Twitch.Api.Bits;
+
+/// <summary>
+/// Represents the image themes in a <see cref="CheermoteTier"/>.
+/// </summary>
+public record CheermoteImageThemes
 {
     /// <summary>
-    /// Represents the image themes in a <see cref="CheermoteTier"/>.
+    /// The <see cref="CheermoteImageSet"/> for the dark theme.
     /// </summary>
-    public record CheermoteImageThemes
-    {
-        /// <summary>
-        /// The <see cref="CheermoteImageSet"/> for the dark theme.
-        /// </summary>
-        [JsonPropertyName("dark")]
-        public CheermoteImageSet? Dark { get; init; }
+    [JsonPropertyName("dark")]
+    public CheermoteImageSet? Dark { get; init; }
 
-        /// <summary>
-        /// The <see cref="CheermoteImageSet"/> for the light theme.
-        /// </summary>
-        [JsonPropertyName("light")]
-        public CheermoteImageSet? Light { get; init; }
-    }
+    /// <summary>
+    /// The <see cref="CheermoteImageSet"/> for the light theme.
+    /// </summary>
+    [JsonPropertyName("light")]
+    public CheermoteImageSet? Light { get; init; }
 }

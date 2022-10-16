@@ -381,6 +381,9 @@ dotnet_diagnostic.ASP0001.severity = warning
 dotnet_diagnostic.MVC1005.severity = warning
 dotnet_diagnostic.CA2255.severity = warning
 dotnet_diagnostic.EF1001.severity = warning
+csharp_style_prefer_method_group_conversion = true:silent
+csharp_style_prefer_top_level_statements = true:silent
+csharp_style_prefer_utf8_string_literals = true:suggestion
 
 [*.{cs,vb}]
 

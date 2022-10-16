@@ -21,65 +21,64 @@ using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Ads
+namespace StreamActions.Twitch.Api.Ads;
+
+/// <summary>
+/// Sends and represents a response element for a request to start a commercial.
+/// </summary>
+public record Commercial
 {
     /// <summary>
-    /// Sends and represents a response element for a request to start a commercial.
+    /// Length of the triggered commercial.
     /// </summary>
-    public record Commercial
+    [JsonPropertyName("length")]
+    public int? Length { get; init; }
+
+    /// <summary>
+    /// Seconds until the next commercial can be served on this channel.
+    /// </summary>
+    [JsonPropertyName("retry_after")]
+    public int? RetryAfter { get; init; }
+
+    /// <summary>
+    /// The timestamp represented by <see cref="RetryAfter"/>.
+    /// </summary>
+    [JsonIgnore]
+    public DateTime? RetryAfterDate => this.RetryAfter is null ? null : DateTime.UtcNow.AddSeconds((double)this.RetryAfter);
+
+    /// <summary>
+    /// Provides contextual information on why the request failed.
+    /// </summary>
+    [JsonPropertyName("message")]
+    public string? Message { get; init; }
+
+    /// <summary>
+    /// Starts a commercial on a specified channel.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="parameters">The <see cref="StartCommercialParameters"/> with the request parameters.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Commercial"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null.</exception>
+    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:edit:commercial</c> is not present.</exception>
+    public static async Task<ResponseData<Commercial>?> StartCommercial(TwitchSession session, StartCommercialParameters parameters)
     {
-        /// <summary>
-        /// Length of the triggered commercial.
-        /// </summary>
-        [JsonPropertyName("length")]
-        public int? Length { get; init; }
-
-        /// <summary>
-        /// Seconds until the next commercial can be served on this channel.
-        /// </summary>
-        [JsonPropertyName("retry_after")]
-        public int? RetryAfter { get; init; }
-
-        /// <summary>
-        /// The timestamp represented by <see cref="RetryAfter"/>.
-        /// </summary>
-        [JsonIgnore]
-        public DateTime? RetryAfterDate => this.RetryAfter is null ? null : DateTime.UtcNow.AddSeconds((double)this.RetryAfter);
-
-        /// <summary>
-        /// Provides contextual information on why the request failed.
-        /// </summary>
-        [JsonPropertyName("message")]
-        public string? Message { get; init; }
-
-        /// <summary>
-        /// Starts a commercial on a specified channel.
-        /// </summary>
-        /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-        /// <param name="parameters">The <see cref="StartCommercialParameters"/> with the request parameters.</param>
-        /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Commercial"/> containing the response.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null.</exception>
-        /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:edit:commercial</c> is not present.</exception>
-        public static async Task<ResponseData<Commercial>?> StartCommercial(TwitchSession session, StartCommercialParameters parameters)
+        if (session is null)
         {
-            if (session is null)
-            {
-                throw new ArgumentNullException(nameof(session));
-            }
-
-            if (parameters is null)
-            {
-                throw new ArgumentNullException(nameof(parameters));
-            }
-
-            if (!session.Token?.HasScope("channel:edit:commercial") ?? false)
-            {
-                throw new ScopeMissingException("channel:edit:commercial");
-            }
-
-            using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/channels/commercial"), session, content).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<ResponseData<Commercial>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+            throw new ArgumentNullException(nameof(session));
         }
+
+        if (parameters is null)
+        {
+            throw new ArgumentNullException(nameof(parameters));
+        }
+
+        if (!session.Token?.HasScope("channel:edit:commercial") ?? false)
+        {
+            throw new ScopeMissingException("channel:edit:commercial");
+        }
+
+        using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/channels/commercial"), session, content).ConfigureAwait(false);
+        return await response.Content.ReadFromJsonAsync<ResponseData<Commercial>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

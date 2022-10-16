@@ -16,20 +16,19 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Interfaces
+namespace StreamActions.Common.Interfaces;
+
+/// <summary>
+/// An interface for a top-level Document that may require initialization in the database.
+/// </summary>
+public interface IDocument
 {
+    #region Public Methods
+
     /// <summary>
-    /// An interface for a top-level Document that may require initialization in the database.
+    /// Initializes the Collection for the Document and/or sets up the indexes, if necessary.
     /// </summary>
-    public interface IDocument
-    {
-        #region Public Methods
+    public void Initialize();
 
-        /// <summary>
-        /// Initializes the Collection for the Document and/or sets up the indexes, if necessary.
-        /// </summary>
-        public void Initialize();
-
-        #endregion Public Methods
-    }
+    #endregion Public Methods
 }

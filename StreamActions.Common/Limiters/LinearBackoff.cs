@@ -16,51 +16,50 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Limiters
+namespace StreamActions.Common.Limiters;
+
+/// <summary>
+/// Handles backoff timing using an linearly increasing duration strategy.
+/// </summary>
+public sealed class LinearBackoff : BackoffBase
 {
+    #region Public Constructors
+
     /// <summary>
-    /// Handles backoff timing using an linearly increasing duration strategy.
+    /// Constructor.
     /// </summary>
-    public sealed class LinearBackoff : BackoffBase
-    {
-        #region Public Constructors
+    /// <param name="initialDuration">The initial duration of the backoff, after a reset.</param>
+    /// <param name="maxDuration">The maximum allowed backoff duration.</param>
+    /// <param name="stepSize">The duration to add to the previous <see cref="BackoffBase.NextDuration"/> to calculate the next backoff duration.</param>
+    public LinearBackoff(TimeSpan initialDuration, TimeSpan maxDuration, TimeSpan stepSize) : base(initialDuration, maxDuration) => this._stepSize = stepSize;
 
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        /// <param name="initialDuration">The initial duration of the backoff, after a reset.</param>
-        /// <param name="maxDuration">The maximum allowed backoff duration.</param>
-        /// <param name="stepSize">The duration to add to the previous <see cref="BackoffBase.NextDuration"/> to calculate the next backoff duration.</param>
-        public LinearBackoff(TimeSpan initialDuration, TimeSpan maxDuration, TimeSpan stepSize) : base(initialDuration, maxDuration) => this._stepSize = stepSize;
+    #endregion Public Constructors
 
-        #endregion Public Constructors
+    #region Public Properties
 
-        #region Public Properties
+    /// <summary>
+    /// The duration added to the previous <see cref="BackoffBase.NextDuration"/> to generate the next backoff duration.
+    /// </summary>
+    public TimeSpan StepSize => TimeSpan.FromTicks(this._stepSize.Ticks);
 
-        /// <summary>
-        /// The duration added to the previous <see cref="BackoffBase.NextDuration"/> to generate the next backoff duration.
-        /// </summary>
-        public TimeSpan StepSize => TimeSpan.FromTicks(this._stepSize.Ticks);
+    #endregion Public Properties
 
-        #endregion Public Properties
+    #region Protected Methods
 
-        #region Protected Methods
+    /// <summary>
+    /// Calculates the next value for <see cref="NextDuration"/>, in ticks.
+    /// </summary>
+    /// <returns>The next value that will be set for <see cref="NextDuration"/>, in ticks.</returns>
+    protected override long CalcNextDurationTicks() => this.NextDuration.Ticks + this._stepSize.Ticks;
 
-        /// <summary>
-        /// Calculates the next value for <see cref="NextDuration"/>, in ticks.
-        /// </summary>
-        /// <returns>The next value that will be set for <see cref="NextDuration"/>, in ticks.</returns>
-        protected override long CalcNextDurationTicks() => this.NextDuration.Ticks + this._stepSize.Ticks;
+    #endregion Protected Methods
 
-        #endregion Protected Methods
+    #region Private Fields
 
-        #region Private Fields
+    /// <summary>
+    /// The duration added to the previous <see cref="BackoffBase.NextDuration"/> to generate the next backoff duration.
+    /// </summary>
+    private readonly TimeSpan _stepSize;
 
-        /// <summary>
-        /// The duration added to the previous <see cref="BackoffBase.NextDuration"/> to generate the next backoff duration.
-        /// </summary>
-        private readonly TimeSpan _stepSize;
-
-        #endregion Private Fields
-    }
+    #endregion Private Fields
 }

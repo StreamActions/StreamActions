@@ -18,17 +18,16 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Common
+namespace StreamActions.Twitch.Api.Common;
+
+/// <summary>
+/// The pagination object for multi-page API results.
+/// </summary>
+public record Pagination
 {
     /// <summary>
-    /// The pagination object for multi-page API results.
+    /// The pagination cursor.
     /// </summary>
-    public record Pagination
-    {
-        /// <summary>
-        /// The pagination cursor.
-        /// </summary>
-        [JsonPropertyName("cursor")]
-        public string? Cursor { get; init; }
-    }
+    [JsonPropertyName("cursor")]
+    public string? Cursor { get; init; }
 }

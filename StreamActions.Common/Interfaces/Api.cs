@@ -16,25 +16,24 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Interfaces
+namespace StreamActions.Common.Interfaces;
+
+/// <summary>
+/// An interface for a component which interacts with an API.
+/// </summary>
+public abstract class Api : Component
 {
+    #region Public Properties
+
     /// <summary>
-    /// An interface for a component which interacts with an API.
+    /// Defines the timestamp of the latest API update that is included in the type.
     /// </summary>
-    public abstract class Api : Component
-    {
-        #region Public Properties
+    public static DateTime? ApiDate { get; }
 
-        /// <summary>
-        /// Defines the timestamp of the latest API update that is included in the type.
-        /// </summary>
-        public static DateTime? ApiDate { get; }
+    /// <summary>
+    /// The API version.
+    /// </summary>
+    public static string? ApiVersion { get; }
 
-        /// <summary>
-        /// The API version.
-        /// </summary>
-        public static string? ApiVersion { get; }
-
-        #endregion Public Properties
-    }
+    #endregion Public Properties
 }

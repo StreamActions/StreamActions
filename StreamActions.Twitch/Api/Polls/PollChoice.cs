@@ -18,35 +18,34 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Polls
+namespace StreamActions.Twitch.Api.Polls;
+
+/// <summary>
+/// Represents a choice in <see cref="Poll.Choices"/>.
+/// </summary>
+public record PollChoice
 {
     /// <summary>
-    /// Represents a choice in <see cref="Poll.Choices"/>.
+    /// ID for the choice.
     /// </summary>
-    public record PollChoice
-    {
-        /// <summary>
-        /// ID for the choice.
-        /// </summary>
-        [JsonPropertyName("id")]
-        public string? Id { get; init; }
+    [JsonPropertyName("id")]
+    public string? Id { get; init; }
 
-        /// <summary>
-        /// Text displayed for the choice.
-        /// </summary>
-        [JsonPropertyName("title")]
-        public string? Title { get; init; }
+    /// <summary>
+    /// Text displayed for the choice.
+    /// </summary>
+    [JsonPropertyName("title")]
+    public string? Title { get; init; }
 
-        /// <summary>
-        /// Total number of votes received for the choice across all methods of voting.
-        /// </summary>
-        [JsonPropertyName("votes")]
-        public int? Votes { get; init; }
+    /// <summary>
+    /// Total number of votes received for the choice across all methods of voting.
+    /// </summary>
+    [JsonPropertyName("votes")]
+    public int? Votes { get; init; }
 
-        /// <summary>
-        /// Number of votes received via Channel Points.
-        /// </summary>
-        [JsonPropertyName("channel_points_votes")]
-        public int? ChannelPointsVotes { get; init; }
-    }
+    /// <summary>
+    /// Number of votes received via Channel Points.
+    /// </summary>
+    [JsonPropertyName("channel_points_votes")]
+    public int? ChannelPointsVotes { get; init; }
 }

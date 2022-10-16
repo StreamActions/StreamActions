@@ -19,23 +19,22 @@
 using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Chat
+namespace StreamActions.Twitch.Api.Chat;
+
+/// <summary>
+/// A response object for a <see cref="UnofficialChatters.GetUnofficialChatters"/> request.
+/// </summary>
+public record UnofficialChattersResponse : TwitchResponse
 {
     /// <summary>
-    /// A response object for a <see cref="UnofficialChatters.GetUnofficialChatters"/> request.
+    /// The number of chatters contained in <see cref="Chatters"/>.
     /// </summary>
-    public record UnofficialChattersResponse : TwitchResponse
-    {
-        /// <summary>
-        /// The number of chatters contained in <see cref="Chatters"/>.
-        /// </summary>
-        [JsonPropertyName("chatter_count")]
-        public int? ChatterCount { get; init; }
+    [JsonPropertyName("chatter_count")]
+    public int? ChatterCount { get; init; }
 
-        /// <summary>
-        /// The current chatters, by role.
-        /// </summary>
-        [JsonPropertyName("chatters")]
-        public UnofficialChatters? Chatters { get; init; }
-    }
+    /// <summary>
+    /// The current chatters, by role.
+    /// </summary>
+    [JsonPropertyName("chatters")]
+    public UnofficialChatters? Chatters { get; init; }
 }

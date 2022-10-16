@@ -18,29 +18,28 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Common
+namespace StreamActions.Twitch.Api.Common;
+
+/// <summary>
+/// An image url object.
+/// </summary>
+public record Images
 {
     /// <summary>
-    /// An image url object.
+    /// A URL to the small version (28px x 28px) of the image.
     /// </summary>
-    public record Images
-    {
-        /// <summary>
-        /// A URL to the small version (28px x 28px) of the image.
-        /// </summary>
-        [JsonPropertyName("url_1x")]
-        public Uri? Url1X { get; init; }
+    [JsonPropertyName("url_1x")]
+    public Uri? Url1X { get; init; }
 
-        /// <summary>
-        /// A URL to the medium version (56px x 56px) of the image.
-        /// </summary>
-        [JsonPropertyName("url_2x")]
-        public Uri? Url2X { get; init; }
+    /// <summary>
+    /// A URL to the medium version (56px x 56px) of the image.
+    /// </summary>
+    [JsonPropertyName("url_2x")]
+    public Uri? Url2X { get; init; }
 
-        /// <summary>
-        /// A URL to the large version (112px x 112px) of the image.
-        /// </summary>
-        [JsonPropertyName("url_4x")]
-        public Uri? Url4X { get; init; }
-    }
+    /// <summary>
+    /// A URL to the large version (112px x 112px) of the image.
+    /// </summary>
+    [JsonPropertyName("url_4x")]
+    public Uri? Url4X { get; init; }
 }

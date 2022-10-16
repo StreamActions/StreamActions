@@ -18,43 +18,42 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace StreamActions.Common.Logger
+namespace StreamActions.Common.Logger;
+
+/// <summary>
+/// Provides <see cref="LoggerMessage"/> members for logging invalid arguments and operations.
+/// </summary>
+public static partial class InvalidOperationLogger
 {
+    #region Public Methods
+
     /// <summary>
-    /// Provides <see cref="LoggerMessage"/> members for logging invalid arguments and operations.
+    /// Logs that an <see cref="ArgumentNullException"/> was thrown.
     /// </summary>
-    public static partial class InvalidOperationLogger
-    {
-        #region Public Methods
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="type">The type that threw the exception.</param>
+    /// <param name="member">The member that threw the exception.</param>
+    /// <param name="argument">The argument that was <see langword="null"/>.</param>
+    /// <param name="exception">The exception that was thrown.</param>
+    [LoggerMessage(
+        EventId = 1000,
+        Level = LogLevel.Debug,
+        Message = "[{Type}.{Member}] Argument Null: {Argument}")]
+    public static partial void ArgumentNull(this ILogger logger, string type, string member, string argument, Exception? exception = null);
 
-        /// <summary>
-        /// Logs that an <see cref="ArgumentNullException"/> was thrown.
-        /// </summary>
-        /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-        /// <param name="type">The type that threw the exception.</param>
-        /// <param name="member">The member that threw the exception.</param>
-        /// <param name="argument">The argument that was <see langword="null"/>.</param>
-        /// <param name="exception">The exception that was thrown.</param>
-        [LoggerMessage(
-            EventId = 1000,
-            Level = LogLevel.Debug,
-            Message = "[{Type}.{Member}] Argument Null: {Argument}")]
-        public static partial void ArgumentNull(this ILogger logger, string type, string member, string argument, Exception? exception = null);
+    /// <summary>
+    /// Logs that an <see cref="InvalidOperationException"/> was thrown.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="type">The type that threw the exception.</param>
+    /// <param name="member">The member that threw the exception.</param>
+    /// <param name="message">The message explaining why the operation was invalid.</param>
+    /// <param name="exception">The exception that was thrown.</param>
+    [LoggerMessage(
+        EventId = 1001,
+        Level = LogLevel.Debug,
+        Message = "[{Type}.{Member}] Invalid Operation: {Message}")]
+    public static partial void InvalidOperation(this ILogger logger, string type, string member, string message, Exception? exception = null);
 
-        /// <summary>
-        /// Logs that an <see cref="InvalidOperationException"/> was thrown.
-        /// </summary>
-        /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-        /// <param name="type">The type that threw the exception.</param>
-        /// <param name="member">The member that threw the exception.</param>
-        /// <param name="message">The message explaining why the operation was invalid.</param>
-        /// <param name="exception">The exception that was thrown.</param>
-        [LoggerMessage(
-            EventId = 1001,
-            Level = LogLevel.Debug,
-            Message = "[{Type}.{Member}] Invalid Operation: {Message}")]
-        public static partial void InvalidOperation(this ILogger logger, string type, string member, string message, Exception? exception = null);
-
-        #endregion Public Methods
-    }
+    #endregion Public Methods
 }

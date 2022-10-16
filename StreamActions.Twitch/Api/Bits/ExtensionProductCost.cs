@@ -18,34 +18,33 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Bits
+namespace StreamActions.Twitch.Api.Bits;
+
+/// <summary>
+/// Represents the cost to acquire the product in a <see cref="ExtensionProductData"/>.
+/// </summary>
+public record ExtensionProductCost
 {
     /// <summary>
-    /// Represents the cost to acquire the product in a <see cref="ExtensionProductData"/>.
+    /// Number of Bits required to acquire the product.
     /// </summary>
-    public record ExtensionProductCost
+    [JsonPropertyName("amount")]
+    public int? Amount { get; init; }
+
+    /// <summary>
+    /// Identifies the contribution method.
+    /// </summary>
+    [JsonPropertyName("type")]
+    public ExtensionProductCostType? Type { get; init; }
+
+    /// <summary>
+    /// The types of contributions that can be used in a product purchase.
+    /// </summary>
+    public enum ExtensionProductCostType
     {
         /// <summary>
-        /// Number of Bits required to acquire the product.
+        /// Purchase via bits.
         /// </summary>
-        [JsonPropertyName("amount")]
-        public int? Amount { get; init; }
-
-        /// <summary>
-        /// Identifies the contribution method.
-        /// </summary>
-        [JsonPropertyName("type")]
-        public ExtensionProductCostType? Type { get; init; }
-
-        /// <summary>
-        /// The types of contributions that can be used in a product purchase.
-        /// </summary>
-        public enum ExtensionProductCostType
-        {
-            /// <summary>
-            /// Purchase via bits.
-            /// </summary>
-            Bits
-        }
+        Bits
     }
 }

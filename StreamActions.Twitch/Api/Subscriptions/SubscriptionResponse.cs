@@ -19,22 +19,21 @@
 using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Subscriptions
+namespace StreamActions.Twitch.Api.Subscriptions;
+
+/// <summary>
+/// A <see cref="ResponseData{TDataType}"/> with the subscription <see cref="Points"/> field.
+/// </summary>
+public record SubscriptionResponse : ResponseData<Subscription>
 {
     /// <summary>
-    /// A <see cref="ResponseData{TDataType}"/> with the subscription <see cref="Points"/> field.
+    /// The current number of subscriber points earned by this broadcaster.
     /// </summary>
-    public record SubscriptionResponse : ResponseData<Subscription>
-    {
-        /// <summary>
-        /// The current number of subscriber points earned by this broadcaster.
-        /// </summary>
-        /// <remarks>
-        /// Points are based on the subscription tier of each user that subscribes to this broadcaster.
-        /// For example, a Tier 1 subscription is worth 1 point, Tier 2 is worth 2 points, and Tier 3 is worth 6 points.
-        /// The number of points determines the number of emote slots that are unlocked for the broadcaster.
-        /// </remarks>
-        [JsonPropertyName("points")]
-        public int? Points { get; init; }
-    }
+    /// <remarks>
+    /// Points are based on the subscription tier of each user that subscribes to this broadcaster.
+    /// For example, a Tier 1 subscription is worth 1 point, Tier 2 is worth 2 points, and Tier 3 is worth 6 points.
+    /// The number of points determines the number of emote slots that are unlocked for the broadcaster.
+    /// </remarks>
+    [JsonPropertyName("points")]
+    public int? Points { get; init; }
 }

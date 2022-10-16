@@ -18,23 +18,22 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Bits
+namespace StreamActions.Twitch.Api.Bits;
+
+/// <summary>
+/// Represents an image set in <see cref="CheermoteImageThemes"/>.
+/// </summary>
+public record CheermoteImageSet
 {
     /// <summary>
-    /// Represents an image set in <see cref="CheermoteImageThemes"/>.
+    /// The <see cref="CheermoteImageUris"/> for the animated version of the cheermote.
     /// </summary>
-    public record CheermoteImageSet
-    {
-        /// <summary>
-        /// The <see cref="CheermoteImageUris"/> for the animated version of the cheermote.
-        /// </summary>
-        [JsonPropertyName("animated")]
-        public CheermoteImageSet? Animated { get; init; }
+    [JsonPropertyName("animated")]
+    public CheermoteImageSet? Animated { get; init; }
 
-        /// <summary>
-        /// The <see cref="CheermoteImageUris"/> for the static version of the cheermote.
-        /// </summary>
-        [JsonPropertyName("static")]
-        public CheermoteImageSet? Static { get; init; }
-    }
+    /// <summary>
+    /// The <see cref="CheermoteImageUris"/> for the static version of the cheermote.
+    /// </summary>
+    [JsonPropertyName("static")]
+    public CheermoteImageSet? Static { get; init; }
 }
