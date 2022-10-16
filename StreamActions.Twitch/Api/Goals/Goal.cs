@@ -70,13 +70,19 @@ namespace StreamActions.Twitch.Api.Goals
         /// </summary>
         /// <remarks>
         /// <para>
-        /// If the goal is to increase followers, this field is set to the current number of followers. This number increases with new followers and decreases if users unfollow the channel.
+        /// If type is <see cref="GoalType.Follower"/>, this field is set to the broadcaster's current number of followers. This number increases with new followers and decreases when users unfollow the broadcaster.
         /// </para>
         /// <para>
-        /// For subscriptions, current_amount is increased and decreased by the points value associated with the subscription tier.For example, if a tier-two subscription is worth 2 points, current_amount is increased or decreased by 2, not 1.
+        /// If type is <see cref="GoalType.Subscription"/>, this field is increased and decreased by the points value associated with the subscription tier. For example, if a tier-two subscription is worth 2 points, this field is increased or decreased by 2, not 1.
         /// </para>
         /// <para>
-        /// For new_subscriptions, current_amount is increased by the points value associated with the subscription tier. For example, if a tier-two subscription is worth 2 points, current_amount is increased by 2, not 1.
+        /// If type is <see cref="GoalType.Subscription_Count"/>, this field is increased by 1 for each new subscription and decreased by 1 for each user that unsubscribes.
+        /// </para>
+        /// <para>
+        /// If type is <see cref="GoalType.New_Subscription"/>, this field is increased by the points value associated with the subscription tier. For example, if a tier-two subscription is worth 2 points, this field is increased by 2, not 1.
+        /// </para>
+        /// <para>
+        /// If type is <see cref="GoalType.New_Subscription_Count"/>, this field is increased by 1 for each new subscription.
         /// </para>
         /// </remarks>
         [JsonPropertyName("current_amount")]
@@ -104,14 +110,24 @@ namespace StreamActions.Twitch.Api.Goals
             /// </summary>
             Follower,
             /// <summary>
-            /// The goal is to increase subscriptions. This type shows the net increase or decrease in subscriptions.
+            /// The goal is to increase subscriptions. This type shows the net increase or decrease in tier points associated with the subscriptions.
             /// </summary>
             Subscription,
             /// <summary>
-            /// The goal is to increase subscriptions. This type shows only the net increase in subscriptions (it does not account for users that stopped subscribing since the goal's inception).
+            /// The goal is to increase subscriptions. This type shows the net increase or decrease in the number of subscriptions.
             /// </summary>
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
-            New_subscription
+            Subscription_Count,
+            /// <summary>
+            /// The goal is to increase subscriptions. This type shows only the net increase in tier points associated with the subscriptions (it does not account for users that unsubscribed since the goal started).
+            /// </summary>
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
+            New_Subscription,
+            /// <summary>
+            /// The goal is to increase subscriptions. This type shows only the net increase in the number of subscriptions (it does not account for users that unsubscribed since the goal started).
+            /// </summary>
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
+            New_Subscription_Count
         }
 
         /// <summary>
