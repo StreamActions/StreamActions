@@ -50,7 +50,7 @@ namespace StreamActions.Common.Logger
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
         [LoggerMessage(
-            EventId = 9999,
+            EventId = 9995,
             Level = LogLevel.Debug,
             Message = "[{Type}.{Member}] {Message}")]
         public static partial void Debug(this ILogger logger, string type, string member, string message, Exception? exception = null);
@@ -64,7 +64,7 @@ namespace StreamActions.Common.Logger
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
         [LoggerMessage(
-            EventId = 9999,
+            EventId = 9998,
             Level = LogLevel.Error,
             Message = "[{Type}.{Member}] {Message}")]
         public static partial void Error(this ILogger logger, string type, string member, string message, Exception? exception = null);
@@ -78,7 +78,7 @@ namespace StreamActions.Common.Logger
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
         [LoggerMessage(
-            EventId = 9999,
+            EventId = 9996,
             Level = LogLevel.Information,
             Message = "[{Type}.{Member}] {Message}")]
         public static partial void Information(this ILogger logger, string type, string member, string message, Exception? exception = null);
@@ -92,7 +92,7 @@ namespace StreamActions.Common.Logger
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
         [LoggerMessage(
-            EventId = 9999,
+            EventId = 9994,
             Level = LogLevel.Trace,
             Message = "[{Type}.{Member}] {Message}")]
         public static partial void Trace(this ILogger logger, string type, string member, string message, Exception? exception = null);
@@ -106,7 +106,7 @@ namespace StreamActions.Common.Logger
         /// <param name="message">The message to log.</param>
         /// <param name="exception">The exception that was thrown.</param>
         [LoggerMessage(
-            EventId = 9999,
+            EventId = 9997,
             Level = LogLevel.Warning,
             Message = "[{Type}.{Member}] {Message}")]
         public static partial void Warning(this ILogger logger, string type, string member, string message, Exception? exception = null);

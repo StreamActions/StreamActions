@@ -52,7 +52,7 @@ namespace StreamActions.Common.Logger
         [LoggerMessage(
             EventId = 1001,
             Level = LogLevel.Debug,
-            Message = "[{Type}.{Member}] Invalid Operation: {Reason}")]
+            Message = "[{Type}.{Member}] Invalid Operation: {Message}")]
         public static partial void InvalidOperation(this ILogger logger, string type, string member, string message, Exception? exception = null);
 
         #endregion Public Methods
