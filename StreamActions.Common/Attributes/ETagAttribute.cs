@@ -19,7 +19,7 @@
 namespace StreamActions.Common.Attributes;
 
 /// <summary>
-/// Indicates the URI and ETag associated with a <see cref="StreamActions.Common.Interfaces.Component"/>, allowing <c>diff.py</c> to automatically detect when the source documentation has changed.
+/// Indicates the URI and ETag associated with a <see cref="StreamActions.Common.Interfaces.Component"/>, allowing <c>Diff.py</c> to automatically detect when the source documentation has changed.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class ETagAttribute : Attribute
@@ -31,7 +31,7 @@ public sealed class ETagAttribute : Attribute
     /// </summary>
     /// <param name="uri">The URI of the source documentation for this component.</param>
     /// <param name="eTag">The ETag of the latest version of the documentation that this component conforms to.</param>
-    /// <param name="differParameters">Parameters for <c>diff.py</c>.</param>
+    /// <param name="differParameters">Parameters for <c>Diff.py</c>.</param>
     public ETagAttribute(string uri, string eTag, string[] differParameters)
     {
         this.Uri = uri;
@@ -44,7 +44,7 @@ public sealed class ETagAttribute : Attribute
     #region Public Properties
 
     /// <summary>
-    /// Parameters for <c>diff.py</c>.
+    /// Parameters for <c>Diff.py</c>.
     /// </summary>
     public IReadOnlyCollection<string> DifferParameters { get; init; }
 
