@@ -336,7 +336,7 @@ namespace StreamActions.Twitch.Api.Videos
         /// </summary>
         /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
         /// <param name="id">ID of the video(s) to be deleted. Limit: 5.</param>
-        /// <returns>A <see cref="TwitchResponse"/> with the response code.</returns>
+        /// <returns>A <see cref="ResponseData{TDataType}"/> with the IDs of the videos that were deleted.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="id"/> is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> has more than 5 elements.</exception>
         /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:manage:videos</c> is not present.</exception>
@@ -345,7 +345,7 @@ namespace StreamActions.Twitch.Api.Videos
         /// Invalid Video IDs will be ignored (i.e. IDs provided that do not have a video associated with it).
         /// If the OAuth user token does not have permission to delete even one of the valid Video IDs, no videos will be deleted and the response will return a 401.
         /// </para></remarks>
-        public static async Task<TwitchResponse?> DeleteVideos(TwitchSession session, IEnumerable<string> id)
+        public static async Task<ResponseData<string>?> DeleteVideos(TwitchSession session, IEnumerable<string> id)
         {
             if (session is null)
             {
@@ -369,7 +369,7 @@ namespace StreamActions.Twitch.Api.Videos
 
             Uri uri = Util.BuildUri(new("/videos"), new Dictionary<string, IEnumerable<string>> { { "id", id } });
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
-            return await response.Content.ReadFromJsonAsync<TwitchResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+            return await response.Content.ReadFromJsonAsync<ResponseData<string>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
 }
