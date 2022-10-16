@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Attributes;
 using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -25,6 +26,9 @@ namespace StreamActions.Twitch.Api.OAuth;
 /// <summary>
 /// Sends and represents a response for a request for OIDC UserInfo.
 /// </summary>
+[ETag("https://dev.twitch.tv/docs/authentication/getting-tokens-oidc", "81e904ca528bea07e83f30077cc7299d", new string[] {
+    "-context", "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
+    "-remre", "'cloudcannon[^\"]*'" })]
 public record UserInfo : TwitchResponse
 {
     /// <summary>
@@ -48,7 +52,7 @@ public record UserInfo : TwitchResponse
     /// <summary>
     /// <see cref="ExpiresUnix"/> as a <see cref="DateTime"/>.
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [JsonIgnore]
     public DateTime? Expires => this.ExpiresUnix.HasValue ? DateTime.UnixEpoch.AddSeconds(this.ExpiresUnix.Value) : null;
 
     /// <summary>
@@ -60,7 +64,7 @@ public record UserInfo : TwitchResponse
     /// <summary>
     /// <see cref="IssuedUnix"/> as a <see cref="DateTime"/>.
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [JsonIgnore]
     public DateTime? Issued => this.IssuedUnix.HasValue ? DateTime.UnixEpoch.AddSeconds(this.IssuedUnix.Value) : null;
 
     /// <summary>
@@ -96,7 +100,7 @@ public record UserInfo : TwitchResponse
     /// <summary>
     /// <see cref="Picture"/> as a <see cref="Uri"/>. Only present if the claim was requested for UserInfo.
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [JsonIgnore]
     public Uri? PictureUri => this.Picture is not null ? new(this.Picture) : null;
 
     /// <summary>

@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Attributes;
 using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -25,6 +26,9 @@ namespace StreamActions.Twitch.Api.OAuth;
 /// <summary>
 /// Record containing response data for the Validate endpoint.
 /// </summary>
+[ETag("https://dev.twitch.tv/docs/authentication/validate-tokens", "da51777a3ed18ad5014efa29d4bbc78e", new string[] {
+    "-context", "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
+    "-remre", "'cloudcannon[^\"]*'" })]
 public record Validate : TwitchResponse
 {
     /// <summary>

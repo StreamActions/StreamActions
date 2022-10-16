@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Attributes;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -24,6 +25,9 @@ namespace StreamActions.Twitch.Api.Ingest;
 /// <summary>
 /// Sends and represents a response element for a request for ingest servers.
 /// </summary>
+[ETag("https://dev.twitch.tv/docs/video-broadcast/reference", "6624802d54891a42b2c19effa0b96885", new string[] {
+    "-context", "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
+    "-remre", "'cloudcannon[^\"]*'" })]
 public record Ingest
 {
     /// <summary>

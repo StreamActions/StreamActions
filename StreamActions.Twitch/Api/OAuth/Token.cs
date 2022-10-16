@@ -20,6 +20,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using StreamActions.Common;
+using StreamActions.Common.Attributes;
 using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -29,6 +30,12 @@ namespace StreamActions.Twitch.Api.OAuth;
 /// <summary>
 /// Record containing response data for the Token endpoint.
 /// </summary>
+[ETag("https://dev.twitch.tv/docs/authentication/refresh-tokens", "c1aba60b8e86dee6b6152c8e24f953a7", new string[] {
+    "-context", "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
+    "-remre", "'cloudcannon[^\"]*'" })]
+[ETag("https://dev.twitch.tv/docs/authentication/revoke-tokens", "be403e24e9e0137860e5f664a4bf666f", new string[] {
+    "-context", "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
+    "-remre", "'cloudcannon[^\"]*'" })]
 public record Token : TwitchResponse
 {
     /// <summary>

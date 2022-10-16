@@ -17,6 +17,7 @@
  */
 
 using Microsoft.Extensions.Logging;
+using StreamActions.Common.Attributes;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Interfaces;
 using StreamActions.Common.Logger;
@@ -33,6 +34,10 @@ namespace StreamActions.Twitch.Api;
 /// Handles validation of OAuth tokens and performs HTTP calls for the API.
 /// </summary>
 [Guid("996E35EC-638A-4E5B-AEFC-84C800E16520")]
+[ETag("https://dev.twitch.tv/docs/api/reference", "57284f3efe091726ff57ac47a2a95ef5", new string[] {
+    "-context", "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
+    "-remre", "'cloudcannon[^\"]*'", "-rem", "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-new\">NEW</span></a> '",
+    "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-beta\">BETA</span></a> '" })]
 public class TwitchApi : StreamActions.Common.Interfaces.Api
 {
     #region Public Events
