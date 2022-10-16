@@ -73,7 +73,7 @@ namespace StreamActions.Twitch.Api.Clips
         public string? CreatorName { get; init; }
 
         /// <summary>
-        /// ID of the video from which the clip was created.
+        /// ID of the video from which the clip was created. This field contains an empty string if the video is not available.
         /// </summary>
         [JsonPropertyName("video_id")]
         public string? VideoId { get; init; }
@@ -125,6 +125,15 @@ namespace StreamActions.Twitch.Api.Clips
         /// </summary>
         [JsonPropertyName("duration")]
         public float? DurationSeconds { get; init; }
+
+        /// <summary>
+        /// The zero-based offset, in seconds, to where the clip starts in the video (VOD). Is <c>null</c> if the video is not available or hasn't been created yet from the live stream.
+        /// </summary>
+        /// <remarks>
+        /// Note that there's a delay between when a clip is created during a broadcast and when the offset is set. During the delay period, VodOffset is <c>null</c>. The delay is indeterminate, but is typically minutes long.
+        /// </remarks>
+        [JsonPropertyName("vod_offset")]
+        public int? VodOffset { get; init; }
 
         /// <summary>
         /// Gets clip information by clip ID (one or more), broadcaster ID (one only), or game ID (one only).
