@@ -41,6 +41,12 @@ namespace StreamActions.Twitch.Api.Ads
         public int? RetryAfter { get; init; }
 
         /// <summary>
+        /// The timestamp represented by <see cref="RetryAfter"/>.
+        /// </summary>
+        [JsonIgnore]
+        public DateTime? RetryAfterDate => this.RetryAfter is null ? null : DateTime.UtcNow.AddSeconds((double)this.RetryAfter);
+
+        /// <summary>
         /// Provides contextual information on why the request failed.
         /// </summary>
         [JsonPropertyName("message")]
