@@ -41,7 +41,7 @@ init
 irc
 ircs
 json
-Leaderboard
+leaderboard
 listpermissions
 localhost
 mailto
@@ -58,6 +58,7 @@ plugin
 plugins
 png
 pre
+programmatically
 Ratelimit
 Refactor
 Refactored

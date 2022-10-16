@@ -208,7 +208,7 @@ namespace StreamActions.Twitch.Api.Subscriptions
         /// <param name="userId">User ID of a Twitch viewer.</param>
         /// <returns>A <see cref="SubscriptionResponse"/> with elements of type <see cref="Subscription"/> containing the response. The response contains a <see cref="TwitchResponse.Status"/> of <see cref="System.Net.HttpStatusCode.NotFound"/> if the <paramref name="userId"/> is not subscribed to <paramref name="broadcasterId"/>.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> or <paramref name="userId"/> is null, empty, or whitespace.</exception>
-        /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:read:subscriptions</c> is not present.</exception>
+        /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>user:read:subscriptions</c> is not present.</exception>
         public static async Task<SubscriptionResponse?> CheckUserSubscription(TwitchSession session, string broadcasterId, string userId)
         {
             if (session is null)
@@ -226,9 +226,9 @@ namespace StreamActions.Twitch.Api.Subscriptions
                 throw new ArgumentNullException(nameof(userId));
             }
 
-            if (!session.Token?.HasScope("channel:read:subscriptions") ?? false)
+            if (!session.Token?.HasScope("user:read:subscriptions") ?? false)
             {
-                throw new ScopeMissingException("channel:read:subscriptions");
+                throw new ScopeMissingException("user:read:subscriptions");
             }
 
             Dictionary<string, IEnumerable<string>> queryParams = new()
