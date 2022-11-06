@@ -16,6 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Globalization;
+
 namespace StreamActions.Common.Attributes;
 
 /// <summary>
@@ -31,12 +33,14 @@ public sealed class ETagAttribute : Attribute
     /// </summary>
     /// <param name="uri">The URI of the source documentation for this component.</param>
     /// <param name="eTag">The ETag of the latest version of the documentation that this component conforms to.</param>
-    /// <param name="differParameters">Parameters for <c>Diff.py</c>.</param>
-    public ETagAttribute(string uri, string eTag, string[] differParameters)
+    /// <param name="timestamp">The timestamp when the <paramref name="eTag"/> was updated.</param>
+    /// <param name="stripParameters">Parameters for <c>StripData.py</c>.</param>
+    public ETagAttribute(string uri, string eTag, string timestamp, string[] stripParameters)
     {
         this.Uri = uri;
         this.ETag = eTag;
-        this.DifferParameters = differParameters.ToList();
+        this.Timestamp = DateTime.Parse(timestamp, CultureInfo.InvariantCulture);
+        this.StripParameters = stripParameters.ToList();
     }
 
     #endregion Public Constructors
@@ -44,14 +48,19 @@ public sealed class ETagAttribute : Attribute
     #region Public Properties
 
     /// <summary>
-    /// Parameters for <c>Diff.py</c>.
-    /// </summary>
-    public IReadOnlyCollection<string> DifferParameters { get; init; }
-
-    /// <summary>
     /// The ETag of the latest version of the documentation that this component conforms to.
     /// </summary>
     public string ETag { get; init; }
+
+    /// <summary>
+    /// Parameters for <c>StripData.py</c>.
+    /// </summary>
+    public IReadOnlyCollection<string> StripParameters { get; init; }
+
+    /// <summary>
+    /// The timestamp when the <see cref="ETag"/> was updated.
+    /// </summary>
+    public DateTime Timestamp { get; init; }
 
     /// <summary>
     /// The URI of the source documentation for this component.
