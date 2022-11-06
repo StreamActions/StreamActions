@@ -19,6 +19,7 @@
 import argparse
 import difflib
 import re
+from StripData import stripdata
 
 #python3 Diff.py -context -stripblank -strip -findfirst '<div class=\"main\">' -findlast '<div class=\"subscribe-footer\">' -remre 'cloudcannon[^\"]*' -rem '<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-new\">NEW</span></a> ' '<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-beta\">BETA</span></a> ' -filea helix_2022-05-12.htm -fileb helix_2022-08-28.htm -fileout test.htm
 
@@ -55,12 +56,6 @@ def main(args, shouldReturn=False):
     else:
         editfiles = False
 
-    remre = None
-    if args.remre != None:
-        remre = []
-        for rem in args.remre:
-            remre.append(re.compile(rem))
-
     with open(args.filea, encoding='utf-8') as fa:
         with open(args.fileb, encoding='utf-8') as fb:
             doprint(args, 'Preparing files')
@@ -68,87 +63,8 @@ def main(args, shouldReturn=False):
             fblines = fb.readlines()
 
             if editfiles:
-                temp = []
-                if args.findfirst != None:
-                    foundfirst = False
-                else:
-                    foundfirst = True
-                foundlast = -1
-                for line in falines:
-                    if not foundfirst and args.findfirst != None:
-                        idx = line.find(args.findfirst)
-                        if idx != -1:
-                            foundfirst = True
-                    if args.findlast != None:
-                        idx = line.find(args.findlast)
-                        if idx != -1:
-                            foundlast = len(temp) + 1
-                    if args.strip:
-                        line = line.strip()
-                    if args.rem != None:
-                        for rem in args.rem:
-                            idx = line.find(rem)
-                            if idx != -1:
-                                if len(rem) == len(line):
-                                    line = ''
-                                else:
-                                    line = line[0:idx] + line[idx + len(rem):]
-                    if remre != None:
-                        for rem in remre:
-                            matches = rem.finditer(line)
-                            for match in matches:
-                                idx = match.start()
-                                if len(match.group()) == len(line):
-                                    line = ''
-                                else:
-                                    line = line[0:idx] + line[idx + len(match.group()):]
-                    if len(line) > 0 or not args.stripblank:
-                        if foundfirst:
-                            temp.append(line)
-                if foundlast > -1:
-                    temp = temp[0:foundlast]
-                falines = temp
-
-                temp = []
-                if args.findfirst != None:
-                    foundfirst = False
-                else:
-                    foundfirst = True
-                foundlast = -1
-                for line in fblines:
-                    if not foundfirst and args.findfirst != None:
-                        idx = line.find(args.findfirst)
-                        if idx != -1:
-                            foundfirst = True
-                    if args.findlast != None:
-                        idx = line.find(args.findlast)
-                        if idx != -1:
-                            foundlast = len(temp) + 1
-                    if args.strip:
-                        line = line.strip()
-                    if args.rem != None:
-                        for rem in args.rem:
-                            idx = line.find(rem)
-                            if idx != -1:
-                                if len(rem) == len(line):
-                                    line = ''
-                                else:
-                                    line = line[0:idx] + line[idx + len(rem):]
-                    if remre != None:
-                        for rem in remre:
-                            matches = rem.finditer(line)
-                            for match in matches:
-                                idx = match.start()
-                                if len(match.group()) == len(line):
-                                    line = ''
-                                else:
-                                    line = line[0:idx] + line[idx + len(match.group()):]
-                    if len(line) > 0 or not args.stripblank:
-                        if foundfirst:
-                            temp.append(line)
-                if foundlast > -1:
-                    temp = temp[0:foundlast]
-                fblines = temp
+                falines = stripdata(args, falines)
+                fblines = stripdata(args, fblines)
 
             doprint(args, 'Generating diff')
             if args.table:
