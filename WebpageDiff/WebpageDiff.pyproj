@@ -31,6 +31,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Diff.py" />
+    <Compile Include="Hash.py" />
     <Compile Include="StripData.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
