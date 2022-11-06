@@ -37,9 +37,6 @@ def main(args, shouldReturn=False):
     if not 'fileout' in args:
         args.fileout = 'out.html'
 
-    if not 'main' in args or not args.main:
-        args = parseargs(args)
-
     if args.namea != None:
         namea = args.namea
     else:
@@ -136,5 +133,4 @@ def parseargs(inargs):
 
 if __name__ == '__main__':
     args = parseargs(None)
-    args.main = True
     main(args)
