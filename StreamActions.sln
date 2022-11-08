@@ -53,7 +53,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Twitch", "Str
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Common", "StreamActions.Common\StreamActions.Common.csproj", "{E0CC157B-5800-4E3B-8961-332E78B3D096}"
 EndProject
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "WebpageDiff", "WebpageDiff\WebpageDiff.pyproj", "{109CC1EE-B198-4BF7-BD96-EBBD39D75DA9}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Diff", "Diff\Diff.pyproj", "{109CC1EE-B198-4BF7-BD96-EBBD39D75DA9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
