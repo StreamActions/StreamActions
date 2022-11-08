@@ -26,9 +26,9 @@ namespace StreamActions.Twitch.Api.OAuth;
 /// <summary>
 /// Sends and represents a response for a request for OIDC UserInfo.
 /// </summary>
-[ETag("https://dev.twitch.tv/docs/authentication/getting-tokens-oidc", "81e904ca528bea07e83f30077cc7299d", "2022-10-16T21:22Z", new string[] {
-    "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'", "-remre",
-    "'cloudcannon[^\"]*'" })]
+[ETag("https://dev.twitch.tv/docs/authentication/getting-tokens-oidc", "4fecd89165e854442989c1f5f98d8642a645ff36f81c7797764a58ba29e879e6",
+    "2022-10-16T21:22Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
+        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
 public record UserInfo : TwitchResponse
 {
     /// <summary>

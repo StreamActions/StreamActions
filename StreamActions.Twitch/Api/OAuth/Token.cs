@@ -30,12 +30,12 @@ namespace StreamActions.Twitch.Api.OAuth;
 /// <summary>
 /// Record containing response data for the Token endpoint.
 /// </summary>
-[ETag("https://dev.twitch.tv/docs/authentication/refresh-tokens", "c1aba60b8e86dee6b6152c8e24f953a7", "2022-10-16T20:40Z", new string[] {
-    "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'", "-remre",
-    "'cloudcannon[^\"]*'" })]
-[ETag("https://dev.twitch.tv/docs/authentication/revoke-tokens", "be403e24e9e0137860e5f664a4bf666f", "2022-10-16T20:44Z", new string[] {
-    "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'", "-remre",
-    "'cloudcannon[^\"]*'" })]
+[ETag("https://dev.twitch.tv/docs/authentication/refresh-tokens", "983bd1581e310444688acbb2ea1205fc26ce7ee4ab6801d3cb97dc2bafbff121",
+    "2022-10-16T20:40Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
+        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
+[ETag("https://dev.twitch.tv/docs/authentication/revoke-tokens", "36c9e9126bb4e99710352235c034c12a751192af8b009d9df491cf87d580de6c",
+    "2022-10-16T20:44Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
+        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
 public record Token : TwitchResponse
 {
     /// <summary>
