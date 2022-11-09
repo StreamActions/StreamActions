@@ -35,7 +35,7 @@ public sealed class ETagAttribute : Attribute
     /// <param name="eTag">The ETag of the latest version of the documentation that this component conforms to.</param>
     /// <param name="timestamp">The timestamp when the <paramref name="eTag"/> was updated.</param>
     /// <param name="stripParameters">Parameters for <c>StripData.py</c>.</param>
-    /// <remarks>RegEx: <code>/\[ETag\(\"[^\"]+\",\s*\"[^\"]+\",\s*\"[^\"]+\",\s*[^{]+{([^}]*)}\)\]/</code></remarks>
+    /// <remarks>RegEx (Python3): <code>r"\[ETag\(\s*\"(?P<url>[^\"]+)\",\s*\"(?P<hash>[^\"]+)\",\s*\"(?P<date>[^\"]+)\",\s*[^{]+{(?P<params>.*)}\)\]"s</code></remarks>
     public ETagAttribute(string uri, string eTag, string timestamp, string[] stripParameters)
     {
         this.Uri = uri;
