@@ -22,7 +22,7 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Interfaces;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Api.OAuth;
+using StreamActions.Twitch.OAuth;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;

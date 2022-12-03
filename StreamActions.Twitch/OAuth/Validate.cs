@@ -17,11 +17,12 @@
  */
 
 using StreamActions.Common.Attributes;
+using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.OAuth;
+namespace StreamActions.Twitch.OAuth;
 
 /// <summary>
 /// Record containing response data for the Validate endpoint.
