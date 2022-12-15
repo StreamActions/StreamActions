@@ -248,7 +248,7 @@ dotnet_naming_style.camel_case_with__.capitalization = camel_case
 
 # IDE0047: Remove unnecessary parentheses
 dotnet_diagnostic.IDE0047.severity =suggestion
-csharp_style_namespace_declarations= block_scoped:warning
+csharp_style_namespace_declarations= file_scoped:warning
 csharp_style_prefer_null_check_over_type_check= true:suggestion
 csharp_style_implicit_object_creation_when_type_is_apparent= true:suggestion
 csharp_style_allow_embedded_statements_on_same_line_experimental= true:silent
@@ -384,6 +384,7 @@ dotnet_diagnostic.EF1001.severity = warning
 csharp_style_prefer_method_group_conversion = true:silent
 csharp_style_prefer_top_level_statements = true:silent
 csharp_style_prefer_utf8_string_literals = true:suggestion
+csharp_style_prefer_readonly_struct = true:suggestion
 
 [*.{cs,vb}]
 
