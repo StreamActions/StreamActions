@@ -29,7 +29,7 @@ namespace StreamActions.Twitch.Api.Bits;
 /// <summary>
 /// Sends and represents a response element from a request for the bits leaderboard.
 /// </summary>
-public record Leaderboard
+public sealed record Leaderboard
 {
     /// <summary>
     /// Leaderboard rank of the user.

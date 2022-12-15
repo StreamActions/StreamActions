@@ -27,7 +27,7 @@ namespace StreamActions.Twitch.Api.Channels;
 /// <summary>
 /// Sends and represents a response element for a request for the channel editors list.
 /// </summary>
-public record ChannelEditor
+public sealed record ChannelEditor
 {
     /// <summary>
     /// User ID of the editor.

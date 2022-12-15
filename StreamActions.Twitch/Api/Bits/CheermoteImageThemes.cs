@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Bits;
 /// <summary>
 /// Represents the image themes in a <see cref="CheermoteTier"/>.
 /// </summary>
-public record CheermoteImageThemes
+public sealed record CheermoteImageThemes
 {
     /// <summary>
     /// The <see cref="CheermoteImageSet"/> for the dark theme.

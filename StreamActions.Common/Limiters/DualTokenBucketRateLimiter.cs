@@ -21,7 +21,7 @@ namespace StreamActions.Common.Limiters;
 /// <summary>
 /// Handles rate limits using dual token buckets, where a token must be acquired from both a local bucket and a shared global bucket to succeed.
 /// </summary>
-public class DualTokenBucketRateLimiter
+public sealed class DualTokenBucketRateLimiter
 {
     #region Public Constructors
 

@@ -37,7 +37,7 @@ namespace StreamActions.Twitch.OAuth;
 [ETag("https://dev.twitch.tv/docs/authentication/revoke-tokens", "36c9e9126bb4e99710352235c034c12a751192af8b009d9df491cf87d580de6c",
     "2022-10-16T20:44Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
         "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
-public record Token : TwitchResponse
+public sealed record Token : TwitchResponse
 {
     /// <summary>
     /// The OAuth token that has been granted.

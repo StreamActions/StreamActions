@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Bits;
 /// <summary>
 /// Represents the uris to the images in a <see cref="CheermoteImageSet"/> in various sizes.
 /// </summary>
-public record CheermoteImageUris
+public sealed record CheermoteImageUris
 {
     /// <summary>
     /// The uri to the 1x size image.

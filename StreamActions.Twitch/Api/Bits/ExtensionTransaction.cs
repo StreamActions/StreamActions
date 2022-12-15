@@ -27,7 +27,7 @@ namespace StreamActions.Twitch.Api.Bits;
 /// <summary>
 /// Sends and represents the response for a request for extension transactions.
 /// </summary>
-public record ExtensionTransaction
+public sealed record ExtensionTransaction
 {
     /// <summary>
     /// Unique identifier of the Bits-in-Extensions transaction.

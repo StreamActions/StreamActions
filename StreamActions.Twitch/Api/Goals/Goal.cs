@@ -27,7 +27,7 @@ namespace StreamActions.Twitch.Api.Goals;
 /// <summary>
 /// Sends and represents a response element for a request for creator goals.
 /// </summary>
-public record Goal
+public sealed record Goal
 {
     /// <summary>
     /// An ID that uniquely identifies this goal.

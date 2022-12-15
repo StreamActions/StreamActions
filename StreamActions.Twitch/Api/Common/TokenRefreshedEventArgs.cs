@@ -21,7 +21,7 @@ namespace StreamActions.Twitch.Api.Common;
 /// <summary>
 /// Represents the event args for a <see cref="TwitchApi.OnTokenRefreshed"/> event.
 /// </summary>
-public class TokenRefreshedEventArgs : EventArgs
+public sealed class TokenRefreshedEventArgs : EventArgs
 {
     #region Public Constructors
 

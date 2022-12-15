@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Ads;
 /// <summary>
 /// The parameters for <see cref="Commercial.StartCommercial(Common.TwitchSession, StartCommercialParameters)"/>.
 /// </summary>
-public record StartCommercialParameters
+public sealed record StartCommercialParameters
 {
     /// <summary>
     /// Constructor.

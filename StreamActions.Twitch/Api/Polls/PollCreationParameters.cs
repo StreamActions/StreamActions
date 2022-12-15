@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Polls;
 /// <summary>
 /// Represents the parameters for <see cref="Poll.CreatePoll(Common.TwitchSession, PollCreationParameters)"/>.
 /// </summary>
-public record PollCreationParameters
+public sealed record PollCreationParameters
 {
     /// <summary>
     /// Constructor.

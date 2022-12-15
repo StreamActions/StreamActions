@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Bits;
 /// <summary>
 /// Represents the cost to acquire the product in a <see cref="ExtensionProductData"/>.
 /// </summary>
-public record ExtensionProductCost
+public sealed record ExtensionProductCost
 {
     /// <summary>
     /// Number of Bits required to acquire the product.

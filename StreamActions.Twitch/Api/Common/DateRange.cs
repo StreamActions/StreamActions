@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Common;
 /// <summary>
 /// A date range in a response object.
 /// </summary>
-public record DateRange
+public sealed record DateRange
 {
     /// <summary>
     /// Starting date/time for returned reports, in RFC3339 format with the hours, minutes, and seconds zeroed out and the UTC timezone: YYYY-MM-DDT00:00:00Z. This must be on or after January 31, 2018.

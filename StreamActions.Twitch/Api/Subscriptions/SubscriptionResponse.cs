@@ -24,7 +24,7 @@ namespace StreamActions.Twitch.Api.Subscriptions;
 /// <summary>
 /// A <see cref="ResponseData{TDataType}"/> with the subscription <see cref="Points"/> field.
 /// </summary>
-public record SubscriptionResponse : ResponseData<Subscription>
+public sealed record SubscriptionResponse : ResponseData<Subscription>
 {
     /// <summary>
     /// The current number of subscriber points earned by this broadcaster.

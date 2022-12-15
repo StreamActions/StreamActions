@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.Api.Ingest;
 [ETag("https://dev.twitch.tv/docs/video-broadcast/reference", "93b471e8222a9fbd55f7782fb258c096c1b2e8562faa9b618ff7d9891bee97ae",
     "2022-10-16T20:11Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
         "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
-public record Ingest
+public sealed record Ingest
 {
     /// <summary>
     /// Sequential identifier of ingest server.

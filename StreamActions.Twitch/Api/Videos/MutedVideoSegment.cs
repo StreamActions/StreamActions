@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Videos;
 /// <summary>
 /// Represents a muted video segment in a <see cref="Video"/>.
 /// </summary>
-public record MutedVideoSegment
+public sealed record MutedVideoSegment
 {
     /// <summary>
     /// Duration of the muted segment, in seconds.

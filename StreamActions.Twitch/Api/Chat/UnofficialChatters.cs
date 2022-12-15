@@ -26,7 +26,7 @@ namespace StreamActions.Twitch.Api.Chat;
 /// <summary>
 /// Represents a response object containing the unofficial chatter role lists.
 /// </summary>
-public record UnofficialChatters
+public sealed record UnofficialChatters
 {
     /// <summary>
     /// The broadcaster.

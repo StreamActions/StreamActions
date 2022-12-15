@@ -26,7 +26,7 @@ namespace StreamActions.Twitch.Api.Ads;
 /// <summary>
 /// Sends and represents a response element for a request to start a commercial.
 /// </summary>
-public record Commercial
+public sealed record Commercial
 {
     /// <summary>
     /// Length of the triggered commercial.

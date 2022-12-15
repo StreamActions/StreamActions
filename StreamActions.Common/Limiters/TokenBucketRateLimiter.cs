@@ -25,7 +25,7 @@ namespace StreamActions.Common.Limiters;
 /// <summary>
 /// Handles rate limits using a token bucket which trickles back tokens over a set period.
 /// </summary>
-public class TokenBucketRateLimiter
+public sealed class TokenBucketRateLimiter
 {
     #region Public Constructors
 

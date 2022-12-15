@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Common;
 /// <summary>
 /// Contains parameters for a Twitch API session.
 /// </summary>
-public record TwitchSession
+public sealed record TwitchSession
 {
     /// <summary>
     /// Rate Limiter for TwitchAPI.

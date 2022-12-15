@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.Api.Subscriptions;
 /// <summary>
 /// Sends and represents a response element for a list of subscribers.
 /// </summary>
-public record Subscription
+public sealed record Subscription
 {
     /// <summary>
     /// User ID of the broadcaster.

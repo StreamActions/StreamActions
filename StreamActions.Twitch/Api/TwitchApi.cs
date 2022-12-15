@@ -37,7 +37,7 @@ namespace StreamActions.Twitch.Api;
 [ETag("https://dev.twitch.tv/docs/api/reference", "5fc9f39fc0c3ef4a37a5d71ee29a81169b61e595a24d12e6437314918a27b98c", "2022-10-04T00:35Z",
     new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
         "-remre", "'cloudcannon[^\"]*'" })]
-public class TwitchApi : StreamActions.Common.Interfaces.Api
+public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
 {
     #region Public Events
 

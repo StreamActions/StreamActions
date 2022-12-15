@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Bits;
 /// <summary>
 /// Represents the product acquired, as it looked at the time of the <see cref="ExtensionTransaction"/>.
 /// </summary>
-public record ExtensionProductData
+public sealed record ExtensionProductData
 {
     /// <summary>
     /// Set to twitch.ext + your Extension ID.

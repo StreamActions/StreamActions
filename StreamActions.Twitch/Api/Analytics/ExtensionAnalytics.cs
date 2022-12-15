@@ -29,7 +29,7 @@ namespace StreamActions.Twitch.Api.Analytics;
 /// <summary>
 /// Sends and represents a response element for a request for extension analytics.
 /// </summary>
-public record ExtensionAnalytics
+public sealed record ExtensionAnalytics
 {
     /// <summary>
     /// ID of the extension whose analytics data is being provided.

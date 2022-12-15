@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Channels;
 /// <summary>
 /// The parameters for <see cref="Channel.ModifyChannelInformation(Common.TwitchSession, ModifyChannelParameters)"/>.
 /// </summary>
-public record ModifyChannelParameters
+public sealed record ModifyChannelParameters
 {
     /// <summary>
     /// Constructor. At least 1 parameter must be a valid, non-null value.

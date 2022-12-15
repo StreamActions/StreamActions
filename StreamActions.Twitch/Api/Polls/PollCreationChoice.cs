@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Polls;
 /// <summary>
 /// Represents a choice in <see cref="PollCreationParameters.Choices"/>.
 /// </summary>
-public record PollCreationChoice
+public sealed record PollCreationChoice
 {
     /// <summary>
     /// Constructor.

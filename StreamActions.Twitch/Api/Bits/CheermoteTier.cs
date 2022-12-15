@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Bits;
 /// <summary>
 /// Represents a cheermote tier in a <see cref="Cheermote"/>.
 /// </summary>
-public record CheermoteTier
+public sealed record CheermoteTier
 {
     /// <summary>
     /// Minimum number of bits needed to be used to hit the given tier of emote.

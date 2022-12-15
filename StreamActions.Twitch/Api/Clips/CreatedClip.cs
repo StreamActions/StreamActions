@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.Api.Clips;
 /// <summary>
 /// Sends and represents a response element for a request to create a clip.
 /// </summary>
-public record CreatedClip
+public sealed record CreatedClip
 {
     /// <summary>
     /// The rate limiter for <see cref="CreateClip(TwitchSession, string, bool)"/>.

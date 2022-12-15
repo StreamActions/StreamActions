@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.Api.Polls;
 /// <summary>
 /// Sends and represents a response element for a request for poll information.
 /// </summary>
-public record Poll
+public sealed record Poll
 {
     /// <summary>
     /// ID of the poll.

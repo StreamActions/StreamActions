@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Bits;
 /// <summary>
 /// Represents an image set in <see cref="CheermoteImageThemes"/>.
 /// </summary>
-public record CheermoteImageSet
+public sealed record CheermoteImageSet
 {
     /// <summary>
     /// The <see cref="CheermoteImageUris"/> for the animated version of the cheermote.

@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Common;
 /// <summary>
 /// The pagination object for multi-page API results.
 /// </summary>
-public record Pagination
+public sealed record Pagination
 {
     /// <summary>
     /// The pagination cursor.

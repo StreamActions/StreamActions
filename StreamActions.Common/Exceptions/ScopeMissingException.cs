@@ -21,7 +21,7 @@ namespace StreamActions.Common.Exceptions;
 /// <summary>
 /// The exception that is thrown when a required OAuth scope is missing.
 /// </summary>
-public class ScopeMissingException : InvalidOperationException
+public sealed class ScopeMissingException : InvalidOperationException
 {
     #region Public Constructors
 

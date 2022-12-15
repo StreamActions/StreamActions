@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.Api.Videos;
 /// <summary>
 /// Sends and represents a response element for a request for a broadcasters videos.
 /// </summary>
-public record Video
+public sealed record Video
 {
     /// <summary>
     /// ID of the video.

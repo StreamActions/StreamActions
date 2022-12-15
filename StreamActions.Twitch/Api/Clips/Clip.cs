@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.Api.Clips;
 /// <summary>
 /// Sends and represents a response element for a request for clips.
 /// </summary>
-public record Clip
+public sealed record Clip
 {
     /// <summary>
     /// ID of the clip being queried.

@@ -26,7 +26,7 @@ namespace StreamActions.Twitch.Api.Bits;
 /// <summary>
 /// Sends and represents a response for a request for a list of cheermotes.
 /// </summary>
-public record Cheermote
+public sealed record Cheermote
 {
     /// <summary>
     /// The string used to Cheer that precedes the Bits amount.

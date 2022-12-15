@@ -16,11 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Text.Json.Serialization;
-
 namespace StreamActions.Twitch.Api.Common;
 
-public record TwitchToken
+public sealed record TwitchToken
 {
     /// <summary>
     /// The OAuth token.

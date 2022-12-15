@@ -24,7 +24,7 @@ namespace StreamActions.Twitch.Api.Chat;
 /// <summary>
 /// A response object for a <see cref="UnofficialChatters.GetUnofficialChatters"/> request.
 /// </summary>
-public record UnofficialChattersResponse : TwitchResponse
+public sealed record UnofficialChattersResponse : TwitchResponse
 {
     /// <summary>
     /// The number of chatters contained in <see cref="Chatters"/>.

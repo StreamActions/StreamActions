@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.Common;
 /// <summary>
 /// An image url object.
 /// </summary>
-public record Images
+public sealed record Images
 {
     /// <summary>
     /// A URL to the small version (28px x 28px) of the image.

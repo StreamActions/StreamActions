@@ -27,7 +27,7 @@ namespace StreamActions.Twitch.Api.Channels;
 /// <summary>
 /// Sends and represents a response element for a request for channel information.
 /// </summary>
-public record Channel
+public sealed record Channel
 {
     /// <summary>
     /// Twitch User ID of this channel owner.

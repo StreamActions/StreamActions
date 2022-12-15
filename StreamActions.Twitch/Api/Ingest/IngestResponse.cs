@@ -24,7 +24,7 @@ namespace StreamActions.Twitch.Api.Ingest;
 /// <summary>
 /// An Ingests response.
 /// </summary>
-public record IngestResponse : TwitchResponse
+public sealed record IngestResponse : TwitchResponse
 {
     /// <summary>
     /// The data array.

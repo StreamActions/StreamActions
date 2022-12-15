@@ -30,7 +30,7 @@ namespace StreamActions.Twitch.OAuth;
 [ETag("https://dev.twitch.tv/docs/authentication/validate-tokens", "81447f40c4fba5d6daf3b948eaf73f32199d75a86593e52be3be863883bc2875",
     "2022-10-16T20:43Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
         "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
-public record Validate : TwitchResponse
+public sealed record Validate : TwitchResponse
 {
     /// <summary>
     /// The returned Client Id attached to the validated OAuth token.

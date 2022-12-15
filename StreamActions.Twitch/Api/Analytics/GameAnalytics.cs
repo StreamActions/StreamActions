@@ -29,7 +29,7 @@ namespace StreamActions.Twitch.Api.Analytics;
 /// <summary>
 /// Sends and represents a response element for a request for game analytics.
 /// </summary>
-public record GameAnalytics
+public sealed record GameAnalytics
 {
     /// <summary>
     /// ID of the game whose analytics data is being provided.
