@@ -32,11 +32,6 @@ namespace StreamActions.Twitch.OAuth;
 public sealed record Scope
 {
     /// <summary>
-    /// The name of the scope, which is included in OAuth responses.
-    /// </summary>
-    public string? Name { get; init; }
-
-    /// <summary>
     /// The description of the permissions provided by the scope.
     /// </summary>
     public string? Description { get; init; }
@@ -47,9 +42,16 @@ public sealed record Scope
     public Scope? Implies { get; init; }
 
     /// <summary>
+    /// The name of the scope, which is included in OAuth responses.
+    /// </summary>
+    public string? Name { get; init; }
+
+    /// <summary>
     /// A <see cref="IReadOnlyDictionary{TKey, TValue}"/> mapping <see cref="Scope.Name"/> to a <see cref="Scope"/> object.
     /// </summary>
     public static IReadOnlyDictionary<string, Scope> Scopes => _scopes.AsReadOnly();
+
+    #region Scopes
 
     /// <summary>
     /// analytics:read:extensions - View analytics data for the Twitch Extensions owned by the authenticated account.
@@ -117,14 +119,24 @@ public sealed record Scope
     public static readonly Scope ChannelManageVideos = new("channel:manage:videos", "Manage a channel's videos, including deleting videos.");
 
     /// <summary>
-    /// channel:read:editors - View a list of users with the editor role for a channel.
+    /// channel:manage:vips - Add or remove the VIP role from users in your channel.
     /// </summary>
-    public static readonly Scope ChannelReadEditors = new("channel:read:editors", "View a list of users with the editor role for a channel.");
+    public static readonly Scope ChannelManageVips = new("channel:manage:vips", "Add or remove the VIP role from users in your channel.", ChannelReadVips);
+
+    /// <summary>
+    /// channel:moderate - Perform moderation actions in a channel.
+    /// </summary>
+    public static readonly Scope ChannelModerate = new("channel:moderate", "Perform moderation actions in a channel.");
 
     /// <summary>
     /// channel:read:charity - Read charity campaign details and user donations on your channel.
     /// </summary>
     public static readonly Scope ChannelReadCharity = new("channel:read:charity", "Read charity campaign details and user donations on your channel.");
+
+    /// <summary>
+    /// channel:read:editors - View a list of users with the editor role for a channel.
+    /// </summary>
+    public static readonly Scope ChannelReadEditors = new("channel:read:editors", "View a list of users with the editor role for a channel.");
 
     /// <summary>
     /// channel:read:goals - View Creator Goals for a channel.
@@ -167,14 +179,146 @@ public sealed record Scope
     public static readonly Scope ChannelReadVips = new("channel:read:vips", "Read the list of VIPs in your channel.");
 
     /// <summary>
-    /// channel:manage:vips - Add or remove the VIP role from users in your channel.
+    /// chat:edit - Send live stream chat messages.
     /// </summary>
-    public static readonly Scope ChannelManageVips = new("channel:manage:vips", "Add or remove the VIP role from users in your channel.", ChannelReadVips);
+    public static readonly Scope ChatEdit = new("chat:edit", "Send live stream chat messages.");
+
+    /// <summary>
+    /// chat:read - View live stream chat messages.
+    /// </summary>
+    public static readonly Scope ChatRead = new("chat:read", "View live stream chat messages.");
+
+    /// <summary>
+    /// clips:edit - Manage Clips for a channel.
+    /// </summary>
+    public static readonly Scope ClipsEdit = new("clips:edit", "Manage Clips for a channel.");
+
+    /// <summary>
+    /// moderation:read - View a channel's moderation data including Moderators, Bans, Timeouts, and Automod settings.
+    /// </summary>
+    public static readonly Scope ModerationRead = new("moderation:read", "View a channel's moderation data including Moderators, Bans, Timeouts, and Automod settings.");
+
+    /// <summary>
+    /// moderator:manage:announcements - Send announcements in channels where you have the moderator role.
+    /// </summary>
+    public static readonly Scope ModeratorManageAnnouncements = new("moderator:manage:announcements", "Send announcements in channels where you have the moderator role.");
+
+    /// <summary>
+    /// moderator:manage:automod - Manage messages held for review by AutoMod in channels where you are a moderator.
+    /// </summary>
+    public static readonly Scope ModeratorManageAutomod = new("moderator:manage:automod", "Manage messages held for review by AutoMod in channels where you are a moderator.");
+
+    /// <summary>
+    /// moderator:manage:automod_settings - Manage a broadcaster's AutoMod settings.
+    /// </summary>
+    public static readonly Scope ModeratorManageAutomodSettings = new("moderator:manage:automod_settings", "Manage a broadcaster's AutoMod settings.");
+
+    /// <summary>
+    /// moderator:manage:banned_users - Ban and unban users.
+    /// </summary>
+    public static readonly Scope ModeratorManageBannedUsers = new("moderator:manage:banned_users", "Ban and unban users.");
+
+    /// <summary>
+    /// moderator:manage:blocked_terms - Manage a broadcaster's list of blocked terms.
+    /// </summary>
+    public static readonly Scope ModeratormanageBlockedTerms = new("moderator:manage:blocked_terms", "Manage a broadcaster's list of blocked terms.");
+
+    /// <summary>
+    /// moderator:manage:chat_messages - Delete chat messages in channels where you have the moderator role.
+    /// </summary>
+    public static readonly Scope ModeratorManageChatMessages = new("moderator:manage:chat_messages", "Delete chat messages in channels where you have the moderator role.");
+
+    /// <summary>
+    /// moderator:manage:chat_settings - Manage a broadcaster's chat room settings.
+    /// </summary>
+    public static readonly Scope ModeratorManageChatSettings = new("moderator:manage:chat_settings", "Manage a broadcaster's chat room settings.");
+
+    /// <summary>
+    /// moderator:manage:shield_mode - Manage a broadcaster's Shield Mode status.
+    /// </summary>
+    public static readonly Scope ModeratormanageShieldMode = new("moderator:manage:shield_mode", "Manage a broadcaster's Shield Mode status.", ModeratorReadShieldMode);
+
+    /// <summary>
+    /// moderator:read:automod_settings - View a broadcaster's AutoMod settings.
+    /// </summary>
+    public static readonly Scope ModeratorReadAutomodSettings = new("moderator:read:automod_settings", "View a broadcaster's AutoMod settings.");
+
+    /// <summary>
+    /// moderator:read:blocked_terms - View a broadcaster's list of blocked terms.
+    /// </summary>
+    public static readonly Scope ModeratorReadBlockedTerms = new("moderator:read:blocked_terms", "View a broadcaster's list of blocked terms.");
+
+    /// <summary>
+    /// moderator:read:chat_settings - View a broadcaster's chat room settings.
+    /// </summary>
+    public static readonly Scope ModeratorReadChatSettings = new("moderator:read:chat_settings", "View a broadcaster's chat room settings.");
+
+    /// <summary>
+    /// moderator:read:chatters - View the chatters in a broadcaster's chat room.
+    /// </summary>
+    public static readonly Scope ModeratorReadChatters = new("moderator:read:chatters", "View the chatters in a broadcaster's chat room.");
+
+    /// <summary>
+    /// moderator:read:shield_mode - View a broadcaster's Shield Mode status.
+    /// </summary>
+    public static readonly Scope ModeratorReadShieldMode = new("moderator:read:shield_mode", "View a broadcaster's Shield Mode status.");
 
     /// <summary>
     /// openid - OpenID Connect.
     /// </summary>
     public static readonly Scope OpenID = new("openid", "OpenID Connect.");
+
+    /// <summary>
+    /// user:edit - Manage a user object.
+    /// </summary>
+    public static readonly Scope UserEdit = new("user:edit", "Manage a user object.");
+
+    /// <summary>
+    /// user:manage:blocked_users - Manage the block list of a user.
+    /// </summary>
+    public static readonly Scope UserManageBlockedUsers = new("user:manage:blocked_users", "Manage the block list of a user.");
+
+    /// <summary>
+    /// user:manage:chat_color - Update the color used for the user's name in chat.
+    /// </summary>
+    public static readonly Scope UserManageChatColor = new("user:manage:chat_color", "Update the color used for the user's name in chat.");
+
+    /// <summary>
+    /// user:manage:whispers - Read whispers that you send and receive, and send whispers on your behalf.
+    /// </summary>
+    public static readonly Scope UserManageWhispers = new("user:manage:whispers", "Read whispers that you send and receive, and send whispers on your behalf.");
+
+    /// <summary>
+    /// user:read:blocked_users - View the block list of a user.
+    /// </summary>
+    public static readonly Scope UserReadBlockedUsers = new("user:read:blocked_users", "View the block list of a user.");
+
+    /// <summary>
+    /// user:read:broadcast - View a user's broadcasting configuration, including Extension configurations.
+    /// </summary>
+    public static readonly Scope UserReadBroadcast = new("user:read:broadcast", "View a user's broadcasting configuration, including Extension configurations.");
+
+    /// <summary>
+    /// user:read:email - Manage a user object.
+    /// </summary>
+    public static readonly Scope UserReadEmail = new("user:read:email", "View a user's email address.");
+
+    /// <summary>
+    /// user:read:follows - View the list of channels a user follows.
+    /// </summary>
+    public static readonly Scope UserReadFollows = new("user:read:follows", "View the list of channels a user follows.");
+
+    /// <summary>
+    /// user:read:subscriptions - View if an authorized user is subscribed to specific channels.
+    /// </summary>
+    public static readonly Scope UserReadSubscriptions = new("user:read:subscriptions", "View if an authorized user is subscribed to specific channels.");
+
+    /// <summary>
+    /// whispers:read - View your whisper messages.
+    /// </summary>
+    public static readonly Scope WhispersRead = new("whispers:read", "View your whisper messages.");
+
+    #endregion Scopes
 
     /// <summary>
     /// Backing dictionary for <see cref="Scope.Scopes"/>.
