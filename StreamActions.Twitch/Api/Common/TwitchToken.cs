@@ -91,7 +91,7 @@ public sealed record TwitchToken
 
         foreach (Scope imply in implies)
         {
-            if (this.Scopes.Contains(imply))
+            if (this.HasScope(imply))
             {
                 return true;
             }
