@@ -67,16 +67,16 @@ public sealed record Token : TwitchResponse
     /// The scopes that are authorized under the OAuth token.
     /// </summary>
     [JsonPropertyName("scope")]
-    public IReadOnlyList<string>? Scopes { get; init; }
+    public IReadOnlyList<Scope>? Scopes { get; init; }
 
     /// <summary>
-    /// The OIDC JWT token string, if authorizing with the <c>openid</c> scope.
+    /// The OIDC JWT token string, if authorizing with the <see cref="Scope.OpenID"/> scope.
     /// </summary>
     [JsonPropertyName("id_token")]
     public string? IdToken { get; init; }
 
     /// <summary>
-    /// The OIDC JWT token, if authorizing with the <c>openid</c> scope.
+    /// The OIDC JWT token, if authorizing with the <see cref="Scope.OpenID"/> scope.
     /// </summary>
     [JsonIgnore]
     public JsonWebToken? JwtToken => this.GetJsonWebToken();

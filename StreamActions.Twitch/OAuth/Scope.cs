@@ -47,7 +47,7 @@ public sealed record Scope
     public string? Name { get; init; }
 
     /// <summary>
-    /// A <see cref="IReadOnlyDictionary{TKey, TValue}"/> mapping <see cref="Scope.Name"/> to a <see cref="Scope"/> object.
+    /// A <see cref="IReadOnlyDictionary{TKey, TValue}"/> mapping <see cref="Name"/> to a <see cref="Scope"/> object.
     /// </summary>
     public static IReadOnlyDictionary<string, Scope> Scopes => _scopes.AsReadOnly();
 
@@ -321,7 +321,27 @@ public sealed record Scope
     #endregion Scopes
 
     /// <summary>
-    /// Backing dictionary for <see cref="Scope.Scopes"/>.
+    /// Returns all scopes that imply <paramref name="scope"/>.
+    /// </summary>
+    /// <param name="scope">The scope to check.</param>
+    /// <returns>A list of scopes that imply <paramref name="scope"/>.</returns>
+    public static IReadOnlyList<Scope> ImpliedBy(Scope scope)
+    {
+        List<Scope> scopes = new();
+
+        foreach (KeyValuePair<string, Scope> s in _scopes)
+        {
+            if (s.Value.Implies == scope)
+            {
+                scopes.Add(s.Value);
+            }
+        }
+
+        return scopes.AsReadOnly();
+    }
+
+    /// <summary>
+    /// Backing dictionary for <see cref="Scopes"/>.
     /// </summary>
     private static readonly Dictionary<string, Scope> _scopes = new();
 

@@ -16,6 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.OAuth;
+using System.Collections.Immutable;
+
 namespace StreamActions.Twitch.Api.Common;
 
 public sealed record TwitchToken
@@ -48,7 +51,7 @@ public sealed record TwitchToken
     /// <summary>
     /// The scopes that are authorized under the OAuth token.
     /// </summary>
-    public IReadOnlyList<string>? Scopes { get; init; }
+    public IReadOnlyList<Scope>? Scopes { get; init; }
 
     /// <summary>
     /// The login name associated with the OAuth token.
@@ -65,5 +68,35 @@ public sealed record TwitchToken
     /// </summary>
     /// <param name="scope">The scope to find.</param>
     /// <returns><see langword="true"/> if <see cref="Scopes"/> is null or contains <paramref name="scope"/>.</returns>
-    public bool HasScope(string scope) => this.Scopes is null || this.Scopes.Contains(scope);
+    public bool HasScope(string scope) => this.HasScope(Scope.Scopes.GetValueOrDefault(scope));
+
+    /// <summary>
+    /// Checks if the specified scope is present in <see cref="Scopes"/>.
+    /// </summary>
+    /// <param name="scope">The scope to find.</param>
+    /// <returns><see langword="true"/> if <see cref="Scopes"/> is null or contains <paramref name="scope"/>.</returns>
+    public bool HasScope(Scope? scope)
+    {
+        if (scope is null)
+        {
+            return false;
+        }
+
+        if (this.Scopes is null || this.Scopes.Contains(scope))
+        {
+            return true;
+        }
+
+        IReadOnlyList<Scope> implies = Scope.ImpliedBy(scope);
+
+        foreach (Scope imply in implies)
+        {
+            if (this.Scopes.Contains(imply))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
