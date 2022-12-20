@@ -16,8 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -59,7 +60,7 @@ public sealed record Commercial
     /// <param name="parameters">The <see cref="StartCommercialParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Commercial"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:edit:commercial</c> is not present.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> contains a scope list, and <see cref="Scope.ChannelEditCommercial"/> is not present.</exception>
     public static async Task<ResponseData<Commercial>?> StartCommercial(TwitchSession session, StartCommercialParameters parameters)
     {
         if (session is null)
@@ -72,9 +73,9 @@ public sealed record Commercial
             throw new ArgumentNullException(nameof(parameters));
         }
 
-        if (!session.Token?.HasScope("channel:edit:commercial") ?? false)
+        if (!session.Token?.HasScope(Scope.ChannelEditCommercial) ?? false)
         {
-            throw new ScopeMissingException("channel:edit:commercial");
+            throw new TwitchScopeMissingException(Scope.ChannelEditCommercial);
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);

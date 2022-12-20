@@ -16,19 +16,22 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace StreamActions.Common.Exceptions;
+using StreamActions.Common.Exceptions;
+using StreamActions.Twitch.OAuth;
+
+namespace StreamActions.Twitch.Exceptions;
 
 /// <summary>
-/// The exception that is thrown when a required OAuth scope is missing.
+/// The exception that is thrown when a required OAuth scope from Twitch is missing.
 /// </summary>
-public class ScopeMissingException : InvalidOperationException
+public sealed class TwitchScopeMissingException : ScopeMissingException
 {
     #region Public Constructors
 
     /// <summary>
     /// Default Constructor.
     /// </summary>
-    public ScopeMissingException()
+    public TwitchScopeMissingException()
     {
     }
 
@@ -36,7 +39,15 @@ public class ScopeMissingException : InvalidOperationException
     /// Constructor.
     /// </summary>
     /// <param name="scope">The scope that is missing from the OAuth token.</param>
-    public ScopeMissingException(string scope) : base("Missing scope " + scope + ".")
+    public TwitchScopeMissingException(string scope) : base(scope)
+    {
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scope">The scope that is missing from the OAuth token.</param>
+    public TwitchScopeMissingException(Scope scope) : base(scope?.Name ?? "Unknown")
     {
     }
 
@@ -45,7 +56,16 @@ public class ScopeMissingException : InvalidOperationException
     /// </summary>
     /// <param name="scope">The scope that is missing from the OAuth token.</param>
     /// <param name="innerException">The inner exception that caused the current exception.</param>
-    public ScopeMissingException(string scope, Exception innerException) : base("Missing scope " + scope + ".", innerException)
+    public TwitchScopeMissingException(string scope, Exception innerException) : base(scope, innerException)
+    {
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scope">The scope that is missing from the OAuth token.</param>
+    /// <param name="innerException">The inner exception that caused the current exception.</param>
+    public TwitchScopeMissingException(Scope scope, Exception innerException) : base(scope?.Name ?? "Unknown", innerException)
     {
     }
 

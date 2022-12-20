@@ -17,9 +17,10 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -79,7 +80,7 @@ public sealed record ExtensionAnalytics
     /// <param name="type">Type of analytics report that is returned. Currently, this field has no affect on the response as there is only one report type. If additional types were added, using this field would return only the URL for the specified report.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ExtensionAnalytics"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>analytics:read:extensions</c> is not present.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> contains a scope list, and <see cref="Scope.AnalyticsReadExtensions"/> is not present.</exception>
     /// <exception cref="InvalidOperationException">Specified only one of <paramref name="startedAt"/>/<paramref name="endedAt"/> without specifying the other.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<ExtensionAnalytics>?> GetExtensionAnalytics(TwitchSession session, string? extensionId = null, string? after = null, int first = 20, DateTime? startedAt = null, DateTime? endedAt = null,
@@ -90,9 +91,9 @@ public sealed record ExtensionAnalytics
             throw new ArgumentNullException(nameof(session));
         }
 
-        if (!session.Token?.HasScope("analytics:read:extensions") ?? false)
+        if (!session.Token?.HasScope(Scope.AnalyticsReadExtensions) ?? false)
         {
-            throw new ScopeMissingException("analytics:read:extensions");
+            throw new TwitchScopeMissingException(Scope.AnalyticsReadExtensions);
         }
 
         first = Math.Clamp(first, 1, 100);
