@@ -251,7 +251,7 @@ public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
         }
         catch (Exception ex) when (ex is HttpRequestException or TimeoutException)
         {
-            return new(0) { ReasonPhrase = ex.GetType().Name, Content = new StringContent(ex.Message) };
+            return new(0) { ReasonPhrase = ex.GetType().Name, Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse { Status = 0, Message = ex.Message }, SerializerOptions)) };
         }
     }
 
