@@ -192,14 +192,14 @@ public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
             using HttpRequestMessage request = new(method, uri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
             request.Content = content;
 
-            if (session.Token.OAuth != "__NEW")
+            if (session.Token != TwitchToken.Empty)
             {
                 request.Headers.Add("Authorization", "Bearer " + session.Token.OAuth);
             }
 
             HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
 
-            if (!retry && !dontRefresh && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token.OAuth != "__NEW" && !string.IsNullOrWhiteSpace(session.Token.Refresh))
+            if (!retry && !dontRefresh && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token != TwitchToken.Empty && !string.IsNullOrWhiteSpace(session.Token.Refresh))
             {
                 string oldRefresh = session.Token.Refresh;
                 if (session._refreshLock.WaitOne(TimeSpan.FromSeconds(30)))

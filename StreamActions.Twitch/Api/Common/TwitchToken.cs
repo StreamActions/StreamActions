@@ -24,6 +24,11 @@ namespace StreamActions.Twitch.Api.Common;
 public sealed record TwitchToken
 {
     /// <summary>
+    /// An empty token, for requests that do not need one.
+    /// </summary>
+    public static readonly TwitchToken Empty = new();
+
+    /// <summary>
     /// The OAuth token.
     /// </summary>
     /// <exception cref="ArgumentNullException">Attempt to set to null or whitespace.</exception>

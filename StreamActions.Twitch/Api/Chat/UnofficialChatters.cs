@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Twitch.Api.Common;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -96,7 +97,7 @@ public sealed record UnofficialChatters
         }
 
         Uri uri = Util.BuildUri(new(string.Format(CultureInfo.InvariantCulture, baseAddress, channelLogin)));
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, new() { RateLimiter = new(1, TimeSpan.FromSeconds(1)), Token = new() { OAuth = "__NEW" } }).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, new() { RateLimiter = new(1, TimeSpan.FromSeconds(1)), Token = TwitchToken.Empty }).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<UnofficialChattersResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
