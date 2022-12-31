@@ -79,15 +79,21 @@ public sealed record TwitchToken
     /// Checks if the specified scope is present in <see cref="Scopes"/>.
     /// </summary>
     /// <param name="scope">The scope to find.</param>
-    /// <returns><see langword="true"/> if <see cref="Scopes"/> is null or contains <paramref name="scope"/>.</returns>
-    public bool HasScope(Scope? scope)
+    /// <param name="retIfNull">returned if <see cref="Scopes"/> is <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if <see cref="Scopes"/> contains <paramref name="scope"/>; <paramref name="retIfNull"/> if <see cref="Scopes"/> is <see langword="null"/>.</returns>
+    public bool HasScope(Scope? scope, bool retIfNull = false)
     {
         if (scope is null)
         {
             return false;
         }
 
-        if (this.Scopes is null || this.Scopes.Contains(scope))
+        if (this.Scopes is null)
+        {
+            return retIfNull;
+        }
+
+        if (this.Scopes.Contains(scope))
         {
             return true;
         }
