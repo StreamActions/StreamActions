@@ -47,7 +47,7 @@ localhost
 mailto
 metadata
 Middleware
-mongod
+namespace
 oauth
 offline
 online
@@ -70,6 +70,7 @@ skype
 spotify
 src
 ssl
+stacktrace
 sublicense
 Subtag
 superadmin

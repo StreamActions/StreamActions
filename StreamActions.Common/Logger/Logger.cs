@@ -18,6 +18,8 @@
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace StreamActions.Common.Logger;
 
@@ -51,6 +53,99 @@ public static class Logger
     /// <exception cref="ArgumentNullException"><paramref name="category"/> is null, blank, or whitespace.</exception>
     public static ILogger GetLogger(string? category) => string.IsNullOrWhiteSpace(category) ? throw new ArgumentNullException(nameof(category)) : _loggerFactory.CreateLogger(category);
 
+    /// <summary>
+    /// Gets the calling members name.
+    /// </summary>
+    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the member calling this method.</param>
+    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
+    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
+    /// <returns><code>[Namespace.]Type.Name</code> if a valid entry is available at the specified location in the stacktrace; <code>@[Namespace.]Type.Name</code> is appended if <paramref name="atLocation"/> also points to a valid entry; <code>null</code> if no valid entry.</returns>
+    public static string GetCaller(int selfLocation = 2, int? atLocation = null, bool addNamespace = false)
+    {
+        StackTrace st = new(selfLocation);
+        if (st.FrameCount is 0)
+        {
+            return "null";
+        }
+
+        if (atLocation.HasValue && (atLocation.Value < selfLocation || atLocation.Value - selfLocation < st.FrameCount))
+        {
+            atLocation = null;
+        }
+
+        StackFrame? f = st.GetFrame(0);
+        if (f is null)
+        {
+            return "null";
+        }
+
+        string s = "";
+
+        if (f.HasMethod())
+        {
+            MethodBase? m = f.GetMethod();
+
+            if (m is null)
+            {
+                s += "null";
+            }
+            else
+            {
+                if (addNamespace)
+                {
+                    s += m.ReflectedType?.Namespace ?? "null";
+                    s += ".";
+                }
+                s += m.ReflectedType?.Name ?? "null";
+                s += ".";
+                s += m.Name;
+            }
+        }
+        else
+        {
+            s += "none";
+        }
+
+        if (atLocation.HasValue)
+        {
+            s += "@";
+
+            f = st.GetFrame(atLocation.Value - selfLocation);
+            if (f is null)
+            {
+                s += "null";
+            }
+            else
+            {
+                if (f.HasMethod())
+                {
+                    MethodBase? m = f.GetMethod();
+
+                    if (m is null)
+                    {
+                        s += "null";
+                    }
+                    else
+                    {
+                        if (addNamespace)
+                        {
+                            s += m.ReflectedType?.Namespace ?? "null";
+                            s += ".";
+                        }
+                        s += m.ReflectedType?.Name ?? "null";
+                        s += ".";
+                        s += m.Name;
+                    }
+                }
+                else
+                {
+                    s += "none";
+                }
+            }
+        }
+
+        return s;
+    }
     #endregion Public Methods
 
     #region Private Fields
