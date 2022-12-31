@@ -80,6 +80,7 @@ public sealed record ExtensionAnalytics
     /// <param name="type">Type of analytics report that is returned. Currently, this field has no affect on the response as there is only one report type. If additional types were added, using this field would return only the URL for the specified report.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ExtensionAnalytics"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.AnalyticsReadExtensions"/>.</exception>
     /// <exception cref="InvalidOperationException">Specified only one of <paramref name="startedAt"/>/<paramref name="endedAt"/> without specifying the other.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
@@ -91,10 +92,7 @@ public sealed record ExtensionAnalytics
             throw new ArgumentNullException(nameof(session));
         }
 
-        if (!session.Token?.HasScope(Scope.AnalyticsReadExtensions) ?? true)
-        {
-            throw new TwitchScopeMissingException(Scope.AnalyticsReadExtensions);
-        }
+        session.RequireToken(Scope.AnalyticsReadExtensions);
 
         first = Math.Clamp(first, 1, 100);
 

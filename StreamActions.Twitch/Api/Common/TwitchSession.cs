@@ -17,13 +17,15 @@
  */
 
 using StreamActions.Common.Limiters;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 
 namespace StreamActions.Twitch.Api.Common;
 
 /// <summary>
 /// Contains parameters for a Twitch API session.
 /// </summary>
-public sealed record TwitchSession
+public sealed record TwitchSession : IDisposable
 {
     /// <summary>
     /// Rate Limiter for TwitchAPI.
@@ -49,4 +51,37 @@ public sealed record TwitchSession
     /// Backer for <see cref="Token"/>.
     /// </summary>
     private TwitchToken? _token;
+
+    /// <summary>
+    /// <inheritdoc/>
+    /// </summary>
+    public void Dispose() => this._refreshLock.Close();
+
+    /// <summary>
+    /// Checks if a token is present and, optionally, a scope.
+    /// </summary>
+    /// <param name="scope">The scope to check for.</param>
+    /// <param name="retIfNull">if <see cref="TwitchToken.Scopes"/> is <see langword="null"/> and this is <see langword="true"/>, <see cref="TwitchScopeMissingException"/> is not thrown.</param>
+    /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Scopes"/> does not contain <paramref name="scope"/>, or another scope that implies it.</exception>
+    public void RequireToken(Scope? scope = null, bool retIfNull = false)
+    {
+        if (this.Token is null)
+        {
+            throw new InvalidOperationException(nameof(this.Token) + " is null.");
+        }
+
+        if (string.IsNullOrWhiteSpace(this.Token.OAuth))
+        {
+            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.");
+        }
+
+        if (scope is not null)
+        {
+            if (!this.Token.HasScope(scope, retIfNull))
+            {
+                throw new TwitchScopeMissingException(scope);
+            }
+        }
+    }
 }
