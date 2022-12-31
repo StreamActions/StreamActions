@@ -63,7 +63,7 @@ public sealed record TwitchSession : IDisposable
     /// <param name="scope">The scope to check for.</param>
     /// <param name="retIfNull">if <see cref="TwitchToken.Scopes"/> is <see langword="null"/> and this is <see langword="true"/>, <see cref="TwitchScopeMissingException"/> is not thrown.</param>
     /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Scopes"/> does not contain <paramref name="scope"/>, or another scope that implies it.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="scope"/> is not <see langword="null"/> and <see cref="TwitchToken.Scopes"/> does not contain <paramref name="scope"/>, or another scope that implies it.</exception>
     public void RequireToken(Scope? scope = null, bool retIfNull = false)
     {
         if (this.Token is null)
