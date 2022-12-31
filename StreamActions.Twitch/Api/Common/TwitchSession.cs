@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common.Limiters;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 
@@ -68,11 +69,13 @@ public sealed record TwitchSession : IDisposable
     {
         if (this.Token is null)
         {
+            TwitchApi.GetLogger().InvalidOperation(nameof(this.Token) + " is null.", atLocation: 3);
             throw new InvalidOperationException(nameof(this.Token) + " is null.");
         }
 
         if (string.IsNullOrWhiteSpace(this.Token.OAuth))
         {
+            TwitchApi.GetLogger().InvalidOperation(nameof(this.Token.OAuth) + " is null, empty, or whitespace.", atLocation: 3);
             throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.");
         }
 
@@ -80,6 +83,7 @@ public sealed record TwitchSession : IDisposable
         {
             if (!this.Token.HasScope(scope, retIfNull))
             {
+                TwitchApi.GetLogger().ScopeMissing(scope.Name ?? "Unknown", atLocation: 3);
                 throw new TwitchScopeMissingException(scope);
             }
         }

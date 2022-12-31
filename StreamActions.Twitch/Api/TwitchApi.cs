@@ -115,7 +115,7 @@ public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            _logger.ArgumentNull(nameof(TwitchApi), nameof(Init), nameof(clientId));
+            _logger.ArgumentNull(nameof(clientId));
             throw new ArgumentNullException(nameof(clientId));
         }
 
@@ -173,13 +173,13 @@ public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
     {
         if (!_httpClient.DefaultRequestHeaders.Contains("Client-Id"))
         {
-            _logger.InvalidOperation(nameof(TwitchApi), nameof(PerformHttpRequest), "Must call Init first");
+            _logger.InvalidOperation("Must call Init first.", atLocation: 3);
             throw new InvalidOperationException("Must call TwitchAPI.Init.");
         }
 
         if (string.IsNullOrWhiteSpace(session.Token?.OAuth))
         {
-            _logger.InvalidOperation(nameof(TwitchApi), nameof(PerformHttpRequest), "OAuth token was null, blank, or whitespace");
+            _logger.InvalidOperation("OAuth token was null, blank, or whitespace.", atLocation: 3);
             throw new InvalidOperationException("Invalid OAuth token in session.");
         }
 
