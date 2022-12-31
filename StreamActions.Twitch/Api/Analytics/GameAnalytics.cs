@@ -80,7 +80,7 @@ public sealed record GameAnalytics
     /// <param name="type">Type of analytics report that is returned. Currently, this field has no affect on the response as there is only one report type. If additional types were added, using this field would return only the URL for the specified report.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ExtensionAnalytics"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
-    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> contains a scope list, and <see cref="Scope.AnalyticsReadGames"/> is not present.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.AnalyticsReadGames"/>.</exception>
     /// <exception cref="InvalidOperationException">Specified only one of <paramref name="startedAt"/>/<paramref name="endedAt"/> without specifying the other.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<GameAnalytics>?> GetExtensionAnalytics(TwitchSession session, string? gameId = null, string? after = null, int first = 20, DateTime? startedAt = null, DateTime? endedAt = null,
@@ -91,7 +91,7 @@ public sealed record GameAnalytics
             throw new ArgumentNullException(nameof(session));
         }
 
-        if (!session.Token?.HasScope(Scope.AnalyticsReadGames) ?? false)
+        if (!session.Token?.HasScope(Scope.AnalyticsReadGames) ?? true)
         {
             throw new TwitchScopeMissingException(Scope.AnalyticsReadGames);
         }

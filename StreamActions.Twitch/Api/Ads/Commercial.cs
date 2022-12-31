@@ -60,7 +60,7 @@ public sealed record Commercial
     /// <param name="parameters">The <see cref="StartCommercialParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Commercial"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null.</exception>
-    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> contains a scope list, and <see cref="Scope.ChannelEditCommercial"/> is not present.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelEditCommercial"/>.</exception>
     public static async Task<ResponseData<Commercial>?> StartCommercial(TwitchSession session, StartCommercialParameters parameters)
     {
         if (session is null)
@@ -73,7 +73,7 @@ public sealed record Commercial
             throw new ArgumentNullException(nameof(parameters));
         }
 
-        if (!session.Token?.HasScope(Scope.ChannelEditCommercial) ?? false)
+        if (!session.Token?.HasScope(Scope.ChannelEditCommercial) ?? true)
         {
             throw new TwitchScopeMissingException(Scope.ChannelEditCommercial);
         }
