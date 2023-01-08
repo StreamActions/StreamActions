@@ -177,7 +177,7 @@ public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
             throw new InvalidOperationException("Must call TwitchAPI.Init.");
         }
 
-        if (string.IsNullOrWhiteSpace(session.Token?.OAuth))
+        if (session.Token != TwitchToken.Empty && string.IsNullOrWhiteSpace(session.Token?.OAuth))
         {
             _logger.InvalidOperation("OAuth token was null, blank, or whitespace.", atLocation: 3);
             throw new InvalidOperationException("Invalid OAuth token in session.");
