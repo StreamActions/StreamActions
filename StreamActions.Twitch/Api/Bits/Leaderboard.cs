@@ -17,9 +17,10 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -98,7 +99,8 @@ public sealed record Leaderboard
     /// <param name="userId">ID of the user whose results are returned; i.e., the person who paid for the Bits.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Leaderboard"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>bits:read</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.BitsRead"/>.</exception>
     /// <exception cref="InvalidOperationException">Specified <paramref name="startedAt"/> while the value of <paramref name="period"/> was <see cref="LeaderboardPeriod.All"/>.</exception>
     /// <remarks>
     /// <para>
@@ -119,10 +121,7 @@ public sealed record Leaderboard
             throw new ArgumentNullException(nameof(session));
         }
 
-        if (!session.Token?.HasScope("bits:read") ?? false)
-        {
-            throw new ScopeMissingException("bits:read");
-        }
+        session.RequireToken(Scope.BitsRead);
 
         count = Math.Clamp(count, 1, 100);
 

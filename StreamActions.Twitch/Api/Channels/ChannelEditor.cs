@@ -17,8 +17,9 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -54,7 +55,8 @@ public sealed record ChannelEditor
     /// <param name="broadcasterId">Broadcaster's user ID associated with the channel.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelEditor"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:read:editors</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadEditors"/>.</exception>
     public static async Task<ResponseData<ChannelEditor>?> GetChannelEditors(TwitchSession session, string broadcasterId)
     {
         if (session is null)
@@ -67,10 +69,7 @@ public sealed record ChannelEditor
             throw new ArgumentNullException(nameof(broadcasterId));
         }
 
-        if (!session.Token?.HasScope("channel:read:editors") ?? false)
-        {
-            throw new ScopeMissingException("channel:read:editors");
-        }
+        session.RequireToken(Scope.ChannelReadEditors);
 
         Uri uri = Util.BuildUri(new("/channels/editors"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);

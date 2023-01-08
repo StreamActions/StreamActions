@@ -85,12 +85,15 @@ public sealed record Channel
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Channel"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null or has 0 elements.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="broadcasterId"/> has more than 100 elements.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<ResponseData<Channel>?> GetChannelInformation(TwitchSession session, IEnumerable<string> broadcasterId)
     {
         if (session is null)
         {
             throw new ArgumentNullException(nameof(session));
         }
+
+        session.RequireToken();
 
         if (broadcasterId is null || !broadcasterId.Any())
         {

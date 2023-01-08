@@ -102,12 +102,15 @@ public sealed record Cheermote
     /// <param name="broadcasterId">ID for the broadcaster who might own specialized Cheermotes.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Cheermote"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<ResponseData<Cheermote>?> GetCheermotes(TwitchSession session, string? broadcasterId = null)
     {
         if (session is null)
         {
             throw new ArgumentNullException(nameof(session));
         }
+
+        session.RequireToken();
 
         Dictionary<string, IEnumerable<string>> queryParams = new();
 
