@@ -29,6 +29,11 @@ namespace StreamActions.Twitch.Api.Common;
 public sealed record TwitchSession : IDisposable
 {
     /// <summary>
+    /// A default TwitchSession with an empty token, for requests that do not need one.
+    /// </summary>
+    public static readonly TwitchSession Empty = new() { Token = TwitchToken.Empty };
+
+    /// <summary>
     /// Rate Limiter for TwitchAPI.
     /// </summary>
     public TokenBucketRateLimiter RateLimiter { get; init; } = new(1, TimeSpan.FromSeconds(60));
