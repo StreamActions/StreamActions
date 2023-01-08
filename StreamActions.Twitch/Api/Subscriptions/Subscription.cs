@@ -17,8 +17,9 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -137,7 +138,8 @@ public sealed record Subscription
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> is defined and has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="userId"/> and <paramref name="after"/> are both defined.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:read:subscriptions</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadSubscriptions"/>.</exception>
     public static async Task<SubscriptionResponse?> GetBroadcasterSubscriptions(TwitchSession session, string broadcasterId, IEnumerable<string>? userId = null, string? after = null, int first = 20)
     {
         if (session is null)
@@ -155,10 +157,7 @@ public sealed record Subscription
             throw new ArgumentOutOfRangeException(nameof(userId), "must have a count <= 100");
         }
 
-        if (!session.Token?.HasScope("channel:read:subscriptions") ?? false)
-        {
-            throw new ScopeMissingException("channel:read:subscriptions");
-        }
+        session.RequireToken(Scope.ChannelReadSubscriptions);
 
         first = Math.Clamp(first, 1, 100);
 
@@ -208,7 +207,8 @@ public sealed record Subscription
     /// <param name="userId">User ID of a Twitch viewer.</param>
     /// <returns>A <see cref="SubscriptionResponse"/> with elements of type <see cref="Subscription"/> containing the response. The response contains a <see cref="TwitchResponse.Status"/> of <see cref="System.Net.HttpStatusCode.NotFound"/> if the <paramref name="userId"/> is not subscribed to <paramref name="broadcasterId"/>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> or <paramref name="userId"/> is null, empty, or whitespace.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>user:read:subscriptions</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadSubscriptions"/>.</exception>
     public static async Task<SubscriptionResponse?> CheckUserSubscription(TwitchSession session, string broadcasterId, string userId)
     {
         if (session is null)
@@ -226,10 +226,7 @@ public sealed record Subscription
             throw new ArgumentNullException(nameof(userId));
         }
 
-        if (!session.Token?.HasScope("user:read:subscriptions") ?? false)
-        {
-            throw new ScopeMissingException("user:read:subscriptions");
-        }
+        session.RequireToken(Scope.ChannelReadSubscriptions);
 
         Dictionary<string, IEnumerable<string>> queryParams = new()
         {

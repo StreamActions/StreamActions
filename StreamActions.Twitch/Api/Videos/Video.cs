@@ -17,8 +17,9 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -237,6 +238,7 @@ public sealed record Video
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; did not specify a valid value for one of <paramref name="id"/>, <paramref name="userId"/>, or <paramref name="gameId"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Specified more than one of the mutually exclusive parameters <paramref name="id"/>, <paramref name="userId"/>, or <paramref name="gameId"/>; <paramref name="id"/> is defined and has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="after"/> and <paramref name="before"/> were both defined.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<Video>?> GetVideos(TwitchSession session, IEnumerable<string>? id = null, string? userId = null, string? gameId = null, string? after = null,
         string? before = null, int first = 20, string? language = null, VideoPeriod period = VideoPeriod.All, VideoSort sort = VideoSort.Time, VideoType type = VideoType.All)
@@ -245,6 +247,8 @@ public sealed record Video
         {
             throw new ArgumentNullException(nameof(session));
         }
+
+        session.RequireToken();
 
         if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
         {
@@ -339,7 +343,8 @@ public sealed record Video
     /// <returns>A <see cref="ResponseData{TDataType}"/> with the IDs of the videos that were deleted.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="id"/> is null or empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> has more than 5 elements.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:manage:videos</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVideos"/>.</exception>
     /// <remarks>
     /// <para>
     /// Invalid Video IDs will be ignored (i.e. IDs provided that do not have a video associated with it).
@@ -357,14 +362,11 @@ public sealed record Video
             throw new ArgumentNullException(nameof(id));
         }
 
+        session.RequireToken(Scope.ChannelManageVideos);
+
         if (id.Count() > 5)
         {
             throw new ArgumentOutOfRangeException(nameof(id), "must have a count <= 5");
-        }
-
-        if (!session.Token?.HasScope("channel:manage:videos") ?? false)
-        {
-            throw new ScopeMissingException("channel:manage:videos");
         }
 
         Uri uri = Util.BuildUri(new("/videos"), new Dictionary<string, IEnumerable<string>> { { "id", id } });

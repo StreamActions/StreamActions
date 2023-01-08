@@ -95,12 +95,15 @@ public sealed record Token : TwitchResponse
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="session"/> does not have a valid refresh token.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<Token?> RefreshOAuth(TwitchSession session, string? baseAddress = null)
     {
         if (session is null)
         {
             throw new ArgumentNullException(nameof(session));
         }
+
+        session.RequireToken();
 
         if (string.IsNullOrWhiteSpace(session.Token?.Refresh))
         {
@@ -143,7 +146,7 @@ public sealed record Token : TwitchResponse
         Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, IEnumerable<string>> { { "grant_type", new List<string> { "authorization_code" } },
             { "code", new List<string> { code } }, { "client_id", new List<string> { TwitchApi.ClientId ?? "" } },
             { "client_secret", new List<string> { TwitchApi.ClientSecret ?? "" } }, { "redirect_uri", new List<string> { redirectUri.ToString() } } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, new() { RateLimiter = new(1, TimeSpan.FromSeconds(1)), Token = TwitchToken.Empty }, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, TwitchSession.Empty, content).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -154,12 +157,15 @@ public sealed record Token : TwitchResponse
     /// <param name="baseAddress">The uri to the Revoke endpoint.</param>
     /// <returns>A <see cref="TwitchResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<TwitchResponse?> RevokeOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/revoke")
     {
         if (session is null)
         {
             throw new ArgumentNullException(nameof(session));
         }
+
+        session.RequireToken();
 
         using StringContent content = new("");
         Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, IEnumerable<string>> { { "client_id", new List<string> { TwitchApi.ClientId ?? "" } },

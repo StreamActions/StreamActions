@@ -75,7 +75,7 @@ public sealed record Ingest
     /// <returns>A <see cref="IngestResponse"/> containing the response data.</returns>
     public static async Task<IngestResponse?> GetIngestServers(string baseAddress = "https://ingest.twitch.tv/ingests")
     {
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), new() { RateLimiter = new(1, TimeSpan.FromSeconds(1)), Token = TwitchToken.Empty }).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), TwitchSession.Empty).ConfigureAwait(false);
         return await response.Content.ReadFromJsonAsync<IngestResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

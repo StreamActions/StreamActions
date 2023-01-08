@@ -17,8 +17,9 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -137,7 +138,8 @@ public sealed record Goal
     /// <param name="broadcasterId">The ID of the broadcaster that created the goals.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Channel"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:read:goals</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadGoals"/>.</exception>
     public static async Task<ResponseData<Goal>?> GetCreatorGoals(TwitchSession session, string broadcasterId)
     {
         if (session is null)
@@ -150,10 +152,7 @@ public sealed record Goal
             throw new ArgumentNullException(nameof(broadcasterId));
         }
 
-        if (!session.Token?.HasScope("channel:read:goals") ?? false)
-        {
-            throw new ScopeMissingException("channel:read:goals");
-        }
+        session.RequireToken(Scope.ChannelReadGoals);
 
         Uri uri = Util.BuildUri(new("/goals"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);

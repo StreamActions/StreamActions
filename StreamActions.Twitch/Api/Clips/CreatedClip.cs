@@ -17,9 +17,10 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Common.Limiters;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -56,7 +57,8 @@ public sealed record CreatedClip
     /// <param name="hasDelay">If false, the clip is captured from the live stream when the API is called; otherwise, a delay is added before the clip is captured (to account for the brief delay between the broadcaster's stream and the viewer's experience of that stream).</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="CreatedClip"/> containing the response. The <see cref="TwitchResponse.Status"/> will be 0 if <see cref="RateLimiter"/> timed out waiting.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>clips:edit</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ClipsEdit"/>.</exception>
     /// <remarks>
     /// <para>
     /// Clip creation takes time. We recommend that you query <see cref="Clip.GetClips"/>, with the clip ID that is returned here.
@@ -79,10 +81,7 @@ public sealed record CreatedClip
             throw new ArgumentNullException(nameof(broadcasterId));
         }
 
-        if (!session.Token?.HasScope("clips:edit") ?? false)
-        {
-            throw new ScopeMissingException("clips:edit");
-        }
+        session.RequireToken(Scope.ClipsEdit);
 
         try
         {

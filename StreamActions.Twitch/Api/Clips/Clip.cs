@@ -151,6 +151,7 @@ public sealed record Clip
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; did not specify a valid value for one of <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="startedAt"/> is null while <paramref name="endedAt"/> is defined.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Specified more than one of the mutually exclusive parameters <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="id"/> is defined and has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="after"/> and <paramref name="before"/> were both defined.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
     /// The clips service returns a maximum of 1000 clips.
@@ -163,6 +164,8 @@ public sealed record Clip
         {
             throw new ArgumentNullException(nameof(session));
         }
+
+        session.RequireToken();
 
         if (string.IsNullOrWhiteSpace(broadcasterId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
         {

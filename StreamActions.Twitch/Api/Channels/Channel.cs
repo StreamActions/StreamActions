@@ -17,8 +17,8 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -118,7 +118,8 @@ public sealed record Channel
     /// <param name="parameters">The <see cref="ModifyChannelParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="TwitchResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:manage:broadcast</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageBroadcast"/>.</exception>
     public static async Task<TwitchResponse?> ModifyChannelInformation(TwitchSession session, string broadcasterId, ModifyChannelParameters parameters)
     {
         if (session is null)
@@ -136,10 +137,7 @@ public sealed record Channel
             throw new ArgumentNullException(nameof(parameters));
         }
 
-        if (!session.Token?.HasScope("channel:manage:broadcast") ?? false)
-        {
-            throw new ScopeMissingException("channel:manage:broadcast");
-        }
+        session.RequireToken(Scope.ChannelManageBroadcast);
 
         Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);

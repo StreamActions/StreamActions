@@ -17,8 +17,9 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -144,7 +145,8 @@ public sealed record Poll
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Poll"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not null and has more than 100 elements.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:read:polls</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadPolls"/>.</exception>
     public static async Task<ResponseData<Poll>?> GetPolls(TwitchSession session, string broadcasterId, IEnumerable<string>? id = null, string? after = null, int first = 20)
     {
         if (session is null)
@@ -162,10 +164,7 @@ public sealed record Poll
             throw new ArgumentOutOfRangeException(nameof(id), "must have a count <= 100");
         }
 
-        if (!session.Token?.HasScope("channel:read:polls") ?? false)
-        {
-            throw new ScopeMissingException("channel:read:polls");
-        }
+        session.RequireToken(Scope.ChannelReadPolls);
 
         first = Math.Clamp(first, 1, 20);
 
@@ -209,7 +208,8 @@ public sealed record Poll
     /// <param name="parameters">The <see cref="PollCreationParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Poll"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:manage:polls</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManagePolls"/>.</exception>
     public static async Task<ResponseData<Poll>?> CreatePoll(TwitchSession session, PollCreationParameters parameters)
     {
         if (session is null)
@@ -222,10 +222,7 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(parameters));
         }
 
-        if (!session.Token?.HasScope("channel:manage:polls") ?? false)
-        {
-            throw new ScopeMissingException("channel:manage:polls");
-        }
+        session.RequireToken(Scope.ChannelManagePolls);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/polls"), session, content).ConfigureAwait(false);
@@ -239,7 +236,8 @@ public sealed record Poll
     /// <param name="parameters">The <see cref="PollEndParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Poll"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null.</exception>
-    /// <exception cref="ScopeMissingException"><paramref name="session"/> contains a scope list, and <c>channel:manage:polls</c> is not present.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManagePolls"/>.</exception>
     public static async Task<ResponseData<Poll>?> EndPoll(TwitchSession session, PollEndParameters parameters)
     {
         if (session is null)
@@ -252,10 +250,7 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(parameters));
         }
 
-        if (!session.Token?.HasScope("channel:manage:polls") ?? false)
-        {
-            throw new ScopeMissingException("channel:manage:polls");
-        }
+        session.RequireToken(Scope.ChannelManagePolls);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/polls"), session, content).ConfigureAwait(false);

@@ -19,6 +19,7 @@
 using StreamActions.Common.Attributes;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -123,12 +124,16 @@ public sealed record UserInfo : TwitchResponse
     /// <param name="baseAddress">The uri to the UserInfo endpoint. <see langword="null"/> for default.</param>
     /// <returns>A <see cref="UserInfo"/> with the response data.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.OpenID"/>.</exception>
     public static async Task<UserInfo?> GetUserInfo(TwitchSession session, string? baseAddress = null)
     {
         if (session is null)
         {
             throw new ArgumentNullException(nameof(session));
         }
+
+        session.RequireToken(Scope.OpenID);
 
         baseAddress ??= Token._openIdConnectConfiguration.Value.UserInfoEndpoint;
 
