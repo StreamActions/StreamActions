@@ -21,6 +21,9 @@ using System.Collections.Immutable;
 
 namespace StreamActions.Twitch.Api.Common;
 
+/// <summary>
+/// Contains information for a Twitch API token.
+/// </summary>
 public sealed record TwitchToken
 {
     /// <summary>
