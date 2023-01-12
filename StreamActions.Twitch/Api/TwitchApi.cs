@@ -37,7 +37,7 @@ namespace StreamActions.Twitch.Api;
 [ETag("https://dev.twitch.tv/docs/api/reference", "5fc9f39fc0c3ef4a37a5d71ee29a81169b61e595a24d12e6437314918a27b98c", "2022-10-04T00:35Z",
     new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
         "-remre", "'cloudcannon[^\"]*'" })]
-public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
+public sealed class TwitchApi : IApi
 {
     #region Public Events
 
@@ -51,14 +51,14 @@ public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
     #region Public Properties
 
     /// <summary>
-    /// <inheritdoc cref="StreamActions.Common.Interfaces.Api.ApiDate"/>
+    /// <inheritdoc cref="IApi.ApiDate"/>
     /// </summary>
-    public static new DateTime? ApiDate => new(2022, 05, 09);
+    public static DateTime? ApiDate => new(2022, 05, 09);
 
     /// <summary>
-    /// <inheritdoc cref="Component.Author"/>
+    /// <inheritdoc cref="IComponent.Author"/>
     /// </summary>
-    public static new string? Author => "StreamActions Team";
+    public static string? Author => "StreamActions Team";
 
     /// <summary>
     /// The currently initialized Client Id.
@@ -66,19 +66,19 @@ public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
     public static string? ClientId { get; private set; }
 
     /// <summary>
-    /// <inheritdoc cref="Component.Description"/>
+    /// <inheritdoc cref="IComponent.Description"/>
     /// </summary>
-    public static new string? Description => "Interacts with the Twitch Helix API";
+    public static string? Description => "Interacts with the Twitch Helix API";
 
     /// <summary>
-    /// <inheritdoc cref="Component.Id"/>
+    /// <inheritdoc cref="IComponent.Id"/>
     /// </summary>
-    public static new Guid? Id => typeof(TwitchApi).GUID;
+    public static Guid? Id => typeof(TwitchApi).GUID;
 
     /// <summary>
-    /// <inheritdoc cref="Component.Name"/>
+    /// <inheritdoc cref="IComponent.Name"/>
     /// </summary>
-    public static new string? Name => nameof(TwitchApi);
+    public static string? Name => nameof(TwitchApi);
 
     /// <summary>
     /// The <see cref="JsonSerializerOptions"/> that should be used for all serialization and deserialization.
@@ -91,14 +91,14 @@ public sealed class TwitchApi : StreamActions.Common.Interfaces.Api
     };
 
     /// <summary>
-    /// <inheritdoc cref="Component.Uri"/>
+    /// <inheritdoc cref="IComponent.Uri"/>
     /// </summary>
-    public static new Uri? Uri => new("https://github.com/StreamActions/StreamActions");
+    public static Uri? Uri => new("https://github.com/StreamActions/StreamActions");
 
     /// <summary>
-    /// <inheritdoc cref="Component.Version"/>
+    /// <inheritdoc cref="IComponent.Version"/>
     /// </summary>
-    public static new Version? Version => new(1, 0, 0, 0);
+    public static Version? Version => new(1, 0, 0, 0);
 
     #endregion Public Properties
 

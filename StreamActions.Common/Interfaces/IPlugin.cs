@@ -19,21 +19,30 @@
 namespace StreamActions.Common.Interfaces;
 
 /// <summary>
-/// An interface for a component which interacts with an API.
+/// An interface for a plugin that processes messages, commands, and other input.
 /// </summary>
-public abstract class Api : Component
+public interface IPlugin : IComponent
 {
     #region Public Properties
 
     /// <summary>
-    /// Defines the timestamp of the latest API update that is included in the type.
+    /// Whether the plugin should always be enabled for all channels. This should only be true in core plugins and special circumstances.
     /// </summary>
-    public static DateTime? ApiDate { get; }
-
-    /// <summary>
-    /// The API version.
-    /// </summary>
-    public static string? ApiVersion { get; }
+    public bool AlwaysEnabled { get; }
 
     #endregion Public Properties
+
+    #region Public Methods
+
+    /// <summary>
+    /// Called when the plugin is disabled either globally, or by all channels. EventHandler delegates must be unsubscribed here.
+    /// </summary>
+    public abstract void Disabled();
+
+    /// <summary>
+    /// Called when the plugin is enabled either globally, or by at least one channel. EventHandler delegates must be subscribed here.
+    /// </summary>
+    public abstract void Enabled();
+
+    #endregion Public Methods
 }

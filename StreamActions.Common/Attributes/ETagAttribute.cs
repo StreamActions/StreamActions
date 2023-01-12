@@ -21,7 +21,7 @@ using System.Globalization;
 namespace StreamActions.Common.Attributes;
 
 /// <summary>
-/// Indicates the URI and ETag associated with a <see cref="StreamActions.Common.Interfaces.Component"/>, allowing <c>Diff.py</c> to automatically detect when the source documentation has changed.
+/// Indicates the URI and ETag associated with a <see cref="Interfaces.IComponent"/>, allowing <c>Diff.py</c> to automatically detect when the source documentation has changed.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class ETagAttribute : Attribute

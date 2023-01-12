@@ -23,7 +23,7 @@ namespace StreamActions.Common.Interfaces;
 /// <summary>
 /// A base interface containing common properties for sub-interfaces.
 /// </summary>
-public abstract class Component
+public interface IComponent
 {
     #region Public Properties
 
