@@ -310,7 +310,7 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 
 ### Required Tools
 To work on StreamActions, the following tools are required:
-* ASP.NET 6 Runtime/SDK
+* ASP.NET 7 Runtime/SDK
 * Git
     * Configured to use GPG if, setup
 * A GitHub account linked to your git commit email address
@@ -330,7 +330,7 @@ If you are working on StreamActions from a Windows 10 or later environment, the 
 * [Git for Windows](https://git-scm.com/) (If not installed from the Visual Studio Installer)
     * Configured to use GPG if Gpg4win is setup
 
-NOTE: If you are using Visual Studio, you must use 2022 or later to access the ASP.NET 6 Runtime/SDK.
+NOTE: If you are using Visual Studio, you must use 2022 or later to access the ASP.NET 7 Runtime/SDK.
 
 ### Recommended Extensions
 We have included an _StreamActions.vsext_ file which contains direct references to the below extensions for easy installation. Just install [Extension Manager 2022](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.ExtensionManager2022), restart Visual Studio, and then use the _Extensions > Import and Export Extensions > Import Extensions..._ menu option to import it. The dialog will allow you to select which extensions you want to use. This makes it easy to keep up as our extension set evolves, as you can simply re-run the action to import new extensions.
