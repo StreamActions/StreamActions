@@ -63,7 +63,7 @@ public static partial class GenericLogger
     {
         if (logger?.IsEnabled(LogLevel.Critical) ?? false)
         {
-            logger.Critical(message, Logger.GetCaller(selfLocation, atLocation, addNamespace), exception);
+            logger.Critical(Logger.GetCaller(selfLocation, atLocation, addNamespace), message, exception);
         }
     }
 
@@ -103,7 +103,7 @@ public static partial class GenericLogger
     {
         if (logger?.IsEnabled(LogLevel.Debug) ?? false)
         {
-            logger.Debug(message, Logger.GetCaller(selfLocation, atLocation, addNamespace), exception);
+            logger.Debug(Logger.GetCaller(selfLocation, atLocation, addNamespace), message, exception);
         }
     }
 
@@ -143,7 +143,7 @@ public static partial class GenericLogger
     {
         if (logger?.IsEnabled(LogLevel.Error) ?? false)
         {
-            logger.Error(message, Logger.GetCaller(selfLocation, atLocation, addNamespace), exception);
+            logger.Error(Logger.GetCaller(selfLocation, atLocation, addNamespace), message, exception);
         }
     }
 
@@ -183,7 +183,7 @@ public static partial class GenericLogger
     {
         if (logger?.IsEnabled(LogLevel.Information) ?? false)
         {
-            logger.Information(message, Logger.GetCaller(selfLocation, atLocation, addNamespace), exception);
+            logger.Information(Logger.GetCaller(selfLocation, atLocation, addNamespace), message, exception);
         }
     }
 
@@ -223,7 +223,7 @@ public static partial class GenericLogger
     {
         if (logger?.IsEnabled(LogLevel.Trace) ?? false)
         {
-            logger.Trace(message, Logger.GetCaller(selfLocation, atLocation, addNamespace), exception);
+            logger.Trace(Logger.GetCaller(selfLocation, atLocation, addNamespace), message, exception);
         }
     }
 
@@ -263,7 +263,7 @@ public static partial class GenericLogger
     {
         if (logger?.IsEnabled(LogLevel.Warning) ?? false)
         {
-            logger.Warning(message, Logger.GetCaller(selfLocation, atLocation, addNamespace), exception);
+            logger.Warning(Logger.GetCaller(selfLocation, atLocation, addNamespace), message, exception);
         }
     }
 

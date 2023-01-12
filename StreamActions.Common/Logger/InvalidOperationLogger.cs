@@ -48,7 +48,7 @@ public static partial class InvalidOperationLogger
     /// <param name="member">The member that threw the exception.</param>
     /// <param name="argument">The argument that was <see langword="null"/>.</param>
     /// <param name="exception">The exception that was thrown.</param>
-    public static void ArgumentNull(this ILogger logger, string type, string argument, string message, Exception? exception = null) => logger.ArgumentNull(type + "." + argument, message, exception);
+    public static void ArgumentNull(this ILogger logger, string type, string member, string argument, Exception? exception = null) => logger.ArgumentNull(type + "." + member, argument, exception);
 
     /// <summary>
     /// Logs that a <see cref="ArgumentNullException"/> was thrown.
@@ -63,7 +63,7 @@ public static partial class InvalidOperationLogger
     {
         if (logger?.IsEnabled(LogLevel.Debug) ?? false)
         {
-            logger.ArgumentNull(argument, Logger.GetCaller(selfLocation, atLocation, addNamespace), exception);
+            logger.ArgumentNull(Logger.GetCaller(selfLocation, atLocation, addNamespace), argument, exception);
         }
     }
 
@@ -103,7 +103,7 @@ public static partial class InvalidOperationLogger
     {
         if (logger?.IsEnabled(LogLevel.Debug) ?? false)
         {
-            logger.InvalidOperation(message, Logger.GetCaller(selfLocation, atLocation, addNamespace), exception);
+            logger.InvalidOperation(Logger.GetCaller(selfLocation, atLocation, addNamespace), message, exception);
         }
     }
 
@@ -121,17 +121,17 @@ public static partial class InvalidOperationLogger
     public static partial void ScopeMissing(this ILogger logger, string member, string scope, Exception? exception = null);
 
     /// <summary>
-    /// Logs that a <see cref=""Exceptions.ScopeMissingException"/> was thrown.
+    /// Logs that a <see cref="Exceptions.ScopeMissingException"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="type">The type that threw the exception.</param>
-    /// <param name="argument">The member that threw the exception.</param>
+    /// <param name="member">The member that threw the exception.</param>
     /// <param name="scope">The scope that was missing.</param>
     /// <param name="exception">The exception that was thrown.</param>
     public static void ScopeMissing(this ILogger logger, string type, string member, string scope, Exception? exception = null) => logger.ScopeMissing(type + "." + member, scope, exception);
 
     /// <summary>
-    /// Logs that a <see cref=""Exceptions.ScopeMissingException"/> was thrown.
+    /// Logs that a <see cref="Exceptions.ScopeMissingException"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="scope">The scope that was missing.</param>
@@ -143,7 +143,7 @@ public static partial class InvalidOperationLogger
     {
         if (logger?.IsEnabled(LogLevel.Error) ?? false)
         {
-            logger.ScopeMissing(scope, Logger.GetCaller(selfLocation, atLocation, addNamespace), exception);
+            logger.ScopeMissing(Logger.GetCaller(selfLocation, atLocation, addNamespace), scope, exception);
         }
     }
 
