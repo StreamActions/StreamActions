@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <Folder Include="Api\ChannelPoints\" />
+    <Folder Include="Api\Chat\" />
     <Folder Include="Api\Entitlements\" />
     <Folder Include="Api\Extensions\" />
     <Folder Include="Api\EventSub\" />
@@ -43,7 +44,6 @@
     <Folder Include="Api\Music\" />
     <Folder Include="Api\Users\" />
     <Folder Include="Api\Teams\" />
-    <Folder Include="Api\Tags\" />
     <Folder Include="Api\Streams\" />
     <Folder Include="Api\Search\" />
     <Folder Include="Api\Schedule\" />
