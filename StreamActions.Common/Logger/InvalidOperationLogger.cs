@@ -18,6 +18,7 @@
 
 using Microsoft.Extensions.Logging;
 using StreamActions.Common.Exceptions;
+using System.Diagnostics;
 
 namespace StreamActions.Common.Logger;
 

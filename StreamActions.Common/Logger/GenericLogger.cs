@@ -17,6 +17,7 @@
  */
 
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace StreamActions.Common.Logger;
 
