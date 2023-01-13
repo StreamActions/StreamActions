@@ -17,7 +17,6 @@
  */
 
 using Microsoft.Extensions.Logging;
-using StreamActions.Common.Exceptions;
 using System.Diagnostics;
 
 namespace StreamActions.Common.Logger;
@@ -63,17 +62,11 @@ public static partial class InvalidOperationLogger
     /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the argument calling this method.</param>
     /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
     /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
-    /// <param name="createAndThrow">If <see langword="true"/>, create and throw the exception </param>
-    public static void ArgumentNull(this ILogger logger, string argument, string? message = null, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false, bool createAndThrow = false)
+    public static void ArgumentNull(this ILogger logger, string argument, string? message = null, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false)
     {
         if (logger?.IsEnabled(LogLevel.Debug) ?? false)
         {
             logger.ArgumentNull(Logger.GetCaller(selfLocation, atLocation, addNamespace), argument + (message is null ? "" : " - " + message), exception);
-        }
-
-        if (createAndThrow)
-        {
-            throw new ArgumentNullException(argument, message);
         }
     }
 
@@ -113,17 +106,11 @@ public static partial class InvalidOperationLogger
     /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the argument calling this method.</param>
     /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
     /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
-    /// <param name="createAndThrow">If <see langword="true"/>, create and throw the exception </param>
-    public static void ArgumentOutOfRange(this ILogger logger, string argument, object? actualValue = null, string? message = null, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false, bool createAndThrow = false)
+    public static void ArgumentOutOfRange(this ILogger logger, string argument, object? actualValue = null, string? message = null, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false)
     {
         if (logger?.IsEnabled(LogLevel.Debug) ?? false)
         {
             logger.ArgumentNull(Logger.GetCaller(selfLocation, atLocation, addNamespace), argument + (actualValue is null ? "" : " - " + actualValue) + (message is null ? "" : " - " + message), exception);
-        }
-
-        if (createAndThrow)
-        {
-            throw new ArgumentOutOfRangeException(argument, actualValue, message);
         }
     }
 
@@ -159,17 +146,11 @@ public static partial class InvalidOperationLogger
     /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the argument calling this method.</param>
     /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
     /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
-    /// <param name="createAndThrow">If <see langword="true"/>, create and throw the exception </param>
-    public static void InvalidOperation(this ILogger logger, string message, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false, bool createAndThrow = false)
+    public static void InvalidOperation(this ILogger logger, string message, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false)
     {
         if (logger?.IsEnabled(LogLevel.Debug) ?? false)
         {
             logger.InvalidOperation(Logger.GetCaller(selfLocation, atLocation, addNamespace), message, exception);
-        }
-
-        if (createAndThrow)
-        {
-            throw new InvalidOperationException(message);
         }
     }
 
@@ -205,17 +186,11 @@ public static partial class InvalidOperationLogger
     /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the argument calling this method.</param>
     /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
     /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
-    /// <param name="createAndThrow">If <see langword="true"/>, create and throw the exception </param>
-    public static void ScopeMissing(this ILogger logger, string scope, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false, bool createAndThrow = false)
+    public static void ScopeMissing(this ILogger logger, string scope, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false)
     {
         if (logger?.IsEnabled(LogLevel.Error) ?? false)
         {
             logger.ScopeMissing(Logger.GetCaller(selfLocation, atLocation, addNamespace), scope, exception);
-        }
-
-        if (createAndThrow)
-        {
-            throw new ScopeMissingException(scope);
         }
     }
 
