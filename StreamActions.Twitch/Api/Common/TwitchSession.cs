@@ -45,7 +45,7 @@ public sealed record TwitchSession : IDisposable
     public TwitchToken? Token
     {
         get => this._token;
-        internal set => this._token = value ?? throw new ArgumentNullException(nameof(value)).Log(TwitchApi.GetLogger(), atLocation: 3);
+        internal set => this._token = value ?? throw new ArgumentNullException(nameof(value)).Log(TwitchApi.GetLogger());
     }
 
     /// <summary>
@@ -74,19 +74,19 @@ public sealed record TwitchSession : IDisposable
     {
         if (this.Token is null)
         {
-            throw new InvalidOperationException(nameof(this.Token) + " is null.").Log(TwitchApi.GetLogger(), atLocation: 3);
+            throw new InvalidOperationException(nameof(this.Token) + " is null.").Log(TwitchApi.GetLogger());
         }
 
         if (string.IsNullOrWhiteSpace(this.Token.OAuth))
         {
-            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.").Log(TwitchApi.GetLogger(), atLocation: 3);
+            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.").Log(TwitchApi.GetLogger());
         }
 
         if (scope is not null)
         {
             if (!this.Token.HasScope(scope, retIfNull))
             {
-                throw new TwitchScopeMissingException(scope).Log(TwitchApi.GetLogger(), atLocation: 3);
+                throw new TwitchScopeMissingException(scope).Log(TwitchApi.GetLogger());
             }
         }
     }

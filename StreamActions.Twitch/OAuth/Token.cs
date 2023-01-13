@@ -101,14 +101,14 @@ public sealed record Token : TwitchResponse
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger(), atLocation: 3);
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken();
 
         if (string.IsNullOrWhiteSpace(session.Token?.Refresh))
         {
-            throw new InvalidOperationException(nameof(TwitchToken.Refresh) + " is not a valid refresh token").Log(TwitchApi.GetLogger(), atLocation: 3);
+            throw new InvalidOperationException(nameof(TwitchToken.Refresh) + " is not a valid refresh token").Log(TwitchApi.GetLogger());
         }
 
         baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
@@ -133,12 +133,12 @@ public sealed record Token : TwitchResponse
     {
         if (string.IsNullOrWhiteSpace(code))
         {
-            throw new ArgumentNullException(nameof(code)).Log(TwitchApi.GetLogger(), atLocation: 3);
+            throw new ArgumentNullException(nameof(code)).Log(TwitchApi.GetLogger());
         }
 
         if (redirectUri is null)
         {
-            throw new ArgumentNullException(nameof(redirectUri)).Log(TwitchApi.GetLogger(), atLocation: 3);
+            throw new ArgumentNullException(nameof(redirectUri)).Log(TwitchApi.GetLogger());
         }
 
         baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
@@ -163,7 +163,7 @@ public sealed record Token : TwitchResponse
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger(), atLocation: 3);
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken();

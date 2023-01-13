@@ -80,7 +80,7 @@ public sealed record Validate : TwitchResponse
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger(), atLocation: 3);
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);
