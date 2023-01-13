@@ -146,31 +146,6 @@ public static class Logger
 
         return s;
     }
-
-    /// <summary>
-    /// Gets the <see cref="LogLevel"/> from the method attributes.
-    /// </summary>
-    /// <param name="type">The type to check.</param>
-    /// <param name="method">The method to check.</param>
-    /// <returns><see cref="LogLevel.Debug"/> on failure; else, the <see cref="LogLevel"/> set in the attribute.</returns>
-    public static LogLevel GetMessageLogLevel(Type type, string method)
-    {
-        if (type is null)
-        {
-            return LogLevel.Debug;
-        }
-
-        MethodInfo? mInfo = type.GetMethod(method, new[] { typeof(ILogger), typeof(string), typeof(string), typeof(Exception) });
-
-        if (mInfo is null)
-        {
-            return LogLevel.Debug;
-        }
-
-        LoggerMessageAttribute? attr = (LoggerMessageAttribute?)Attribute.GetCustomAttribute(mInfo, typeof(LoggerMessageAttribute));
-
-        return attr is null ? LogLevel.Debug : attr.Level;
-    }
     #endregion Public Methods
 
     #region Private Fields
