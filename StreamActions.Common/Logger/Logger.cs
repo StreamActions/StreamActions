@@ -1,6 +1,6 @@
 ﻿/*
  * This file is part of StreamActions.
- * Copyright © 2019-2023 StreamActions Team (streamactions.github.io)
+ * Copyright © 2019-2022 StreamActions Team (streamactions.github.io)
  *
  * StreamActions is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -31,27 +31,40 @@ public static class Logger
     #region Public Methods
 
     /// <summary>
-    /// Creates an <see cref="ILogger{TCategoryName}"/>.
+    /// Constructs a message for a log entry by combining the message with any parameters that are not already in it.
     /// </summary>
-    /// <typeparam name="T">The type to create the logger for. The fully qualified name of the type will be the logging category.</typeparam>
-    /// <returns>An <see cref="ILogger{TCategoryName}"/>.</returns>
-    public static ILogger<T> GetLogger<T>() => _loggerFactory.CreateLogger<T>();
+    /// <param name="paramList">A list of parameters to ensure are in the message.</param>
+    /// <param name="message">The exception message.</param>
+    /// <returns>The combined message.</returns>
+    public static string ConstructLogMessage(IDictionary<string, object?> paramList, string? message)
+    {
+        string msg = "";
 
-    /// <summary>
-    /// Creates an <see cref="ILogger"/>.
-    /// </summary>
-    /// <param name="t">The type to create the logger for. The fully qualified name of the type will be the logging category.</param>
-    /// <returns>An <see cref="ILogger"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="t"/> is null; <see cref="Type.FullName"/> is null, blank, or whitespace.</exception>
-    public static ILogger GetLogger(Type t) => GetLogger(t?.FullName);
+        if (message is not null)
+        {
+            msg += message;
+        }
 
-    /// <summary>
-    /// Creates an <see cref="ILogger"/>.
-    /// </summary>
-    /// <param name="category">The logging category.</param>
-    /// <returns>An <see cref="ILogger"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="category"/> is null, blank, or whitespace.</exception>
-    public static ILogger GetLogger(string? category) => string.IsNullOrWhiteSpace(category) ? throw new ArgumentNullException(nameof(category)) : _loggerFactory.CreateLogger(category);
+        foreach (KeyValuePair<string, object?> param in paramList ?? new Dictionary<string, object?>())
+        {
+            if (param.Value is not null && (!message?.Contains(param.Value.ToString() ?? "", StringComparison.InvariantCultureIgnoreCase) ?? true))
+            {
+                if (!string.IsNullOrWhiteSpace(msg))
+                {
+                    msg += " ";
+                }
+
+                msg += "(" + param.Key + " was `" + param.Value + "`)";
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(msg))
+        {
+            msg += nameof(msg) + " was null";
+        }
+
+        return msg;
+    }
 
     /// <summary>
     /// Gets the calling members name.
@@ -148,45 +161,28 @@ public static class Logger
     }
 
     /// <summary>
-    /// Constructs a message for a log entry by combining the message with any parameters that are not already in it.
+    /// Creates an <see cref="ILogger{TCategoryName}"/>.
     /// </summary>
-    /// <param name="paramList">A list of parameters to ensure are in the message.</param>
-    /// <param name="message">The exception message.</param>
-    /// <returns>The combined message.</returns>
-    public static string ConstructLogMessage(string?[] paramList, string? message)
-    {
-        string msg = "";
+    /// <typeparam name="T">The type to create the logger for. The fully qualified name of the type will be the logging category.</typeparam>
+    /// <returns>An <see cref="ILogger{TCategoryName}"/>.</returns>
+    public static ILogger<T> GetLogger<T>() => _loggerFactory.CreateLogger<T>();
 
-        foreach (string? param in paramList ?? Array.Empty<string?>())
-        {
-            if (!string.IsNullOrWhiteSpace(param) && (!message?.Contains(param, StringComparison.InvariantCultureIgnoreCase) ?? true))
-            {
-                if (!string.IsNullOrWhiteSpace(msg))
-                {
-                    msg += " - ";
-                }
+    /// <summary>
+    /// Creates an <see cref="ILogger"/>.
+    /// </summary>
+    /// <param name="t">The type to create the logger for. The fully qualified name of the type will be the logging category.</param>
+    /// <returns>An <see cref="ILogger"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="t"/> is null; <see cref="Type.FullName"/> is null, blank, or whitespace.</exception>
+    public static ILogger GetLogger(Type t) => GetLogger(t?.FullName);
 
-                msg += param;
-            }
-        }
+    /// <summary>
+    /// Creates an <see cref="ILogger"/>.
+    /// </summary>
+    /// <param name="category">The logging category.</param>
+    /// <returns>An <see cref="ILogger"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="category"/> is null, blank, or whitespace.</exception>
+    public static ILogger GetLogger(string? category) => string.IsNullOrWhiteSpace(category) ? throw new ArgumentNullException(nameof(category)) : _loggerFactory.CreateLogger(category);
 
-        if (!string.IsNullOrWhiteSpace(msg))
-        {
-            msg += " - ";
-        }
-
-        if (message is not null)
-        {
-            msg += message;
-        }
-
-        if (string.IsNullOrWhiteSpace(msg))
-        {
-            msg += nameof(message) + " was null";
-        }
-
-        return msg;
-    }
     #endregion Public Methods
 
     #region Private Fields

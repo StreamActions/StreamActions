@@ -51,7 +51,7 @@ public static partial class InvalidOperationLogger
     /// <param name="paramName">The message that was <see langword="null"/>.</param>
     /// <param name="message">A message that describes the error.</param>
     /// <param name="exception">The exception that was thrown.</param>
-    public static void ArgumentNull(this ILogger logger, string type, string member, string? paramName = null, string? message = null, Exception? exception = null) => logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new[] { paramName }, message), exception);
+    public static void ArgumentNull(this ILogger logger, string type, string member, string? paramName = null, string? message = null, Exception? exception = null) => logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName } }, message), exception);
 
     /// <summary>
     /// Logs that an <see cref="ArgumentNullException"/> was thrown.
@@ -67,7 +67,7 @@ public static partial class InvalidOperationLogger
     {
         if (logger?.IsEnabled(LogLevel.Debug) ?? false)
         {
-            logger.ArgumentNull(Logger.GetCaller(selfLocation, atLocation, addNamespace), Logger.ConstructLogMessage(new[] { paramName }, message), exception);
+            logger.ArgumentNull(Logger.GetCaller(selfLocation, atLocation, addNamespace), Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName } }, message), exception);
         }
     }
 
@@ -116,7 +116,7 @@ public static partial class InvalidOperationLogger
     /// <param name="actualValue">The value of <paramref name="paramName"/> that caused this exception.</param>
     /// <param name="message">A message that describes the error.</param>
     /// <param name="exception">The exception that was thrown.</param>
-    public static void ArgumentOutOfRange(this ILogger logger, string type, string member, string? paramName = null, object? actualValue = null, string? message = null, Exception? exception = null) => logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new[] { paramName, actualValue?.ToString() }, message), exception);
+    public static void ArgumentOutOfRange(this ILogger logger, string type, string member, string? paramName = null, object? actualValue = null, string? message = null, Exception? exception = null) => logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName }, { nameof(actualValue), actualValue?.ToString() } }, message), exception);
 
     /// <summary>
     /// Logs that an <see cref="ArgumentOutOfRangeException"/> was thrown.
@@ -133,7 +133,7 @@ public static partial class InvalidOperationLogger
     {
         if (logger?.IsEnabled(LogLevel.Debug) ?? false)
         {
-            logger.ArgumentOutOfRange(Logger.GetCaller(selfLocation, atLocation, addNamespace), Logger.ConstructLogMessage(new[] { paramName, actualValue?.ToString() }, message), exception);
+            logger.ArgumentOutOfRange(Logger.GetCaller(selfLocation, atLocation, addNamespace), Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName }, { nameof(actualValue), actualValue?.ToString() } }, message), exception);
         }
     }
 
@@ -154,10 +154,7 @@ public static partial class InvalidOperationLogger
             throw new ArgumentNullException(nameof(exception));
         }
 
-        if (logger is not null)
-        {
-            logger.ArgumentOutOfRange(exception.ParamName, exception.ActualValue, exception.Message, exception, selfLocation, atLocation, addNamespace);
-        }
+        logger?.ArgumentOutOfRange(exception.ParamName, exception.ActualValue, exception.Message, exception, selfLocation, atLocation, addNamespace);
 
         return exception;
     }
@@ -219,10 +216,7 @@ public static partial class InvalidOperationLogger
             throw new ArgumentNullException(nameof(exception));
         }
 
-        if (logger is not null)
-        {
-            logger.InvalidOperation(exception.Message, exception, selfLocation, atLocation, addNamespace);
-        }
+        logger?.InvalidOperation(exception.Message, exception, selfLocation, atLocation, addNamespace);
 
         return exception;
     }
@@ -249,7 +243,7 @@ public static partial class InvalidOperationLogger
     /// <param name="scope">The message that was missing.</param>
     /// <param name="message">A message that describes the error.</param>
     /// <param name="exception">The exception that was thrown.</param>
-    public static void ScopeMissing(this ILogger logger, string type, string member, string? scope = null, string? message = null, Exception? exception = null) => logger.ScopeMissing(type + "." + member, Logger.ConstructLogMessage(new[] { scope }, message), exception);
+    public static void ScopeMissing(this ILogger logger, string type, string member, string? scope = null, string? message = null, Exception? exception = null) => logger.ScopeMissing(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(scope), scope } }, message), exception);
 
     /// <summary>
     /// Logs that a <see cref="Exceptions.ScopeMissingException"/> was thrown.
@@ -265,7 +259,7 @@ public static partial class InvalidOperationLogger
     {
         if (logger?.IsEnabled(LogLevel.Error) ?? false)
         {
-            logger.ScopeMissing(Logger.GetCaller(selfLocation, atLocation, addNamespace), Logger.ConstructLogMessage(new[] { scope }, message), exception);
+            logger.ScopeMissing(Logger.GetCaller(selfLocation, atLocation, addNamespace), Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(scope), scope } }, message), exception);
         }
     }
 
@@ -286,10 +280,7 @@ public static partial class InvalidOperationLogger
             throw new ArgumentNullException(nameof(exception));
         }
 
-        if (logger is not null)
-        {
-            logger.ScopeMissing(exception.Scope, exception.Message, exception, selfLocation, atLocation, addNamespace);
-        }
+        logger?.ScopeMissing(exception.Scope, exception.Message, exception, selfLocation, atLocation, addNamespace);
 
         return exception;
     }
