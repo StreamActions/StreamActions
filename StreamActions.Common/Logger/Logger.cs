@@ -146,6 +146,47 @@ public static class Logger
 
         return s;
     }
+
+    /// <summary>
+    /// Constructs a message for a log entry by combining the message with any parameters that are not already in it.
+    /// </summary>
+    /// <param name="paramList">A list of parameters to ensure are in the message.</param>
+    /// <param name="message">The exception message.</param>
+    /// <returns>The combined message.</returns>
+    public static string ConstructLogMessage(string?[] paramList, string? message)
+    {
+        string msg = "";
+
+        foreach (string? param in paramList ?? Array.Empty<string?>())
+        {
+            if (!string.IsNullOrWhiteSpace(param) && (!message?.Contains(param, StringComparison.InvariantCultureIgnoreCase) ?? true))
+            {
+                if (!string.IsNullOrWhiteSpace(msg))
+                {
+                    msg += " - ";
+                }
+
+                msg += param;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(msg))
+        {
+            msg += " - ";
+        }
+
+        if (message is not null)
+        {
+            msg += message;
+        }
+
+        if (string.IsNullOrWhiteSpace(msg))
+        {
+            msg += nameof(message) + " was null";
+        }
+
+        return msg;
+    }
     #endregion Public Methods
 
     #region Private Fields
