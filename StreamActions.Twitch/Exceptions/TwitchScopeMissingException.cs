@@ -39,7 +39,7 @@ public sealed class TwitchScopeMissingException : ScopeMissingException
     /// Constructor.
     /// </summary>
     /// <param name="scope">The scope that is missing from the OAuth token.</param>
-    public TwitchScopeMissingException(string scope) : base(scope)
+    public TwitchScopeMissingException(string? scope) : base(scope)
     {
     }
 
@@ -47,16 +47,7 @@ public sealed class TwitchScopeMissingException : ScopeMissingException
     /// Constructor.
     /// </summary>
     /// <param name="scope">The scope that is missing from the OAuth token.</param>
-    public TwitchScopeMissingException(Scope scope) : base(scope?.Name ?? "Unknown")
-    {
-    }
-
-    /// <summary>
-    /// Constructor.
-    /// </summary>
-    /// <param name="scope">The scope that is missing from the OAuth token.</param>
-    /// <param name="innerException">The inner exception that caused the current exception.</param>
-    public TwitchScopeMissingException(string scope, Exception innerException) : base(scope, innerException)
+    public TwitchScopeMissingException(Scope? scope) : base(scope?.Name)
     {
     }
 
@@ -65,7 +56,16 @@ public sealed class TwitchScopeMissingException : ScopeMissingException
     /// </summary>
     /// <param name="scope">The scope that is missing from the OAuth token.</param>
     /// <param name="innerException">The inner exception that caused the current exception.</param>
-    public TwitchScopeMissingException(Scope scope, Exception innerException) : base(scope?.Name ?? "Unknown", innerException)
+    public TwitchScopeMissingException(string? scope, Exception? innerException) : base(scope, innerException)
+    {
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scope">The scope that is missing from the OAuth token.</param>
+    /// <param name="innerException">The inner exception that caused the current exception.</param>
+    public TwitchScopeMissingException(Scope? scope, Exception? innerException) : base(scope?.Name, innerException)
     {
     }
 
