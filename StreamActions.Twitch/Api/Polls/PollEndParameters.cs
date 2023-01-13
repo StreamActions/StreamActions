@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Logger;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Polls;
@@ -37,17 +38,17 @@ public sealed record PollEndParameters
     {
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         if (string.IsNullOrWhiteSpace(id))
         {
-            throw new ArgumentNullException(nameof(id));
+            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
         }
 
         if (status is not Poll.PollStatus.TERMINATED and not Poll.PollStatus.ARCHIVED)
         {
-            throw new ArgumentOutOfRangeException(nameof(status), Enum.GetName(status), "Valid values: TERMINATED or ARCHIVED");
+            throw new ArgumentOutOfRangeException(nameof(status), Enum.GetName(status), "Valid values: TERMINATED or ARCHIVED").Log(TwitchApi.GetLogger());
         }
 
         this.BroadcasterId = broadcasterId;

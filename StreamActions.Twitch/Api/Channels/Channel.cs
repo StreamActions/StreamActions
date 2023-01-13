@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
@@ -90,19 +91,19 @@ public sealed record Channel
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken();
 
         if (broadcasterId is null || !broadcasterId.Any())
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         if (broadcasterId.Count() > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(broadcasterId), "must have a count <= 100");
+            throw new ArgumentOutOfRangeException(nameof(broadcasterId), broadcasterId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
         Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", broadcasterId } });
@@ -124,17 +125,17 @@ public sealed record Channel
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         if (parameters is null)
         {
-            throw new ArgumentNullException(nameof(parameters));
+            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.ChannelManageBroadcast);

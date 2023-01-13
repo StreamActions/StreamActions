@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -245,14 +246,14 @@ public sealed record Video
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken();
 
         if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
         {
-            throw new ArgumentNullException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Must provide at least one value of id, userId, or gameId");
+            throw new ArgumentNullException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Must provide at least one value of id, userId, or gameId").Log(TwitchApi.GetLogger());
         }
 
         bool hasId = false;
@@ -265,7 +266,7 @@ public sealed record Video
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Can not mix parameters id, userId, and gameId");
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Can not mix parameters id, userId, and gameId").Log(TwitchApi.GetLogger());
             }
             hasId = true;
         }
@@ -274,18 +275,18 @@ public sealed record Video
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Can not mix parameters id, userId, and gameId");
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Can not mix parameters id, userId, and gameId").Log(TwitchApi.GetLogger());
             }
 
             if (id.Count() > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), "must have a count <= 100");
+                throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
             }
         }
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new InvalidOperationException("Can only use one of before or after");
+            throw new InvalidOperationException("Can only use one of before or after").Log(TwitchApi.GetLogger());
         }
 
         first = Math.Clamp(first, 1, 100);
@@ -354,19 +355,19 @@ public sealed record Video
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         if (id is null || !id.Any())
         {
-            throw new ArgumentNullException(nameof(id));
+            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.ChannelManageVideos);
 
         if (id.Count() > 5)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), "must have a count <= 5");
+            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 5").Log(TwitchApi.GetLogger());
         }
 
         Uri uri = Util.BuildUri(new("/videos"), new Dictionary<string, IEnumerable<string>> { { "id", id } });

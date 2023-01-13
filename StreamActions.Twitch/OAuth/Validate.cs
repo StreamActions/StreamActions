@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common.Attributes;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
@@ -79,7 +80,7 @@ public sealed record Validate : TwitchResponse
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger(), atLocation: 3);
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);

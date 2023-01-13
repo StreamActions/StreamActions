@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using System.Globalization;
 using System.Net.Http.Json;
@@ -118,19 +119,19 @@ public sealed record ExtensionTransaction
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken();
 
         if (string.IsNullOrWhiteSpace(extensionId))
         {
-            throw new ArgumentNullException(nameof(extensionId));
+            throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
         }
 
         if (id is not null && id.Count() > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), "must have a count <= 100");
+            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
         first = Math.Clamp(first, 1, 100);
@@ -162,7 +163,7 @@ public sealed record ExtensionTransaction
         {
             if (queryParams.ContainsKey("id"))
             {
-                throw new InvalidOperationException("Can not use " + nameof(after) + " at the same time as " + nameof(id));
+                throw new InvalidOperationException("Can not use " + nameof(after) + " at the same time as " + nameof(id)).Log(TwitchApi.GetLogger());
             }
             else
             {

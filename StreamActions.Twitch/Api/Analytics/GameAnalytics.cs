@@ -18,6 +18,7 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -89,7 +90,7 @@ public sealed record GameAnalytics
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.AnalyticsReadGames);
@@ -114,7 +115,7 @@ public sealed record GameAnalytics
 
         if ((!startedAt.HasValue && endedAt.HasValue) || (startedAt.HasValue && !endedAt.HasValue))
         {
-            throw new InvalidOperationException("If " + nameof(startedAt) + " is specified, " + nameof(endedAt) + " must also be specified (and vice-versa)");
+            throw new InvalidOperationException("If " + nameof(startedAt) + " is specified, " + nameof(endedAt) + " must also be specified (and vice-versa)").Log(TwitchApi.GetLogger());
         }
 
         if (startedAt.HasValue && endedAt.HasValue)

@@ -18,6 +18,7 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -118,7 +119,7 @@ public sealed record Leaderboard
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.BitsRead);
@@ -140,7 +141,7 @@ public sealed record Leaderboard
         {
             if (period == LeaderboardPeriod.All)
             {
-                throw new InvalidOperationException("Can not use " + nameof(startedAt) + " while " + nameof(period) + " is set to all");
+                throw new InvalidOperationException("Can not use " + nameof(startedAt) + " while " + nameof(period) + " is set to all").Log(TwitchApi.GetLogger());
             }
             else
             {

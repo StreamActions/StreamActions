@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -151,17 +152,17 @@ public sealed record Poll
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         if (id is not null && id.Count() > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), "must have a count <= 100");
+            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.ChannelReadPolls);
@@ -214,12 +215,12 @@ public sealed record Poll
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         if (parameters is null)
         {
-            throw new ArgumentNullException(nameof(parameters));
+            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.ChannelManagePolls);
@@ -242,12 +243,12 @@ public sealed record Poll
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         if (parameters is null)
         {
-            throw new ArgumentNullException(nameof(parameters));
+            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.ChannelManagePolls);

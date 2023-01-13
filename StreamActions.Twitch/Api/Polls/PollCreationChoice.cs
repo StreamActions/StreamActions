@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Logger;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Polls;
@@ -35,12 +36,12 @@ public sealed record PollCreationChoice
     {
         if (string.IsNullOrWhiteSpace(title))
         {
-            throw new ArgumentNullException(nameof(title));
+            throw new ArgumentNullException(nameof(title)).Log(TwitchApi.GetLogger());
         }
 
         if (title.Length > 25)
         {
-            throw new ArgumentOutOfRangeException(nameof(title), title.Length, "Must be 25 characters or less");
+            throw new ArgumentOutOfRangeException(nameof(title), title.Length, "Must be 25 characters or less").Log(TwitchApi.GetLogger());
         }
 
         this.Title = title;

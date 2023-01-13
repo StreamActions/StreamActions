@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -144,17 +145,17 @@ public sealed record Subscription
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         if (userId is not null && userId.Count() > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(userId), "must have a count <= 100");
+            throw new ArgumentOutOfRangeException(nameof(userId), userId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.ChannelReadSubscriptions);
@@ -182,7 +183,7 @@ public sealed record Subscription
             {
                 if (!string.IsNullOrWhiteSpace(after))
                 {
-                    throw new InvalidOperationException(nameof(userId) + " can not be used at the same time as " + nameof(after));
+                    throw new InvalidOperationException(nameof(userId) + " can not be used at the same time as " + nameof(after)).Log(TwitchApi.GetLogger());
                 }
 
                 queryParams.Add("user_id", userIds);
@@ -213,17 +214,17 @@ public sealed record Subscription
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId));
+            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.ChannelReadSubscriptions);

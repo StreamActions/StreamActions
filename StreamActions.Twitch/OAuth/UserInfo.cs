@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common.Attributes;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -130,7 +131,7 @@ public sealed record UserInfo : TwitchResponse
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.OpenID);

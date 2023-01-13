@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Logger;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Polls;
@@ -40,27 +41,27 @@ public sealed record PollCreationParameters
     {
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         if (string.IsNullOrWhiteSpace(title))
         {
-            throw new ArgumentNullException(nameof(title));
+            throw new ArgumentNullException(nameof(title)).Log(TwitchApi.GetLogger());
         }
 
         if (title.Length > 60)
         {
-            throw new ArgumentOutOfRangeException(nameof(title), title.Length, "Must be 60 characters or less");
+            throw new ArgumentOutOfRangeException(nameof(title), title.Length, "Must be 60 characters or less").Log(TwitchApi.GetLogger());
         }
 
         if (choices is null)
         {
-            throw new ArgumentNullException(nameof(choices));
+            throw new ArgumentNullException(nameof(choices)).Log(TwitchApi.GetLogger());
         }
 
         if (choices.Count is < 2 or > 5)
         {
-            throw new ArgumentOutOfRangeException(nameof(choices), choices.Count, "Must provide 2-5 choices.");
+            throw new ArgumentOutOfRangeException(nameof(choices), choices.Count, "Must provide 2-5 choices.").Log(TwitchApi.GetLogger());
         }
 
         duration = Math.Clamp(duration, 15, 1800);

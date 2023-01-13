@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Logger;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Ads;
@@ -35,12 +36,12 @@ public sealed record StartCommercialParameters
     {
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         if (length == CommercialLength.None)
         {
-            throw new ArgumentNullException(nameof(length));
+            throw new ArgumentNullException(nameof(length)).Log(TwitchApi.GetLogger());
         }
 
         this.BroadcasterId = broadcasterId;

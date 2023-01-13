@@ -115,8 +115,7 @@ public sealed partial class TwitchApi : IApi
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            _logger.ArgumentNull(nameof(clientId));
-            throw new ArgumentNullException(nameof(clientId));
+            throw new ArgumentNullException(nameof(clientId)).Log(_logger, atLocation: 3);
         }
 
         ClientId = clientId;
@@ -173,14 +172,12 @@ public sealed partial class TwitchApi : IApi
     {
         if (!_httpClient.DefaultRequestHeaders.Contains("Client-Id"))
         {
-            _logger.InvalidOperation("Must call Init first.", atLocation: 3);
-            throw new InvalidOperationException("Must call TwitchAPI.Init.");
+            throw new InvalidOperationException("Must call TwitchAPI.Init.").Log(_logger, atLocation: 3);
         }
 
         if (session.Token != TwitchToken.Empty && string.IsNullOrWhiteSpace(session.Token?.OAuth))
         {
-            _logger.InvalidOperation("OAuth token was null, blank, or whitespace.", atLocation: 3);
-            throw new InvalidOperationException("Invalid OAuth token in session.");
+            throw new InvalidOperationException("Invalid OAuth token in session.").Log(_logger, atLocation: 3);
         }
 
         bool retry = false;

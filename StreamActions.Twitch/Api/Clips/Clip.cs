@@ -18,6 +18,7 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using System.Globalization;
 using System.Net.Http.Json;
@@ -162,14 +163,14 @@ public sealed record Clip
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken();
 
         if (string.IsNullOrWhiteSpace(broadcasterId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
         {
-            throw new ArgumentNullException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "Must provide at least one value of id, broadcasterId, or gameId");
+            throw new ArgumentNullException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "Must provide at least one value of id, broadcasterId, or gameId").Log(TwitchApi.GetLogger());
         }
 
         bool hasId = false;
@@ -182,7 +183,7 @@ public sealed record Clip
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "Can not mix parameters id, broadcasterId, and gameId");
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "Can not mix parameters id, broadcasterId, and gameId").Log(TwitchApi.GetLogger());
             }
             hasId = true;
         }
@@ -191,23 +192,23 @@ public sealed record Clip
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "Can not mix parameters id, broadcasterId, and gameId");
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "Can not mix parameters id, broadcasterId, and gameId").Log(TwitchApi.GetLogger());
             }
 
             if (id.Count() > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), "must have a count <= 100");
+                throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
             }
         }
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new InvalidOperationException("Can only use one of before or after");
+            throw new InvalidOperationException("Can only use one of before or after").Log(TwitchApi.GetLogger());
         }
 
         if (!startedAt.HasValue && endedAt.HasValue)
         {
-            throw new ArgumentNullException(nameof(startedAt), "Must provide startedAt when using endedAt");
+            throw new ArgumentNullException(nameof(startedAt), "Must provide startedAt when using endedAt").Log(TwitchApi.GetLogger());
         }
 
         first = Math.Clamp(first, 1, 100);

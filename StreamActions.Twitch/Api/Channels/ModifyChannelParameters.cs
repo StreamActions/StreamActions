@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Logger;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Channels;
@@ -38,7 +39,7 @@ public sealed record ModifyChannelParameters
         if (gameId is null && string.IsNullOrWhiteSpace(broadcasterLanguage) && string.IsNullOrWhiteSpace(title)
             && (delay is null || delay == default(int) || delay < 1))
         {
-            throw new InvalidOperationException("At least 1 parameter must have a valid, non-null value.");
+            throw new ArgumentNullException(nameof(gameId) + "," + nameof(broadcasterLanguage) + "," + nameof(title) + "," + nameof(delay), "At least 1 parameter must have a valid, non-null value.").Log(TwitchApi.GetLogger());
         }
 
         this.GameId = gameId;
