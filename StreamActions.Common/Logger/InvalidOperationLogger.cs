@@ -61,7 +61,7 @@ public static partial class InvalidOperationLogger
     /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
     public static void ArgumentNull(this ILogger logger, string argument, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false)
     {
-        if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+        if (logger?.IsEnabled(Logger.GetMessageLogLevel(typeof(InvalidOperationLogger), nameof(ArgumentNull))) ?? false)
         {
             logger.ArgumentNull(Logger.GetCaller(selfLocation, atLocation, addNamespace), argument, exception);
         }
@@ -101,7 +101,7 @@ public static partial class InvalidOperationLogger
     /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
     public static void InvalidOperation(this ILogger logger, string message, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false)
     {
-        if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+        if (logger?.IsEnabled(Logger.GetMessageLogLevel(typeof(InvalidOperationLogger), nameof(InvalidOperation))) ?? false)
         {
             logger.InvalidOperation(Logger.GetCaller(selfLocation, atLocation, addNamespace), message, exception);
         }
@@ -141,7 +141,7 @@ public static partial class InvalidOperationLogger
     /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
     public static void ScopeMissing(this ILogger logger, string scope, Exception? exception = null, int selfLocation = 2, int? atLocation = null, bool addNamespace = false)
     {
-        if (logger?.IsEnabled(LogLevel.Error) ?? false)
+        if (logger?.IsEnabled(Logger.GetMessageLogLevel(typeof(InvalidOperationLogger), nameof(ScopeMissing))) ?? false)
         {
             logger.ScopeMissing(Logger.GetCaller(selfLocation, atLocation, addNamespace), scope, exception);
         }
