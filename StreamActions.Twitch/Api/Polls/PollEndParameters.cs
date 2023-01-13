@@ -47,7 +47,7 @@ public sealed record PollEndParameters
 
         if (status is not Poll.PollStatus.TERMINATED and not Poll.PollStatus.ARCHIVED)
         {
-            throw new ArgumentOutOfRangeException(nameof(status), status, "Valid values: TERMINATED or ARCHIVED");
+            throw new ArgumentOutOfRangeException(nameof(status), Enum.GetName(status), "Valid values: TERMINATED or ARCHIVED");
         }
 
         this.BroadcasterId = broadcasterId;
