@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common.Attributes;
-using StreamActions.Common.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.OAuth;
