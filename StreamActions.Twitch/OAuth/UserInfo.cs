@@ -21,7 +21,7 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
-using System.Net.Http.Json;
+using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.OAuth;
@@ -139,6 +139,6 @@ public sealed record UserInfo : TwitchResponse
         baseAddress ??= Token._openIdConnectConfiguration.Value.UserInfoEndpoint;
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<UserInfo>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<UserInfo>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

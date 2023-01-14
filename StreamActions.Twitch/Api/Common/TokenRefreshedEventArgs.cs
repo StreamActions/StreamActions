@@ -23,6 +23,7 @@ namespace StreamActions.Twitch.Api.Common;
 /// </summary>
 public sealed class TokenRefreshedEventArgs : EventArgs
 {
+
     #region Public Constructors
 
     /// <summary>
@@ -41,4 +42,5 @@ public sealed class TokenRefreshedEventArgs : EventArgs
     public TwitchSession Session { get; init; }
 
     #endregion Public Properties
+
 }

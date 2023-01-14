@@ -50,8 +50,6 @@ public sealed record Scope
     /// </summary>
     public static IReadOnlyDictionary<string, Scope> Scopes => _scopes.AsReadOnly();
 
-    #region Scopes
-
     /// <summary>
     /// analytics:read:extensions - View analytics data for the Twitch Extensions owned by the authenticated account.
     /// </summary>
@@ -105,7 +103,7 @@ public sealed record Scope
     /// <summary>
     ///channel:manage:redemptions - Manage Channel Points custom rewards and their redemptions on a channel.
     /// </summary>
-    public static readonly Scope ChannelManageRedemptions = new("channel:manage:redemptions", "Manage Channel Points custom rewards and their redemptions on a channel.");
+    public static readonly Scope ChannelManageRedemptions = new("channel:manage:redemptions", "Manage Channel Points custom rewards and their redemptions on a channel.", ChannelReadRedemptions);
 
     /// <summary>
     /// channel:manage:schedule - Manage a channel's stream schedule.
@@ -316,8 +314,6 @@ public sealed record Scope
     /// whispers:read - View your whisper messages.
     /// </summary>
     public static readonly Scope WhispersRead = new("whispers:read", "View your whisper messages.");
-
-    #endregion Scopes
 
     /// <summary>
     /// Returns all scopes that imply <paramref name="scope"/>.

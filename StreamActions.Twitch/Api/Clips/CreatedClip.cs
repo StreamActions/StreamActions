@@ -22,7 +22,7 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
-using System.Net.Http.Json;
+using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Clips;
@@ -90,7 +90,7 @@ public sealed record CreatedClip
             Uri uri = Util.BuildUri(new("/clips"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } }, { "has_delay", new List<string> { hasDelay ? "true" : "false" } } });
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
             RateLimiter.ParseHeaders(response.Headers, "Ratelimit-Helixclipscreation-Limit", "Ratelimit-Helixclipscreation-Remaining", "Ratelimit-Helixclipscreation-Reset");
-            return await response.Content.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+            return await response.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is TimeoutException)
         {

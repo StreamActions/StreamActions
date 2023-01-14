@@ -20,7 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using System.Globalization;
-using System.Net.Http.Json;
+using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Bits;
@@ -173,6 +173,6 @@ public sealed record ExtensionTransaction
 
         Uri uri = Util.BuildUri(new("/extensions/transactions"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<ResponseData<ExtensionTransaction>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<ExtensionTransaction>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

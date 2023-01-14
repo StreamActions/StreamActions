@@ -16,23 +16,29 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.OAuth;
+namespace StreamActions.Twitch.Api.ChannelPoints;
 
 /// <summary>
-/// Converts <see cref="Scope"/> to/from a JSON value.
+/// The settings used to determine whether to apply a cooldown period between redemptions and the length of the cooldown in a <see cref="ChannelPointsReward"/>.
 /// </summary>
-public sealed class ScopeJsonConverter : JsonConverter<Scope>
+public sealed record ChannelPointsGlobalCooldownSetting
 {
-    #region Public Methods
+    /// <summary>
+    /// A Boolean value that determines whether to apply a cooldown period.
+    /// </summary>
+    [JsonPropertyName("is_enabled")]
+    public bool? IsEnabled { get; init; }
 
-    /// <inheritdoc/>
-    public override Scope? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => Scope.Scopes.GetValueOrDefault(reader.GetString()!);
+    /// <summary>
+    /// The cooldown period, in seconds.
+    /// </summary>
+    [JsonPropertyName("global_cooldown_seconds")]
+    public int? GlobalCooldownSeconds { get; init; }
 
-    /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, Scope value, JsonSerializerOptions options) => writer?.WriteStringValue(value?.Name);
-
-    #endregion Public Methods
+    /// <summary>
+    /// The cooldown period.
+    /// </summary>
+    public TimeSpan? GlobalCooldown => this.GlobalCooldownSeconds.HasValue ? TimeSpan.FromSeconds(this.GlobalCooldownSeconds.Value) : null;
 }

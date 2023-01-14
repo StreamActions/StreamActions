@@ -22,7 +22,7 @@ using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Globalization;
-using System.Net.Http.Json;
+using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Subscriptions;
@@ -197,7 +197,7 @@ public sealed record Subscription
 
         Uri uri = Util.BuildUri(new("/subscriptions"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<SubscriptionResponse?>().ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<SubscriptionResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -237,6 +237,6 @@ public sealed record Subscription
 
         Uri uri = Util.BuildUri(new("/subscriptions/user"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<SubscriptionResponse?>().ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<SubscriptionResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

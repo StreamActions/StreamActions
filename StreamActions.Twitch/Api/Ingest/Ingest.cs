@@ -18,7 +18,7 @@
 
 using StreamActions.Common.Attributes;
 using StreamActions.Twitch.Api.Common;
-using System.Net.Http.Json;
+using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Ingest;
@@ -76,6 +76,6 @@ public sealed record Ingest
     public static async Task<IngestResponse?> GetIngestServers(string baseAddress = "https://ingest.twitch.tv/ingests")
     {
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), TwitchSession.Empty).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<IngestResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<IngestResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

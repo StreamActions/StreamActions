@@ -39,6 +39,7 @@ namespace StreamActions.Twitch.Api;
         "-remre", "'cloudcannon[^\"]*'" })]
 public sealed partial class TwitchApi : IApi
 {
+
     #region Public Events
 
     /// <summary>
@@ -275,9 +276,13 @@ public sealed partial class TwitchApi : IApi
     /// </summary>
     private TwitchApi()
     { }
+    #endregion Private Constructors
+
+    #region Private Methods
 
     [GeneratedRegex("\\s*{.*}\\s*")]
     private static partial Regex JSONRegex();
 
-    #endregion Private Constructors
+    #endregion Private Methods
+
 }

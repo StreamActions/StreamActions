@@ -20,7 +20,7 @@ using StreamActions.Common.Attributes;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
-using System.Net.Http.Json;
+using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.OAuth;
@@ -84,6 +84,6 @@ public sealed record Validate : TwitchResponse
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<Validate>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<Validate>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

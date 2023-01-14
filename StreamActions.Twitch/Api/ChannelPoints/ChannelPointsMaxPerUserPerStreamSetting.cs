@@ -16,23 +16,24 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.OAuth;
+namespace StreamActions.Twitch.Api.ChannelPoints;
 
 /// <summary>
-/// Converts <see cref="Scope"/> to/from a JSON value.
+/// The settings used to determine whether to apply a maximum to the number of redemptions allowed per user per live stream in a <see cref="ChannelPointsReward"/>.
 /// </summary>
-public sealed class ScopeJsonConverter : JsonConverter<Scope>
+public sealed record ChannelPointsMaxPerUserPerStreamSetting
 {
-    #region Public Methods
+    /// <summary>
+    /// A Boolean value that determines whether the reward applies a limit on the number of redemptions allowed per user per live stream.
+    /// </summary>
+    [JsonPropertyName("is_enabled")]
+    public bool? IsEnabled { get; init; }
 
-    /// <inheritdoc/>
-    public override Scope? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => Scope.Scopes.GetValueOrDefault(reader.GetString()!);
-
-    /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, Scope value, JsonSerializerOptions options) => writer?.WriteStringValue(value?.Name);
-
-    #endregion Public Methods
+    /// <summary>
+    /// The maximum number of redemptions allowed per user per live stream.
+    /// </summary>
+    [JsonPropertyName("max_per_user_per_stream")]
+    public int? MaxPerUserPerStream { get; init; }
 }

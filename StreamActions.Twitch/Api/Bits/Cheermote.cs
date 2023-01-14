@@ -19,7 +19,7 @@
 using StreamActions.Common;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
-using System.Net.Http.Json;
+using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Bits;
@@ -122,6 +122,6 @@ public sealed record Cheermote
 
         Uri uri = Util.BuildUri(new("/bits/cheermotes"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<ResponseData<Cheermote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<Cheermote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

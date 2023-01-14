@@ -26,6 +26,7 @@ namespace StreamActions.Twitch.Exceptions;
 /// </summary>
 public sealed class TwitchScopeMissingException : ScopeMissingException
 {
+
     #region Public Constructors
 
     /// <summary>
@@ -70,4 +71,5 @@ public sealed class TwitchScopeMissingException : ScopeMissingException
     }
 
     #endregion Public Constructors
+
 }

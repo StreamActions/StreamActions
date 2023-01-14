@@ -33,7 +33,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Api\ChannelPoints\" />
     <Folder Include="Api\Chat\" />
     <Folder Include="Api\Entitlements\" />
     <Folder Include="Api\Extensions\" />
@@ -48,6 +47,7 @@
     <Folder Include="Api\Search\" />
     <Folder Include="Api\Schedule\" />
     <Folder Include="Api\Predictions\" />
+    <Folder Include="Extensions\" />
   </ItemGroup>
 
 </Project>

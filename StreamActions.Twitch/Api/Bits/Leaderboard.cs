@@ -23,7 +23,7 @@ using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Globalization;
-using System.Net.Http.Json;
+using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Bits;
@@ -151,6 +151,6 @@ public sealed record Leaderboard
 
         Uri uri = Util.BuildUri(new("/bits/leaderboard"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<ResponseData<Leaderboard>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<Leaderboard>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
