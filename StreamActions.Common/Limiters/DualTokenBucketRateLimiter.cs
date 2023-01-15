@@ -30,7 +30,7 @@ public sealed class DualTokenBucketRateLimiter
     /// </summary>
     /// <param name="localBucket">The local <see cref="TokenBucketRateLimiter"/>.</param>
     /// <param name="globalBucket">The shared global <see cref="TokenBucketRateLimiter"/>.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="localBucket"/> or <paramref name="globalBucket"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="localBucket"/> or <paramref name="globalBucket"/> is <see langword="null"/>.</exception>
     public DualTokenBucketRateLimiter(TokenBucketRateLimiter localBucket, TokenBucketRateLimiter globalBucket)
     {
         this.LocalBucket = localBucket ?? throw new ArgumentNullException(nameof(localBucket));

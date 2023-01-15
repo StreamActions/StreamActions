@@ -61,7 +61,7 @@ public static class ListExtensions
     /// <param name="source">The <c>List&lt;string></c> to check.</param>
     /// <param name="index">The index of the desired entry in the <c>List&lt;string></c>.</param>
     /// <returns><see langword="true"/> if the string at the specified index is <see langword="null"/>, empty, or the index is out of range.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static bool IsNullEmptyOrOutOfRange(this List<string> source, int index)
     {
         if (source is null)
@@ -85,7 +85,7 @@ public static class ListExtensions
     /// <param name="source">The <c>List&lt;string&rt;</c> to check.</param>
     /// <param name="index">The index of the desired entry in the <c>List&lt;string&rt;</c>.</param>
     /// <returns><see langword="true"/> if the string at the specified index is <see langword="null"/>, empty, contains only white-space characters, or the index is out of range.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static bool IsNullWhiteSpaceOrOutOfRange(this List<string?> source, int index)
     {
         if (source is null)

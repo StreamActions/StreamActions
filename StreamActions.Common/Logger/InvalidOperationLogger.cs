@@ -30,7 +30,7 @@ public static partial class InvalidOperationLogger
     #region Public Methods
 
     /// <summary>
-    /// Logs that an <see cref="ArgumentNullException"/> was thrown.
+    /// Logs that an <see cref="Argument<see langword="null"/>Exception"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="member">The member that threw the exception.</param>
@@ -43,7 +43,7 @@ public static partial class InvalidOperationLogger
     public static partial void ArgumentNull(this ILogger logger, string member, string message, Exception? exception = null);
 
     /// <summary>
-    /// Logs that an <see cref="ArgumentNullException"/> was thrown.
+    /// Logs that an <see cref="Argument<see langword="null"/>Exception"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="type">The type that threw the exception.</param>
@@ -54,7 +54,7 @@ public static partial class InvalidOperationLogger
     public static void ArgumentNull(this ILogger logger, string type, string member, string? paramName = null, string? message = null, Exception? exception = null) => logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName } }, message), exception);
 
     /// <summary>
-    /// Logs that an <see cref="ArgumentNullException"/> was thrown.
+    /// Logs that an <see cref="Argument<see langword="null"/>Exception"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="paramName">The message that was <see langword="null"/>.</param>
@@ -72,7 +72,7 @@ public static partial class InvalidOperationLogger
     }
 
     /// <summary>
-    /// Logs that an <see cref="ArgumentNullException"/> was thrown.
+    /// Logs that an <see cref="Argument<see langword="null"/>Exception"/> was thrown.
     /// </summary>
     /// <param name="exception">The exception that was thrown.</param>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>

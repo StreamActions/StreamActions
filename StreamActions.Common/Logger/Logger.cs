@@ -72,7 +72,7 @@ public static class Logger
     /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the member calling this method.</param>
     /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
     /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
-    /// <returns><code>[Namespace.]Type.Name</code> if a valid entry is available at the specified location in the stacktrace; <code>@[Namespace.]Type.Name</code> is appended if <paramref name="atLocation"/> also points to a valid entry; <code>null</code> if no valid entry.</returns>
+    /// <returns><code>[Namespace.]Type.Name</code> if a valid entry is available at the specified location in the stacktrace; <code>@[Namespace.]Type.Name</code> is appended if <paramref name="atLocation"/> also points to a valid entry; <code><see langword="null"/></code> if no valid entry.</returns>
     public static string GetCaller(int selfLocation = 2, int? atLocation = null, bool addNamespace = false)
     {
         StackTrace st = new(selfLocation);
@@ -172,7 +172,7 @@ public static class Logger
     /// </summary>
     /// <param name="t">The type to create the logger for. The fully qualified name of the type will be the logging category.</param>
     /// <returns>An <see cref="ILogger"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="t"/> is null; <see cref="Type.FullName"/> is null, blank, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="t"/> is null; <see cref="Type.FullName"/> is <see langword="null"/>, blank, or whitespace.</exception>
     public static ILogger GetLogger(Type t) => GetLogger(t?.FullName);
 
     /// <summary>
@@ -180,7 +180,7 @@ public static class Logger
     /// </summary>
     /// <param name="category">The logging category.</param>
     /// <returns>An <see cref="ILogger"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="category"/> is null, blank, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="category"/> is <see langword="null"/>, blank, or whitespace.</exception>
     public static ILogger GetLogger(string? category) => string.IsNullOrWhiteSpace(category) ? throw new ArgumentNullException(nameof(category)) : _loggerFactory.CreateLogger(category);
 
     #endregion Public Methods

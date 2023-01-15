@@ -37,7 +37,7 @@ public static partial class Util
     /// <param name="queryParams">The query parameters.</param>
     /// <param name="fragmentParams">The fragment parameters.</param>
     /// <returns>A <see cref="Uri"/> with all query and fragment parameters escaped and appended.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="baseUri"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="baseUri"/> is <see langword="null"/>.</exception>
     public static Uri BuildUri(Uri baseUri, IEnumerable<KeyValuePair<string, IEnumerable<string>>>? queryParams = null, IEnumerable<KeyValuePair<string, IEnumerable<string>>>? fragmentParams = null)
     {
         if (baseUri is null)
