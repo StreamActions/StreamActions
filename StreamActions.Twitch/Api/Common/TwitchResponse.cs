@@ -30,7 +30,7 @@ public record TwitchResponse
     /// The HTTP status code as indicated by the response JSON.
     /// </summary>
     [JsonPropertyName("status")]
-    public HttpStatusCode Status { get; init; } = HttpStatusCode.OK;
+    public HttpStatusCode Status { get; internal set; } = HttpStatusCode.OK;
 
     /// <summary>
     /// The string name of <see cref="Status"/>.

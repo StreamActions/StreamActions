@@ -49,6 +49,11 @@ public static class HttpResponseMessageExtensions
 
         response ??= (T)new TwitchResponse() { Status = message.StatusCode };
 
+        if (response.Status != message.StatusCode)
+        {
+            response.Status = message.StatusCode;
+        }
+
         return response;
     }
 
