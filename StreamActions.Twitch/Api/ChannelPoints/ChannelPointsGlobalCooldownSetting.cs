@@ -40,5 +40,6 @@ public sealed record ChannelPointsGlobalCooldownSetting
     /// <summary>
     /// The cooldown period.
     /// </summary>
+    [JsonIgnore]
     public TimeSpan? GlobalCooldown => this.GlobalCooldownSeconds.HasValue ? TimeSpan.FromSeconds(this.GlobalCooldownSeconds.Value) : null;
 }
