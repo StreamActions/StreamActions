@@ -63,7 +63,7 @@ public sealed record ChannelPointsReward
     public Images? Image { get; init; }
 
     /// <summary>
-    /// The background color to use for the reward. The color is in Hex format (for example, <code>#00E5CB</code>).
+    /// The background color to use for the reward. The color is in Hex format, for example, <c>#00E5CB</c>.
     /// </summary>
     [JsonPropertyName("background_color")]
     public string? BackgroundColor { get; init; }
@@ -135,8 +135,8 @@ public sealed record ChannelPointsReward
     public Images? DefaultImage { get; init; }
 
     /// <summary>
-    /// A Boolean value that determines whether redemptions should be set to <code>FULFILLED</code> status immediately when a reward is redeemed.
-    /// If <see langword="false"/>, status is set to <code>UNFULFILLED</code> and follows the normal request queue process.
+    /// A Boolean value that determines whether redemptions should be set to <c>FULFILLED</c> status immediately when a reward is redeemed.
+    /// If <see langword="false"/>, status is set to <c>UNFULFILLED</c> and follows the normal request queue process.
     /// </summary>
     [JsonPropertyName("should_redemptions_skip_request_queue")]
     public bool? ShouldRedemptionsSkipRequestQueue { get; init; }
@@ -226,7 +226,7 @@ public sealed record ChannelPointsReward
     /// <remarks>
     /// <para>
     /// The app used to create the reward is the only app that may delete it.
-    /// If the reward has any redemptions with status <code>UNFULFILLED</code> at the time the reward is deleted, the redemption statuses are marked as <code>FULFILLED</code>.
+    /// If the reward has any redemptions with status <c>UNFULFILLED</c> at the time the reward is deleted, the redemption statuses are marked as <c>FULFILLED</c>.
     /// </para>
     /// </remarks>
     public static async Task<TwitchResponse?> DeleteCustomReward(TwitchSession session, string broadcasterId, Guid id)
