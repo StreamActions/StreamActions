@@ -47,7 +47,6 @@
     <Folder Include="Api\Search\" />
     <Folder Include="Api\Schedule\" />
     <Folder Include="Api\Predictions\" />
-    <Folder Include="Extensions\" />
   </ItemGroup>
 
 </Project>

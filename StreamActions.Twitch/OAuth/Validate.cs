@@ -17,10 +17,11 @@
  */
 
 using StreamActions.Common.Attributes;
+using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.OAuth;
@@ -31,7 +32,7 @@ namespace StreamActions.Twitch.OAuth;
 [ETag("https://dev.twitch.tv/docs/authentication/validate-tokens", "81447f40c4fba5d6daf3b948eaf73f32199d75a86593e52be3be863883bc2875",
     "2022-10-16T20:43Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
         "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
-public sealed record Validate : TwitchResponse
+public sealed record Validate : JsonApiResponse
 {
     /// <summary>
     /// The returned Client Id attached to the validated OAuth token.

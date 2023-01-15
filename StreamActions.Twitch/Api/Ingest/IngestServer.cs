@@ -17,8 +17,8 @@
  */
 
 using StreamActions.Common.Attributes;
+using StreamActions.Common.Extensions;
 using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Ingest;

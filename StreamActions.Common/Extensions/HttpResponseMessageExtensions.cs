@@ -16,12 +16,11 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Extensions;
+using StreamActions.Common.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace StreamActions.Twitch.Extensions;
+namespace StreamActions.Common.Extensions;
 
 /// <summary>
 /// Contains extension members to <see cref="HttpContent"/>.
@@ -38,7 +37,7 @@ public static class HttpResponseMessageExtensions
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <typeparam name="T">The target type to deserialize to.</typeparam>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    public static async Task<T?> ReadFromJsonAsync<T>(this HttpResponseMessage message, JsonSerializerOptions? options, CancellationToken cancellationToken = default) where T : TwitchResponse
+    public static async Task<T?> ReadFromJsonAsync<T>(this HttpResponseMessage message, JsonSerializerOptions? options, CancellationToken cancellationToken = default) where T : JsonApiResponse
     {
         if (message is null)
         {
@@ -47,7 +46,7 @@ public static class HttpResponseMessageExtensions
 
         T? response = await message.Content.ReadFromJsonAsync<T>(options, cancellationToken).ConfigureAwait(false);
 
-        response ??= (T)new TwitchResponse() { Status = message.StatusCode };
+        response ??= (T)new JsonApiResponse() { Status = message.StatusCode };
 
         if (response.Status != message.StatusCode)
         {

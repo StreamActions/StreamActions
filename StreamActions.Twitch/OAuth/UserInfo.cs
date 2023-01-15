@@ -17,11 +17,12 @@
  */
 
 using StreamActions.Common.Attributes;
+using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
-using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.OAuth;
@@ -32,7 +33,7 @@ namespace StreamActions.Twitch.OAuth;
 [ETag("https://dev.twitch.tv/docs/authentication/getting-tokens-oidc", "4fecd89165e854442989c1f5f98d8642a645ff36f81c7797764a58ba29e879e6",
     "2022-10-16T21:22Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
         "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
-public sealed record UserInfo : TwitchResponse
+public sealed record UserInfo : JsonApiResponse
 {
     /// <summary>
     /// Audience: client ID of the application requesting a user's authorization.

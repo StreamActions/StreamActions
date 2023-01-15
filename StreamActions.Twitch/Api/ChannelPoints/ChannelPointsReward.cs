@@ -22,10 +22,11 @@ using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Globalization;
-using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 using System.Drawing;
 using System.Net.Http.Json;
+using StreamActions.Common.Net;
+using StreamActions.Common.Extensions;
 
 namespace StreamActions.Twitch.Api.ChannelPoints;
 
@@ -423,7 +424,7 @@ public sealed record ChannelPointsReward
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster that created the custom reward. This ID must match the user ID found in the OAuth token.</param>
     /// <param name="id">The ID of the custom reward to delete.</param>
-    /// <returns>A <see cref="TwitchResponse"/> containing the response code.</returns>
+    /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="id"/> is <see cref="Guid.Empty"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRedemptions"/>.</exception>
@@ -435,7 +436,7 @@ public sealed record ChannelPointsReward
     /// If the reward has any redemptions with status <c>UNFULFILLED</c> at the time the reward is deleted, the redemption statuses are marked as <c>FULFILLED</c>.
     /// </para>
     /// </remarks>
-    public static async Task<TwitchResponse?> DeleteCustomReward(TwitchSession session, string broadcasterId, Guid id)
+    public static async Task<JsonApiResponse?> DeleteCustomReward(TwitchSession session, string broadcasterId, Guid id)
     {
         if (session is null)
         {
@@ -462,6 +463,6 @@ public sealed record ChannelPointsReward
 
         Uri uri = Util.BuildUri(new("/channel_points/custom_rewards"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<TwitchResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

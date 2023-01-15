@@ -16,7 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.Api.Common;
+using StreamActions.Common.Net;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Ingest;
@@ -24,7 +24,7 @@ namespace StreamActions.Twitch.Api.Ingest;
 /// <summary>
 /// An Ingests response.
 /// </summary>
-public sealed record IngestResponse : TwitchResponse
+public sealed record IngestResponse : JsonApiResponse
 {
     /// <summary>
     /// The data array.

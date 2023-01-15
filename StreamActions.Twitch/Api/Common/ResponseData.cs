@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Net;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Common;
@@ -24,7 +25,7 @@ namespace StreamActions.Twitch.Api.Common;
 /// A Helix response with a data array.
 /// </summary>
 /// <typeparam name="TDataType">The type representing the returned data.</typeparam>
-public record ResponseData<TDataType> : TwitchResponse
+public record ResponseData<TDataType> : JsonApiResponse
 {
     /// <summary>
     /// The data array.

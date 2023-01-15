@@ -20,9 +20,9 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
-using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
 using System.Net.Http.Json;
+using StreamActions.Common.Extensions;
 
 namespace StreamActions.Twitch.Api.Ads;
 

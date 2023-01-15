@@ -20,8 +20,8 @@ using StreamActions.Common;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using System.Globalization;
-using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
+using StreamActions.Common.Extensions;
 
 namespace StreamActions.Twitch.Api.Bits;
 

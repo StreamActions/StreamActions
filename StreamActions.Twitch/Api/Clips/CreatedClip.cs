@@ -22,8 +22,9 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
-using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
+using StreamActions.Common.Net;
+using StreamActions.Common.Extensions;
 
 namespace StreamActions.Twitch.Api.Clips;
 
@@ -56,7 +57,7 @@ public sealed record CreatedClip
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">ID of the stream from which the clip will be made.</param>
     /// <param name="hasDelay">If false, the clip is captured from the live stream when the API is called; otherwise, a delay is added before the clip is captured (to account for the brief delay between the broadcaster's stream and the viewer's experience of that stream).</param>
-    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="CreatedClip"/> containing the response. The <see cref="TwitchResponse.Status"/> will be 0 if <see cref="RateLimiter"/> timed out waiting.</returns>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="CreatedClip"/> containing the response. The <see cref="JsonApiResponse.Status"/> will be 0 if <see cref="RateLimiter"/> timed out waiting.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ClipsEdit"/>.</exception>

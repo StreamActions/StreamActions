@@ -19,12 +19,12 @@
 using System.Net;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Common;
+namespace StreamActions.Common.Net;
 
 /// <summary>
-/// Base record for Twitch API responses. Indicates request status code and error message if not success.
+/// Base record for JSON API responses. Indicates request status code and error message if not success.
 /// </summary>
-public record TwitchResponse
+public record JsonApiResponse
 {
     /// <summary>
     /// The HTTP status code as indicated by the response JSON.
