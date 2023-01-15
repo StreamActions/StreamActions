@@ -65,8 +65,18 @@ public static partial class Util
 
                 if (kvp.Value.Any())
                 {
+                    bool innerFirst = true;
                     foreach (string value in kvp.Value)
                     {
+                        if (!innerFirst)
+                        {
+                            _ = relativeUri.Append('&');
+                        }
+                        else
+                        {
+                            innerFirst = false;
+                        }
+
                         _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
                     }
                 }
@@ -95,8 +105,18 @@ public static partial class Util
 
                 if (kvp.Value.Any())
                 {
+                    bool innerFirst = true;
                     foreach (string value in kvp.Value)
                     {
+                        if (!innerFirst)
+                        {
+                            _ = relativeUri.Append('&');
+                        }
+                        else
+                        {
+                            innerFirst = false;
+                        }
+
                         _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
                     }
                 }
