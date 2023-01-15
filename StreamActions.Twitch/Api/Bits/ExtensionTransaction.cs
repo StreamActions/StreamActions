@@ -111,8 +111,8 @@ public sealed record ExtensionTransaction
     /// <param name="after">The cursor used to fetch the next page of data. This only applies to queries without ID.</param>
     /// <param name="first">Maximum number of objects to return. Maximum: 100. Default: 20.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ExtensionTransaction"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="extensionId"/> is null, empty, or whitespace.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not null and contains more than 100 elements.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="extensionId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not <see langword="null"/> and contains more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="after"/> is specified at the same time as a valid value in <paramref name="id"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<ResponseData<ExtensionTransaction>?> GetExtensionTransactions(TwitchSession session, string extensionId, IEnumerable<string>? id = null, string? after = null, int first = 20)

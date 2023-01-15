@@ -32,7 +32,7 @@ public sealed record PollEndParameters
     /// <param name="broadcasterId">The broadcaster running polls. Provided broadcaster_id must match the user_id in the user OAuth token.</param>
     /// <param name="id">ID of the poll.</param>
     /// <param name="status">The poll status to be set. Valid values: <see cref="Poll.PollStatus.TERMINATED"/> or <see cref="Poll.PollStatus.ARCHIVED"/>.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> or <paramref name="id"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> or <paramref name="id"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="status"/> is not a valid value.</exception>
     public PollEndParameters(string broadcasterId, string id, Poll.PollStatus status)
     {

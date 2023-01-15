@@ -30,7 +30,7 @@ public sealed record PollCreationChoice
     /// Constructor.
     /// </summary>
     /// <param name="title">Text displayed for the choice. Maximum: 25 characters.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="title"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="title"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="title"/> is longer than 25 characters.</exception>
     public PollCreationChoice(string title)
     {

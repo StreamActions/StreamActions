@@ -75,7 +75,7 @@ public sealed record Validate : TwitchResponse
     /// <param name="session">The <see cref="TwitchSession"/> to validate.</param>
     /// <param name="baseAddress">The uri to the Validate endpoint.</param>
     /// <returns>A <see cref="Validate"/> with the current token data or a Twitch error.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     public static async Task<Validate?> ValidateOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/validate")
     {
         if (session is null)

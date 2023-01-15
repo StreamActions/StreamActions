@@ -236,7 +236,7 @@ public sealed record Video
     /// <param name="sort">Sort order of the videos. Default: <see cref="VideoSort.Time"/>.</param>
     /// <param name="type">Type of video. Default: <see cref="VideoType.All"/>.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Video"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; did not specify a valid value for one of <paramref name="id"/>, <paramref name="userId"/>, or <paramref name="gameId"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; did not specify a valid value for one of <paramref name="id"/>, <paramref name="userId"/>, or <paramref name="gameId"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Specified more than one of the mutually exclusive parameters <paramref name="id"/>, <paramref name="userId"/>, or <paramref name="gameId"/>; <paramref name="id"/> is defined and has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="after"/> and <paramref name="before"/> were both defined.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
@@ -342,7 +342,7 @@ public sealed record Video
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="id">ID of the video(s) to be deleted. Limit: 5.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with the IDs of the videos that were deleted.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="id"/> is null or empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="id"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> has more than 5 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVideos"/>.</exception>

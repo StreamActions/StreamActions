@@ -124,7 +124,7 @@ public sealed record UserInfo : TwitchResponse
     /// <param name="session">The <see cref="TwitchSession"/> to get user info for.</param>
     /// <param name="baseAddress">The uri to the UserInfo endpoint. <see langword="null"/> for default.</param>
     /// <returns>A <see cref="UserInfo"/> with the response data.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.OpenID"/>.</exception>
     public static async Task<UserInfo?> GetUserInfo(TwitchSession session, string? baseAddress = null)

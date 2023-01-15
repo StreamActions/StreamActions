@@ -99,7 +99,7 @@ public sealed record Leaderboard
     /// <param name="startedAt">Timestamp for the period over which the returned data is aggregated. Must be in RFC 3339 format. If this is not provided, data is aggregated over the current period; e.g., the current day/week/month/year. Can not be used with a <paramref name="period"/> of <see cref="LeaderboardPeriod.All"/>.</param>
     /// <param name="userId">ID of the user whose results are returned; i.e., the person who paid for the Bits.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Leaderboard"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.BitsRead"/>.</exception>
     /// <exception cref="InvalidOperationException">Specified <paramref name="startedAt"/> while the value of <paramref name="period"/> was <see cref="LeaderboardPeriod.All"/>.</exception>

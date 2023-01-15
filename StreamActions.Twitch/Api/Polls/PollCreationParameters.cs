@@ -35,7 +35,7 @@ public sealed record PollCreationParameters
     /// <param name="duration">Total duration for the poll (in seconds). Minimum: 15. Maximum: 1800.</param>
     /// <param name="channelPointsVotingEnabled">Indicates if Channel Points can be used for voting. Default: <see langword="false"/>.</param>
     /// <param name="channelPointsPerVote">Number of Channel Points required to vote once with Channel Points. Minimum: 0. Maximum: 1000000.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> or <paramref name="title"/> is null, empty, or whitespace; <paramref name="choices"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> or <paramref name="title"/> is <see langword="null"/>, empty, or whitespace; <paramref name="choices"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="choices"/> has less than 2 or more than 5 elements; <paramref name="title"/> is more than 60 characters.</exception>
     public PollCreationParameters(string broadcasterId, string title, IReadOnlyList<PollCreationChoice> choices, int duration, bool channelPointsVotingEnabled = false, int channelPointsPerVote = 0)
     {

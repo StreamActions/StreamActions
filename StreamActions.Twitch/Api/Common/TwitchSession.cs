@@ -41,7 +41,7 @@ public sealed record TwitchSession : IDisposable
     /// <summary>
     /// The OAuth token data.
     /// </summary>
-    /// <exception cref="ArgumentNullException">Attempt to set to null.</exception>
+    /// <exception cref="ArgumentNullException">Attempt to set to <see langword="null"/>.</exception>
     public TwitchToken? Token
     {
         get => this._token;

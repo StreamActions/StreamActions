@@ -16,19 +16,18 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Ingest;
+namespace StreamActions.Twitch.Api.ChannelPoints;
 
 /// <summary>
-/// An Ingests response.
+/// The parameters for <see cref="ChannelPointsReward.UpdateCustomReward(Common.TwitchSession, string, Guid, ChannelPointsRewardUpdateParameters)"/>
 /// </summary>
-public sealed record IngestResponse : TwitchResponse
+public record ChannelPointsRewardUpdateParameters : ChannelPointsRewardCreationParameters
 {
     /// <summary>
-    /// The data array.
+    /// A Boolean value that determines whether the reward is currently paused. Viewers can't redeem paused rewards.
     /// </summary>
-    [JsonPropertyName("ingests")]
-    public IReadOnlyList<IngestServer>? Ingests { get; init; }
+    [JsonPropertyName("is_paused")]
+    public bool? IsPaused { get; init; }
 }

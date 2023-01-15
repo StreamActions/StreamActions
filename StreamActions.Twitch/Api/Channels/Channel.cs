@@ -22,6 +22,7 @@ using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
+using System.Net.Http.Json;
 
 namespace StreamActions.Twitch.Api.Channels;
 
@@ -84,7 +85,7 @@ public sealed record Channel
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster whose channel you want to get. You may specify a maximum of 100 IDs.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Channel"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null or has 0 elements.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/> or has 0 elements.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="broadcasterId"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<ResponseData<Channel>?> GetChannelInformation(TwitchSession session, IEnumerable<string> broadcasterId)
@@ -118,7 +119,7 @@ public sealed record Channel
     /// <param name="broadcasterId">ID of the channel to be updated.</param>
     /// <param name="parameters">The <see cref="ModifyChannelParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="TwitchResponse"/> with the response code.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageBroadcast"/>.</exception>
     public static async Task<TwitchResponse?> ModifyChannelInformation(TwitchSession session, string broadcasterId, ModifyChannelParameters parameters)

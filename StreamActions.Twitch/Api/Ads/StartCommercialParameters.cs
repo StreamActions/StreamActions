@@ -31,7 +31,7 @@ public sealed record StartCommercialParameters
     /// </summary>
     /// <param name="broadcasterId">ID of the channel requesting a commercial.</param>
     /// <param name="length">Desired length of the commercial in seconds.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> is null, empty, or whitespace; <paramref name="length"/> is <see cref="CommercialLength.None"/></exception>
+    /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="length"/> is <see cref="CommercialLength.None"/></exception>
     public StartCommercialParameters(string broadcasterId, CommercialLength length)
     {
         if (string.IsNullOrWhiteSpace(broadcasterId))

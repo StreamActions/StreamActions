@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Drawing;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -25,7 +26,7 @@ namespace StreamActions.Common;
 /// <summary>
 /// Utility Members.
 /// </summary>
-public static class Util
+public static partial class Util
 {
     #region Public Methods
 
@@ -118,9 +119,9 @@ public static class Util
     public static TimeSpan DurationStringToTimeSpan(string duration)
     {
         TimeSpan t = new(0);
-        Match m = _durationRegex.Match(duration);
+        Match m = DurationRegex().Match(duration);
 
-        foreach (Group g in m.Groups)
+        foreach (Group g in m.Groups.Cast<Group>())
         {
             t = g.Name switch
             {
@@ -136,14 +137,74 @@ public static class Util
         return t;
     }
 
+    /// <summary>
+    /// Indicates if the input string is a valid hex triplet color.
+    /// </summary>
+    /// <param name="hexColor">The string to check.</param>
+    /// <returns><see langword="true"/> if the string is a valid hex triplet color.</returns>
+    /// <remarks>
+    /// <para>
+    /// This member only accepts full colors of the form <c>#RRGGBB</c>.
+    /// </para>
+    /// </remarks>
+    public static bool IsValidHexColor(string hexColor) => hexColor is not null && HexColorRegex().Match(hexColor).Success;
+
+    /// <summary>
+    /// Converts a hex triplet color to a <see cref="Color"/>.
+    /// </summary>
+    /// <param name="hexColor">The hex triplet to convert.</param>
+    /// <returns><see cref="Color.Empty"/> if the <c>#</c> was missing, any color component was missing, or a color component failed to parse; otherwise, the <see cref="Color"/>.</returns>
+    public static Color HexColorToColor(string hexColor)
+    {
+        Color c = Color.Empty;
+        Match m = HexColorRegex().Match(hexColor);
+
+        string? rs = null;
+        string? gs = null;
+        string? bs = null;
+
+        foreach (Group g in m.Groups.Cast<Group>())
+        {
+            switch (g.Name)
+            {
+                case "r":
+                    rs = g.Value; break;
+                case "g":
+                    gs = g.Value; break;
+                case "b":
+                    bs = g.Value; break;
+                default:
+                    break;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(rs) && !string.IsNullOrWhiteSpace(gs) && !string.IsNullOrWhiteSpace(bs))
+        {
+            try
+            {
+                c = Color.FromArgb(int.Parse(rs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(gs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(bs, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+            }
+            catch (FormatException) { }
+        }
+
+        return c;
+    }
+
     #endregion Public Methods
 
-    #region Private Fields
+    #region Private Methods
 
     /// <summary>
     /// The <see cref="Regex"/> capturing time segments for <see cref="DurationStringToTimeSpan(string)"/>.
     /// </summary>
-    private static readonly Regex _durationRegex = new("((?<weeks>[0-9]*)w)?((?<days>[0-9]*)d)?((?<hours>[0-9]*)h)?((?<minutes>[0-9]*)m)?((?<seconds>[0-9]*)s)?");
+    [GeneratedRegex("((?<weeks>[0-9]*)w)?((?<days>[0-9]*)d)?((?<hours>[0-9]*)h)?((?<minutes>[0-9]*)m)?((?<seconds>[0-9]*)s)?")]
+    private static partial Regex DurationRegex();
 
-    #endregion Private Fields
+    /// <summary>
+    /// The <see cref="Regex"/> validating hex colors.
+    /// </summary>
+    [GeneratedRegex("^#((?<r>[0-9A-Fa-f]{2})(?<g>[0-9A-Fa-f]{2})(?<b>[0-9A-Fa-f]{2}))$")]
+    private static partial Regex HexColorRegex();
+
+    #endregion Private Methods
 }

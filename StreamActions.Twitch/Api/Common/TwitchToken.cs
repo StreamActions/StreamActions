@@ -34,7 +34,7 @@ public sealed record TwitchToken
     /// <summary>
     /// The OAuth token.
     /// </summary>
-    /// <exception cref="ArgumentNullException">Attempt to set to null or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Attempt to set to <see langword="null"/> or whitespace.</exception>
     public string? OAuth
     {
         get => this._oauth;
@@ -75,7 +75,7 @@ public sealed record TwitchToken
     /// Checks if the specified scope is present in <see cref="Scopes"/>.
     /// </summary>
     /// <param name="scope">The scope to find.</param>
-    /// <returns><see langword="true"/> if <see cref="Scopes"/> is null or contains <paramref name="scope"/>.</returns>
+    /// <returns><see langword="true"/> if <see cref="Scopes"/> is <see langword="null"/> or contains <paramref name="scope"/>.</returns>
     public bool HasScope(string scope) => this.HasScope(Scope.Scopes.GetValueOrDefault(scope));
 
     /// <summary>

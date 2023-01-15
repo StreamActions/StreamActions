@@ -111,7 +111,7 @@ public sealed partial class TwitchApi : IApi
     /// <param name="clientId">A valid Twitch App Client Id.</param>
     /// <param name="clientSecret">A valid Twitch App Client Secret.</param>
     /// <param name="baseAddress">The base uri to Helix.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="clientId"/> is null or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="clientId"/> is <see langword="null"/> or whitespace.</exception>
     public static void Init(string clientId, string? clientSecret = null, string baseAddress = "https://api.twitch.tv/helix/")
     {
         if (string.IsNullOrWhiteSpace(clientId))

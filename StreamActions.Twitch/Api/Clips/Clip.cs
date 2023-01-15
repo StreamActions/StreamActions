@@ -128,10 +128,10 @@ public sealed record Clip
     public float? DurationSeconds { get; init; }
 
     /// <summary>
-    /// The zero-based offset, in seconds, to where the clip starts in the video (VOD). Is <c>null</c> if the video is not available or hasn't been created yet from the live stream.
+    /// The zero-based offset, in seconds, to where the clip starts in the video (VOD). Is <c><see langword="null"/></c> if the video is not available or hasn't been created yet from the live stream.
     /// </summary>
     /// <remarks>
-    /// Note that there's a delay between when a clip is created during a broadcast and when the offset is set. During the delay period, VodOffset is <c>null</c>. The delay is indeterminate, but is typically minutes long.
+    /// Note that there's a delay between when a clip is created during a broadcast and when the offset is set. During the delay period, VodOffset is <c><see langword="null"/></c>. The delay is indeterminate, but is typically minutes long.
     /// </remarks>
     [JsonPropertyName("vod_offset")]
     public int? VodOffset { get; init; }
@@ -149,7 +149,7 @@ public sealed record Clip
     /// <param name="startedAt">Starting date/time for returned clips. If this is specified, <paramref name="endedAt"/> also should be specified; otherwise, the <paramref name="endedAt"/> date/time will be 1 week after the <paramref name="startedAt"/> value.</param>
     /// <param name="endedAt">Ending date/time for returned clips. If this is specified, <paramref name="startedAt"/> also must be specified.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Clip"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; did not specify a valid value for one of <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="startedAt"/> is null while <paramref name="endedAt"/> is defined.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; did not specify a valid value for one of <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="startedAt"/> is <see langword="null"/> while <paramref name="endedAt"/> is defined.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Specified more than one of the mutually exclusive parameters <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="id"/> is defined and has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="after"/> and <paramref name="before"/> were both defined.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>

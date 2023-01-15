@@ -24,6 +24,8 @@ using StreamActions.Twitch.OAuth;
 using System.Globalization;
 using StreamActions.Twitch.Extensions;
 using System.Text.Json.Serialization;
+using System.Drawing;
+using System.Net.Http.Json;
 
 namespace StreamActions.Twitch.Api.ChannelPoints;
 
@@ -63,10 +65,16 @@ public sealed record ChannelPointsReward
     public Images? Image { get; init; }
 
     /// <summary>
-    /// The background color to use for the reward. The color is in Hex format, for example, <c>#00E5CB</c>.
+    /// The background color to use for the reward, as a string. The color is in Hex format (for example, <c>#00E5CB</c>).
     /// </summary>
     [JsonPropertyName("background_color")]
-    public string? BackgroundColor { get; init; }
+    public string? BackgroundColorString { get; init; }
+
+    /// <summary>
+    /// The background color to use for the reward.
+    /// </summary>
+    [JsonIgnore]
+    public Color? BackgroundColor => Util.IsValidHexColor(this.BackgroundColorString ?? "") ? Util.HexColorToColor(this.BackgroundColorString ?? "") : null;
 
     /// <summary>
     /// A Boolean value that determines whether the reward is enabled. Disabled rewards aren't shown to the user.
@@ -163,7 +171,7 @@ public sealed record ChannelPointsReward
     /// <param name="id">A list of IDs to filter the rewards by. You may specify a maximum of 50 IDs.</param>
     /// <param name="onlyManageableRewards">A Boolean value that determines whether the response contains only the custom rewards that the app may manage (the app is identified by the ID in the Client-Id header). Set to <see langword="true"/> to get only the custom rewards that the app may manage. The default is <see langword="false"/>.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is defined and has more than 50 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadRedemptions"/>.</exception>
@@ -213,19 +221,217 @@ public sealed record ChannelPointsReward
     }
 
     /// <summary>
+    /// Creates a Custom Reward in the broadcaster's channel.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster to add the custom reward to. This ID must match the user ID found in the OAuth token.</param>
+    /// <param name="parameters">The custom reward to create.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/>, <paramref name="parameters"/>, or <see cref="ChannelPointsRewardCreationParameters.Cost"/> is null; <paramref name="broadcasterId"/> or <see cref="ChannelPointsRewardCreationParameters.Title"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.Cost"/> is < 1; <see cref="ChannelPointsRewardCreationParameters.Title"/> has more than 45 characters; <see cref="ChannelPointsRewardCreationParameters.Prompt"/> has more than 200 characters.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="ChannelPointsRewardCreationParameters.BackgroundColor"/> is not a valid hex triplet in the form <c>#RRGGBB</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is enabled and < 1.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRedemptions"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// There is a limit of 50 Custom Rewards on a channel at a time. This includes both enabled and disabled Custom Rewards.
+    /// </para>
+    /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
+    public static async Task<ResponseData<ChannelPointsReward>?> CreateCustomReward(TwitchSession session, string broadcasterId, ChannelPointsRewardCreationParameters parameters)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters is null)
+        {
+            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(parameters.Title))
+        {
+            throw new ArgumentNullException(nameof(parameters.Title)).Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.Title.Length > 45)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "length must be <= 45").Log(TwitchApi.GetLogger());
+        }
+
+        if (!parameters.Cost.HasValue)
+        {
+            throw new ArgumentNullException(nameof(parameters.Cost)).Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.Cost.Value < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.Cost), parameters.Cost.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireToken(Scope.ChannelManageRedemptions);
+
+        if (!string.IsNullOrWhiteSpace(parameters.Prompt) && parameters.Prompt.Length > 200)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.Prompt), parameters.Prompt.Length, "length must be <= 200").Log(TwitchApi.GetLogger());
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.BackgroundColor) && !Util.IsValidHexColor(parameters.BackgroundColor))
+        {
+            throw new InvalidOperationException(nameof(parameters.BackgroundColor) + " must be a valid hex triplet (#RRGGBB)").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.IsMaxPerStreamEnabled.GetValueOrDefault(false) && parameters.MaxPerStream.GetValueOrDefault(0) < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.IsMaxPerUserPerStreamEnabled.GetValueOrDefault(false) && parameters.MaxPerUserPerStream.GetValueOrDefault(0) < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.IsGlobalCooldownEnabled.GetValueOrDefault(false) && parameters.GlobalCooldownSeconds.GetValueOrDefault(0) < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        Dictionary<string, IEnumerable<string>> queryParams = new()
+        {
+            { "broadcaster_id", new List<string> { broadcasterId } }
+        };
+
+        using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
+        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards"), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<ChannelPointsReward>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates a custom reward.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster to add the custom reward to. This ID must match the user ID found in the OAuth token.</param>
+    /// <param name="parameters">The custom reward to create.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null; <paramref name="id"/> is <see cref="Guid.Empty"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <see cref="ChannelPointsRewardCreationParameters.Title"/> is not <see langword="null"/> and is empty or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.Cost"/> is < 1; <see cref="ChannelPointsRewardCreationParameters.Title"/> has more than 45 characters; <see cref="ChannelPointsRewardCreationParameters.Prompt"/> has more than 200 characters.</exception>
+    /// <exception cref="InvalidOperationException">No parameters were set in <paramref name="parameters"/>; <see cref="ChannelPointsRewardCreationParameters.BackgroundColor"/> is not a valid hex triplet in the form <c>#RRGGBB</c>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is < 1.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRedemptions"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// The app used to create the reward is the only app that may update the reward.
+    /// </para>
+    /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
+    public static async Task<ResponseData<ChannelPointsReward>?> UpdateCustomReward(TwitchSession session, string broadcasterId, Guid id, ChannelPointsRewardUpdateParameters parameters)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+        }
+
+        if (id == Guid.Empty)
+        {
+            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters is null)
+        {
+            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireToken(Scope.ChannelManageRedemptions);
+
+        if (parameters.Title is not null && string.IsNullOrWhiteSpace(parameters.Title))
+        {
+            throw new ArgumentNullException(nameof(parameters.Title)).Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.Title is not null && parameters.Title.Length > 45)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "length must be <= 45").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.Cost.HasValue && parameters.Cost.Value < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.Cost), parameters.Cost.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.Prompt) && parameters.Prompt.Length > 200)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.Prompt), parameters.Prompt.Length, "length must be <= 200").Log(TwitchApi.GetLogger());
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.BackgroundColor) && !Util.IsValidHexColor(parameters.BackgroundColor))
+        {
+            throw new InvalidOperationException(nameof(parameters.BackgroundColor) + " must be a valid hex triplet (#RRGGBB)").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.MaxPerStream.HasValue && parameters.MaxPerStream.Value < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.MaxPerUserPerStream.HasValue && parameters.MaxPerUserPerStream.Value < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.GlobalCooldownSeconds.HasValue && parameters.GlobalCooldownSeconds.Value < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        Dictionary<string, IEnumerable<string>> queryParams = new()
+        {
+            { "broadcaster_id", new List<string> { broadcasterId } },
+            { "id", new List<string> { id.ToString("D", CultureInfo.InvariantCulture) } }
+        };
+
+        if (!(parameters.BackgroundColor is not null || parameters.IsEnabled.HasValue || parameters.Cost.HasValue || parameters.Title is not null || parameters.Prompt is not null
+            || parameters.IsPaused.HasValue || parameters.IsUserInputRequired.HasValue || parameters.IsMaxPerStreamEnabled.HasValue || parameters.MaxPerStream.HasValue
+            || parameters.IsMaxPerUserPerStreamEnabled.HasValue || parameters.MaxPerUserPerStream.HasValue || parameters.IsGlobalCooldownEnabled.HasValue
+            || parameters.GlobalCooldownSeconds.HasValue || parameters.ShouldRedemptionsSkipRequestQueue.HasValue))
+        {
+            throw new InvalidOperationException("must specify at least one parameter to update").Log(TwitchApi.GetLogger());
+        }
+
+        using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
+        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards"), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<ChannelPointsReward>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Deletes a custom reward that the broadcaster created.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster that created the custom reward. This ID must match the user ID found in the OAuth token.</param>
     /// <param name="id">The ID of the custom reward to delete.</param>
-    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is null, empty, or whitespace.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is defined and has more than 50 elements.</exception>
+    /// <returns>A <see cref="TwitchResponse"/> containing the response code.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="id"/> is <see cref="Guid.Empty"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRedemptions"/>.</exception>
     /// <remarks>
     /// <para>
     /// The app used to create the reward is the only app that may delete it.
+    /// </para>
+    /// <para>
     /// If the reward has any redemptions with status <c>UNFULFILLED</c> at the time the reward is deleted, the redemption statuses are marked as <c>FULFILLED</c>.
     /// </para>
     /// </remarks>

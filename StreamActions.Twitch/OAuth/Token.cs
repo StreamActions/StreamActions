@@ -94,7 +94,7 @@ public sealed record Token : TwitchResponse
     /// <param name="session">The <see cref="TwitchSession"/> to refresh.</param>
     /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> for default.</param>
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="session"/> does not have a valid refresh token.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<Token?> RefreshOAuth(TwitchSession session, string? baseAddress = null)
@@ -128,7 +128,7 @@ public sealed record Token : TwitchResponse
     /// <param name="redirectUri">The redirect Uri that was used.</param>
     /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> for default.</param>
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="code"/> is null or whitespace, or <paramref name="redirectUri"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="code"/> is null or whitespace, or <paramref name="redirectUri"/> is <see langword="null"/>.</exception>
     public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null)
     {
         if (string.IsNullOrWhiteSpace(code))
@@ -157,7 +157,7 @@ public sealed record Token : TwitchResponse
     /// <param name="session">The <see cref="TwitchSession"/> to revoke.</param>
     /// <param name="baseAddress">The uri to the Revoke endpoint.</param>
     /// <returns>A <see cref="TwitchResponse"/> with the response code.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<TwitchResponse?> RevokeOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/revoke")
     {
