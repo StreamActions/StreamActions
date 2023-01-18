@@ -223,7 +223,7 @@ public static partial class Util
     /// <summary>
     /// The <see cref="Regex"/> validating hex colors.
     /// </summary>
-    [GeneratedRegex("^#((?<r>[0-9A-F]{2})(?<g>[0-9A-F]{2})(?<b>[0-9A-F]{2}))$")]
+    [GeneratedRegex("^#((?<r>[0-9A-Fa-f]{2})(?<g>[0-9A-Fa-f]{2})(?<b>[0-9A-Fa-f]{2}))$")]
     private static partial Regex HexColorRegex();
 
     #endregion Private Methods

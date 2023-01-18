@@ -26,7 +26,7 @@ namespace StreamActions.Twitch.Api.ChannelPoints;
 public record ChannelPointsRewardCreationParameters
 {
     /// <summary>
-    /// The background color to use for the reward, as a string. The color is in Hex format (for example, <c>#00E5CB</c>) and must be in UPPER-CASE.
+    /// The background color to use for the reward, as a string. The color is in Hex format (for example, <c>#00E5CB</c>).
     /// </summary>
     [JsonPropertyName("background_color")]
     public string? BackgroundColor { get; init; }

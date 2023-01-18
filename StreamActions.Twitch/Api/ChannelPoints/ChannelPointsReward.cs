@@ -320,6 +320,11 @@ public sealed record ChannelPointsReward
             throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.Value, "must be >= 1").Log(TwitchApi.GetLogger());
         }
 
+        if (!string.IsNullOrWhiteSpace(parameters.BackgroundColor) && parameters.BackgroundColor != parameters.BackgroundColor.ToUpperInvariant())
+        {
+            parameters = parameters with { BackgroundColor = parameters.BackgroundColor.ToUpperInvariant() };
+        }
+
         Dictionary<string, IEnumerable<string>> queryParams = new()
         {
             { "broadcaster_id", new List<string> { broadcasterId } }
@@ -428,6 +433,11 @@ public sealed record ChannelPointsReward
         if (parameters.GlobalCooldownSeconds.HasValue && parameters.GlobalCooldownSeconds.Value < 1)
         {
             throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.BackgroundColor) && parameters.BackgroundColor != parameters.BackgroundColor.ToUpperInvariant())
+        {
+            parameters = parameters with { BackgroundColor = parameters.BackgroundColor.ToUpperInvariant() };
         }
 
         Dictionary<string, IEnumerable<string>> queryParams = new()
