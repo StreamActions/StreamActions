@@ -26,7 +26,7 @@ namespace StreamActions.Twitch.Api.ChannelPoints;
 public record ChannelPointsRewardCreationParameters
 {
     /// <summary>
-    /// The background color to use for the reward, as a string. The color is in Hex format (for example, <c>#00E5CB</c>).
+    /// The background color to use for the reward, as a string. The color is in Hex format (for example, <c>#00E5CB</c>) and must be in UPPER-CASE.
     /// </summary>
     [JsonPropertyName("background_color")]
     public string? BackgroundColor { get; init; }
@@ -64,36 +64,66 @@ public record ChannelPointsRewardCreationParameters
     /// <summary>
     /// A Boolean value that determines whether to limit the maximum number of redemptions allowed per live stream.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If this is not <see langword="null"/>, then <see cref="MaxPerStream"/> must also not be <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("is_max_per_stream_enabled")]
     public bool? IsMaxPerStreamEnabled { get; init; }
 
     /// <summary>
     /// The maximum number of redemptions allowed per live stream. The minimum value is 1.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If this is not <see langword="null"/>, then <see cref="IsMaxPerStreamEnabled"/> must also not be <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("max_per_stream")]
     public int? MaxPerStream { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether to limit the maximum number of redemptions allowed per user per stream.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If this is not <see langword="null"/>, then <see cref="MaxPerUserPerStream"/> must also not be <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("is_max_per_user_per_stream_enabled")]
     public bool? IsMaxPerUserPerStreamEnabled { get; init; }
 
     /// <summary>
     /// The maximum number of redemptions allowed per user per stream. The minimum value is 1.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If this is not <see langword="null"/>, then <see cref="IsMaxPerUserPerStreamEnabled"/> must also not be <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("max_per_user_per_stream")]
     public int? MaxPerUserPerStream { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether to apply a cooldown period between redemptions.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If this is not <see langword="null"/>, then <see cref="GlobalCooldownSeconds"/> must also not be <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("is_global_cooldown_enabled")]
     public bool? IsGlobalCooldownEnabled { get; init; }
 
     /// <summary>
     /// The cooldown period, in seconds. The minimum value is 1; however, the minimum value is 60 for it to be shown in the Twitch UX.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If this is not <see langword="null"/>, then <see cref="IsGlobalCooldownEnabled"/> must also not be <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("global_cooldown_seconds")]
     public int? GlobalCooldownSeconds { get; init; }
 

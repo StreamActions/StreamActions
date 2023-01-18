@@ -229,6 +229,7 @@ public sealed record ChannelPointsReward
     /// <param name="parameters">The custom reward to create.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/>, <paramref name="parameters"/>, or <see cref="ChannelPointsRewardCreationParameters.Cost"/> is null; <paramref name="broadcasterId"/> or <see cref="ChannelPointsRewardCreationParameters.Title"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><see cref="ChannelPointsRewardCreationParameters.IsMaxPerStreamEnabled"/>, <see cref="ChannelPointsRewardCreationParameters.IsMaxPerUserPerStreamEnabled"/>, or <see cref="ChannelPointsRewardCreationParameters.IsGlobalCooldownEnabled"/> and <see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> (respectively) are not both either <see langword="null"/> or set.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.Cost"/> is < 1; <see cref="ChannelPointsRewardCreationParameters.Title"/> has more than 45 characters; <see cref="ChannelPointsRewardCreationParameters.Prompt"/> has more than 200 characters.</exception>
     /// <exception cref="InvalidOperationException"><see cref="ChannelPointsRewardCreationParameters.BackgroundColor"/> is not a valid hex triplet in the form <c>#RRGGBB</c>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is enabled and < 1.</exception>
@@ -289,19 +290,34 @@ public sealed record ChannelPointsReward
             throw new InvalidOperationException(nameof(parameters.BackgroundColor) + " must be a valid hex triplet (#RRGGBB)").Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.IsMaxPerStreamEnabled.GetValueOrDefault(false) && parameters.MaxPerStream.GetValueOrDefault(0) < 1)
+        if (parameters.IsMaxPerStreamEnabled.HasValue != parameters.MaxPerStream.HasValue)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.IsMaxPerStreamEnabled) + "," + nameof(parameters.MaxPerStream), "must specify both or none").Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.IsMaxPerUserPerStreamEnabled.GetValueOrDefault(false) && parameters.MaxPerUserPerStream.GetValueOrDefault(0) < 1)
+        if (parameters.MaxPerStream.HasValue && parameters.MaxPerStream.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.Value, "must be >= 1").Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.IsGlobalCooldownEnabled.GetValueOrDefault(false) && parameters.GlobalCooldownSeconds.GetValueOrDefault(0) < 1)
+        if (parameters.IsMaxPerUserPerStreamEnabled.HasValue != parameters.MaxPerUserPerStream.HasValue)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.IsMaxPerUserPerStreamEnabled) + "," + nameof(parameters.MaxPerUserPerStream), "must specify both or none").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.MaxPerUserPerStream.HasValue && parameters.MaxPerUserPerStream.Value < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.IsGlobalCooldownEnabled.HasValue != parameters.GlobalCooldownSeconds.HasValue)
+        {
+            throw new ArgumentNullException(nameof(parameters.IsGlobalCooldownEnabled) + "," + nameof(parameters.GlobalCooldownSeconds), "must specify both or none").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.GlobalCooldownSeconds.HasValue && parameters.GlobalCooldownSeconds.Value < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.Value, "must be >= 1").Log(TwitchApi.GetLogger());
         }
 
         Dictionary<string, IEnumerable<string>> queryParams = new()
@@ -323,6 +339,7 @@ public sealed record ChannelPointsReward
     /// <param name="parameters">The custom reward to create.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null; <paramref name="id"/> is <see cref="Guid.Empty"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <see cref="ChannelPointsRewardCreationParameters.Title"/> is not <see langword="null"/> and is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><see cref="ChannelPointsRewardCreationParameters.IsMaxPerStreamEnabled"/>, <see cref="ChannelPointsRewardCreationParameters.IsMaxPerUserPerStreamEnabled"/>, or <see cref="ChannelPointsRewardCreationParameters.IsGlobalCooldownEnabled"/> and <see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> (respectively) are not both either <see langword="null"/> or set.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.Cost"/> is < 1; <see cref="ChannelPointsRewardCreationParameters.Title"/> has more than 45 characters; <see cref="ChannelPointsRewardCreationParameters.Prompt"/> has more than 200 characters.</exception>
     /// <exception cref="InvalidOperationException">No parameters were set in <paramref name="parameters"/>; <see cref="ChannelPointsRewardCreationParameters.BackgroundColor"/> is not a valid hex triplet in the form <c>#RRGGBB</c>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is < 1.</exception>
@@ -383,19 +400,34 @@ public sealed record ChannelPointsReward
             throw new InvalidOperationException(nameof(parameters.BackgroundColor) + " must be a valid hex triplet (#RRGGBB)").Log(TwitchApi.GetLogger());
         }
 
+        if (parameters.IsMaxPerStreamEnabled.HasValue != parameters.MaxPerStream.HasValue)
+        {
+            throw new ArgumentNullException(nameof(parameters.IsMaxPerStreamEnabled) + "," + nameof(parameters.MaxPerStream), "must specify both or none").Log(TwitchApi.GetLogger());
+        }
+
         if (parameters.MaxPerStream.HasValue && parameters.MaxPerStream.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.IsMaxPerUserPerStreamEnabled.HasValue != parameters.MaxPerUserPerStream.HasValue)
+        {
+            throw new ArgumentNullException(nameof(parameters.IsMaxPerUserPerStreamEnabled) + "," + nameof(parameters.MaxPerUserPerStream), "must specify both or none").Log(TwitchApi.GetLogger());
         }
 
         if (parameters.MaxPerUserPerStream.HasValue && parameters.MaxPerUserPerStream.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.IsGlobalCooldownEnabled.HasValue != parameters.GlobalCooldownSeconds.HasValue)
+        {
+            throw new ArgumentNullException(nameof(parameters.IsGlobalCooldownEnabled) + "," + nameof(parameters.GlobalCooldownSeconds), "must specify both or none").Log(TwitchApi.GetLogger());
         }
 
         if (parameters.GlobalCooldownSeconds.HasValue && parameters.GlobalCooldownSeconds.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.GetValueOrDefault(0), "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.Value, "must be >= 1").Log(TwitchApi.GetLogger());
         }
 
         Dictionary<string, IEnumerable<string>> queryParams = new()
