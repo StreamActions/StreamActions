@@ -25,7 +25,7 @@ namespace StreamActions.Twitch.OAuth;
 /// A Twitch OAuth scope.
 /// </summary>
 [ETag("https://dev.twitch.tv/docs/authentication/scopes", "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
-    "2022-12-15T16:40Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
+    "2023-01-21T06:21Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
         "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
 [JsonConverter(typeof(ScopeJsonConverter))]
 public sealed record Scope
@@ -34,11 +34,6 @@ public sealed record Scope
     /// The description of the permissions provided by the scope.
     /// </summary>
     public string? Description { get; init; }
-
-    /// <summary>
-    /// For scopes providing <c>edit/manage</c> permissions, indicates what <c>read</c> scope, if any, is implied by this scope.
-    /// </summary>
-    public Scope? Implies { get; init; }
 
     /// <summary>
     /// The name of the scope, which is included in OAuth responses.
@@ -116,7 +111,7 @@ public sealed record Scope
     /// Manage Channel Points custom rewards and their redemptions on a channel.
     /// </summary>
     /// <value>channel:manage:redemptions</value>
-    public static readonly Scope ChannelManageRedemptions = new("channel:manage:redemptions", "Manage Channel Points custom rewards and their redemptions on a channel.", ChannelReadRedemptions);
+    public static readonly Scope ChannelManageRedemptions = new("channel:manage:redemptions", "Manage Channel Points custom rewards and their redemptions on a channel.");
 
     /// <summary>
     /// Manage a channel's stream schedule.
@@ -134,7 +129,7 @@ public sealed record Scope
     /// Add or remove the VIP role from users in your channel.
     /// </summary>
     /// <value>channel:manage:vips</value>
-    public static readonly Scope ChannelManageVips = new("channel:manage:vips", "Add or remove the VIP role from users in your channel.", ChannelReadVips);
+    public static readonly Scope ChannelManageVips = new("channel:manage:vips", "Add or remove the VIP role from users in your channel.");
 
     /// <summary>
     /// Perform moderation actions in a channel.
@@ -254,7 +249,7 @@ public sealed record Scope
     /// Manage a broadcaster's list of blocked terms.
     /// </summary>
     /// <value>moderator:manage:blocked_terms</value>
-    public static readonly Scope ModeratormanageBlockedTerms = new("moderator:manage:blocked_terms", "Manage a broadcaster's list of blocked terms.");
+    public static readonly Scope ModeratorManageBlockedTerms = new("moderator:manage:blocked_terms", "Manage a broadcaster's list of blocked terms.");
 
     /// <summary>
     /// Delete chat messages in channels where you have the moderator role.
@@ -272,7 +267,13 @@ public sealed record Scope
     /// Manage a broadcaster's Shield Mode status.
     /// </summary>
     /// <value>moderator:manage:shield_mode</value>
-    public static readonly Scope ModeratormanageShieldMode = new("moderator:manage:shield_mode", "Manage a broadcaster's Shield Mode status.", ModeratorReadShieldMode);
+    public static readonly Scope ModeratorManageShieldMode = new("moderator:manage:shield_mode", "Manage a broadcaster's Shield Mode status.");
+
+    /// <summary>
+    /// Manage a broadcaster's shoutouts.
+    /// </summary>
+    /// <value>moderator:manage:shoutouts</value>
+    public static readonly Scope ModeratorManageShoutouts = new("moderator:manage:shoutouts", "Manage a broadcaster's shoutouts.");
 
     /// <summary>
     /// View a broadcaster's AutoMod settings.
@@ -303,6 +304,12 @@ public sealed record Scope
     /// </summary>
     /// <value>moderator:read:shield_mode</value>
     public static readonly Scope ModeratorReadShieldMode = new("moderator:read:shield_mode", "View a broadcaster's Shield Mode status.");
+
+    /// <summary>
+    /// View a broadcaster's shoutouts.
+    /// </summary>
+    /// <value>moderator:read:shoutouts</value>
+    public static readonly Scope ModeratorReadShoutouts = new("moderator:read:shoutouts", "View a broadcaster's shoutouts.");
 
     /// <summary>
     /// OpenID Connect.
@@ -373,26 +380,6 @@ public sealed record Scope
     #endregion Scopes
 
     /// <summary>
-    /// Returns all scopes that imply <paramref name="scope"/>.
-    /// </summary>
-    /// <param name="scope">The scope to check.</param>
-    /// <returns>A list of scopes that imply <paramref name="scope"/>.</returns>
-    public static IReadOnlyList<Scope> ImpliedBy(Scope scope)
-    {
-        List<Scope> scopes = new();
-
-        foreach (KeyValuePair<string, Scope> s in _scopes)
-        {
-            if (s.Value.Implies == scope)
-            {
-                scopes.Add(s.Value);
-            }
-        }
-
-        return scopes.AsReadOnly();
-    }
-
-    /// <summary>
     /// Backing dictionary for <see cref="Scopes"/>.
     /// </summary>
     private static readonly Dictionary<string, Scope> _scopes = new();
@@ -402,12 +389,10 @@ public sealed record Scope
     /// </summary>
     /// <param name="name">The name of the scope, which is included in OAuth responses.</param>
     /// <param name="description">The description of the permissions provided by the scope.</param>
-    /// <param name="implies">For scopes providing <c>edit/manage</c> permissions, indicates what <c>read</c> scope, if any, is implied by this scope.</param>
-    private Scope(string name, string description, Scope? implies = null)
+    private Scope(string name, string description)
     {
         this.Name = name;
         this.Description = description;
-        this.Implies = implies;
 
         _scopes.Add(name, this);
     }
