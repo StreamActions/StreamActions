@@ -45,6 +45,11 @@ public sealed record Scope
     /// </summary>
     public static IReadOnlyDictionary<string, Scope> Scopes => _scopes.AsReadOnly();
 
+    /// <summary>
+    /// Backing dictionary for <see cref="Scopes"/>.
+    /// </summary>
+    private static readonly Dictionary<string, Scope> _scopes = new();
+
     #region Scopes
 
     /// <summary>
@@ -378,11 +383,6 @@ public sealed record Scope
     public static readonly Scope WhispersRead = new("whispers:read", "View your whisper messages.");
 
     #endregion Scopes
-
-    /// <summary>
-    /// Backing dictionary for <see cref="Scopes"/>.
-    /// </summary>
-    private static readonly Dictionary<string, Scope> _scopes = new();
 
     /// <summary>
     /// Constructor.
