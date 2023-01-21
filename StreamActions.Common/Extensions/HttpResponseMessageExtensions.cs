@@ -50,7 +50,7 @@ public static class HttpResponseMessageExtensions
 
         if (response.Status != message.StatusCode)
         {
-            response.Status = message.StatusCode;
+            response.SetStatus(message.StatusCode);
         }
 
         return response;

@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Extensions;
 using System.Net;
 using System.Text.Json.Serialization;
 
@@ -30,7 +31,11 @@ public record JsonApiResponse
     /// The HTTP status code as indicated by the response JSON.
     /// </summary>
     [JsonPropertyName("status")]
-    public HttpStatusCode Status { get; internal set; } = HttpStatusCode.OK;
+    public HttpStatusCode Status
+    {
+        get => this._status;
+        init => this._status = value;
+    }
 
     /// <summary>
     /// The string name of <see cref="Status"/>.
@@ -71,4 +76,16 @@ public record JsonApiResponse
     /// </summary>
     [JsonIgnore]
     private string? _error;
+
+    /// <summary>
+    /// Backing field for <see cref="Status"/>.
+    /// </summary>
+    [JsonIgnore]
+    private HttpStatusCode _status;
+
+    /// <summary>
+    /// Internal method allowing <see cref="HttpResponseMessageExtensions.ReadFromJsonAsync{T}(HttpResponseMessage, System.Text.Json.JsonSerializerOptions?, CancellationToken)"/> to update the status.
+    /// </summary>
+    /// <param name="statusCode">The new status code.</param>
+    internal void SetStatus(HttpStatusCode statusCode) => this._status = statusCode;
 }

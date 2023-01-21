@@ -21,6 +21,7 @@ using StreamActions.Common.Attributes;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Interfaces;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using System.Runtime.InteropServices;
@@ -34,7 +35,7 @@ namespace StreamActions.Twitch.Api;
 /// Handles validation of OAuth tokens and performs HTTP calls for the API.
 /// </summary>
 [Guid("996E35EC-638A-4E5B-AEFC-84C800E16520")]
-[ETag("https://dev.twitch.tv/docs/api/reference", "5fc9f39fc0c3ef4a37a5d71ee29a81169b61e595a24d12e6437314918a27b98c", "2022-10-04T00:35Z",
+[ETag("https://dev.twitch.tv/docs/api/reference", "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a", "2023-01-21T06:21Z",
     new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
         "-remre", "'cloudcannon[^\"]*'" })]
 public sealed partial class TwitchApi : IApi
@@ -239,7 +240,7 @@ public sealed partial class TwitchApi : IApi
                 string rcontent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 if (!JSONRegex().IsMatch(rcontent))
                 {
-                    response.Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse { Status = response.StatusCode, Message = rcontent }, SerializerOptions));
+                    response.Content = new StringContent(JsonSerializer.Serialize(new JsonApiResponse { Status = response.StatusCode, Message = rcontent }, SerializerOptions));
                 }
             }
 
@@ -249,7 +250,7 @@ public sealed partial class TwitchApi : IApi
         }
         catch (Exception ex) when (ex is HttpRequestException or TimeoutException)
         {
-            return new(0) { ReasonPhrase = ex.GetType().Name, Content = new StringContent(JsonSerializer.Serialize(new TwitchResponse { Status = 0, Message = ex.Message }, SerializerOptions)) };
+            return new(0) { ReasonPhrase = ex.GetType().Name, Content = new StringContent(JsonSerializer.Serialize(new JsonApiResponse { Message = ex.Message }, SerializerOptions)) };
         }
     }
 
