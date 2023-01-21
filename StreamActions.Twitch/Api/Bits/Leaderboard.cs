@@ -33,70 +33,70 @@ namespace StreamActions.Twitch.Api.Bits;
 public sealed record Leaderboard
 {
     /// <summary>
-    /// Leaderboard rank of the user.
+    /// The user's position on the leaderboard.
     /// </summary>
     [JsonPropertyName("rank")]
     public int? Rank { get; init; }
 
     /// <summary>
-    /// Leaderboard score (number of Bits) of the user.
+    /// The number of Bits the user has cheered.
     /// </summary>
     [JsonPropertyName("score")]
     public int? Score { get; init; }
 
     /// <summary>
-    /// ID of the user (viewer) in the leaderboard entry.
+    /// An ID that identifies a user on the leaderboard.
     /// </summary>
     [JsonPropertyName("user_id")]
     public string? UserId { get; init; }
 
     /// <summary>
-    /// User login name.
+    /// The user's login name.
     /// </summary>
     [JsonPropertyName("user_login")]
     public string? UserLogin { get; init; }
 
     /// <summary>
-    /// Display name corresponding to <see cref="UserId"/>.
+    /// The user's display name.
     /// </summary>
     [JsonPropertyName("user_name")]
     public string? UserName { get; init; }
 
     /// <summary>
-    /// Time period over which data is aggregated (PST time zone).
+    /// The time period over which data is aggregated (uses the PST time zone).
     /// </summary>
     public enum LeaderboardPeriod
     {
         /// <summary>
-        /// The lifetime of the broadcaster's channel.
+        /// Default. The lifetime of the broadcaster's channel.
         /// </summary>
         All,
         /// <summary>
-        /// 00:00:00 on the day specified in <paramref name="startedAt"/>, through 00:00:00 on the following day.
+        /// A day spans from 00:00:00 on the day specified in <c>startedAt</c> and runs through 00:00:00 of the next day.
         /// </summary>
         Day,
         /// <summary>
-        /// 00:00:00 on Monday of the week specified in <paramref name="startedAt"/>, through 00:00:00 on the following Monday.
+        /// A week spans from 00:00:00 on the Monday of the week specified in <c>startedAt</c> and runs through 00:00:00 of the next Monday.
         /// </summary>
         Week,
         /// <summary>
-        /// 00:00:00 on the first day of the month specified in <paramref name="startedAt"/>, through 00:00:00 on the first day of the following month.
+        /// A month spans from 00:00:00 on the first day of the month specified in <c>startedAt</c> and runs through 00:00:00 of the first day of the next month.
         /// </summary>
         Month,
         /// <summary>
-        /// 00:00:00 on the first day of the year specified in <paramref name="startedAt"/>, through 00:00:00 on the first day of the following year.
+        /// A year spans from 00:00:00 on the first day of the year specified in <c>startedAt</c> and runs through 00:00:00 of the first day of the next year.
         /// </summary>
         Year
     }
 
     /// <summary>
-    /// Gets a ranked list of Bits leaderboard information for an authorized broadcaster.
+    /// Gets the Bits leaderboard for the authenticated broadcaster.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="count">Number of results to be returned. Maximum: 100. Default: 10.</param>
-    /// <param name="period">Time period over which data is aggregated (PST time zone). This parameter interacts with <paramref name="startedAt"/>.</param>
-    /// <param name="startedAt">Timestamp for the period over which the returned data is aggregated. Must be in RFC 3339 format. If this is not provided, data is aggregated over the current period; e.g., the current day/week/month/year. Can not be used with a <paramref name="period"/> of <see cref="LeaderboardPeriod.All"/>.</param>
-    /// <param name="userId">ID of the user whose results are returned; i.e., the person who paid for the Bits.</param>
+    /// <param name="count">The number of results to return. Maximum: 100. Default: 10.</param>
+    /// <param name="period">The time period over which data is aggregated (uses the PST time zone). This parameter interacts with <paramref name="startedAt"/>.</param>
+    /// <param name="startedAt">The start date used for determining the aggregation period. Note that the date is converted to PST before being used. Can not be used with a <paramref name="period"/> of <see cref="LeaderboardPeriod.All"/>.</param>
+    /// <param name="userId">An ID that identifies a user that cheered bits in the channel. If <paramref name="count"/> is greater than 1, the response may include users ranked above and below the specified user.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Leaderboard"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
@@ -104,13 +104,25 @@ public sealed record Leaderboard
     /// <exception cref="InvalidOperationException">Specified <paramref name="startedAt"/> while the value of <paramref name="period"/> was <see cref="LeaderboardPeriod.All"/>.</exception>
     /// <remarks>
     /// <para>
-    /// Note for <paramref name="startedAt"/>:
-    /// Currently, the HH:MM:SS part of this value is used only to identify a given day in PST and otherwise ignored. For example, if the <paramref name="startedAt"/> value resolves to 5PM PST yesterday and <paramref name="period"/> is <see cref="LeaderboardPeriod.Day"/>, data is returned for all of yesterday.
-    /// </para>
-    /// <para>
-    /// Note for <paramref name="userId"/>:
-    /// As long as <paramref name="count"/> is greater than 1, the returned data includes additional users, with Bits amounts above and below the user specified by <paramref name="userId"/>.
-    /// If <paramref name="userId"/> is not provided, the endpoint returns the Bits leaderboard data across top users (subject to the value of <paramref name="count"/>).
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the broadcaster's Bits leaderboard.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>403 Forbidden</term>
+    /// <description>???</description>
+    /// </item>
+    /// </list>
     /// </para>
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
