@@ -26,13 +26,13 @@ namespace StreamActions.Twitch.Api.Common;
 public sealed record DateRange
 {
     /// <summary>
-    /// Starting date/time for returned reports, in RFC3339 format with the hours, minutes, and seconds zeroed out and the UTC timezone: YYYY-MM-DDT00:00:00Z. This must be on or after January 31, 2018.
+    /// The start date.
     /// </summary>
     [JsonPropertyName("started_at")]
     public DateTime? StartedAt { get; init; }
 
     /// <summary>
-    /// Ending date/time for returned reports, in RFC3339 format with the hours, minutes, and seconds zeroed out and the UTC timezone: YYYY-MM-DDT00:00:00Z. The report covers the entire ending date; e.g., if 2018-05-01T00:00:00Z is specified, the report covers up to 2018-05-01T23:59:59Z.
+    /// The end date.
     /// </summary>
     [JsonPropertyName("ended_at")]
     public DateTime? EndedAt { get; init; }

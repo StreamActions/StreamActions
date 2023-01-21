@@ -26,14 +26,14 @@ namespace StreamActions.Twitch.Api.Ads;
 public sealed record StartCommercialParameters
 {
     /// <summary>
-    /// ID of the channel requesting a commercial.
+    /// The ID of the partner or affiliate broadcaster that wants to run the commercial. This ID must match the user ID found in the OAuth token.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
     public string? BroadcasterId { get; init; }
 
     /// <summary>
-    /// Desired length of the commercial in seconds.
+    /// The length of the commercial to run, in seconds. Twitch tries to serve a commercial that's the requested length, but it may be shorter or longer. The maximum length you should request is 180 seconds.
     /// </summary>
     [JsonPropertyName("length")]
-    public Commercial.CommercialLength? Length { get; init; }
+    public int? Length { get; init; }
 }

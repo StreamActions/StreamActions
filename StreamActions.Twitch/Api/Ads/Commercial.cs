@@ -32,63 +32,34 @@ namespace StreamActions.Twitch.Api.Ads;
 public sealed record Commercial
 {
     /// <summary>
-    /// Length of the triggered commercial.
+    /// The length of the commercial you requested.
     /// </summary>
     [JsonPropertyName("length")]
-    public CommercialLength? Length { get; init; }
+    public int? Length { get; init; }
 
     /// <summary>
-    /// Seconds until the next commercial can be served on this channel.
+    /// The number of seconds you must wait before running another commercial.
     /// </summary>
     [JsonPropertyName("retry_after")]
-    public int? RetryAfter { get; init; }
+    public int? RetryAfterSeconds { get; init; }
 
     /// <summary>
-    /// The timestamp represented by <see cref="RetryAfter"/>.
+    /// The amount of time you must wait before running another commercial.
     /// </summary>
     [JsonIgnore]
-    public DateTime? RetryAfterDate => this.RetryAfter is null ? null : DateTime.UtcNow.AddSeconds((double)this.RetryAfter);
+    public TimeSpan? RetryAfter => this.RetryAfterSeconds.HasValue ? TimeSpan.FromSeconds(this.RetryAfterSeconds.Value) : null;
 
     /// <summary>
-    /// Provides contextual information on why the request failed.
+    /// The timestamp you must wait until before running another commercial.
+    /// </summary>
+    [JsonIgnore]
+    public DateTime? RetryAfterDateTime => this.RetryAfter.HasValue ? DateTime.UtcNow.Add(this.RetryAfter.Value) : null;
+
+    /// <summary>
+    /// A message that indicates whether Twitch was able to serve an ad.
     /// </summary>
     [JsonPropertyName("message")]
     public string? Message { get; init; }
-
-    /// <summary>
-    /// Valid lengths for a commercial break.
-    /// </summary>
-    public enum CommercialLength
-    {
-        /// <summary>
-        /// Default value. Not valid for use.
-        /// </summary>
-        None,
-        /// <summary>
-        /// 30 seconds.
-        /// </summary>
-        Thirty = 30,
-        /// <summary>
-        /// 1 minute.
-        /// </summary>
-        Sixty = 60,
-        /// <summary>
-        /// 1 minute, 30 seconds.
-        /// </summary>
-        Ninety = 90,
-        /// <summary>
-        /// 2 minutes.
-        /// </summary>
-        OneTwenty = 120,
-        /// <summary>
-        /// 2 minutes, 30 seconds.
-        /// </summary>
-        OneFifty = 150,
-        /// <summary>
-        /// 3 minutes.
-        /// </summary>
-        OneEighty = 180
-    }
 
     /// <summary>
     /// Starts a commercial on the specified channel.
@@ -97,13 +68,37 @@ public sealed record Commercial
     /// <param name="parameters">The <see cref="StartCommercialParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Commercial"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentNullException"><see cref="StartCommercialParameters.BroadcasterId"/> is <see langword="null"/>, empty, or whitespace; <see cref="StartCommercialParameters.Length"/> is <see langword="null"/> or <see cref="CommercialLength.None"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><see cref="StartCommercialParameters.Length"/> is not a valid value of <see cref="CommercialLength"/>.</exception>
+    /// <exception cref="ArgumentNullException"><see cref="StartCommercialParameters.BroadcasterId"/> is <see langword="null"/>, empty, or whitespace; <see cref="StartCommercialParameters.Length"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelEditCommercial"/>.</exception>
     /// <remarks>
     /// <para>
     /// Only partners and affiliates may run commercials and they must be streaming live at the time.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully started the commercial.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The specified broadcaster does not exist.</description>
+    /// </item>
+    /// <item>
+    /// <term>429 Too Many Requests</term>
+    /// <description>The cooldown has not expired yet.</description>
+    /// </item>
+    /// </list>
     /// </para>
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
@@ -124,17 +119,17 @@ public sealed record Commercial
             throw new ArgumentNullException(nameof(parameters.BroadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (!parameters.Length.HasValue || parameters.Length.Value == CommercialLength.None)
+        if (!parameters.Length.HasValue)
         {
             throw new ArgumentNullException(nameof(parameters.Length)).Log(TwitchApi.GetLogger());
         }
 
-        if (!Enum.IsDefined(parameters.Length.Value))
-        {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Length), parameters.Length.Value, "not a valid commercial length").Log(TwitchApi.GetLogger());
-        }
-
         session.RequireToken(Scope.ChannelEditCommercial);
+
+        if (Math.Clamp(parameters.Length.Value, 1, 180) != parameters.Length.Value)
+        {
+            parameters = parameters with { Length = Math.Clamp(parameters.Length.Value, 1, 180) };
+        }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/channels/commercial"), session, content).ConfigureAwait(false);

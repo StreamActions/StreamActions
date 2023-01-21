@@ -33,25 +33,25 @@ namespace StreamActions.Twitch.Api.Analytics;
 public sealed record ExtensionAnalytics
 {
     /// <summary>
-    /// ID of the extension whose analytics data is being provided.
+    /// An ID that identifies the extension that the report was generated for.
     /// </summary>
     [JsonPropertyName("extension_id")]
     public string? ExtensionId { get; init; }
 
     /// <summary>
-    /// URL to the downloadable CSV file containing analytics data. Valid for 5 minutes.
+    /// The URL that you use to download the report. The URL is valid for 5 minutes.
     /// </summary>
     [JsonPropertyName("URL")]
     public Uri? Url { get; init; }
 
     /// <summary>
-    /// Type of report.
+    /// The type of report.
     /// </summary>
     [JsonPropertyName("type")]
     public ExtensionReportType? Type { get; init; }
 
     /// <summary>
-    /// The date range covered by the report.
+    /// The reporting window's start and end dates.
     /// </summary>
     [JsonPropertyName("date_range")]
     public DateRange? DateRange { get; init; }
@@ -69,20 +69,46 @@ public sealed record ExtensionAnalytics
     }
 
     /// <summary>
-    /// Gets a URL that Extension developers can use to download analytics reports (CSV files) for their Extensions. The URL is valid for 5 minutes.
+    /// Gets an analytics report for one or more extensions. The response contains the URLs used to download the reports (CSV files).
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="extensionId">Client ID value assigned to the extension when it is created. If this is specified, the returned URL points to an analytics report for just the specified extension. If this is not specified, the response includes multiple URLs (paginated), pointing to separate analytics reports for each of the authenticated user's Extensions.</param>
-    /// <param name="after">Cursor for forward pagination: tells the server where to start fetching the next set of results, in a multi-page response. This applies only to queries without <paramref name="extensionId"/>.</param>
-    /// <param name="first">Maximum number of objects to return. Maximum: 100. Default: 20.</param>
-    /// <param name="startedAt">Starting date/time for returned reports. This must be on or after January 31, 2018.</param>
-    /// <param name="endedAt">Ending date/time for returned reports. The report covers the entire ending date. This must be on or after January 31, 2018.</param>
-    /// <param name="type">Type of analytics report that is returned. Currently, this field has no affect on the response as there is only one report type. If additional types were added, using this field would return only the URL for the specified report.</param>
+    /// <param name="extensionId">The extension's client ID. If specified, the response contains a report for the specified extension. If not specified, the response includes a report for each extension that the authenticated user owns.</param>
+    /// <param name="after">The cursor used to get the next page of results.</param>
+    /// <param name="first">The maximum number of report URLs to return per page in the response. Maximum: 100. Default: 20.</param>
+    /// <param name="startedAt">The reporting window's start date. This must be on or after January 31, 2018. If you specify a start date, you must specify an end date.</param>
+    /// <param name="endedAt">The reporting window's end date. This must be on or after January 31, 2018. Because it can take up to two days for the data to be available, you must specify an end date that's earlier than today minus one to two days. If not, the API ignores your end date and uses an end date that is today minus one to two days.</param>
+    /// <param name="type">The type of analytics report to get.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ExtensionAnalytics"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.AnalyticsReadExtensions"/>.</exception>
     /// <exception cref="InvalidOperationException">Specified only one of <paramref name="startedAt"/>/<paramref name="endedAt"/> without specifying the other.</exception>
+    /// <remarks>
+    /// <para>
+    /// The reports are returned in no particular order; however, the data within each report is in ascending order by date (newest first). The report contains rows for only those days that the extension was used.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the broadcaster's analytics reports.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The specified extension does not exist.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<ExtensionAnalytics>?> GetExtensionAnalytics(TwitchSession session, string? extensionId = null, string? after = null, int first = 20, DateTime? startedAt = null, DateTime? endedAt = null,
         ExtensionReportType type = ExtensionReportType.Overview_v2)
