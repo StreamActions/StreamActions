@@ -34,6 +34,12 @@ public record ResponseData<TDataType> : JsonApiResponse
     public IReadOnlyList<TDataType>? Data { get; init; }
 
     /// <summary>
+    /// The reporting window's start and end dates.
+    /// </summary>
+    [JsonPropertyName("date_range")]
+    public DateRange? DateRange { get; init; }
+
+    /// <summary>
     /// The pagination cursor information for multi-page responses.
     /// </summary>
     [JsonPropertyName("pagination")]

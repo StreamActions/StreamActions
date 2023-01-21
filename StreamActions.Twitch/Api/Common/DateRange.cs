@@ -26,13 +26,13 @@ namespace StreamActions.Twitch.Api.Common;
 public sealed record DateRange
 {
     /// <summary>
-    /// The start date.
+    /// The reporting window's start date.
     /// </summary>
     [JsonPropertyName("started_at")]
     public DateTime? StartedAt { get; init; }
 
     /// <summary>
-    /// The end date.
+    /// The reporting window's end date.
     /// </summary>
     [JsonPropertyName("ended_at")]
     public DateTime? EndedAt { get; init; }
