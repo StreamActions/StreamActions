@@ -21,48 +21,48 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.Bits;
 
 /// <summary>
-/// Represents the product acquired, as it looked at the time of the <see cref="ExtensionTransaction"/>.
+/// Contains details about the digital product in a <see cref="ExtensionTransaction"/>.
 /// </summary>
 public sealed record ExtensionProductData
 {
     /// <summary>
-    /// Set to twitch.ext + your Extension ID.
+    /// Set to <c>twitch.ext.</c> + <c>the extension's ID</c>.
     /// </summary>
     [JsonPropertyName("domain")]
     public string? Domain { get; init; }
 
     /// <summary>
-    /// Unique identifier for the product across the Extension
+    /// An ID that identifies the digital product.
     /// </summary>
     [JsonPropertyName("sku")]
     public string? Sku { get; init; }
 
     /// <summary>
-    /// A <see cref="ExtensionProductCost"/> representing the cost to acquire the product.
+    /// Contains details about the digital product's cost.
     /// </summary>
     [JsonPropertyName("cost")]
     public ExtensionProductCost? Cost { get; init; }
 
     /// <summary>
-    /// Indicates if the product is in development
+    /// A Boolean value that determines whether the product is in development. Is <see langword="true"/> if the digital product is in development and cannot be exchanged.
     /// </summary>
     [JsonPropertyName("inDevelopment")]
     public bool? InDevelopment { get; init; }
 
     /// <summary>
-    /// Display name of the product.
+    /// The name of the digital product.
     /// </summary>
     [JsonPropertyName("displayName")]
     public string? DisplayName { get; init; }
 
     /// <summary>
-    /// The expiration timestamp for the product. Currently always empty since only unexpired products can be purchased.
+    /// This field is always empty since you may purchase only unexpired products.
     /// </summary>
     [JsonPropertyName("expiration")]
     public DateTime? Expiration { get; init; }
 
     /// <summary>
-    /// Indicates whether or not the data was sent over the Extension PubSub to all instances of the Extension.
+    /// A Boolean value that determines whether the data was broadcast to all instances of the extension.
     /// </summary>
     [JsonPropertyName("broadcast")]
     public bool? Broadcast { get; init; }

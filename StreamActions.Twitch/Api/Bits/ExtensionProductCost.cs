@@ -21,24 +21,24 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.Bits;
 
 /// <summary>
-/// Represents the cost to acquire the product in a <see cref="ExtensionProductData"/>.
+/// Contains details about the digital product's cost in a <see cref="ExtensionProductData"/>.
 /// </summary>
 public sealed record ExtensionProductCost
 {
     /// <summary>
-    /// Number of Bits required to acquire the product.
+    /// The amount exchanged for the digital product.
     /// </summary>
     [JsonPropertyName("amount")]
     public int? Amount { get; init; }
 
     /// <summary>
-    /// Identifies the contribution method.
+    /// The type of currency exchanged.
     /// </summary>
     [JsonPropertyName("type")]
     public ExtensionProductCostType? Type { get; init; }
 
     /// <summary>
-    /// The types of contributions that can be used in a product purchase.
+    /// The type of currency exchanged.
     /// </summary>
     public enum ExtensionProductCostType
     {

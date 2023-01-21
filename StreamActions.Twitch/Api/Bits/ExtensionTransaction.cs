@@ -31,67 +31,67 @@ namespace StreamActions.Twitch.Api.Bits;
 public sealed record ExtensionTransaction
 {
     /// <summary>
-    /// Unique identifier of the Bits-in-Extensions transaction.
+    /// An ID that identifies the transaction.
     /// </summary>
     [JsonPropertyName("id")]
     public string? Id { get; init; }
 
     /// <summary>
-    /// UTC timestamp when this transaction occurred.
+    /// The UTC date and time of the transaction.
     /// </summary>
     [JsonPropertyName("timestamp")]
     public DateTime? Timestamp { get; init; }
 
     /// <summary>
-    /// Twitch user ID of the channel the transaction occurred on.
+    /// The ID of the broadcaster that owns the channel where the transaction occurred.
     /// </summary>
     [JsonPropertyName("bradcaster_id")]
     public string? BroadcasterId { get; init; }
 
     /// <summary>
-    /// Login name of the broadcaster.
+    /// The broadcaster's login name.
     /// </summary>
     [JsonPropertyName("broadcaster_login")]
     public string? BroadcasterLogin { get; init; }
 
     /// <summary>
-    /// Twitch display name of the broadcaster.
+    /// The broadcaster's display name.
     /// </summary>
     [JsonPropertyName("broadcaster_name")]
     public string? BroadcasterName { get; init; }
 
     /// <summary>
-    /// Twitch user ID of the user who generated the transaction.
+    /// The ID of the user that purchased the digital product.
     /// </summary>
     [JsonPropertyName("user_id")]
     public string? UserId { get; init; }
 
     /// <summary>
-    /// Login name of the user who generated the transaction.
+    /// The user's login name.
     /// </summary>
     [JsonPropertyName("user_login")]
     public string? UserLogin { get; init; }
 
     /// <summary>
-    /// Twitch display name of the user who generated the transaction.
+    /// The user's display name.
     /// </summary>
     [JsonPropertyName("user_name")]
     public string? UserName { get; init; }
 
     /// <summary>
-    /// Enum of the product type.
+    /// The type of transaction.
     /// </summary>
     [JsonPropertyName("product_type")]
     public ExtensionProductType? ProductType { get; init; }
 
     /// <summary>
-    /// A <see cref="ExtensionProductData"/> that represents the product acquired, as it looked at the time of the transaction.
+    /// Contains details about the digital product.
     /// </summary>
     [JsonPropertyName("product_data")]
     public ExtensionProductData? ProductData { get; init; }
 
     /// <summary>
-    /// The types of extension products.
+    /// The type of transaction.
     /// </summary>
     public enum ExtensionProductType
     {
@@ -103,18 +103,41 @@ public sealed record ExtensionTransaction
     }
 
     /// <summary>
-    /// Gets the list of Extension transactions for a given Extension. This allows Extension back-end servers to fetch a list of transactions that have occurred for their Extension across all of Twitch. A transaction is a record of a user exchanging Bits for an in-Extension digital good.
+    /// Gets an extension's list of transactions. A transaction records the exchange of a currency (for example, Bits) for a digital product.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request. Must be for an App Access Token.</param>
-    /// <param name="extensionId">ID of the Extension to list transactions for.</param>
-    /// <param name="id">Transaction IDs to look up. Can include multiple to fetch multiple transactions in a single request. Maximum: 100.</param>
-    /// <param name="after">The cursor used to fetch the next page of data. This only applies to queries without ID.</param>
-    /// <param name="first">Maximum number of objects to return. Maximum: 100. Default: 20.</param>
+    /// <param name="extensionId">The ID of the extension whose list of transactions you want to get.</param>
+    /// <param name="id">A transaction ID used to filter the list of transactions. Maximum: 100.</param>
+    /// <param name="after">The cursor used to get the next page of result.</param>
+    /// <param name="first">The maximum number of items to return per page in the response.. Maximum: 100. Default: 20.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ExtensionTransaction"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="extensionId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not <see langword="null"/> and contains more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="after"/> is specified at the same time as a valid value in <paramref name="id"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the list of transactions.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The specified transaction id does not exist.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<ResponseData<ExtensionTransaction>?> GetExtensionTransactions(TwitchSession session, string extensionId, IEnumerable<string>? id = null, string? after = null, int first = 20)
     {
         if (session is null)

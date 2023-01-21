@@ -16,6 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common;
+using System.Drawing;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Bits;
@@ -26,37 +28,43 @@ namespace StreamActions.Twitch.Api.Bits;
 public sealed record CheermoteTier
 {
     /// <summary>
-    /// Minimum number of bits needed to be used to hit the given tier of emote.
+    /// The minimum number of Bits that you must cheer at this tier level. The maximum number of Bits that you can cheer at this level is determined by the required minimum Bits of the next tier level minus 1.
     /// </summary>
     [JsonPropertyName("min_bits")]
     public int? MinBits { get; init; }
 
     /// <summary>
-    /// ID of the emote tier. Possible tiers are: 1, 100, 500, 1000 ,5000, 10k, 100k.
+    /// The tier level. Possible tiers are: 1, 100, 500, 1000 ,5000, 10k, 100k.
     /// </summary>
     [JsonPropertyName("id")]
     public string? Id { get; init; }
 
     /// <summary>
-    /// Hex code for the color associated with the bits of that tier. Grey, Purple, Teal, Blue, or Red color to match the base bit type.
+    /// The hex code of the color associated with this tier level (for example, <c>#979797</c>), as a string.
     /// </summary>
     [JsonPropertyName("color")]
-    public string? Color { get; init; }
+    public string? ColorString { get; init; }
 
     /// <summary>
-    /// <see cref="CheermoteImageThemes"/> containing both animated and static image sets, sorted by light and dark.
+    /// The color associated with this tier level.
+    /// </summary>
+    [JsonPropertyName("color")]
+    public Color? Color => Util.IsValidHexColor(this.ColorString ?? "") ? Util.HexColorToColor(this.ColorString ?? "") : null;
+
+    /// <summary>
+    /// The animated and static image sets for the Cheermote.
     /// </summary>
     [JsonPropertyName("images")]
     public CheermoteImageThemes? Images { get; init; }
 
     /// <summary>
-    /// Indicates whether or not emote information is accessible to users.
+    /// A Boolean value that determines whether users can cheer at this tier level.
     /// </summary>
     [JsonPropertyName("can_cheer")]
     public bool? CanCheer { get; init; }
 
     /// <summary>
-    /// Indicates whether or not we hide the emote from the bits card.
+    /// A Boolean value that determines whether this tier level is shown in the Bits card.
     /// </summary>
     [JsonPropertyName("show_in_bits_card")]
     public bool? ShowInBitsCard { get; init; }

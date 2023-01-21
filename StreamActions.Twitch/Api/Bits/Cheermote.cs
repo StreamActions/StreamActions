@@ -30,7 +30,7 @@ namespace StreamActions.Twitch.Api.Bits;
 public sealed record Cheermote
 {
     /// <summary>
-    /// The string used to Cheer that precedes the Bits amount.
+    /// The name portion of the Cheermote string that you use in chat to cheer Bits. The full Cheermote string is the concatenation of <c>{prefix} + {number of Bits}</c>.
     /// </summary>
     [JsonPropertyName("prefix")]
     public string? Prefix { get; init; }
@@ -42,68 +42,83 @@ public sealed record Cheermote
     public IReadOnlyList<CheermoteTier>? Tiers { get; init; }
 
     /// <summary>
-    /// Shows the type of emote.
+    /// The type of Cheermote.
     /// </summary>
     [JsonPropertyName("type")]
     public CheermoteType? Type { get; init; }
 
     /// <summary>
-    /// Order of the emotes as shown in the bits card, in ascending order.
+    /// The order that the Cheermotes are shown in the Bits card. The numbers may not be consecutive. The order numbers are unique within a Cheermote type (for example, <see cref="CheermoteType.Global_first_party"/>) but may not be unique amongst all Cheermotes in the response.
     /// </summary>
     [JsonPropertyName("order")]
     public int? Order { get; init; }
 
     /// <summary>
-    /// The date when this Cheermote was last updated.
+    /// The date and time when this Cheermote was last updated.
     /// </summary>
     [JsonPropertyName("last_updated")]
     public DateTime? LastUpdated { get; init; }
 
     /// <summary>
-    /// Indicates whether or not this emote provides a charity contribution match during charity campaigns.
+    /// A Boolean value that indicates whether this Cheermote provides a charitable contribution match during charity campaigns.
     /// </summary>
     [JsonPropertyName("is_charitable")]
     public bool? IsCharitable { get; init; }
 
     /// <summary>
-    /// The types of cheermotes.
+    /// The type of Cheermote.
     /// </summary>
     public enum CheermoteType
     {
         /// <summary>
-        /// A global cheermote that belongs to Twitch.
+        /// A Twitch-defined Cheermote that is shown in the Bits card.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
         Global_first_party,
         /// <summary>
-        /// A global cheermote that belongs to a third-party company.
+        /// A Twitch-defined Cheermote that is not shown in the Bits card.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
         Global_third_party,
         /// <summary>
-        /// A custom cheermote uploaded by the broadcaster.
+        /// A broadcaster-defined Cheermote.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
         Channel_custom,
         /// <summary>
-        /// A display-only cheermote.
+        /// Do not use; for internal use only.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
         Display_only,
         /// <summary>
-        /// A sponsored cheermote.
+        /// A sponsor-defined Cheermote. When used, the sponsor adds additional Bits to the amount that the user cheered. For example, if the user cheered Terminator100, the broadcaster might receive 110 Bits, which includes the sponsor's 10 Bits contribution.
         /// </summary>
         Sponsored
     }
 
     /// <summary>
-    /// Retrieves the list of available Cheermotes, animated emotes to which viewers can assign Bits, to cheer in chat. Cheermotes returned are available throughout Twitch, in all Bits-enabled channels.
+    /// Gets a list of Cheermotes that users can use to cheer Bits in any Bits-enabled channel's chat room. Cheermotes are animated emotes that viewers can assign Bits to.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">ID for the broadcaster who might own specialized Cheermotes.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster whose custom Cheermotes you want to get. If not specified, the response contains only global Cheermotes.
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Cheermote"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the Cheermotes.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<ResponseData<Cheermote>?> GetCheermotes(TwitchSession session, string? broadcasterId = null)
     {
         if (session is null)
