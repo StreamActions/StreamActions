@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Logger;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Channels;
@@ -27,52 +26,42 @@ namespace StreamActions.Twitch.Api.Channels;
 public sealed record ModifyChannelParameters
 {
     /// <summary>
-    /// Constructor. At least 1 parameter must be a valid, non-<see langword="null"/> value.
-    /// </summary>
-    /// <param name="gameId">The current game ID being played on the channel. Use "0" or "" (an empty string) to unset the game. Use <see langword="null"/> to not change this value.</param>
-    /// <param name="broadcasterLanguage">The language of the channel. A language value must be either the ISO 639-1 two-letter code for a supported stream language or "other". Use <see langword="null"/> to not change this value.</param>
-    /// <param name="title">The title of the stream. Value must not be an empty string. Use <see langword="null"/> to not change this value.</param>
-    /// <param name="delay">Stream delay in seconds. Stream delay is a Twitch Partner feature; trying to set this value for other account types will return a 400 error. Use <see langword="null"/> to not change this value.</param>
-    /// <exception cref="InvalidOperationException">None of the provided parameters was a valid, non-<see langword="null"/> value.</exception>
-    public ModifyChannelParameters(string? gameId, string? broadcasterLanguage, string? title, int? delay)
-    {
-        if (gameId is null && string.IsNullOrWhiteSpace(broadcasterLanguage) && string.IsNullOrWhiteSpace(title)
-            && (delay is null || delay == default(int) || delay < 1))
-        {
-            throw new ArgumentNullException(nameof(gameId) + "," + nameof(broadcasterLanguage) + "," + nameof(title) + "," + nameof(delay), "At least 1 parameter must have a valid, non-null value.").Log(TwitchApi.GetLogger());
-        }
-
-        this.GameId = gameId;
-        this.BroadcasterLanguage = broadcasterLanguage;
-        this.Title = title;
-        this.Delay = delay;
-    }
-
-    /// <summary>
-    /// The current game ID being played on the channel. Use "0" or "" (an empty string) to unset the game. Use <see langword="null"/> to not change this value.
+    /// The ID of the game that the user plays. The game is not updated if the ID isn't a game ID that Twitch recognizes. To unset this field, use <c>"0"</c> or <c>""</c> (an empty string). To not update this field, use <see langword="null"/>.
     /// </summary>
     [JsonPropertyName("game_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? GameId { get; private init; }
+    public string? GameId { get; init; }
 
     /// <summary>
-    /// The language of the channel. A language value must be either the ISO 639-1 two-letter code for a supported stream language or "other". Use <see langword="null"/> to not change this value.
+    /// The user's preferred language. Set the value to an ISO 639-1 two-letter language code (for example, <c>en</c> for English). Set to <c>"other"</c> if the user's preferred language is not a Twitch supported language. The language isn't updated if the language code isn't a Twitch supported language. To not update this field, use <see langword="null"/>.
     /// </summary>
     [JsonPropertyName("broadcaster_language")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? BroadcasterLanguage { get; private init; }
+    public string? BroadcasterLanguage { get; init; }
 
     /// <summary>
-    /// The title of the stream. Value must not be an empty string. Use <see langword="null"/> to not change this value.
+    /// The title of the user's stream. You may not set this field to an empty string. To not update this field, use <see langword="null"/>.
     /// </summary>
     [JsonPropertyName("title")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Title { get; private init; }
+    public string? Title { get; init; }
 
     /// <summary>
-    /// Stream delay in seconds. Stream delay is a Twitch Partner feature; trying to set this value for other account types will return a 400 error. Use <see langword="null"/> to not change this value.
+    /// The number of seconds you want your broadcast buffered before streaming it live. The delay helps ensure fairness during competitive play. Only users with Partner status may set this field. The maximum delay is 900 seconds (15 minutes). To not update this field, use <see langword="null"/>.
     /// </summary>
     [JsonPropertyName("delay")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? Delay { get; private init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Delay { get; init; }
+
+    /// <summary>
+    /// A list of channel-defined tags to apply to the channel. To remove all tags from the channel, set tags to an empty array. Tags help identify the content that the channel streams. To not update this field, use <see langword="null"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A channel may specify a maximum of 10 tags. Each tag is limited to a maximum of 25 characters and may not be an empty string or contain spaces or special characters. Tags are case insensitive. For readability, consider using camelCasing or PascalCasing.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("tags")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? Tags { get; init; }
 }

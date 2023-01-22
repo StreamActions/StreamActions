@@ -32,32 +32,51 @@ namespace StreamActions.Twitch.Api.Channels;
 public sealed record ChannelEditor
 {
     /// <summary>
-    /// User ID of the editor.
+    /// An ID that uniquely identifies a user with editor permissions.
     /// </summary>
     [JsonPropertyName("user_id")]
     public string? UserId { get; init; }
 
     /// <summary>
-    /// Display name of the editor.
+    /// The user's display name.
     /// </summary>
     [JsonPropertyName("user_name")]
     public string? UserName { get; init; }
 
     /// <summary>
-    /// Date and time the editor was given editor permissions.
+    /// The date and time when the user became one of the broadcaster's editors.
     /// </summary>
     [JsonPropertyName("created_at")]
     public DateTime? CreatedAt { get; init; }
 
     /// <summary>
-    /// Gets a list of users who have editor permissions for a specific channel.
+    /// Gets the broadcaster's list of editors.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">Broadcaster's user ID associated with the channel.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster that owns the channel. This ID must match the user ID in the access token.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelEditor"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadEditors"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the broadcaster's list of editors.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<ResponseData<ChannelEditor>?> GetChannelEditors(TwitchSession session, string broadcasterId)
     {
         if (session is null)

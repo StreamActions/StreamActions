@@ -129,7 +129,7 @@ public sealed record ExtensionTransaction
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
-    /// <description>OAuth token was invalid for this request due to the specified reason.</description>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// <item>
     /// <term>404 Not Found</term>
