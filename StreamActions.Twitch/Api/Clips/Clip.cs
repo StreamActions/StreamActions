@@ -85,7 +85,7 @@ public sealed record Clip
     public string? GameId { get; init; }
 
     /// <summary>
-    /// The ISO 639-1 two-letter language code that the broadcaster broadcasts in. For example, <c>en</c> for English. The value is <c>other</c> if the broadcaster uses a language that Twitch doesn't support.
+    /// The ISO 639-1 two-letter language code that the broadcaster broadcasts in. For example, <c>"en"</c> for English. The value is <c>"other"</c> if the broadcaster uses a language that Twitch doesn't support.
     /// </summary>
     [JsonPropertyName("language")]
     public string? Language { get; init; }
@@ -193,7 +193,7 @@ public sealed record Clip
 
         if (string.IsNullOrWhiteSpace(broadcasterId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
         {
-            throw new ArgumentNullException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "must provide at least one value of id, broadcasterId, or gameId").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "must provide at least one of these parameters").Log(TwitchApi.GetLogger());
         }
 
         bool hasId = false;
@@ -206,7 +206,7 @@ public sealed record Clip
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix parameters id, broadcasterId, and gameId").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
             }
             hasId = true;
         }
@@ -215,7 +215,7 @@ public sealed record Clip
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix parameters id, broadcasterId, and gameId").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
             }
 
             if (id.Count() > 100)
@@ -226,12 +226,12 @@ public sealed record Clip
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new InvalidOperationException("can only use one of before or after").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after)).Log(TwitchApi.GetLogger());
         }
 
-        if (!startedAt.HasValue && endedAt.HasValue)
+        if (startedAt.HasValue != endedAt.HasValue)
         {
-            throw new ArgumentNullException(nameof(startedAt), "must provide startedAt when using endedAt").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(startedAt) + "," + nameof(endedAt), "both parameters must be used together").Log(TwitchApi.GetLogger());
         }
 
         first = Math.Clamp(first, 1, 100);
