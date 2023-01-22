@@ -67,10 +67,11 @@ public sealed record TwitchSession : IDisposable
     /// Checks if a token is present and, optionally, a scope.
     /// </summary>
     /// <param name="scope">The scope to check for.</param>
+    /// <param name="alternateScope">An alternate scope to check for.</param>
     /// <param name="retIfNull">If <see cref="TwitchToken.Scopes"/> is <see langword="null"/> and this is <see langword="true"/>, <see cref="TwitchScopeMissingException"/> is not thrown.</param>
     /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TwitchScopeMissingException"><paramref name="scope"/> is not <see langword="null"/> and <see cref="TwitchToken.Scopes"/> does not contain <paramref name="scope"/>, or another scope that implies it.</exception>
-    public void RequireToken(Scope? scope = null, bool retIfNull = false)
+    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Scopes"/> does not contain <paramref name="scope"/> or <paramref name="alternateScope"/>.</exception>
+    public void RequireToken(Scope? scope = null, Scope? alternateScope = null, bool retIfNull = false)
     {
         if (this.Token is null)
         {
@@ -82,12 +83,20 @@ public sealed record TwitchSession : IDisposable
             throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.").Log(TwitchApi.GetLogger());
         }
 
+        bool hasScope = false;
         if (scope is not null)
         {
-            if (!this.Token.HasScope(scope, retIfNull))
-            {
-                throw new TwitchScopeMissingException(scope).Log(TwitchApi.GetLogger());
-            }
+            hasScope = this.Token.HasScope(scope, alternateScope is null ? retIfNull : false);
+        }
+
+        if (!hasScope && alternateScope is not null)
+        {
+            hasScope = this.Token.HasScope(alternateScope, retIfNull);
+        }
+
+        if (!hasScope)
+        {
+            throw new TwitchScopeMissingException(scope).Log(TwitchApi.GetLogger());
         }
     }
 }

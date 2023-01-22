@@ -175,7 +175,7 @@ public sealed record ChannelPointsReward
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is defined and has more than 50 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadRedemptions"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadRedemptions"/> or <see cref="Scope.ChannelManageRedemptions"/>.</exception>
     /// <remarks>
     /// <para>
     /// There is a limit of 50 Custom Rewards on a channel at a time. This includes both enabled and disabled Custom Rewards.
@@ -224,7 +224,7 @@ public sealed record ChannelPointsReward
             throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 50").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelReadRedemptions);
+        session.RequireToken(Scope.ChannelReadRedemptions, Scope.ChannelManageRedemptions);
 
         Dictionary<string, IEnumerable<string>> queryParams = new()
         {
