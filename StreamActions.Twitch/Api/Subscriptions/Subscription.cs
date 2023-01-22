@@ -29,84 +29,104 @@ using StreamActions.Common.Extensions;
 namespace StreamActions.Twitch.Api.Subscriptions;
 
 /// <summary>
-/// Sends and represents a response element for a list of subscribers.
+/// Sends and represents a response element for a request for a list of subscribers.
 /// </summary>
 public sealed record Subscription
 {
     /// <summary>
-    /// User ID of the broadcaster.
+    /// An ID that identifies the broadcaster.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
     public string? BroadcasterId { get; init; }
 
     /// <summary>
-    /// Login of the broadcaster.
+    /// The broadcaster's login name.
     /// </summary>
     [JsonPropertyName("broadcaster_login")]
     public string? BroadcasterLogin { get; init; }
 
     /// <summary>
-    /// Display name of the broadcaster.
+    /// The broadcaster's display name.
     /// </summary>
     [JsonPropertyName("broadcaster_name")]
     public string? BroadcasterName { get; init; }
 
     /// <summary>
-    /// If the subscription was gifted, this is the user ID of the gifter. May not be defined for <see cref="CheckUserSubscription(TwitchSession, string, string)"/>.
+    /// The ID of the user that gifted the subscription to the user.
     /// </summary>
     [JsonPropertyName("gifter_id")]
     public string? GifterId { get; init; }
 
     /// <summary>
-    /// If the subscription was gifted, this is the login of the gifter.
+    /// The gifter's login name.
     /// </summary>
     [JsonPropertyName("gifter_login")]
     public string? GifterLogin { get; init; }
 
     /// <summary>
-    /// If the subscription was gifted, this is the display name of the gifter.
+    /// The gifter's display name.
     /// </summary>
     [JsonPropertyName("gifter_name")]
     public string? GifterName { get; init; }
 
     /// <summary>
-    /// Is <see langword="true"/> if the subscription is a gift subscription.
+    /// A Boolean value that determines whether the subscription is a gift subscription.
     /// </summary>
     [JsonPropertyName("is_gift")]
     public bool? IsGift { get; init; }
 
     /// <summary>
-    /// Name of the subscription. May not be defined for <see cref="CheckUserSubscription(TwitchSession, string, string)"/>.
+    /// The name of the subscription.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This property is not defined for <see cref="CheckUserSubscription(TwitchSession, string, string)"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("plan_name")]
     public string? PlanName { get; init; }
 
     /// <summary>
-    /// Type of subscription (Tier 1, Tier 2, Tier 3).
+    /// The type of subscription.
     /// </summary>
     [JsonPropertyName("tier")]
     public SubscriptionTier? Tier { get; init; }
 
     /// <summary>
-    /// ID of the subscribed user. May not be defined for <see cref="CheckUserSubscription(TwitchSession, string, string)"/>.
+    /// An ID that identifies the subscribing user.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This property is not defined for <see cref="CheckUserSubscription(TwitchSession, string, string)"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("user_id")]
     public string? UserId { get; init; }
 
     /// <summary>
-    /// Display name of the subscribed user. May not be defined for <see cref="CheckUserSubscription(TwitchSession, string, string)"/>.
+    /// The user's display name.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This property is not defined for <see cref="CheckUserSubscription(TwitchSession, string, string)"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("user_login")]
     public string? UserLogin { get; init; }
 
     /// <summary>
-    /// Login of the subscribed user. May not be defined for <see cref="CheckUserSubscription(TwitchSession, string, string)"/>.
+    /// The user's login name.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This property is not defined for <see cref="CheckUserSubscription(TwitchSession, string, string)"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("user_name")]
     public string? UserName { get; init; }
 
     /// <summary>
-    /// Subscription tiers.
+    /// The type of subscription.
     /// </summary>
     public enum SubscriptionTier
     {
@@ -132,17 +152,37 @@ public sealed record Subscription
     /// Gets a list of users that subscribe to the specified broadcaster.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">User ID of the broadcaster. Must match the User ID in the Bearer token.</param>
+    /// <param name="broadcasterId">The broadcaster's ID. This ID must match the user ID in the access token.</param>
     /// <param name="userId">Filters the list to include only the specified subscribers. You may specify a maximum of 100 subscribers.</param>
-    /// <param name="after">Cursor for forward pagination: tells the server where to start fetching the next set of results in a multi-page response. This may only be used on queries without <paramref name="userId"/>. The cursor value specified here is from the pagination response field of a prior query.</param>
-    /// <param name="first">Maximum number of objects to return. Maximum: 100. Default: 20.</param>
+    /// <param name="first">The maximum number of items to return per page in the response. Maximum: 100. Default: 20.</param>
+    /// <param name="before">The cursor used to get the previous page of results.</param>
+    /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="SubscriptionResponse"/> with elements of type <see cref="Subscription"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> is defined and has more than 100 elements.</exception>
-    /// <exception cref="InvalidOperationException"><paramref name="userId"/> and <paramref name="after"/> are both defined.</exception>
+    /// <exception cref="InvalidOperationException">More than one of <paramref name="userId"/>, <paramref name="after"/>, <paramref name="before"/> were defined.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadSubscriptions"/>.</exception>
-    public static async Task<SubscriptionResponse?> GetBroadcasterSubscriptions(TwitchSession session, string broadcasterId, IEnumerable<string>? userId = null, string? after = null, int first = 20)
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the broadcaster's list of subscribers.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public static async Task<SubscriptionResponse?> GetBroadcasterSubscriptions(TwitchSession session, string broadcasterId, IEnumerable<string>? userId = null, int first = 20, string? before = null, string? after = null)
     {
         if (session is null)
         {
@@ -186,9 +226,23 @@ public sealed record Subscription
                 {
                     throw new InvalidOperationException(nameof(userId) + " can not be used at the same time as " + nameof(after)).Log(TwitchApi.GetLogger());
                 }
+                else if (!string.IsNullOrWhiteSpace(before))
+                {
+                    throw new InvalidOperationException(nameof(userId) + " can not be used at the same time as " + nameof(before)).Log(TwitchApi.GetLogger());
+                }
 
                 queryParams.Add("user_id", userIds);
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(before))
+        {
+            if (!string.IsNullOrWhiteSpace(after))
+            {
+                throw new InvalidOperationException(nameof(before) + " can not be used at the same time as " + nameof(after)).Log(TwitchApi.GetLogger());
+            }
+
+            queryParams.Add("before", new List<string> { before });
         }
 
         if (!string.IsNullOrWhiteSpace(after))
@@ -202,15 +256,38 @@ public sealed record Subscription
     }
 
     /// <summary>
-    /// Checks if a specific user (<paramref name="userId"/>) is subscribed to a specific channel (<paramref name="broadcasterId"/>).
+    /// Checks whether the user subscribes to the broadcaster's channel.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">User ID of the broadcaster. Must match the User ID in the Bearer token.</param>
-    /// <param name="userId">User ID of a Twitch viewer.</param>
+    /// <param name="broadcasterId">The ID of a partner or affiliate broadcaster.</param>
+    /// <param name="userId">The ID of the user that you're checking to see whether they subscribe to the broadcaster in <paramref name="broadcasterId"/>. This ID must match the user ID in the access Token.</param>
     /// <returns>A <see cref="SubscriptionResponse"/> with elements of type <see cref="Subscription"/> containing the response. The response contains a <see cref="JsonApiResponse.Status"/> of <see cref="System.Net.HttpStatusCode.NotFound"/> if the <paramref name="userId"/> is not subscribed to <paramref name="broadcasterId"/>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadSubscriptions"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.UserReadSubscriptions"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>The user subscribes to the broadcaster.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The user does not subscribe to the broadcaster.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<SubscriptionResponse?> CheckUserSubscription(TwitchSession session, string broadcasterId, string userId)
     {
         if (session is null)
@@ -228,7 +305,7 @@ public sealed record Subscription
             throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelReadSubscriptions);
+        session.RequireToken(Scope.UserReadSubscriptions);
 
         Dictionary<string, IEnumerable<string>> queryParams = new()
         {
