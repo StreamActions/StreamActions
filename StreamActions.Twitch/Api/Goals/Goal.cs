@@ -32,13 +32,13 @@ namespace StreamActions.Twitch.Api.Goals;
 public sealed record Goal
 {
     /// <summary>
-    /// An ID that uniquely identifies this goal.
+    /// An ID that identifies this goal.
     /// </summary>
     [JsonPropertyName("id")]
     public string? Id { get; init; }
 
     /// <summary>
-    /// An ID that uniquely identifies the broadcaster.
+    /// An ID that identifies the broadcaster that created the goal.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
     public string? BroadcasterId { get; init; }
@@ -50,7 +50,7 @@ public sealed record Goal
     public string? BroadcasterName { get; init; }
 
     /// <summary>
-    /// The broadcaster's user handle.
+    /// The broadcaster's login name.
     /// </summary>
     [JsonPropertyName("broadcaster_login")]
     public string? BroadcasterLogin { get; init; }
@@ -62,13 +62,13 @@ public sealed record Goal
     public GoalType? Type { get; init; }
 
     /// <summary>
-    /// A description of the goal, if specified. The description may contain a maximum of 40 characters.
+    /// A description of the goal. Is an empty string if not specified.
     /// </summary>
     [JsonPropertyName("description")]
     public string? Description { get; init; }
 
     /// <summary>
-    /// The current value.
+    /// The goal's current value.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -91,13 +91,18 @@ public sealed record Goal
     public int? CurrentAmount { get; init; }
 
     /// <summary>
-    /// The goal's target value. For example, if the broadcaster has 200 followers before creating the goal, and their goal is to double that number, this field is set to 400.
+    /// The goal's target value.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For example, if the broadcaster has 200 followers before creating the goal, and their goal is to double that number, this field is set to 400.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("target_amount")]
     public int? TargetAmount { get; init; }
 
     /// <summary>
-    /// The UTC timestamp in RFC 3339 format, which indicates when the broadcaster created the goal.
+    /// The UTC date and time that the broadcaster created the goal.
     /// </summary>
     [JsonPropertyName("created_at")]
     public DateTime? CreatedAt { get; init; }
@@ -133,14 +138,32 @@ public sealed record Goal
     }
 
     /// <summary>
-    /// Gets the broadcaster's list of active goals. Use this to get the current progress of each goal.
+    /// Gets the broadcaster's list of active goals. Use this endpoint to get the current progress of each goal.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster that created the goals.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster that created the goals. This ID must match the user ID in the user access token.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Channel"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadGoals"/>.</exception>
+    /// <remarks><para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the broadcaster's goals.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<ResponseData<Goal>?> GetCreatorGoals(TwitchSession session, string broadcasterId)
     {
         if (session is null)
