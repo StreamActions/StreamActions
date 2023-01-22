@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Logger;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Polls;
@@ -27,87 +26,50 @@ namespace StreamActions.Twitch.Api.Polls;
 public sealed record PollCreationParameters
 {
     /// <summary>
-    /// Constructor.
-    /// </summary>
-    /// <param name="broadcasterId">The broadcaster running polls. Provided broadcaster_id must match the user_id in the user OAuth token.</param>
-    /// <param name="title">Question displayed for the poll. Maximum: 60 characters.</param>
-    /// <param name="choices">Array of the poll choices. Minimum: 2 choices.Maximum: 5 choices.</param>
-    /// <param name="duration">Total duration for the poll (in seconds). Minimum: 15. Maximum: 1800.</param>
-    /// <param name="channelPointsVotingEnabled">Indicates if Channel Points can be used for voting. Default: <see langword="false"/>.</param>
-    /// <param name="channelPointsPerVote">Number of Channel Points required to vote once with Channel Points. Minimum: 0. Maximum: 1000000.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> or <paramref name="title"/> is <see langword="null"/>, empty, or whitespace; <paramref name="choices"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="choices"/> has less than 2 or more than 5 elements; <paramref name="title"/> is more than 60 characters.</exception>
-    public PollCreationParameters(string broadcasterId, string title, IReadOnlyList<PollCreationChoice> choices, int duration, bool channelPointsVotingEnabled = false, int channelPointsPerVote = 0)
-    {
-        if (string.IsNullOrWhiteSpace(broadcasterId))
-        {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
-        }
-
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            throw new ArgumentNullException(nameof(title)).Log(TwitchApi.GetLogger());
-        }
-
-        if (title.Length > 60)
-        {
-            throw new ArgumentOutOfRangeException(nameof(title), title.Length, "Must be 60 characters or less").Log(TwitchApi.GetLogger());
-        }
-
-        if (choices is null)
-        {
-            throw new ArgumentNullException(nameof(choices)).Log(TwitchApi.GetLogger());
-        }
-
-        if (choices.Count is < 2 or > 5)
-        {
-            throw new ArgumentOutOfRangeException(nameof(choices), choices.Count, "Must provide 2-5 choices.").Log(TwitchApi.GetLogger());
-        }
-
-        duration = Math.Clamp(duration, 15, 1800);
-        channelPointsPerVote = Math.Clamp(channelPointsPerVote, 0, 1000000);
-
-        this.BroadcasterId = broadcasterId;
-        this.Title = title;
-        this.Choices = choices;
-        this.Duration = duration;
-        this.ChannelPointsVotingEnabled = channelPointsVotingEnabled;
-        this.ChannelPointsPerVote = channelPointsPerVote;
-    }
-
-    /// <summary>
-    /// The broadcaster running polls. Provided broadcaster_id must match the user_id in the user OAuth token.
+    /// The ID of the broadcaster that's running the poll. This ID must match the user ID in the user access token.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
-    public string BroadcasterId { get; private init; }
+    public string? BroadcasterId { get; init; }
 
     /// <summary>
-    /// Question displayed for the poll. Maximum: 60 characters.
+    /// The question that viewers will vote on. The question may contain a maximum of 60 characters.
     /// </summary>
     [JsonPropertyName("title")]
-    public string Title { get; private init; }
+    public string? Title { get; init; }
 
     /// <summary>
-    /// Array of the poll choices. Minimum: 2 choices.Maximum: 5 choices.
+    /// A list of choices that viewers may choose from. The list must contain a minimum of 2 choices and up to a maximum of 5 choices.
     /// </summary>
     [JsonPropertyName("choices")]
-    public IReadOnlyList<PollCreationChoice> Choices { get; private init; }
+    public IReadOnlyList<PollCreationChoice>? Choices { get; init; }
 
     /// <summary>
-    /// Total duration for the poll (in seconds). Minimum: 15. Maximum: 1800.
+    /// The length of time (in seconds) that the poll will run for. The minimum is 15 seconds and the maximum is 1800 seconds (30 minutes).
     /// </summary>
     [JsonPropertyName("duration")]
-    public int Duration { get; private init; }
+    public int? Duration { get; init; }
 
     /// <summary>
-    /// Indicates if Channel Points can be used for voting. Default: <see langword="false"/>.
+    /// A Boolean value that indicates whether viewers may cast additional votes using Channel Points.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not set this field, use <see langword="null"/>; if set to <see langword="true"/>, <see cref="ChannelPointsPerVote"/> must be defined.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("channel_points_voting_enabled")]
-    public bool ChannelPointsVotingEnabled { get; private init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ChannelPointsVotingEnabled { get; init; }
 
     /// <summary>
-    /// Number of Channel Points required to vote once with Channel Points. Minimum: 0. Maximum: 1000000.
+    /// The number of points that the viewer must spend to cast one additional vote. The minimum is 1 and the maximum is 1mil.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not set this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("channel_points_per_vote")]
-    public int ChannelPointsPerVote { get; private init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? ChannelPointsPerVote { get; init; }
 }

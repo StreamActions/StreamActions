@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Logger;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Polls;
@@ -27,55 +26,33 @@ namespace StreamActions.Twitch.Api.Polls;
 public sealed record PollEndParameters
 {
     /// <summary>
-    /// Constructor.
-    /// </summary>
-    /// <param name="broadcasterId">The broadcaster running polls. Provided broadcaster_id must match the user_id in the user OAuth token.</param>
-    /// <param name="id">ID of the poll.</param>
-    /// <param name="status">The poll status to be set. Valid values: <see cref="Poll.PollStatus.TERMINATED"/> or <see cref="Poll.PollStatus.ARCHIVED"/>.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="broadcasterId"/> or <paramref name="id"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="status"/> is not a valid value.</exception>
-    public PollEndParameters(string broadcasterId, string id, Poll.PollStatus status)
-    {
-        if (string.IsNullOrWhiteSpace(broadcasterId))
-        {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
-        }
-
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
-        }
-
-        if (status is not Poll.PollStatus.TERMINATED and not Poll.PollStatus.ARCHIVED)
-        {
-            throw new ArgumentOutOfRangeException(nameof(status), Enum.GetName(status), "Valid values: TERMINATED or ARCHIVED").Log(TwitchApi.GetLogger());
-        }
-
-        this.BroadcasterId = broadcasterId;
-        this.Id = id;
-        this.Status = Enum.GetName(status) ?? "";
-    }
-
-    /// <summary>
-    /// The broadcaster running polls. Provided <see cref="BroadcasterId"/> must match the user_id authorized in <see cref="Common.TwitchSession.Token"/>.
+    /// The ID of the broadcaster that’s running the poll. This ID must match the user ID in the user access token.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
-    public string BroadcasterId { get; private init; }
+    public string? BroadcasterId { get; init; }
 
     /// <summary>
-    /// ID of the poll.
+    /// The ID of the poll to update.
     /// </summary>
     [JsonPropertyName("id")]
-    public string Id { get; private init; }
+    public string? Id { get; init; }
 
     /// <summary>
-    /// The poll status to be set.
+    /// The status to set the poll to.
     /// </summary>
     /// <remarks>
-    /// Valid values:
-    /// <c>TERMINATED</c>: End the poll manually, but allow it to be viewed publicly.
-    /// <c>ARCHIVED</c>: End the poll manually and do not allow it to be viewed publicly.
+    /// Possible case-sensitive values are:
+    /// <list type="table">
+    /// <item>
+    /// <term>TERMINATED</term>
+    /// <description>Ends the poll before the poll is scheduled to end. The poll remains publicly visible.</description>
+    /// </item>
+    /// <item>
+    /// <term>ARCHIVED</term>
+    /// <description>Ends the poll before the poll is scheduled to end, and then archives it so it's no longer publicly visible.</description>
+    /// </item>
+    /// </list>
     /// </remarks>
     [JsonPropertyName("status")]
-    public string Status { get; private init; }
+    public string? Status { get; init; }
 }

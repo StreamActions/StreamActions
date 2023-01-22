@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Logger;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Polls;
@@ -27,29 +26,8 @@ namespace StreamActions.Twitch.Api.Polls;
 public sealed record PollCreationChoice
 {
     /// <summary>
-    /// Constructor.
-    /// </summary>
-    /// <param name="title">Text displayed for the choice. Maximum: 25 characters.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="title"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="title"/> is longer than 25 characters.</exception>
-    public PollCreationChoice(string title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            throw new ArgumentNullException(nameof(title)).Log(TwitchApi.GetLogger());
-        }
-
-        if (title.Length > 25)
-        {
-            throw new ArgumentOutOfRangeException(nameof(title), title.Length, "Must be 25 characters or less").Log(TwitchApi.GetLogger());
-        }
-
-        this.Title = title;
-    }
-
-    /// <summary>
-    /// Text displayed for the choice. Maximum: 25 characters.
+    /// One of the choices the viewer may select. The choice may contain a maximum of 25 characters.
     /// </summary>
     [JsonPropertyName("title")]
-    public string Title { get; private init; }
+    public string? Title { get; init; }
 }
