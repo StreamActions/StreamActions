@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Limiters;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -34,41 +33,69 @@ namespace StreamActions.Twitch.Api.Clips;
 public sealed record CreatedClip
 {
     /// <summary>
-    /// The rate limiter for <see cref="CreateClip(TwitchSession, string, bool)"/>.
-    /// </summary>
-    [JsonIgnore]
-    public static TokenBucketRateLimiter RateLimiter { get; } = new(1, TimeSpan.FromSeconds(60));
-
-    /// <summary>
-    /// ID of the clip that was created.
+    /// An ID that uniquely identifies the clip.
     /// </summary>
     [JsonPropertyName("id")]
     public string? Id { get; init; }
 
     /// <summary>
-    /// URL of the edit page for the clip.
+    /// A URL that you can use to edit the clip's title, identify the part of the clip to publish, and publish the clip.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The URL is valid for up to 24 hours or until the clip is published, whichever comes first.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("edit_url")]
     public Uri? EditUrl { get; init; }
 
     /// <summary>
-    /// Creates a clip programmatically.
+    /// Creates a clip from the broadcaster's stream.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">ID of the stream from which the clip will be made.</param>
-    /// <param name="hasDelay">If false, the clip is captured from the live stream when the API is called; otherwise, a delay is added before the clip is captured (to account for the brief delay between the broadcaster's stream and the viewer's experience of that stream).</param>
-    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="CreatedClip"/> containing the response. The <see cref="JsonApiResponse.Status"/> will be 0 if <see cref="RateLimiter"/> timed out waiting.</returns>
+    /// <param name="broadcasterId">The ID of the broadcaster whose stream you want to create a clip from.</param>
+    /// <param name="hasDelay">A Boolean value that determines whether the API captures the clip at the moment the viewer requests it or after a delay. If <see langword="false"/> (default), Twitch captures the clip at the moment the viewer requests it (this is the same clip experience as the Twitch UX). If <see langword="true"/>, Twitch adds a delay before capturing the clip (this basically shifts the capture window to the right slightly).</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="CreatedClip"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ClipsEdit"/>.</exception>
     /// <remarks>
     /// <para>
-    /// Clip creation takes time. We recommend that you query <see cref="Clip.GetClips"/>, with the clip ID that is returned here.
-    /// If <see cref="Clip.GetClips"/> returns a valid clip, your clip creation was successful. If, after 15 seconds,
-    /// you still have not gotten back a valid clip from <see cref="Clip.GetClips"/>, assume that the clip was not created and retry <see cref="CreateClip(TwitchSession, string, bool)"/>.
+    /// This API captures up to 90 seconds of the broadcaster's stream. The 90 seconds spans the point in the stream from when you called the API.
+    /// For example, if you call the API at the 4:00 minute mark, the API captures from approximately the 3:35 mark to approximately the 4:05 minute mark. Twitch tries its best to capture 90 seconds of the stream, but the actual length may be less. This may occur if you begin capturing the clip near the beginning or end of the stream.
     /// </para>
     /// <para>
-    /// This endpoint has a global rate limit, across all callers. The rate limit is tracked by <see cref="RateLimiter"/>.
+    /// By default, Twitch publishes up to the last 30 seconds of the 90 seconds window and provides a default title for the clip. To specify the title and the portion of the 90 seconds window that's used for the clip, use the URL in the response's <see cref="EditUrl"/> field.
+    /// You can specify a clip that's from 5 seconds to 60 seconds in length. The URL is valid for up to 24 hours or until the clip is published, whichever comes first.
+    /// </para>
+    /// <para>
+    /// Creating a clip is an asynchronous process that can take a short amount of time to complete. To determine whether the clip was successfully created, call <see cref="Clip.GetClips(TwitchSession, IEnumerable{string}?, string?, string?, string?, string?, int, DateTime?, DateTime?)"/> using the <see cref="Id"/> that this request returned.
+    /// If Get Clips returns the clip, the clip was successfully created. If after 15 seconds Get Clips hasn't returned the clip, assume it failed.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>202 Accepted</term>
+    /// <description>Successfully started the clip process.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>403 Forbidden</term>
+    /// <description>The specified broadcaster has disabled or restricted the ability to capture clips.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The specified broadcaster is not live.</description>
+    /// </item>
+    /// </list>
     /// </para>
     /// </remarks>
     public static async Task<ResponseData<CreatedClip>?> CreateClip(TwitchSession session, string broadcasterId, bool hasDelay = false)
@@ -85,17 +112,8 @@ public sealed record CreatedClip
 
         session.RequireToken(Scope.ClipsEdit);
 
-        try
-        {
-            await RateLimiter.WaitForRateLimit(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
-            Uri uri = Util.BuildUri(new("/clips"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } }, { "has_delay", new List<string> { hasDelay ? "true" : "false" } } });
-            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
-            RateLimiter.ParseHeaders(response.Headers, "Ratelimit-Helixclipscreation-Limit", "Ratelimit-Helixclipscreation-Remaining", "Ratelimit-Helixclipscreation-Reset");
-            return await response.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is TimeoutException)
-        {
-            return new() { Status = 0, Error = ex.GetType().Name, Message = ex.Message };
-        }
+        Uri uri = Util.BuildUri(new("/clips"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } }, { "has_delay", new List<string> { hasDelay ? "true" : "false" } } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

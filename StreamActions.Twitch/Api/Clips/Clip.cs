@@ -31,122 +31,122 @@ namespace StreamActions.Twitch.Api.Clips;
 public sealed record Clip
 {
     /// <summary>
-    /// ID of the clip being queried.
+    /// An ID that uniquely identifies the clip.
     /// </summary>
     [JsonPropertyName("id")]
     public string? Id { get; init; }
 
     /// <summary>
-    /// URL where the clip can be viewed.
+    /// A URL to the clip.
     /// </summary>
     [JsonPropertyName("url")]
     public Uri? Url { get; init; }
 
     /// <summary>
-    /// URL to embed the clip.
+    /// A URL that you can use in an iframe to embed the clip.
     /// </summary>
     [JsonPropertyName("embed_url")]
     public Uri? EmbedUrl { get; init; }
 
     /// <summary>
-    /// User ID of the stream from which the clip was created.
+    /// An ID that identifies the broadcaster that the video was clipped from.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
     public string? BroadcasterId { get; init; }
 
     /// <summary>
-    /// Display name corresponding to <see cref="BroadcasterId"/>.
+    /// The broadcaster's display name.
     /// </summary>
     [JsonPropertyName("broadcaster_name")]
     public string? BroadcasterName { get; init; }
 
     /// <summary>
-    /// ID of the user who created the clip.
+    /// An ID that identifies the user that created the clip.
     /// </summary>
     [JsonPropertyName("creator_id")]
     public string? CreatorId { get; init; }
 
     /// <summary>
-    /// Display name corresponding to <see cref="CreatorId"/>.
+    /// The user's display name.
     /// </summary>
     [JsonPropertyName("creator_name")]
     public string? CreatorName { get; init; }
 
     /// <summary>
-    /// ID of the video from which the clip was created. This field contains an empty string if the video is not available.
+    /// An ID that identifies the video that the clip came from. This field contains an empty string if the video is not available.
     /// </summary>
     [JsonPropertyName("video_id")]
     public string? VideoId { get; init; }
 
     /// <summary>
-    /// ID of the game assigned to the stream when the clip was created.
+    /// The ID of the game that was being played when the clip was created.
     /// </summary>
     [JsonPropertyName("game_id")]
     public string? GameId { get; init; }
 
     /// <summary>
-    /// Language of the stream from which the clip was created. A language value is either the ISO 639-1 two-letter code for a supported stream language or "other".
+    /// The ISO 639-1 two-letter language code that the broadcaster broadcasts in. For example, <c>en</c> for English. The value is <c>other</c> if the broadcaster uses a language that Twitch doesn't support.
     /// </summary>
     [JsonPropertyName("language")]
     public string? Language { get; init; }
 
     /// <summary>
-    /// Title of the clip.
+    /// The title of the clip.
     /// </summary>
     [JsonPropertyName("title")]
     public string? Title { get; init; }
 
     /// <summary>
-    /// Number of times the clip has been viewed.
+    /// The number of times the clip has been viewed.
     /// </summary>
     [JsonPropertyName("view_count")]
     public int? ViewCount { get; init; }
 
     /// <summary>
-    /// Date when the clip was created.
+    /// The date and time of when the clip was created
     /// </summary>
     [JsonPropertyName("created_at")]
     public DateTime? CreatedAt { get; init; }
 
     /// <summary>
-    /// URL of the clip thumbnail.
+    /// A URL to a thumbnail image of the clip.
     /// </summary>
     [JsonPropertyName("thumbnail_url")]
     public Uri? ThumbnailUrl { get; init; }
 
     /// <summary>
-    /// Duration of the Clip.
+    /// The length of the clip.
     /// </summary>
     [JsonIgnore]
     public TimeSpan? Duration => this.DurationSeconds.HasValue ? TimeSpan.FromSeconds(this.DurationSeconds.Value) : null;
 
     /// <summary>
-    /// Duration of the Clip in seconds (up to 0.1 precision).
+    /// The length of the clip, in seconds. Precision is 0.1.
     /// </summary>
     [JsonPropertyName("duration")]
     public float? DurationSeconds { get; init; }
 
     /// <summary>
-    /// The zero-based offset, in seconds, to where the clip starts in the video (VOD). Is <c><see langword="null"/></c> if the video is not available or hasn't been created yet from the live stream.
+    /// The zero-based offset, in seconds, to where the clip starts in the video (VOD). Is <see langword="null"/> if the video is not available or hasn't been created yet from the live stream.
     /// </summary>
     /// <remarks>
-    /// Note that there's a delay between when a clip is created during a broadcast and when the offset is set. During the delay period, VodOffset is <c><see langword="null"/></c>. The delay is indeterminate, but is typically minutes long.
+    /// Note that there's a delay between when a clip is created during a broadcast and when the offset is set. During the delay period, VodOffset is <see langword="null"/>. The delay is indeterminate, but is typically minutes long.
     /// </remarks>
     [JsonPropertyName("vod_offset")]
     public int? VodOffset { get; init; }
 
     /// <summary>
-    /// Gets clip information by clip ID (one or more), broadcaster ID (one only), or game ID (one only).
+    /// Gets one or more video clips that were captured from streams.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="id">ID of the clip being queried. Limit: 100. If this is specified, you cannot use any other parameters.</param>
-    /// <param name="broadcasterId">ID of the broadcaster for whom clips are returned. Results are ordered by view count. If this is specified, you cannot use <paramref name="id"/> or <paramref name="gameId"/>.</param>
-    /// <param name="gameId">ID of the game for which clips are returned. Results are ordered by view count.  If this is specified, you cannot use <paramref name="id"/> or <paramref name="broadcasterId"/>.</param>
-    /// <param name="after">Cursor for forward pagination: tells the server where to start fetching the next set of results, in a multi-page response.</param>
-    /// <param name="before">Cursor for backward pagination: tells the server where to start fetching the next set of results, in a multi-page response.</param>
-    /// <param name="first">Maximum number of objects to return. Maximum: 100. Default: 20.</param>
-    /// <param name="startedAt">Starting date/time for returned clips. If this is specified, <paramref name="endedAt"/> also should be specified; otherwise, the <paramref name="endedAt"/> date/time will be 1 week after the <paramref name="startedAt"/> value.</param>
-    /// <param name="endedAt">Ending date/time for returned clips. If this is specified, <paramref name="startedAt"/> also must be specified.</param>
+    /// <param name="id">An ID that identifies the clip to get. You may specify a maximum of 100 IDs.</param>
+    /// <param name="broadcasterId">An ID that identifies the broadcaster whose video clips you want to get. Use this parameter to get clips that were captured from the broadcaster's streams.</param>
+    /// <param name="gameId">An ID that identifies the game whose clips you want to get. Use this parameter to get clips that were captured from streams that were playing this game.</param>
+    /// <param name="after">The cursor used to get the next page of results.</param>
+    /// <param name="before">The cursor used to get the previous page of results.</param>
+    /// <param name="first">The maximum number of clips to return per page in the response. Maximum: 100. Default: 20.</param>
+    /// <param name="startedAt">The start date used to filter clips. The API returns only clips within the start and end date window.</param>
+    /// <param name="endedAt">The end date used to filter clips. If not specified, the time window is the start date plus one week.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Clip"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; did not specify a valid value for one of <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="startedAt"/> is <see langword="null"/> while <paramref name="endedAt"/> is defined.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Specified more than one of the mutually exclusive parameters <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="id"/> is defined and has more than 100 elements.</exception>
@@ -154,7 +154,31 @@ public sealed record Clip
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
-    /// The clips service returns a maximum of 1000 clips.
+    /// The <paramref name="id"/>, <paramref name="gameId"/>, and <paramref name="broadcasterId"/> parameters are mutually exclusive.
+    /// </para>
+    /// <para>
+    /// For clips returned by <paramref name="gameId"/> or <paramref name="broadcasterId"/>, the list is in descending order by view count. For lists returned by <paramref name="id"/>, the list is in the same order as the input IDs.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully started the commercial.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The specified game does not exist.</description>
+    /// </item>
+    /// </list>
     /// </para>
     /// </remarks>
     public static async Task<ResponseData<Clip>?> GetClips(TwitchSession session, IEnumerable<string>? id = null, string? broadcasterId = null, string? gameId = null, string? after = null,
@@ -169,7 +193,7 @@ public sealed record Clip
 
         if (string.IsNullOrWhiteSpace(broadcasterId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
         {
-            throw new ArgumentNullException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "Must provide at least one value of id, broadcasterId, or gameId").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "must provide at least one value of id, broadcasterId, or gameId").Log(TwitchApi.GetLogger());
         }
 
         bool hasId = false;
@@ -182,7 +206,7 @@ public sealed record Clip
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "Can not mix parameters id, broadcasterId, and gameId").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix parameters id, broadcasterId, and gameId").Log(TwitchApi.GetLogger());
             }
             hasId = true;
         }
@@ -191,7 +215,7 @@ public sealed record Clip
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "Can not mix parameters id, broadcasterId, and gameId").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix parameters id, broadcasterId, and gameId").Log(TwitchApi.GetLogger());
             }
 
             if (id.Count() > 100)
@@ -202,12 +226,12 @@ public sealed record Clip
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new InvalidOperationException("Can only use one of before or after").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of before or after").Log(TwitchApi.GetLogger());
         }
 
         if (!startedAt.HasValue && endedAt.HasValue)
         {
-            throw new ArgumentNullException(nameof(startedAt), "Must provide startedAt when using endedAt").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(startedAt), "must provide startedAt when using endedAt").Log(TwitchApi.GetLogger());
         }
 
         first = Math.Clamp(first, 1, 100);
