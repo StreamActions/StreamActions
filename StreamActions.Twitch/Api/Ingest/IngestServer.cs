@@ -26,8 +26,8 @@ namespace StreamActions.Twitch.Api.Ingest;
 /// <summary>
 /// Sends and represents a response element for a request for ingest servers.
 /// </summary>
-[ETag("https://dev.twitch.tv/docs/video-broadcast/reference", "93b471e8222a9fbd55f7782fb258c096c1b2e8562faa9b618ff7d9891bee97ae",
-    "2022-10-16T20:11Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
+[ETag("https://dev.twitch.tv/docs/video-broadcast/reference", "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+    "2023-01-22T13:58Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
         "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
 public sealed record IngestServer
 {
@@ -73,6 +73,17 @@ public sealed record IngestServer
     /// </summary>
     /// <param name="baseAddress">The uri to the Ingests endpoint.</param>
     /// <returns>A <see cref="IngestResponse"/> containing the response data.</returns>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the list of ingest endpoints.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<IngestResponse?> GetIngestServers(string baseAddress = "https://ingest.twitch.tv/ingests")
     {
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), TwitchSession.Empty).ConfigureAwait(false);
