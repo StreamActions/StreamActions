@@ -28,6 +28,12 @@ public record ChannelPointsRewardUpdateParameters : ChannelPointsRewardCreationP
     /// <summary>
     /// A Boolean value that determines whether the reward is currently paused. Viewers can't redeem paused rewards.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("is_paused")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsPaused { get; init; }
 }

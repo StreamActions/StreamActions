@@ -28,37 +28,79 @@ public record ChannelPointsRewardCreationParameters
     /// <summary>
     /// The background color to use for the reward, as a string. The color is in Hex format (for example, <c>#00E5CB</c>).
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("background_color")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? BackgroundColor { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether the reward is enabled. Disabled rewards aren't shown to the user.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("is_enabled")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsEnabled { get; init; }
 
     /// <summary>
     /// The cost of the reward in Channel Points.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This field is required when used in <see cref="ChannelPointsReward.CreateCustomReward(Common.TwitchSession, string, ChannelPointsRewardCreationParameters)"/>.
+    /// </para>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("cost")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Cost { get; init; }
 
     /// <summary>
     /// The title of the reward.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This field is required when used in <see cref="ChannelPointsReward.CreateCustomReward(Common.TwitchSession, string, ChannelPointsRewardCreationParameters)"/>.
+    /// </para>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("title")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Title { get; init; }
 
     /// <summary>
     /// The prompt/description shown to the viewer when they redeem the reward.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("prompt")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Prompt { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether the user must enter information when redeeming the reward.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("is_user_input_required")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsUserInputRequired { get; init; }
 
     /// <summary>
@@ -66,10 +108,11 @@ public record ChannelPointsRewardCreationParameters
     /// </summary>
     /// <remarks>
     /// <para>
-    /// If this is not <see langword="null"/>, then <see cref="MaxPerStream"/> must also not be <see langword="null"/>.
+    /// To not update this field or <see cref="MaxPerStream"/>, use <see langword="null"/>; if updating one of these fields, both must be defined.
     /// </para>
     /// </remarks>
     [JsonPropertyName("is_max_per_stream_enabled")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsMaxPerStreamEnabled { get; init; }
 
     /// <summary>
@@ -77,10 +120,11 @@ public record ChannelPointsRewardCreationParameters
     /// </summary>
     /// <remarks>
     /// <para>
-    /// If this is not <see langword="null"/>, then <see cref="IsMaxPerStreamEnabled"/> must also not be <see langword="null"/>.
+    /// To not update this field or <see cref="IsMaxPerStreamEnabled"/>, use <see langword="null"/>; if updating one of these fields, both must be defined.
     /// </para>
     /// </remarks>
     [JsonPropertyName("max_per_stream")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? MaxPerStream { get; init; }
 
     /// <summary>
@@ -88,10 +132,11 @@ public record ChannelPointsRewardCreationParameters
     /// </summary>
     /// <remarks>
     /// <para>
-    /// If this is not <see langword="null"/>, then <see cref="MaxPerUserPerStream"/> must also not be <see langword="null"/>.
+    /// To not update this field or <see cref="MaxPerUserPerStream"/>, use <see langword="null"/>; if updating one of these fields, both must be defined.
     /// </para>
     /// </remarks>
     [JsonPropertyName("is_max_per_user_per_stream_enabled")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsMaxPerUserPerStreamEnabled { get; init; }
 
     /// <summary>
@@ -99,10 +144,11 @@ public record ChannelPointsRewardCreationParameters
     /// </summary>
     /// <remarks>
     /// <para>
-    /// If this is not <see langword="null"/>, then <see cref="IsMaxPerUserPerStreamEnabled"/> must also not be <see langword="null"/>.
+    /// To not update this field or <see cref="IsMaxPerUserPerStreamEnabled"/>, use <see langword="null"/>; if updating one of these fields, both must be defined.
     /// </para>
     /// </remarks>
     [JsonPropertyName("max_per_user_per_stream")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? MaxPerUserPerStream { get; init; }
 
     /// <summary>
@@ -110,10 +156,11 @@ public record ChannelPointsRewardCreationParameters
     /// </summary>
     /// <remarks>
     /// <para>
-    /// If this is not <see langword="null"/>, then <see cref="GlobalCooldownSeconds"/> must also not be <see langword="null"/>.
+    /// To not update this field or <see cref="GlobalCooldownSeconds"/>, use <see langword="null"/>; if updating one of these fields, both must be defined.
     /// </para>
     /// </remarks>
     [JsonPropertyName("is_global_cooldown_enabled")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsGlobalCooldownEnabled { get; init; }
 
     /// <summary>
@@ -121,16 +168,23 @@ public record ChannelPointsRewardCreationParameters
     /// </summary>
     /// <remarks>
     /// <para>
-    /// If this is not <see langword="null"/>, then <see cref="IsGlobalCooldownEnabled"/> must also not be <see langword="null"/>.
+    /// To not update this field or <see cref="IsGlobalCooldownEnabled"/>, use <see langword="null"/>; if updating one of these fields, both must be defined.
     /// </para>
     /// </remarks>
     [JsonPropertyName("global_cooldown_seconds")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? GlobalCooldownSeconds { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether redemptions should be set to <c>FULFILLED</c> status immediately when a reward is redeemed.
     /// If <see langword="false"/>, status is set to <c>UNFULFILLED</c> and follows the normal request queue process.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("should_redemptions_skip_request_queue")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? ShouldRedemptionsSkipRequestQueue { get; init; }
 }

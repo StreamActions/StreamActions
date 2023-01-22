@@ -26,39 +26,74 @@ namespace StreamActions.Twitch.Api.Channels;
 public sealed record ModifyChannelParameters
 {
     /// <summary>
-    /// The ID of the game that the user plays. The game is not updated if the ID isn't a game ID that Twitch recognizes. To unset this field, use <c>"0"</c> or <c>""</c> (an empty string). To not update this field, use <see langword="null"/>.
+    /// The ID of the game that the user plays.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The game is not updated if the ID isn't a game ID that Twitch recognizes. To unset this field, use <c>"0"</c> or <c>""</c> (an empty string).
+    /// </para>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("game_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? GameId { get; init; }
 
     /// <summary>
-    /// The user's preferred language. Set the value to an ISO 639-1 two-letter language code (for example, <c>en</c> for English). Set to <c>"other"</c> if the user's preferred language is not a Twitch supported language. The language isn't updated if the language code isn't a Twitch supported language. To not update this field, use <see langword="null"/>.
+    /// The user's preferred language. Set the value to an ISO 639-1 two-letter language code (for example, <c>en</c> for English). Set to <c>"other"</c> if the user's preferred language is not a Twitch supported language.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The language isn't updated if the language code isn't a Twitch supported language.
+    /// </para>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("broadcaster_language")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? BroadcasterLanguage { get; init; }
 
     /// <summary>
-    /// The title of the user's stream. You may not set this field to an empty string. To not update this field, use <see langword="null"/>.
+    /// The title of the user's stream.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// You may not set this field to an empty string.
+    /// </para>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("title")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Title { get; init; }
 
     /// <summary>
-    /// The number of seconds you want your broadcast buffered before streaming it live. The delay helps ensure fairness during competitive play. Only users with Partner status may set this field. The maximum delay is 900 seconds (15 minutes). To not update this field, use <see langword="null"/>.
+    /// The number of seconds you want your broadcast buffered before streaming it live. The delay helps ensure fairness during competitive play.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Only users with Partner status may set this field. The maximum delay is 900 seconds (15 minutes).
+    /// </para>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("delay")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Delay { get; init; }
 
     /// <summary>
-    /// A list of channel-defined tags to apply to the channel. To remove all tags from the channel, set tags to an empty array. Tags help identify the content that the channel streams. To not update this field, use <see langword="null"/>.
+    /// A list of channel-defined tags to apply to the channel. To remove all tags from the channel, set tags to an empty array. Tags help identify the content that the channel streams.
     /// </summary>
     /// <remarks>
     /// <para>
     /// A channel may specify a maximum of 10 tags. Each tag is limited to a maximum of 25 characters and may not be an empty string or contain spaces or special characters. Tags are case insensitive. For readability, consider using camelCasing or PascalCasing.
+    /// </para>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
     /// </para>
     /// </remarks>
     [JsonPropertyName("tags")]
