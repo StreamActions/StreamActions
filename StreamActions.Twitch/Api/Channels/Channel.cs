@@ -65,8 +65,13 @@ public sealed partial record Channel
     public string? GameId { get; init; }
 
     /// <summary>
-    /// The broadcaster's preferred language. The value is an ISO 639-1 two-letter language code (for example, <c>en</c> for English). The value is set to <c>"other"</c> if the language is not a Twitch supported language.
+    /// The broadcaster's preferred language.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The value is an ISO 639-1 two-letter language code (for example, <c>"en"</c> for English). The value is set to <c>"other"</c> if the language is not a Twitch supported language.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("broadcaster_language")]
     public string? BroadcasterLanguage { get; init; }
 

@@ -41,9 +41,12 @@ public sealed record ModifyChannelParameters
     public string? GameId { get; init; }
 
     /// <summary>
-    /// The user's preferred language. Set the value to an ISO 639-1 two-letter language code (for example, <c>en</c> for English). Set to <c>"other"</c> if the user's preferred language is not a Twitch supported language.
+    /// The user's preferred language.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// Set the value to an ISO 639-1 two-letter language code (for example, <c>"en"</c> for English). Set to <c>"other"</c> if the user's preferred language is not a Twitch supported language.
+    /// </para>
     /// <para>
     /// The language isn't updated if the language code isn't a Twitch supported language.
     /// </para>
