@@ -108,8 +108,8 @@ public sealed record ExtensionTransaction
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request. Must be for an App Access Token.</param>
     /// <param name="extensionId">The ID of the extension whose list of transactions you want to get.</param>
     /// <param name="id">A transaction ID used to filter the list of transactions. Maximum: 100.</param>
+    /// <param name="first">The maximum number of items to return per page in the response. Maximum: 100. Default: 20.</param>
     /// <param name="after">The cursor used to get the next page of result.</param>
-    /// <param name="first">The maximum number of items to return per page in the response.. Maximum: 100. Default: 20.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ExtensionTransaction"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="extensionId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not <see langword="null"/> and contains more than 100 elements.</exception>
@@ -138,7 +138,7 @@ public sealed record ExtensionTransaction
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ResponseData<ExtensionTransaction>?> GetExtensionTransactions(TwitchSession session, string extensionId, IEnumerable<string>? id = null, string? after = null, int first = 20)
+    public static async Task<ResponseData<ExtensionTransaction>?> GetExtensionTransactions(TwitchSession session, string extensionId, IEnumerable<string>? id = null, int first = 20, string? after = null)
     {
         if (session is null)
         {

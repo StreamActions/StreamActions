@@ -73,11 +73,11 @@ public sealed record GameAnalytics
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="gameId">The game's client ID. If specified, the response contains a report for the specified game. If not specified, the response includes a report for each of the authenticated user's games.</param>
-    /// <param name="after">The cursor used to get the next page of results.</param>
-    /// <param name="first">The maximum number of report URLs to return per page in the response. Maximum: 100. Default: 20.</param>
+    /// <param name="type">The type of analytics report to get.</param>
     /// <param name="startedAt">The reporting window's start date. If you specify a start date, you must specify an end date. The start date must be within one year of today's date.</param>
     /// <param name="endedAt">The reporting window's end date. Because it can take up to two days for the data to be available, you must specify an end date that's earlier than today minus one to two days. If not, the API ignores your end date and uses an end date that is today minus one to two days.</param>
-    /// <param name="type">The type of analytics report to get.</param>
+    /// <param name="first">The maximum number of report URLs to return per page in the response. Maximum: 100. Default: 20.</param>
+    /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ExtensionAnalytics"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
@@ -110,8 +110,7 @@ public sealed record GameAnalytics
     /// </para>
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
-    public static async Task<ResponseData<GameAnalytics>?> GetGameAnalytics(TwitchSession session, string? gameId = null, string? after = null, int first = 20, DateTime? startedAt = null, DateTime? endedAt = null,
-        GameReportType type = GameReportType.Overview_v2)
+    public static async Task<ResponseData<GameAnalytics>?> GetGameAnalytics(TwitchSession session, string? gameId = null, GameReportType type = GameReportType.Overview_v2, DateTime? startedAt = null, DateTime? endedAt = null, int first = 20, string? after = null)
     {
         if (session is null)
         {

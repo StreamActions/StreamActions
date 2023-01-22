@@ -139,14 +139,14 @@ public sealed record Clip
     /// Gets one or more video clips that were captured from streams.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="id">An ID that identifies the clip to get. You may specify a maximum of 100 IDs.</param>
     /// <param name="broadcasterId">An ID that identifies the broadcaster whose video clips you want to get. Use this parameter to get clips that were captured from the broadcaster's streams.</param>
     /// <param name="gameId">An ID that identifies the game whose clips you want to get. Use this parameter to get clips that were captured from streams that were playing this game.</param>
-    /// <param name="after">The cursor used to get the next page of results.</param>
-    /// <param name="before">The cursor used to get the previous page of results.</param>
-    /// <param name="first">The maximum number of clips to return per page in the response. Maximum: 100. Default: 20.</param>
+    /// <param name="id">An ID that identifies the clip to get. You may specify a maximum of 100 IDs.</param>
     /// <param name="startedAt">The start date used to filter clips. The API returns only clips within the start and end date window.</param>
     /// <param name="endedAt">The end date used to filter clips. If not specified, the time window is the start date plus one week.</param>
+    /// <param name="first">The maximum number of clips to return per page in the response. Maximum: 100. Default: 20.</param>
+    /// <param name="before">The cursor used to get the previous page of results.</param>
+    /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Clip"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; did not specify a valid value for one of <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="startedAt"/> is <see langword="null"/> while <paramref name="endedAt"/> is defined.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Specified more than one of the mutually exclusive parameters <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="id"/> is defined and has more than 100 elements.</exception>
@@ -181,8 +181,8 @@ public sealed record Clip
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ResponseData<Clip>?> GetClips(TwitchSession session, IEnumerable<string>? id = null, string? broadcasterId = null, string? gameId = null, string? after = null,
-        string? before = null, int first = 20, DateTime? startedAt = null, DateTime? endedAt = null)
+    public static async Task<ResponseData<Clip>?> GetClips(TwitchSession session, string? broadcasterId = null, string? gameId = null, IEnumerable<string>? id = null, DateTime? startedAt = null,
+        DateTime? endedAt = null, int first = 20, string? before = null, string? after = null)
     {
         if (session is null)
         {
