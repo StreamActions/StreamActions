@@ -33,116 +33,132 @@ namespace StreamActions.Twitch.Api.Videos;
 public sealed record Video
 {
     /// <summary>
-    /// ID of the video.
+    /// An ID that identifies the video.
     /// </summary>
     [JsonPropertyName("id")]
     public string? Id { get; init; }
 
     /// <summary>
-    /// ID of the stream that the video originated from if the <see cref="Type"/> is <see cref="VideoType.Archive"/>. Otherwise set to <see langword="null"/>.
+    /// The ID of the stream that the video originated from if the video's <see cref="Type"/> is <see cref="VideoType.Archive"/>; otherwise, <see langword="null"/>.
     /// </summary>
     [JsonPropertyName("stream_id")]
     public string? StreamId { get; init; }
 
     /// <summary>
-    /// ID of the user who owns the video.
+    /// The ID of the broadcaster that owns the video.
     /// </summary>
     [JsonPropertyName("user_id")]
     public string? UserId { get; init; }
 
     /// <summary>
-    /// Login of the user who owns the video.
+    /// The broadcaster's login name.
     /// </summary>
     [JsonPropertyName("user_login")]
     public string? UserLogin { get; init; }
 
     /// <summary>
-    /// Display name corresponding to <see cref="UserId"/>.
+    /// The broadcaster's display name.
     /// </summary>
     [JsonPropertyName("user_name")]
     public string? UserName { get; init; }
 
     /// <summary>
-    /// Title of the video.
+    /// The video's title.
     /// </summary>
     [JsonPropertyName("title")]
     public string? Title { get; init; }
 
     /// <summary>
-    /// Description of the video.
+    /// The video's description.
     /// </summary>
     [JsonPropertyName("description")]
     public string? Description { get; init; }
 
     /// <summary>
-    /// Date when the video was created.
+    /// The date and time, in UTC, of when the video was created.
     /// </summary>
     [JsonPropertyName("created_at")]
     public DateTime? CreatedAt { get; init; }
 
     /// <summary>
-    /// Date when the video was published.
+    /// The date and time, in UTC, of when the video was published.
     /// </summary>
     [JsonPropertyName("published_at")]
     public DateTime? PublishedAt { get; init; }
 
     /// <summary>
-    /// URL of the video.
+    /// The video's URL.
     /// </summary>
     [JsonPropertyName("url")]
     public Uri? Url { get; init; }
 
     /// <summary>
-    /// Template URL for the thumbnail of the video.
+    /// A URL to a thumbnail image of the video.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Before using the URL, you must replace the <c>%{width}</c> and <c>%{height}</c> placeholders with the width and height of the thumbnail you want returned.
+    /// Specify the width and height in pixels. Because the CDN preserves the thumbnail's ratio, the thumbnail may not be the exact size you requested.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("thumbnail_url")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "Template Uri")]
     public string? ThumbnailUrl { get; init; }
 
     /// <summary>
-    /// Indicates whether the video is publicly viewable.
+    /// The video's viewable state.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Always set to <see cref="Viewability.Public"/>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("viewable")]
     public Viewability? Viewable { get; init; }
 
     /// <summary>
-    /// Number of times the video has been viewed.
+    /// The number of times that users have watched the video.
     /// </summary>
     [JsonPropertyName("view_count")]
     public int? ViewCount { get; init; }
 
     /// <summary>
-    /// Language of the video. A language value is either the ISO 639-1 two-letter code for a supported stream language or <c>other</c>.
+    /// The ISO 639-1 two-letter language code that the video was broadcast in. The language value is <c>"other"</c> if the video was broadcast in a language not in the list of supported languages.
     /// </summary>
     [JsonPropertyName("language")]
     public string? Language { get; init; }
 
     /// <summary>
-    /// Type of video.
+    /// The video's type.
     /// </summary>
     [JsonPropertyName("type")]
     public VideoType? Type { get; init; }
 
     /// <summary>
-    /// Length of the video, as a string in the format <c>1w2d3h4m5s</c>.
+    /// The video's length in ISO 8601 duration format.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For example, 3m21s represents 3 minutes, 21 seconds.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("duration")]
     public string? DurationString { get; init; }
 
     /// <summary>
-    /// Length of the video.
+    /// The video's length.
     /// </summary>
     [JsonIgnore]
     public TimeSpan? Duration => this.DurationString is not null ? Util.DurationStringToTimeSpan(this.DurationString) : null;
 
     /// <summary>
-    /// Array of muted segments in the video. If there are no muted segments, the value will be <see langword="null"/>.
+    /// The segments that Twitch Audio Recognition muted; otherwise, <see langword="null"/>.
     /// </summary>
     [JsonPropertyName("muted_segments")]
     public IEnumerable<MutedVideoSegment>? MutedSegments { get; init; }
 
     /// <summary>
-    /// Indicates whether the video is publicly viewable.
+    /// The video's viewable state.
     /// </summary>
     public enum Viewability
     {
@@ -157,7 +173,7 @@ public sealed record Video
     }
 
     /// <summary>
-    /// Type of video.
+    /// The video's type.
     /// </summary>
     public enum VideoType
     {
@@ -166,95 +182,126 @@ public sealed record Video
         /// </summary>
         All,
         /// <summary>
-        /// An archived stream.
+        /// An on-demand video (VOD) of one of the broadcaster's past streams.
         /// </summary>
         Archive,
         /// <summary>
-        /// An uploaded video.
+        /// A video that the broadcaster uploaded to their video library.
         /// </summary>
         Upload,
         /// <summary>
-        /// A highlight from a stream.
+        /// A highlight reel of one of the broadcaster's past streams.
         /// </summary>
         Highlight
     }
 
     /// <summary>
-    /// Time period during which the video was created (PST time zone).
+    /// A filter used to filter the list of videos by when they were published.
     /// </summary>
     public enum VideoPeriod
     {
         /// <summary>
-        /// The lifetime of the broadcaster's channel.
+        /// Default. The lifetime of the broadcaster's channel.
         /// </summary>
         All,
         /// <summary>
-        /// 00:00:00 on the current day, through 00:00:00 on the following day.
+        /// A day spans from 00:00:00 on the day specified in <c>startedAt</c> and runs through 00:00:00 of the next day.
         /// </summary>
         Day,
         /// <summary>
-        /// 00:00:00 on Monday of the current week, through 00:00:00 on the following Monday.
+        /// A week spans from 00:00:00 on the Monday of the week specified in <c>startedAt</c> and runs through 00:00:00 of the next Monday.
         /// </summary>
         Week,
         /// <summary>
-        /// 00:00:00 on the first day of the current month, through 00:00:00 on the first day of the following month.
+        /// A month spans from 00:00:00 on the first day of the month specified in <c>startedAt</c> and runs through 00:00:00 of the first day of the next month.
         /// </summary>
         Month
     }
 
     /// <summary>
-    /// Sort order of the videos.
+    /// The order to sort the returned videos in.
     /// </summary>
     public enum VideoSort
     {
         /// <summary>
-        /// <see cref="CreatedAt"/> timestamp, descending.
+        /// Sort the results in descending order by when they were created (i.e., latest video first).
         /// </summary>
         Time,
         /// <summary>
-        /// What's trending, descending.
+        /// Sort the results in descending order by biggest gains in viewership (i.e., highest trending video first).
         /// </summary>
         Trending,
         /// <summary>
-        /// <see cref="ViewCount"/> value, descending.
+        ///  Sort the results in descending order by most views (i.e., highest number of views first).
         /// </summary>
         Views
     }
 
     /// <summary>
-    /// Gets video information by one or more video IDs, user ID, or game ID. For lookup by user or game, several filters are available that can be specified as query parameters. If a game is specified, a maximum of 500 results are available.
+    /// Gets information about one or more published videos. You may get videos by ID, by user, or by game/category.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="id">ID of the video being queried. Limit: 100. If this is specified, you cannot use any other parameters.</param>
-    /// <param name="userId">ID of the user who owns the video. If this is specified, you cannot use <paramref name="id"/> or <paramref name="gameId"/>.</param>
-    /// <param name="gameId">ID of the game the video is of. If this is specified, you cannot use <paramref name="id"/> or <paramref name="userId"/>.</param>
-    /// <param name="after">Cursor for forward pagination: tells the server where to start fetching the next set of results, in a multi-page response. The cursor value specified here is from the <see cref="ResponseData{TDataType}.Pagination"/> response field of a prior query.</param>
-    /// <param name="before">Cursor for backward pagination: tells the server where to start fetching the next set of results, in a multi-page response. The cursor value specified here is from the <see cref="ResponseData{TDataType}.Pagination"/> response field of a prior query.</param>
-    /// <param name="first">Number of values to be returned when getting videos by user or game ID. Limit: 100. Default: 20.</param>
-    /// <param name="language">Language of the video being queried. A language value must be either the ISO 639-1 two-letter code for a supported stream language or <c>other</c>.</param>
-    /// <param name="period">Period during which the video was created. Default: <see cref="VideoPeriod.All"/>.</param>
-    /// <param name="sort">Sort order of the videos. Default: <see cref="VideoSort.Time"/>.</param>
-    /// <param name="type">Type of video. Default: <see cref="VideoType.All"/>.</param>
+    /// <param name="id">A list of IDs that identify the videos you want to get. You may specify a maximum of 100 IDs.</param>
+    /// <param name="userId">The ID of the user whose list of videos you want to get.</param>
+    /// <param name="gameId">A category or game ID. The response contains a maximum of 500 videos that show this content.</param>
+    /// <param name="language">A filter used to filter the list of videos by the language that the video owner broadcasts in. For supported languages, set this parameter to the ISO 639-1 two-letter code for the language. If the language is not supported, use <c>"other"</c>.</param>
+    /// <param name="period">A filter used to filter the list of videos by when they were published. Default: <see cref="VideoPeriod.All"/>.</param>
+    /// <param name="sort">The order to sort the returned videos in. Default: <see cref="VideoSort.Time"/>.</param>
+    /// <param name="type">A filter used to filter the list of videos by the video's type. Default: <see cref="VideoType.All"/>.</param>
+    /// <param name="first">The maximum number of items to return per page in the response. Limit: 100. Default: 20.</param>
+    /// <param name="before">The cursor used to get the next page of results.</param>
+    /// <param name="after">The cursor used to get the previous page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Video"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; did not specify a valid value for one of <paramref name="id"/>, <paramref name="userId"/>, or <paramref name="gameId"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; did not specify one of <paramref name="id"/>, <paramref name="userId"/>, or <paramref name="gameId"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Specified more than one of the mutually exclusive parameters <paramref name="id"/>, <paramref name="userId"/>, or <paramref name="gameId"/>; <paramref name="id"/> is defined and has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="after"/> and <paramref name="before"/> were both defined.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <remarks>
+    /// <para>
+    /// The <paramref name="id"/>, <paramref name="userId"/>, and <paramref name="gameId"/> parameters are mutually exclusive.
+    /// </para>
+    /// <para>
+    /// You may apply several filters to get a subset of the videos. The filters are applied as an AND operation to each video.
+    /// For example, if <paramref name="language"/> is set to <c>de</c> and <paramref name="gameId"/> is set to <c>21779</c>, the response includes only videos that show playing League of Legends by users that stream in German.
+    /// The filters apply only if you get videos by user ID or game ID.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the list of videos.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The specified game does not exist; all specified ids do not exist.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
-    public static async Task<ResponseData<Video>?> GetVideos(TwitchSession session, IEnumerable<string>? id = null, string? userId = null, string? gameId = null, string? after = null,
-        string? before = null, int first = 20, string? language = null, VideoPeriod period = VideoPeriod.All, VideoSort sort = VideoSort.Time, VideoType type = VideoType.All)
+    public static async Task<ResponseData<Video>?> GetVideos(TwitchSession session, IEnumerable<string>? id = null, string? userId = null, string? gameId = null, string? language = null,
+        VideoPeriod period = VideoPeriod.All, VideoSort sort = VideoSort.Time, VideoType type = VideoType.All, int first = 20, string? before = null, string? after = null)
     {
         if (session is null)
         {
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
-
         if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
         {
-            throw new ArgumentNullException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Must provide at least one value of id, userId, or gameId").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "must provide at least one of these parameters").Log(TwitchApi.GetLogger());
         }
+
+        session.RequireToken();
 
         bool hasId = false;
         if (!string.IsNullOrWhiteSpace(userId))
@@ -266,7 +313,7 @@ public sealed record Video
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Can not mix parameters id, userId, and gameId").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
             }
             hasId = true;
         }
@@ -275,7 +322,7 @@ public sealed record Video
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "Can not mix parameters id, userId, and gameId").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
             }
 
             if (id.Count() > 100)
@@ -286,7 +333,7 @@ public sealed record Video
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new InvalidOperationException("Can only use one of before or after").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after)).Log(TwitchApi.GetLogger());
         }
 
         first = Math.Clamp(first, 1, 100);
@@ -337,10 +384,10 @@ public sealed record Video
     }
 
     /// <summary>
-    /// Deletes one or more videos. Videos are past broadcasts, Highlights, or uploads.
+    /// Deletes one or more videos. You may delete past broadcasts, highlights, or uploads.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="id">ID of the video(s) to be deleted. Limit: 5.</param>
+    /// <param name="id">The list of videos to delete. You can delete a maximum of 5 videos per request.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with the IDs of the videos that were deleted.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="id"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> has more than 5 elements.</exception>
@@ -348,9 +395,26 @@ public sealed record Video
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVideos"/>.</exception>
     /// <remarks>
     /// <para>
-    /// Invalid Video IDs will be ignored (i.e. IDs provided that do not have a video associated with it).
-    /// If the OAuth user token does not have permission to delete even one of the valid Video IDs, no videos will be deleted and the response will return a 401.
-    /// </para></remarks>
+    /// If the user doesn't have permission to delete one of the videos in the list, none of the videos are deleted.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully deleted the list of videos.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<ResponseData<string>?> DeleteVideos(TwitchSession session, IEnumerable<string> id)
     {
         if (session is null)

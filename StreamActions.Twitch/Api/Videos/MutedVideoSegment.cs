@@ -26,25 +26,25 @@ namespace StreamActions.Twitch.Api.Videos;
 public sealed record MutedVideoSegment
 {
     /// <summary>
-    /// Duration of the muted segment, in seconds.
+    /// The duration of the muted segment, in seconds.
     /// </summary>
     [JsonPropertyName("duration")]
     public int? DurationSeconds { get; init; }
 
     /// <summary>
-    /// <see cref="DurationSeconds"/> as a <see cref="TimeSpan"/>.
+    /// The duration of the muted segment.
     /// </summary>
     [JsonIgnore]
     public TimeSpan? Duration => this.DurationSeconds.HasValue ? TimeSpan.FromSeconds(this.DurationSeconds.Value) : null;
 
     /// <summary>
-    /// Offset in the video at which the muted segment begins, in seconds.
+    /// The offset, in seconds, from the beginning of the video to where the muted segment begins.
     /// </summary>
     [JsonPropertyName("offset")]
     public int? OffsetSeconds { get; init; }
 
     /// <summary>
-    /// <see cref="OffsetSeconds"/> as a <see cref="TimeSpan"/>.
+    /// The offset from the beginning of the video to where the muted segment begins.
     /// </summary>
     [JsonIgnore]
     public TimeSpan? Offset => this.OffsetSeconds.HasValue ? TimeSpan.FromSeconds(this.OffsetSeconds.Value) : null;
