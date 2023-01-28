@@ -21,7 +21,7 @@ import argparse
 import hashlib
 from StripData import stripdata
 
-#python3 Hash.py -stripblank -strip -findfirst '<div class="main">' -findlast '<div class="subscribe-footer">' -remre 'cloudcannon[^"]*' -rem '<a href="/docs/product-lifecycle"><span class="pill pill-new">NEW</span></a> ' '<a href="/docs/product-lifecycle"><span class="pill pill-beta">BETA</span></a> ' -file helix_2022-05-12.htm
+#python3 Hash.py -stripblank -strip -findfirst '<div class="main">' -findlast '<div class="subscribe-footer">' -remre 'cloudcannon[^"]*' -rem '<a href="/docs/product-lifecycle"><span class="pill pill-new">NEW</span></a>' '<a href="/docs/product-lifecycle"><span class="pill pill-beta">BETA</span></a>' -file helix_2022-05-12.htm
 
 # Main function
 # args: A dict containing the args returned by argparse

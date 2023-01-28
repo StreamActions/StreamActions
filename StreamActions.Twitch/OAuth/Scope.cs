@@ -27,7 +27,9 @@ namespace StreamActions.Twitch.OAuth;
 [ETag("[Twitch] Scopes", new string[] { "twitch", "api" },
     "https://dev.twitch.tv/docs/authentication/scopes", "3eb00b9d1a45b9cc4b85585eeaf852467dc4ce79baf55b777c942c7664376498",
     "2023-01-21T06:21Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
-        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
+        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'", "-rem",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-new\">NEW</span></a>'",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-beta\">BETA</span></a>'" })]
 [JsonConverter(typeof(ScopeJsonConverter))]
 public sealed record Scope
 {

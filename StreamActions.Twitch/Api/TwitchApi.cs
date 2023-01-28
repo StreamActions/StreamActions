@@ -38,7 +38,9 @@ namespace StreamActions.Twitch.Api;
 [ETag("[Twitch] API", new string[] { "twitch", "api" },
     "https://dev.twitch.tv/docs/api/reference", "617ae798756077c5bdd9a4168c23b045422700b804a91156bb47018b4688aae8", "2023-01-21T06:21Z",
     new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
-        "-remre", "'cloudcannon[^\"]*'" })]
+        "-remre", "'cloudcannon[^\"]*'", "-rem",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-new\">NEW</span></a>'",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-beta\">BETA</span></a>'" })]
 public sealed partial class TwitchApi : IApi
 {
 

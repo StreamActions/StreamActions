@@ -33,7 +33,9 @@ namespace StreamActions.Twitch.OAuth;
 [ETag("[Twitch] OIDC UserInfo", new string[] { "twitch", "api" },
     "https://dev.twitch.tv/docs/authentication/getting-tokens-oidc", "4fecd89165e854442989c1f5f98d8642a645ff36f81c7797764a58ba29e879e6",
     "2022-10-16T21:22Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
-        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
+        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'", "-rem",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-new\">NEW</span></a>'",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-beta\">BETA</span></a>'" })]
 public sealed record UserInfo : JsonApiResponse
 {
     /// <summary>

@@ -21,7 +21,7 @@ import argparse
 import difflib
 from StripData import stripdata
 
-#python3 Diff.py -context -stripblank -strip -findfirst '<div class="main">' -findlast '<div class="subscribe-footer">' -remre 'cloudcannon[^"]*' -rem '<a href="/docs/product-lifecycle"><span class="pill pill-new">NEW</span></a> ' '<a href="/docs/product-lifecycle"><span class="pill pill-beta">BETA</span></a> ' -filea helix_2022-05-12.htm -fileb helix_2022-08-28.htm -fileout test.htm
+#python3 Diff.py -context -stripblank -strip -findfirst '<div class="main">' -findlast '<div class="subscribe-footer">' -remre 'cloudcannon[^"]*' -rem '<a href="/docs/product-lifecycle"><span class="pill pill-new">NEW</span></a>' '<a href="/docs/product-lifecycle"><span class="pill pill-beta">BETA</span></a>' -filea helix_2022-05-12.htm -fileb helix_2022-08-28.htm -fileout test.htm
 
 # Handles silent option when calling print
 def doprint(args, message, iend='\n'):

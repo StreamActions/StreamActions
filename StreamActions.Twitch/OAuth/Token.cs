@@ -36,11 +36,15 @@ namespace StreamActions.Twitch.OAuth;
 [ETag("[Twitch] Refresh OAuth", new string[] { "twitch", "api" },
     "https://dev.twitch.tv/docs/authentication/refresh-tokens", "983bd1581e310444688acbb2ea1205fc26ce7ee4ab6801d3cb97dc2bafbff121",
     "2022-10-16T20:40Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
-        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
+        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'", "-rem",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-new\">NEW</span></a>'",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-beta\">BETA</span></a>'" })]
 [ETag("[Twitch] Revoke OAuth", new string[] { "twitch", "api" },
     "https://dev.twitch.tv/docs/authentication/revoke-tokens", "36c9e9126bb4e99710352235c034c12a751192af8b009d9df491cf87d580de6c",
     "2022-10-16T20:44Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
-        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
+        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'", "-rem",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-new\">NEW</span></a>'",
+        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-beta\">BETA</span></a>'" })]
 public sealed record Token : JsonApiResponse
 {
     /// <summary>
