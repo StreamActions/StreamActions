@@ -36,19 +36,19 @@ namespace StreamActions.Twitch.Api.ChannelPoints;
 public sealed record ChannelPointsReward
 {
     /// <summary>
-    /// User ID of the broadcaster.
+    /// The ID that uniquely identifies the broadcaster.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
     public string? BroadcasterId { get; init; }
 
     /// <summary>
-    /// Login of the broadcaster.
+    /// The broadcaster's login name.
     /// </summary>
     [JsonPropertyName("broadcaster_login")]
     public string? BroadcasterLogin { get; init; }
 
     /// <summary>
-    /// Display name of the broadcaster.
+    /// The broadcaster's display name.
     /// </summary>
     [JsonPropertyName("broadcaster_name")]
     public string? BroadcasterName { get; init; }

@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.ChannelPoints;
 /// <summary>
 /// The parameters for <see cref="ChannelPointsReward.UpdateCustomReward(Common.TwitchSession, string, Guid, ChannelPointsRewardUpdateParameters)"/>
 /// </summary>
-public record ChannelPointsRewardUpdateParameters : ChannelPointsRewardCreationParameters
+public sealed record ChannelPointsRewardUpdateParameters : ChannelPointsRewardCreationParameters
 {
     /// <summary>
     /// A Boolean value that determines whether the reward is currently paused. Viewers can't redeem paused rewards.
