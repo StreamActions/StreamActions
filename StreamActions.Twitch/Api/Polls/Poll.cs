@@ -25,6 +25,7 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using System.Net.Http.Json;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Polls;
 
@@ -85,6 +86,7 @@ public sealed record Poll
     /// The poll's status.
     /// </summary>
     [JsonPropertyName("status")]
+    [JsonConverter(typeof(JsonUpperCaseEnumConverter<PollStatus>))]
     public PollStatus? Status { get; init; }
 
     /// <summary>
@@ -404,12 +406,12 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(parameters.Id)).Log(TwitchApi.GetLogger());
         }
 
-        if (string.IsNullOrWhiteSpace(parameters.Status))
+        if (parameters.Status is null)
         {
             throw new ArgumentNullException(nameof(parameters.Status)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Status is not "TERMINATED" or "ARCHIVED")
+        if (parameters.Status is not PollStatus.TERMINATED or PollStatus.ARCHIVED)
         {
             throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be one of TERMINATED or ARCHIVED").Log(TwitchApi.GetLogger());
         }

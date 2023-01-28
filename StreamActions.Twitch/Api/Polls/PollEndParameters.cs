@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Polls;
@@ -44,15 +45,16 @@ public sealed record PollEndParameters
     /// Possible case-sensitive values are:
     /// <list type="table">
     /// <item>
-    /// <term>TERMINATED</term>
+    /// <term><see cref="Poll.PollStatus.TERMINATED"/></term>
     /// <description>Ends the poll before the poll is scheduled to end. The poll remains publicly visible.</description>
     /// </item>
     /// <item>
-    /// <term>ARCHIVED</term>
+    /// <term><see cref="Poll.PollStatus.ARCHIVED"/></term>
     /// <description>Ends the poll before the poll is scheduled to end, and then archives it so it's no longer publicly visible.</description>
     /// </item>
     /// </list>
     /// </remarks>
     [JsonPropertyName("status")]
-    public string? Status { get; init; }
+    [JsonConverter(typeof(JsonUpperCaseEnumConverter<Poll.PollStatus>))]
+    public Poll.PollStatus? Status { get; init; }
 }
