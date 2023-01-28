@@ -21,7 +21,7 @@ import argparse
 import hashlib
 from StripData import stripdata
 
-#python3 Hash.py -stripblank -strip -findfirst '<div class=\"main\">' -findlast '<div class=\"subscribe-footer\">' -remre 'cloudcannon[^\"]*' -rem '<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-new\">NEW</span></a> ' '<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-beta\">BETA</span></a> ' -file helix_2022-05-12.htm
+#python3 Hash.py -stripblank -strip -findfirst '<div class="main">' -findlast '<div class="subscribe-footer">' -remre 'cloudcannon[^"]*' -rem '<a href="/docs/product-lifecycle"><span class="pill pill-new">NEW</span></a> ' '<a href="/docs/product-lifecycle"><span class="pill pill-beta">BETA</span></a> ' -file helix_2022-05-12.htm
 
 # Main function
 # args: A dict containing the args returned by argparse
@@ -41,7 +41,11 @@ def main(args):
     for line in lines:
         h.update(line.encode(encoding='utf-8'))
 
-    print(h.hexdigest())
+    digest = h.hexdigest()
+    if len(lines) == 0 or digest == 'a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a':
+        print('nocontent')
+    else:
+        print(digest)
 
 def parseargs(inargs):
     parser = argparse.ArgumentParser(usage='%(prog)s [options] -file FILE')

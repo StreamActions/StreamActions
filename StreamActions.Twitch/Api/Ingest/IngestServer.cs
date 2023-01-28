@@ -27,7 +27,7 @@ namespace StreamActions.Twitch.Api.Ingest;
 /// Sends and represents a response element for a request for ingest servers.
 /// </summary>
 [ETag("[Twitch] Ingest", new string[] { "twitch", "api" },
-    "https://dev.twitch.tv/docs/video-broadcast/reference", "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+    "https://dev.twitch.tv/docs/video-broadcast/reference", "93b471e8222a9fbd55f7782fb258c096c1b2e8562faa9b618ff7d9891bee97ae",
     "2023-01-22T13:58Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
         "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'" })]
 public sealed record IngestServer
