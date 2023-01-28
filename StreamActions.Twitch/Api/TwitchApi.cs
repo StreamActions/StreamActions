@@ -35,7 +35,8 @@ namespace StreamActions.Twitch.Api;
 /// Handles validation of OAuth tokens and performs HTTP calls for the API.
 /// </summary>
 [Guid("996E35EC-638A-4E5B-AEFC-84C800E16520")]
-[ETag("https://dev.twitch.tv/docs/api/reference", "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a", "2023-01-21T06:21Z",
+[ETag("[Twitch] API", new string[] { "twitch", "api" },
+    "https://dev.twitch.tv/docs/api/reference", "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a", "2023-01-21T06:21Z",
     new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast", "'<div class=\"subscribe-footer\">'",
         "-remre", "'cloudcannon[^\"]*'" })]
 public sealed partial class TwitchApi : IApi

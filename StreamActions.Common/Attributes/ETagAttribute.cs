@@ -31,13 +31,17 @@ public sealed class ETagAttribute : Attribute
     /// <summary>
     /// Attribute Constructor.
     /// </summary>
+    /// <param name="friendlyName">The friendly name of the documentation, to be used when opening issues programmatically.</param>
+    /// <param name="issueTags">Tags to be used when opening issues programmatically.</param>
     /// <param name="uri">The URI of the source documentation for this component.</param>
     /// <param name="eTag">The ETag of the latest version of the documentation that this component conforms to.</param>
     /// <param name="timestamp">The timestamp when the <paramref name="eTag"/> was updated.</param>
     /// <param name="stripParameters">Parameters for <c>StripData.py</c>.</param>
-    /// <remarks>RegEx (Python3): <code>r"\[ETag\(\s*\"(?P<url>[^\"]+)\",\s*\"(?P<hash>[^\"]+)\",\s*\"(?P<date>[^\"]+)\",\s*[^{]+{(?P<params>.*)}\)\]"s</code></remarks>
-    public ETagAttribute(string uri, string eTag, string timestamp, string[] stripParameters)
+    /// <remarks>RegEx (Python3): <code>r"\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\",\s*[^{]+{(?P<issuetags>.*)},\s*\"(?P<url>[^\"]+)\",\s*\"(?P<hash>[^\"]+)\",\s*\"(?P<date>[^\"]+)\",\s*[^{]+{(?P<params>.*)}\)\]"s</code></remarks>
+    public ETagAttribute(string friendlyName, string[] issueTags, string uri, string eTag, string timestamp, string[] stripParameters)
     {
+        this.FriendlyName = friendlyName;
+        this.IssueTags = issueTags;
         this.Uri = uri;
         this.ETag = eTag;
         this.Timestamp = DateTime.Parse(timestamp, CultureInfo.InvariantCulture);
@@ -52,6 +56,16 @@ public sealed class ETagAttribute : Attribute
     /// The ETag of the latest version of the documentation that this component conforms to.
     /// </summary>
     public string ETag { get; init; }
+
+    /// <summary>
+    /// The friendly name of the documentation, to be used when opening issues programmatically.
+    /// </summary>
+    public string FriendlyName { get; init; }
+
+    /// <summary>
+    /// Tags to be used when opening issues programmatically.
+    /// </summary>
+    public IReadOnlyCollection<string> IssueTags { get; init; }
 
     /// <summary>
     /// Parameters for <c>StripData.py</c>.
