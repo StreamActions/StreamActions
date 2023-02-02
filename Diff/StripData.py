@@ -79,5 +79,6 @@ def parseargs(inargs):
     parser.add_argument('-remre', help='Remove all matches of this regex in both input files. May be specified multiple times', nargs='*', default=None)
     parser.add_argument('-strip', help='If set, all whitespace is striped from the beginning and end of each line in both input files', action='store_true')
     parser.add_argument('-stripblank', help='If set, all blank lines are removed from both input files', action='store_true')
-    return parser.parse_args(args=inargs)
+    args, _ = parser.parse_known_args(args=inargs)
+    return args
 

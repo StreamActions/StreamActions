@@ -130,7 +130,8 @@ def parseargs(inargs):
     overridegroup.add_argument('-nameb', help='Override right (Modified) file name', default=None)
     miscgroup = parser.add_argument_group('Misc')
     miscgroup.add_argument('-silent', help='If set, only errors will print (Default not set)', action='store_true')
-    return parser.parse_args(args=inargs)
+    args, _ = parser.parse_known_args(args=inargs)
+    return args
 
 if __name__ == '__main__':
     args = parseargs(None)

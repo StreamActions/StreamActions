@@ -43,9 +43,15 @@ def main(args):
 
     digest = h.hexdigest()
     if len(lines) == 0 or digest == 'a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a':
-        print('nocontent')
+        if args.called:
+            return None
+        else:
+            print('nocontent')
     else:
-        print(digest)
+        if args.called:
+            return digest
+        else:
+            print(digest)
 
 def parseargs(inargs):
     parser = argparse.ArgumentParser(usage='%(prog)s [options] -file FILE')
@@ -58,7 +64,10 @@ def parseargs(inargs):
     inputgroup.add_argument('-remre', help='Remove all matches of this regex in both input files. May be specified multiple times', nargs='*', default=None)
     inputgroup.add_argument('-strip', help='If set, all whitespace is striped from the beginning and end of each line in both input files', action='store_true')
     inputgroup.add_argument('-stripblank', help='If set, all blank lines are removed from both input files', action='store_true')
-    return parser.parse_args(args=inargs)
+    outputgroup = parser.add_argument_group('Output')
+    outputgroup.add_argument('-called', help='If set, return hash or None instead of printing (Default not set)', action='store_true')
+    args, _ = parser.parse_known_args(args=inargs)
+    return args
 
 if __name__ == '__main__':
     args = parseargs(None)
