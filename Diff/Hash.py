@@ -26,29 +26,36 @@ from StripData import stripdata
 # Main function
 # args: A dict containing the args returned by argparse
 #           When calling from another module, args.file is always required
-def main(args):
+# dhouldReturn: If `False` (default), the hash is printed, or `nocontent` if the file was empty or didn't exist; if `True`, thr hash is returned, or `None` if the file was empty or didn't exist
+def main(args, shouldReturn=False):
     if args.strip or args.stripblank or args.findfirst != None or args.findlast != None or args.rem != None:
         editfiles = True
     else:
         editfiles = False
 
-    with open(args.file, encoding='utf-8') as f:
-        lines = f.readlines()
-        if editfiles:
-            lines = stripdata(args, lines)
+    try:
+        with open(args.file, encoding='utf-8') as f:
+            lines = f.readlines()
+            if editfiles:
+                lines = stripdata(args, lines)
+    except:
+        lines = []
 
-    h = hashlib.sha3_256()
-    for line in lines:
-        h.update(line.encode(encoding='utf-8'))
+    try:
+        h = hashlib.sha3_256()
+        for line in lines:
+            h.update(line.encode(encoding='utf-8'))
+        digest = h.hexdigest()
+    except:
+        digest = None
 
-    digest = h.hexdigest()
-    if len(lines) == 0 or digest == 'a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a':
-        if args.called:
+    if len(lines) == 0 or digest == None or digest == 'a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a':
+        if shouldReturn:
             return None
         else:
             print('nocontent')
     else:
-        if args.called:
+        if shouldReturn:
             return digest
         else:
             print(digest)
@@ -64,8 +71,6 @@ def parseargs(inargs):
     inputgroup.add_argument('-remre', help='Remove all matches of this regex in both input files. May be specified multiple times', nargs='*', default=None)
     inputgroup.add_argument('-strip', help='If set, all whitespace is striped from the beginning and end of each line in both input files', action='store_true')
     inputgroup.add_argument('-stripblank', help='If set, all blank lines are removed from both input files', action='store_true')
-    outputgroup = parser.add_argument_group('Output')
-    outputgroup.add_argument('-called', help='If set, return hash or None instead of printing (Default not set)', action='store_true')
     args, _ = parser.parse_known_args(args=inargs)
     return args
 

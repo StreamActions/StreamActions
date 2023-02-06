@@ -24,9 +24,10 @@ from StripData import stripdata
 #python3 Diff.py -context -stripblank -strip -findfirst '<div class="main">' -findlast '<div class="subscribe-footer">' -remre 'cloudcannon[^"]*' -rem '<a href="/docs/product-lifecycle"><span class="pill pill-new">NEW</span></a>' '<a href="/docs/product-lifecycle"><span class="pill pill-beta">BETA</span></a>' -filea helix_2022-05-12.htm -fileb helix_2022-08-28.htm -fileout test.htm
 
 # Handles silent option when calling print
-def doprint(args, message, iend='\n'):
+def doprint(args, message, iend='\n', verbose=True):
     if not args.silent:
-        print(message, end=iend)
+        if args.verbose or not verbose:
+            print(message, end=iend)
 
 # Main function
 # args: A dict containing the args returned by argparse
@@ -55,7 +56,7 @@ def main(args, shouldReturn=False):
 
     with open(args.filea, encoding='utf-8') as fa:
         with open(args.fileb, encoding='utf-8') as fb:
-            doprint(args, 'Preparing files')
+            doprint(args, 'Preparing files', verbose=False)
             falines = fa.readlines()
             fblines = fb.readlines()
 
@@ -63,7 +64,7 @@ def main(args, shouldReturn=False):
                 falines = stripdata(args, falines)
                 fblines = stripdata(args, fblines)
 
-            doprint(args, 'Generating diff')
+            doprint(args, 'Generating diff', verbose=False)
             if args.table:
                 html = difflib.HtmlDiff().make_table(falines, fblines, namea, nameb, args.context, args.n)
             else:
@@ -105,7 +106,7 @@ def main(args, shouldReturn=False):
         with open(args.fileout, 'w', encoding='utf-8') as fo:
             fo.writelines(html)
 
-    doprint(args, 'Done')
+    doprint(args, 'Done', verbose=False)
 
 def parseargs(inargs):
     parser = argparse.ArgumentParser(usage='%(prog)s [options] -filea FILEA -fileb FILEB -fileout FILEOUT')
@@ -130,6 +131,7 @@ def parseargs(inargs):
     overridegroup.add_argument('-nameb', help='Override right (Modified) file name', default=None)
     miscgroup = parser.add_argument_group('Misc')
     miscgroup.add_argument('-silent', help='If set, only errors will print (Default not set)', action='store_true')
+    miscgroup.add_argument('-verbose', help='If set, verbose status information will print (Default not set)', action='store_true')
     args, _ = parser.parse_known_args(args=inargs)
     return args
 
