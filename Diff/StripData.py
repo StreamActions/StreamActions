@@ -17,13 +17,16 @@
 # along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import argparse
 import re
 
-# Strips data from the given lines according to the defined arguments
-# args: A dict containing the args returned by argparse
-# lines: A list of lines
 def stripdata(args, lines):
+    """Strips data from the given lines according to the defined arguments
+
+    args: A dict containing the args returned by argparse
+    lines: A list of lines
+
+    return: A list of lines after the transformations have been performed
+    """
     remre = None
     if args.remre != None:
         remre = []
@@ -71,14 +74,15 @@ def stripdata(args, lines):
         temp = temp[0:foundlast]
     return temp
 
-def parseargs(inargs):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-findfirst', help='Find the first occurrence of this string, and drop all text before it on both input files', default=None)
-    parser.add_argument('-findlast', help='Find the last occurrence of this string, and drop all text after it on both input files', default=None)
-    parser.add_argument('-rem', help='Remove all occurrences of this string in both input files. May be specified multiple times', nargs='*', default=None)
-    parser.add_argument('-remre', help='Remove all matches of this regex in both input files. May be specified multiple times', nargs='*', default=None)
-    parser.add_argument('-strip', help='If set, all whitespace is striped from the beginning and end of each line in both input files', action='store_true')
-    parser.add_argument('-stripblank', help='If set, all blank lines are removed from both input files', action='store_true')
-    args, _ = parser.parse_known_args(args=inargs)
-    return args
+def addargparse(parsergroup):
+    """Adds argparse arguments to the provided parser group for controlling what operations stripdata performs
+
+    parsergroup: A parser group to add the arguments to
+    """
+    parsergroup.add_argument('-findfirst', help='Find the first occurrence of this string, and drop all text before it on the input file', default=None)
+    parsergroup.add_argument('-findlast', help='Find the last occurrence of this string, and drop all text after it on the input file', default=None)
+    parsergroup.add_argument('-rem', help='Remove all occurrences of this string in the input file. May be specified multiple times', nargs='*', default=None)
+    parsergroup.add_argument('-remre', help='Remove all matches of this regex in the input file. May be specified multiple times', nargs='*', default=None)
+    parsergroup.add_argument('-strip', help='If set, all whitespace is striped from the beginning and end of each line in the input file', action='store_true')
+    parsergroup.add_argument('-stripblank', help='If set, all blank lines are removed from the input file', action='store_true')
 

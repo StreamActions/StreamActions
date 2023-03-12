@@ -19,23 +19,33 @@
 
 import argparse
 import difflib
-from StripData import stripdata
+import StripData
 
 #python3 Diff.py -context -stripblank -strip -findfirst '<div class="main">' -findlast '<div class="subscribe-footer">' -remre 'cloudcannon[^"]*' -rem '<a href="/docs/product-lifecycle"><span class="pill pill-new">NEW</span></a>' '<a href="/docs/product-lifecycle"><span class="pill pill-beta">BETA</span></a>' -filea helix_2022-05-12.htm -fileb helix_2022-08-28.htm -fileout test.htm
 
-# Handles silent option when calling print
-def doprint(args, message, iend='\n', verbose=True):
+def __doprint(args, message, iend='\n', verbose=True):
+    """Handles printing console output depending on the value of args.silent, args.verbose, and verbose
+
+    args: A dict containing the args returned by argparse
+    message: The message to potentially print
+    iend: The `end` parameter to print()
+    verbose: If `True` (default), the message is only printed if args.verbose is `True`; if `False`, the value of args.verbose has no effect
+    """
     if not args.silent:
         if args.verbose or not verbose:
             print(message, end=iend)
 
-# Main function
-# args: A dict containing the args returned by argparse
-#           When calling from another module, args.filea and args.fileb are always required
-#           If shouldReturn is False or not specified, fileout is also required
-# shouldReturn: If set to True, the output html will be returned as a list of lines, with trailing LF
-#           If set to False or not specified, the output html will be written to the file specified in args.fileout
-def main(args, shouldReturn=False):
+def diff(args, shouldReturn=False):
+    """Performs a diff of the specified files, then outputs the resulting diff info
+
+    args: A dict containing the args returned by argparse
+           args.filea and args.fileb are always required
+           If shouldReturn is `False` or not specified, args.fileout is also required
+    shouldReturn: If set to `True`, the output html will be returned as a list of lines, with trailing LF
+           If set to `False` or not specified, the output html will be written to the file specified in args.fileout
+
+    returns: The output HTML as a list of lines, if shouldReturn was `True`
+    """
     if not 'fileout' in args:
         args.fileout = 'out.html'
 
@@ -56,31 +66,31 @@ def main(args, shouldReturn=False):
 
     with open(args.filea, encoding='utf-8') as fa:
         with open(args.fileb, encoding='utf-8') as fb:
-            doprint(args, 'Preparing files', verbose=False)
+            __doprint(args, 'Preparing files', verbose=False)
             falines = fa.readlines()
             fblines = fb.readlines()
 
             if editfiles:
-                falines = stripdata(args, falines)
-                fblines = stripdata(args, fblines)
+                falines = StripData.stripdata(args, falines)
+                fblines = StripData.stripdata(args, fblines)
 
-            doprint(args, 'Generating diff', verbose=False)
+            __doprint(args, 'Generating diff', verbose=False)
             if args.table:
                 html = difflib.HtmlDiff().make_table(falines, fblines, namea, nameb, args.context, args.n)
             else:
                 html = difflib.HtmlDiff().make_file(falines, fblines, namea, nameb, args.context, args.n)
 
-    doprint(args, 'Splitlines')
+    __doprint(args, 'Splitlines')
     html = html.splitlines(keepends=True)
 
     if not args.nowrap:
-        doprint(args, 'Inserting css and removing nowrap')
+        __doprint(args, 'Inserting css and removing nowrap')
         findstr1 = 'td.diff_header {text-align:right}'
         findstr2 = 'nowrap="nowrap"'
         numline = str(len(html))
 
         for i,line in enumerate(html):
-            doprint(args, '\r' + str(i) + '/' + numline, iend='')
+            __doprint(args, '\r' + str(i) + '/' + numline, iend='')
             idx = line.find(findstr1)
             changed = False
 
@@ -97,16 +107,16 @@ def main(args, shouldReturn=False):
             if changed:
                 html[i] = line
 
-        doprint(args, '\r' + numline + '/' + numline)
+        __doprint(args, '\r' + numline + '/' + numline)
 
-    doprint(args, 'Writing output')
+    __doprint(args, 'Writing output')
     if shouldReturn:
         return html
     else:
         with open(args.fileout, 'w', encoding='utf-8') as fo:
             fo.writelines(html)
 
-    doprint(args, 'Done', verbose=False)
+    __doprint(args, 'Done', verbose=False)
 
 def parseargs(inargs):
     parser = argparse.ArgumentParser(usage='%(prog)s [options] -filea FILEA -fileb FILEB -fileout FILEOUT')
@@ -120,12 +130,7 @@ def parseargs(inargs):
     outputgroup.add_argument('-nowrap', help='If set, output does not use line wrapping (Default not set)', action='store_true')
     outputgroup.add_argument('-table', help='If set, output only contains the table, not the headers, legend, and footers (Default not set)', action='store_true')
     inputgroup = parser.add_argument_group('Input')
-    inputgroup.add_argument('-findfirst', help='Find the first occurrence of this string, and drop all text before it on both input files', default=None)
-    inputgroup.add_argument('-findlast', help='Find the last occurrence of this string, and drop all text after it on both input files', default=None)
-    inputgroup.add_argument('-rem', help='Remove all occurrences of this string in both input files. May be specified multiple times', nargs='*', default=None)
-    inputgroup.add_argument('-remre', help='Remove all matches of this regex in both input files. May be specified multiple times', nargs='*', default=None)
-    inputgroup.add_argument('-strip', help='If set, all whitespace is striped from the beginning and end of each line in both input files', action='store_true')
-    inputgroup.add_argument('-stripblank', help='If set, all blank lines are removed from both input files', action='store_true')
+    StripData.addargparse(inputgroup)
     overridegroup = parser.add_argument_group('Override')
     overridegroup.add_argument('-namea', help='Override left (Original) file name', default=None)
     overridegroup.add_argument('-nameb', help='Override right (Modified) file name', default=None)
@@ -137,4 +142,4 @@ def parseargs(inargs):
 
 if __name__ == '__main__':
     args = parseargs(None)
-    main(args)
+    diff(args)

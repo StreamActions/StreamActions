@@ -19,27 +19,30 @@
 
 import argparse
 import hashlib
-from StripData import stripdata
+import StripData
 
 #python3 Hash.py -stripblank -strip -findfirst '<div class="main">' -findlast '<div class="subscribe-footer">' -remre 'cloudcannon[^"]*' -rem '<a href="/docs/product-lifecycle"><span class="pill pill-new">NEW</span></a>' '<a href="/docs/product-lifecycle"><span class="pill pill-beta">BETA</span></a>' -file helix_2022-05-12.htm
 
-# Main function
-# args: A dict containing the args returned by argparse
-#           When calling from another module, args.file is always required
-# dhouldReturn: If `False` (default), the hash is printed, or `nocontent` if the file was empty or didn't exist; if `True`, thr hash is returned, or `None` if the file was empty or didn't exist
-def main(args, shouldReturn=False):
-    if args.strip or args.stripblank or args.findfirst != None or args.findlast != None or args.rem != None:
-        editfiles = True
-    else:
-        editfiles = False
+def hash(args, shouldReturn=False):
+    """Performs a SHA3-256 hash of the input file
 
+    args: A dict containing the args returned by argparse; args.file is always required
+    shouldReturn:
+        If `False` (default), the hash is printed if the file contains content after any stripdata transformation;
+          otherwise, the string `"nocontent"` is printed if the file was empty or didn't exist
+
+        If `True`, the hash is returned if the file contains content after any stripdata transformation;
+          otherwise, `None` if the file was empty or didn't exist
+
+    returns: The hash if the file contains content after any stripdata transformations, or `None`, if shouldReturn is `True`
+    """
     try:
         with open(args.file, encoding='utf-8') as f:
             lines = f.readlines()
-            if editfiles:
-                lines = stripdata(args, lines)
     except:
         lines = []
+
+    lines = StripData.stripdata(args, lines)
 
     try:
         h = hashlib.sha3_256()
@@ -65,16 +68,11 @@ def parseargs(inargs):
     coregroup = parser.add_argument_group('Core')
     coregroup.add_argument('-file', help='Input file', required=True)
     inputgroup = parser.add_argument_group('Input')
-    inputgroup.add_argument('-findfirst', help='Find the first occurrence of this string, and drop all text before it on both input files', default=None)
-    inputgroup.add_argument('-findlast', help='Find the last occurrence of this string, and drop all text after it on both input files', default=None)
-    inputgroup.add_argument('-rem', help='Remove all occurrences of this string in both input files. May be specified multiple times', nargs='*', default=None)
-    inputgroup.add_argument('-remre', help='Remove all matches of this regex in both input files. May be specified multiple times', nargs='*', default=None)
-    inputgroup.add_argument('-strip', help='If set, all whitespace is striped from the beginning and end of each line in both input files', action='store_true')
-    inputgroup.add_argument('-stripblank', help='If set, all blank lines are removed from both input files', action='store_true')
+    StripData.addargparse(inputgroup)
     args, _ = parser.parse_known_args(args=inargs)
     return args
 
 if __name__ == '__main__':
     args = parseargs(None)
-    main(args)
+    hash(args)
 
