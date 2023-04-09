@@ -5,10 +5,6 @@
   "version": "1.6",
   "extensions": [
     {
-      "name": "Add New File (64-bit)",
-      "vsixId": "d48e8f25-661b-4970-8b66-03f051ba5fc3"
-    },
-    {
       "name": "CodeMaid VS2022",
       "vsixId": "9079e73d-3fbb-4e07-8dab-f44fa5d8e8b5"
     },
@@ -31,10 +27,6 @@
     {
       "name": "License Header Manager",
       "vsixId": "4c570677-8476-4d33-bd0c-da36c89287c8"
-    },
-    {
-      "name": "Markdown Editor v2",
-      "vsixId": "MarkdownEditor2022.2347dc70-1875-4775-bf48-f2b9fdfee8d4"
     },
     {
       "name": "Multiline Search and Replace",
