@@ -154,7 +154,7 @@ public sealed record Poll
     /// <param name="first">The maximum number of items to return per page in the response. Maximum: 20. Default: 20.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Poll"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not <see langword="null"/> and has more than 20 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadPolls"/> or <see cref="Scope.ChannelManagePolls"/>.</exception>
@@ -249,7 +249,7 @@ public sealed record Poll
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Poll"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentNullException"><see cref="PollCreationParameters.BroadcasterId"/>, <see cref="PollCreationParameters.Title"/>, or a <see cref="PollCreationChoice.Title"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="ArgumentNullException"><see cref="PollCreationParameters.Duration"/> is null; <see cref="PollCreationParameters.Choices"/> is null or empty; <see cref="PollCreationParameters.ChannelPointsPerVote"/> is null when <see cref="PollCreationParameters.ChannelPointsVotingEnabled"/> is <see langword="true"/>.</exception>
+    /// <exception cref="ArgumentNullException"><see cref="PollCreationParameters.Duration"/> is <see langword="null"/>; <see cref="PollCreationParameters.Choices"/> is <see langword="null"/> or empty; <see cref="PollCreationParameters.ChannelPointsPerVote"/> is <see langword="null"/> when <see cref="PollCreationParameters.ChannelPointsVotingEnabled"/> is <see langword="true"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="PollCreationParameters.Title"/> has more than 60 characters; <see cref="PollCreationParameters.Choices"/> has less than 2 or more than 5 elements; a <see cref="PollCreationChoice.Title"/> has more than 25 characters.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManagePolls"/>.</exception>

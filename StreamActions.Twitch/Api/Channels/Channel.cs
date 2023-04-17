@@ -105,7 +105,7 @@ public sealed partial record Channel
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster whose channel you want to get. You may specify a maximum of 100 IDs.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Channel"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/> or has 0 elements.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/> or has 0 elements.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="broadcasterId"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
@@ -158,7 +158,7 @@ public sealed partial record Channel
     /// <param name="broadcasterId">The ID of the broadcaster whose channel you want to update. This ID must match the user ID in the user access token.</param>
     /// <param name="parameters">The <see cref="ModifyChannelParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentNullException"><see cref="ModifyChannelParameters.Title"/> is empty or whitespace; an element in <see cref="ModifyChannelParameters.Tags"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="ModifyChannelParameters.Tags"/> has more than 10 elements; an element in <see cref="ModifyChannelParameters.Tags"/> has more than 25 characters, a whitespace character, or a special character.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>

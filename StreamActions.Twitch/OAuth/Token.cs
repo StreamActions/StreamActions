@@ -135,7 +135,7 @@ public sealed record Token : JsonApiResponse
     /// <param name="redirectUri">The redirect Uri that was used.</param>
     /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> for default.</param>
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="code"/> is null or whitespace, or <paramref name="redirectUri"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="code"/> is <see langword="null"/> or whitespace, or <paramref name="redirectUri"/> is <see langword="null"/>.</exception>
     public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null)
     {
         if (string.IsNullOrWhiteSpace(code))

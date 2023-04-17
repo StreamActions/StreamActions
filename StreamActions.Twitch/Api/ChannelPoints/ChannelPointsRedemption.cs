@@ -170,7 +170,7 @@ public sealed record ChannelPointsRedemption
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <param name="first">The maximum number of redemptions to return per page in the response. Maximum: 50. Default: 20.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="rewardId"/> is <see cref="Guid.Empty"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="rewardId"/> is <see cref="Guid.Empty"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is defined and has more than 50 elements; <paramref name="status"/> or <paramref name="sort"/> are not valid values of their respective enums.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadRedemptions"/> or <see cref="Scope.ChannelManageRedemptions"/>.</exception>
@@ -276,7 +276,7 @@ public sealed record ChannelPointsRedemption
     /// <param name="rewardId">The ID that identifies the reward that's been redeemed.</param>
     /// <param name="parameters">The parameters describing the new state of the redemptions.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="rewardId"/> is <see cref="Guid.Empty"/>; <paramref name="id"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="rewardId"/> is <see cref="Guid.Empty"/>; <paramref name="id"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> has more than 50 elements; <see cref="ChannelPointsRedemptionUpdateParameters.Status"/> is not <see cref="RedemptionStatus.Fulfilled"/> or <see cref="RedemptionStatus.Canceled"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadRedemptions"/> or <see cref="Scope.ChannelManageRedemptions"/>.</exception>
