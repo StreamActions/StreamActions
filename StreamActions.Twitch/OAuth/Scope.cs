@@ -308,6 +308,12 @@ public sealed record Scope
     public static readonly Scope ModeratorReadChatters = new("moderator:read:chatters", "View the chatters in a broadcaster's chat room.");
 
     /// <summary>
+    /// Read the followers of a broadcaster.
+    /// </summary>
+    /// <value>moderator:read:followers</value>
+    public static readonly Scope ModeratorReadFollowers = new("moderator:read:followers", "Read the followers of a broadcaster.");
+
+    /// <summary>
     /// View a broadcaster's Shield Mode status.
     /// </summary>
     /// <value>moderator:read:shield_mode</value>
