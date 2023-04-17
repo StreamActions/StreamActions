@@ -103,7 +103,7 @@ public sealed record Clip
     public int? ViewCount { get; init; }
 
     /// <summary>
-    /// The date and time of when the clip was created
+    /// The date and time of when the clip was created.
     /// </summary>
     [JsonPropertyName("created_at")]
     public DateTime? CreatedAt { get; init; }

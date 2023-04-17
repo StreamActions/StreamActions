@@ -146,7 +146,7 @@ public sealed partial record Channel
             throw new ArgumentOutOfRangeException(nameof(broadcasterId), broadcasterId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", broadcasterId } });
+        Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Channel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
