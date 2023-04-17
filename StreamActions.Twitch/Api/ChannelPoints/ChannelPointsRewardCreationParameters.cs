@@ -176,8 +176,8 @@ public record ChannelPointsRewardCreationParameters
     public int? GlobalCooldownSeconds { get; init; }
 
     /// <summary>
-    /// A Boolean value that determines whether redemptions should be set to <see cref="ChannelPointsRedemption.RedemptionStatus.FULFILLED"/> status immediately when a reward is redeemed.
-    /// If <see langword="false"/>, status is set to <see cref="ChannelPointsRedemption.RedemptionStatus.UNFULFILLED"/> and follows the normal request queue process.
+    /// A Boolean value that determines whether redemptions should be set to <see cref="ChannelPointsRedemption.RedemptionStatus.Fulfilled"/> status immediately when a reward is redeemed.
+    /// If <see langword="false"/>, status is set to <see cref="ChannelPointsRedemption.RedemptionStatus.Unfulfilled"/> and follows the normal request queue process.
     /// </summary>
     /// <remarks>
     /// <para>

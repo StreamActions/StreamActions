@@ -18,6 +18,7 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -48,6 +49,7 @@ public sealed record ExtensionAnalytics
     /// The type of report.
     /// </summary>
     [JsonPropertyName("type")]
+    [JsonConverter(typeof(JsonCustomEnumConverter<ExtensionReportType>))]
     public ExtensionReportType? Type { get; init; }
 
     /// <summary>
@@ -59,13 +61,14 @@ public sealed record ExtensionAnalytics
     /// <summary>
     /// Extension report types.
     /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<ExtensionReportType>))]
     public enum ExtensionReportType
     {
         /// <summary>
         /// <c>overview_v2</c> report.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
-        Overview_v2
+        [JsonCustomEnum("overview_v2")]
+        OverviewV2
     }
 
     /// <summary>
@@ -109,8 +112,7 @@ public sealed record ExtensionAnalytics
     /// </list>
     /// </para>
     /// </remarks>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
-    public static async Task<ResponseData<ExtensionAnalytics>?> GetExtensionAnalytics(TwitchSession session, string? extensionId = null, ExtensionReportType type = ExtensionReportType.Overview_v2, DateTime? startedAt = null, DateTime? endedAt = null, int first = 20, string? after = null)
+    public static async Task<ResponseData<ExtensionAnalytics>?> GetExtensionAnalytics(TwitchSession session, string? extensionId = null, ExtensionReportType type = ExtensionReportType.OverviewV2, DateTime? startedAt = null, DateTime? endedAt = null, int first = 20, string? after = null)
     {
         if (session is null)
         {
@@ -124,7 +126,7 @@ public sealed record ExtensionAnalytics
         Dictionary<string, IEnumerable<string>> queryParams = new()
         {
             { "first", new List<string> { first.ToString(CultureInfo.InvariantCulture) } },
-            { "type", new List<string> { Enum.GetName(type)?.ToLowerInvariant() ?? "" } }
+            { "type", new List<string> { type.JsonValue() ?? "" } }
         };
 
         if (!string.IsNullOrWhiteSpace(extensionId))

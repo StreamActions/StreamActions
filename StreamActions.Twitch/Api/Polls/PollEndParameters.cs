@@ -45,11 +45,11 @@ public sealed record PollEndParameters
     /// Possible case-sensitive values are:
     /// <list type="table">
     /// <item>
-    /// <term><see cref="Poll.PollStatus.TERMINATED"/></term>
+    /// <term><see cref="Poll.PollStatus.Terminated"/></term>
     /// <description>Ends the poll before the poll is scheduled to end. The poll remains publicly visible.</description>
     /// </item>
     /// <item>
-    /// <term><see cref="Poll.PollStatus.ARCHIVED"/></term>
+    /// <term><see cref="Poll.PollStatus.Archived"/></term>
     /// <description>Ends the poll before the poll is scheduled to end, and then archives it so it's no longer publicly visible.</description>
     /// </item>
     /// </list>

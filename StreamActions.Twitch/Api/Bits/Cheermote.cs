@@ -18,6 +18,7 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
@@ -45,10 +46,11 @@ public sealed record Cheermote
     /// The type of Cheermote.
     /// </summary>
     [JsonPropertyName("type")]
+    [JsonConverter(typeof(JsonCustomEnumConverter<CheermoteType>))]
     public CheermoteType? Type { get; init; }
 
     /// <summary>
-    /// The order that the Cheermotes are shown in the Bits card. The numbers may not be consecutive. The order numbers are unique within a Cheermote type (for example, <see cref="CheermoteType.Global_first_party"/>) but may not be unique amongst all Cheermotes in the response.
+    /// The order that the Cheermotes are shown in the Bits card. The numbers may not be consecutive. The order numbers are unique within a Cheermote type (for example, <see cref="CheermoteType.GlobalFirstParty"/>) but may not be unique amongst all Cheermotes in the response.
     /// </summary>
     [JsonPropertyName("order")]
     public int? Order { get; init; }
@@ -68,31 +70,33 @@ public sealed record Cheermote
     /// <summary>
     /// The type of Cheermote.
     /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<CheermoteType>))]
     public enum CheermoteType
     {
         /// <summary>
         /// A Twitch-defined Cheermote that is shown in the Bits card.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
-        Global_first_party,
+        [JsonCustomEnum("global_first_party")]
+        GlobalFirstParty,
         /// <summary>
         /// A Twitch-defined Cheermote that is not shown in the Bits card.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
-        Global_third_party,
+        [JsonCustomEnum("global_third_party")]
+        GlobalThirdParty,
         /// <summary>
         /// A broadcaster-defined Cheermote.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
-        Channel_custom,
+        [JsonCustomEnum("channel_custom")]
+        ChannelCustom,
         /// <summary>
         /// Do not use; for internal use only.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
-        Display_only,
+        [JsonCustomEnum("display_only")]
+        DisplayOnly,
         /// <summary>
         /// A sponsor-defined Cheermote. When used, the sponsor adds additional Bits to the amount that the user cheered. For example, if the user cheered Terminator100, the broadcaster might receive 110 Bits, which includes the sponsor's 10 Bits contribution.
         /// </summary>
+        [JsonCustomEnum("sponsored")]
         Sponsored
     }
 

@@ -18,6 +18,7 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -65,6 +66,7 @@ public sealed record Leaderboard
     /// <summary>
     /// The time period over which data is aggregated (uses the PST time zone).
     /// </summary>
+    [JsonConverter(typeof(JsonLowerCaseEnumConverter<LeaderboardPeriod>))]
     public enum LeaderboardPeriod
     {
         /// <summary>
@@ -125,7 +127,6 @@ public sealed record Leaderboard
     /// </list>
     /// </para>
     /// </remarks>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<Leaderboard>?> GetBitsLeaderboard(TwitchSession session, int count = 10, LeaderboardPeriod period = LeaderboardPeriod.All, DateTime? startedAt = null, string? userId = null)
     {
         if (session is null)
@@ -140,7 +141,7 @@ public sealed record Leaderboard
         Dictionary<string, IEnumerable<string>> queryParams = new()
         {
             { "count", new List<string> { count.ToString(CultureInfo.InvariantCulture) } },
-            { "period", new List<string> { Enum.GetName(period)?.ToLowerInvariant() ?? "" } }
+            { "period", new List<string> { period.JsonValue() ?? "" } }
         };
 
         if (!string.IsNullOrWhiteSpace(userId))

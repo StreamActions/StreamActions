@@ -24,6 +24,7 @@ using StreamActions.Twitch.OAuth;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Videos;
 
@@ -160,6 +161,7 @@ public sealed record Video
     /// <summary>
     /// The video's viewable state.
     /// </summary>
+    [JsonConverter(typeof(JsonLowerCaseEnumConverter<Viewability>))]
     public enum Viewability
     {
         /// <summary>
@@ -175,6 +177,7 @@ public sealed record Video
     /// <summary>
     /// The video's type.
     /// </summary>
+    [JsonConverter(typeof(JsonLowerCaseEnumConverter<VideoType>))]
     public enum VideoType
     {
         /// <summary>
@@ -198,6 +201,7 @@ public sealed record Video
     /// <summary>
     /// A filter used to filter the list of videos by when they were published.
     /// </summary>
+    [JsonConverter(typeof(JsonLowerCaseEnumConverter<VideoPeriod>))]
     public enum VideoPeriod
     {
         /// <summary>
@@ -221,6 +225,7 @@ public sealed record Video
     /// <summary>
     /// The order to sort the returned videos in.
     /// </summary>
+    [JsonConverter(typeof(JsonLowerCaseEnumConverter<VideoSort>))]
     public enum VideoSort
     {
         /// <summary>
@@ -287,7 +292,6 @@ public sealed record Video
     /// </list>
     /// </para>
     /// </remarks>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<Video>?> GetVideos(TwitchSession session, IEnumerable<string>? id = null, string? userId = null, string? gameId = null, string? language = null,
         VideoPeriod period = VideoPeriod.All, VideoSort sort = VideoSort.Time, VideoType type = VideoType.All, int first = 20, string? before = null, string? after = null)
     {
@@ -358,9 +362,9 @@ public sealed record Video
         if (id is null || !id.Any())
         {
             queryParams.Add("first", new List<string> { first.ToString(CultureInfo.InvariantCulture) });
-            queryParams.Add("period", new List<string> { Enum.GetName(period)?.ToLowerInvariant() ?? "" });
-            queryParams.Add("sort", new List<string> { Enum.GetName(sort)?.ToLowerInvariant() ?? "" });
-            queryParams.Add("type", new List<string> { Enum.GetName(type)?.ToLowerInvariant() ?? "" });
+            queryParams.Add("period", new List<string> { period.JsonValue() ?? "" });
+            queryParams.Add("sort", new List<string> { sort.JsonValue() ?? "" });
+            queryParams.Add("type", new List<string> { type.JsonValue() ?? "" });
 
             if (!string.IsNullOrWhiteSpace(language))
             {

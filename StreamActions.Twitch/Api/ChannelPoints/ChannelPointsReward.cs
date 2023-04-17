@@ -144,8 +144,8 @@ public sealed record ChannelPointsReward
     public Images? DefaultImage { get; init; }
 
     /// <summary>
-    /// A Boolean value that determines whether redemptions should be set to <see cref="ChannelPointsRedemption.RedemptionStatus.FULFILLED"/> status immediately when a reward is redeemed.
-    /// If <see langword="false"/>, status is set to <see cref="ChannelPointsRedemption.RedemptionStatus.UNFULFILLED"/> and follows the normal request queue process.
+    /// A Boolean value that determines whether redemptions should be set to <see cref="ChannelPointsRedemption.RedemptionStatus.Fulfilled"/> status immediately when a reward is redeemed.
+    /// If <see langword="false"/>, status is set to <see cref="ChannelPointsRedemption.RedemptionStatus.Unfulfilled"/> and follows the normal request queue process.
     /// </summary>
     [JsonPropertyName("should_redemptions_skip_request_queue")]
     public bool? ShouldRedemptionsSkipRequestQueue { get; init; }
@@ -546,7 +546,7 @@ public sealed record ChannelPointsReward
     /// The app used to create the reward is the only app that may delete it.
     /// </para>
     /// <para>
-    /// If the reward has any redemptions with status <c>UNFULFILLED</c> at the time the reward is deleted, the redemption statuses are marked as <c>FULFILLED</c>.
+    /// If the reward has any redemptions with status <c>Unfulfilled</c> at the time the reward is deleted, the redemption statuses are marked as <c>Fulfilled</c>.
     /// </para>
     /// <para>
     /// Response Codes:

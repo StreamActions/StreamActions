@@ -22,6 +22,7 @@ using StreamActions.Twitch.Api.Common;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Bits;
 
@@ -82,6 +83,7 @@ public sealed record ExtensionTransaction
     /// The type of transaction.
     /// </summary>
     [JsonPropertyName("product_type")]
+    [JsonConverter(typeof(JsonCustomEnumConverter<ExtensionProductType>))]
     public ExtensionProductType? ProductType { get; init; }
 
     /// <summary>
@@ -93,13 +95,14 @@ public sealed record ExtensionTransaction
     /// <summary>
     /// The type of transaction.
     /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<ExtensionProductType>))]
     public enum ExtensionProductType
     {
         /// <summary>
         /// A product which is purchased via bits in an extension.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "API Definition")]
-        BITS_IN_EXTENSION
+        [JsonCustomEnum("BITS_IN_EXTENSION")]
+        BitsInExtension
     }
 
     /// <summary>

@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Bits;
@@ -40,6 +41,7 @@ public sealed record ExtensionProductCost
     /// <summary>
     /// The type of currency exchanged.
     /// </summary>
+    [JsonConverter(typeof(JsonLowerCaseEnumConverter<ExtensionProductCostType>))]
     public enum ExtensionProductCostType
     {
         /// <summary>

@@ -125,35 +125,37 @@ public sealed record ChannelPointsRedemption
     /// <summary>
     /// The state of the redemption.
     /// </summary>
+    [JsonConverter(typeof(JsonUpperCaseEnumConverter<RedemptionStatus>))]
     public enum RedemptionStatus
     {
         /// <summary>
         /// Unfulfilled and in the request queue.
         /// </summary>
-        UNFULFILLED,
+        Unfulfilled,
         /// <summary>
         /// Fulfilled.
         /// </summary>
-        FULFILLED,
+        Fulfilled,
         /// <summary>
         /// Canceled and refunded.
         /// </summary>
-        CANCELED
+        Canceled
     }
 
     /// <summary>
     /// The order to sort redemptions by.
     /// </summary>
+    [JsonConverter(typeof(JsonUpperCaseEnumConverter<RedemptionSort>))]
     public enum RedemptionSort
     {
         /// <summary>
         /// Oldest redemptions first.
         /// </summary>
-        OLDEST,
+        Oldest,
         /// <summary>
         /// Newest redemptions first.
         /// </summary>
-        NEWEST
+        Newest
     }
 
     /// <summary>
@@ -202,7 +204,7 @@ public sealed record ChannelPointsRedemption
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ResponseData<ChannelPointsReward>?> GetCustomRewardRedemption(TwitchSession session, string broadcasterId, Guid rewardId, RedemptionStatus status = RedemptionStatus.UNFULFILLED, IEnumerable<Guid>? id = null, RedemptionSort sort = RedemptionSort.OLDEST, string? after = null, int first = 20)
+    public static async Task<ResponseData<ChannelPointsReward>?> GetCustomRewardRedemption(TwitchSession session, string broadcasterId, Guid rewardId, RedemptionStatus status = RedemptionStatus.Unfulfilled, IEnumerable<Guid>? id = null, RedemptionSort sort = RedemptionSort.Oldest, string? after = null, int first = 20)
     {
         if (session is null)
         {
@@ -242,7 +244,7 @@ public sealed record ChannelPointsRedemption
         {
             { "broadcaster_id", new List<string> { broadcasterId } },
             { "reward_id", new List<string> { rewardId.ToString("D", CultureInfo.InvariantCulture) } },
-            { "sort", new List<string> { Enum.GetName(sort)?.ToUpperInvariant() ?? "" } }
+            { "sort", new List<string> { sort.JsonValue() ?? "" } }
         };
 
         if (id is not null && id.Any())
@@ -251,7 +253,7 @@ public sealed record ChannelPointsRedemption
         }
         else
         {
-            queryParams.Add("status", new List<string> { Enum.GetName(status)?.ToUpperInvariant() ?? "" });
+            queryParams.Add("status", new List<string> { status.JsonValue() ?? "" });
             queryParams.Add("first", new List<string> { first.ToString(CultureInfo.InvariantCulture) });
         }
 
@@ -275,7 +277,7 @@ public sealed record ChannelPointsRedemption
     /// <param name="parameters">The parameters describing the new state of the redemptions.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is null; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="rewardId"/> is <see cref="Guid.Empty"/>; <paramref name="id"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> has more than 50 elements; <see cref="ChannelPointsRedemptionUpdateParameters.Status"/> is not <see cref="RedemptionStatus.FULFILLED"/> or <see cref="RedemptionStatus.CANCELED"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> has more than 50 elements; <see cref="ChannelPointsRedemptionUpdateParameters.Status"/> is not <see cref="RedemptionStatus.Fulfilled"/> or <see cref="RedemptionStatus.Canceled"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadRedemptions"/> or <see cref="Scope.ChannelManageRedemptions"/>.</exception>
     /// <remarks>
@@ -303,7 +305,7 @@ public sealed record ChannelPointsRedemption
     /// </item>
     /// <item>
     /// <term>404 Not Found</term>
-    /// <description>The specified reward does not exist; the specified redemption ids do not exist or are not <see cref="RedemptionStatus.UNFULFILLED"/>.</description>
+    /// <description>The specified reward does not exist; the specified redemption ids do not exist or are not <see cref="RedemptionStatus.Unfulfilled"/>.</description>
     /// </item>
     /// </list>
     /// </para>
@@ -340,9 +342,9 @@ public sealed record ChannelPointsRedemption
             throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 50").Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Status is not RedemptionStatus.FULFILLED or RedemptionStatus.CANCELED)
+        if (parameters.Status is not RedemptionStatus.Fulfilled or RedemptionStatus.Canceled)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be FULFILLED or CANCELED").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be Fulfilled or Canceled").Log(TwitchApi.GetLogger());
         }
 
         session.RequireToken(Scope.ChannelManageRedemptions);

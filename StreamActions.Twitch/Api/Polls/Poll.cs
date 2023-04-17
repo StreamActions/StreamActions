@@ -108,7 +108,7 @@ public sealed record Poll
     public DateTime? StartedAt { get; init; }
 
     /// <summary>
-    /// The UTC date and time of when the poll ended. If <see cref="Status"/> is <see cref="PollStatus.ACTIVE"/>, this field is set to <see langword="null"/>.
+    /// The UTC date and time of when the poll ended. If <see cref="Status"/> is <see cref="PollStatus.Active"/>, this field is set to <see langword="null"/>.
     /// </summary>
     [JsonPropertyName("ended_at")]
     public DateTime? EndedAt { get; init; }
@@ -116,32 +116,33 @@ public sealed record Poll
     /// <summary>
     /// The poll's status.
     /// </summary>
+    [JsonConverter(typeof(JsonUpperCaseEnumConverter<PollStatus>))]
     public enum PollStatus
     {
         /// <summary>
         /// Something went wrong while determining the state.
         /// </summary>
-        INVALID,
+        Invalid,
         /// <summary>
         /// The poll is running.
         /// </summary>
-        ACTIVE,
+        Active,
         /// <summary>
         /// The poll ended on schedule.
         /// </summary>
-        COMPLETED,
+        Completed,
         /// <summary>
         /// The poll was terminated before its scheduled end.
         /// </summary>
-        TERMINATED,
+        Terminated,
         /// <summary>
         /// The poll has been archived and is no longer visible on the channel.
         /// </summary>
-        ARCHIVED,
+        Archived,
         /// <summary>
         /// The poll was deleted.
         /// </summary>
-        MODERATED
+        Moderated
     }
 
     /// <summary>
@@ -411,9 +412,9 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(parameters.Status)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Status is not PollStatus.TERMINATED or PollStatus.ARCHIVED)
+        if (parameters.Status is not PollStatus.Terminated or PollStatus.Archived)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be one of TERMINATED or ARCHIVED").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be one of Terminated or Archived").Log(TwitchApi.GetLogger());
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
