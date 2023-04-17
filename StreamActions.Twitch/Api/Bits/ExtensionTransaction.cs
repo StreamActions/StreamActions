@@ -83,7 +83,6 @@ public sealed record ExtensionTransaction
     /// The type of transaction.
     /// </summary>
     [JsonPropertyName("product_type")]
-    [JsonConverter(typeof(JsonCustomEnumConverter<ExtensionProductType>))]
     public ExtensionProductType? ProductType { get; init; }
 
     /// <summary>

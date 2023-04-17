@@ -60,7 +60,6 @@ public sealed record Goal
     /// The type of goal.
     /// </summary>
     [JsonPropertyName("type")]
-    [JsonConverter(typeof(JsonCustomEnumConverter<GoalType>))]
     public GoalType? Type { get; init; }
 
     /// <summary>

@@ -88,7 +88,6 @@ public sealed record ChannelPointsRedemption
     /// The state of the redemption.
     /// </summary>
     [JsonPropertyName("status")]
-    [JsonConverter(typeof(JsonUpperCaseEnumConverter<RedemptionStatus>))]
     public RedemptionStatus? Status { get; init; }
 
     /// <summary>

@@ -49,7 +49,6 @@ public sealed record GameAnalytics
     /// The type of report.
     /// </summary>
     [JsonPropertyName("type")]
-    [JsonConverter(typeof(JsonCustomEnumConverter<GameReportType>))]
     public GameReportType? Type { get; init; }
 
     /// <summary>

@@ -35,6 +35,5 @@ public sealed record ChannelPointsRedemptionUpdateParameters
     /// </para>
     /// </remarks>
     [JsonPropertyName("status")]
-    [JsonConverter(typeof(JsonUpperCaseEnumConverter<ChannelPointsRedemption.RedemptionStatus>))]
     public ChannelPointsRedemption.RedemptionStatus? Status { get; init; }
 }

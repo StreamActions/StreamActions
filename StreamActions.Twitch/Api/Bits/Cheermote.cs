@@ -46,7 +46,6 @@ public sealed record Cheermote
     /// The type of Cheermote.
     /// </summary>
     [JsonPropertyName("type")]
-    [JsonConverter(typeof(JsonCustomEnumConverter<CheermoteType>))]
     public CheermoteType? Type { get; init; }
 
     /// <summary>

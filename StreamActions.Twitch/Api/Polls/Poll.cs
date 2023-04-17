@@ -86,7 +86,6 @@ public sealed record Poll
     /// The poll's status.
     /// </summary>
     [JsonPropertyName("status")]
-    [JsonConverter(typeof(JsonUpperCaseEnumConverter<PollStatus>))]
     public PollStatus? Status { get; init; }
 
     /// <summary>

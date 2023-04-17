@@ -49,7 +49,6 @@ public sealed record ExtensionAnalytics
     /// The type of report.
     /// </summary>
     [JsonPropertyName("type")]
-    [JsonConverter(typeof(JsonCustomEnumConverter<ExtensionReportType>))]
     public ExtensionReportType? Type { get; init; }
 
     /// <summary>
