@@ -16,10 +16,11 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Common.Json.Serialization;
+namespace StreamActions.Common.Extensions;
 
 /// <summary>
 /// Extensions for enums that use attributes in the <see cref="Serialization"/> namespace.
