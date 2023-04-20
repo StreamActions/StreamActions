@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Collections.Specialized;
 using System.Drawing;
 using System.Globalization;
 using System.Text;
@@ -34,100 +35,136 @@ public static partial class Util
     /// Builds a <see cref="Uri"/>, escaping query and fragment parameters.
     /// </summary>
     /// <param name="baseUri">The base uri.</param>
-    /// <param name="queryParams">The query parameters.</param>
-    /// <param name="fragmentParams">The fragment parameters.</param>
+    /// <param name="queryParams">The query parameters. To put a key without a <c>=value</c>, set the associated value to <see langword="null"/>.</param>
+    /// <param name="fragmentParams">The fragment parameters. To put a key without a <c>=value</c>, set the associated value to <see langword="null"/>.</param>
     /// <returns>A <see cref="Uri"/> with all query and fragment parameters escaped and appended.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="baseUri"/> is <see langword="null"/>.</exception>
-    public static Uri BuildUri(Uri baseUri, IEnumerable<KeyValuePair<string, IEnumerable<string>>>? queryParams = null, IEnumerable<KeyValuePair<string, IEnumerable<string>>>? fragmentParams = null)
+    public static Uri BuildUri(Uri baseUri, NameValueCollection? queryParams = null, NameValueCollection? fragmentParams = null)
     {
         if (baseUri is null)
         {
             throw new ArgumentNullException(nameof(baseUri));
         }
 
-        StringBuilder relativeUri = new();
+        UriBuilder uriBuilder = new(baseUri);
 
-        if (queryParams is not null && queryParams.Any())
+        StringBuilder paramStringBuilder = new();
+
+        if (queryParams is not null && queryParams.HasKeys())
         {
-            _ = relativeUri.Append('?');
+            if (!string.IsNullOrEmpty(uriBuilder.Query))
+            {
+                _ = paramStringBuilder.Append('&');
+            }
 
             bool first = true;
-            foreach (KeyValuePair<string, IEnumerable<string>> kvp in queryParams)
+            foreach (string? name in queryParams.AllKeys)
             {
-                if (!first)
+                if (name is not null)
                 {
-                    _ = relativeUri.Append('&');
-                }
-                else
-                {
-                    first = false;
-                }
-
-                if (kvp.Value.Any())
-                {
-                    bool innerFirst = true;
-                    foreach (string value in kvp.Value)
+                    if (!first)
                     {
-                        if (!innerFirst)
-                        {
-                            _ = relativeUri.Append('&');
-                        }
-                        else
-                        {
-                            innerFirst = false;
-                        }
-
-                        _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
+                        _ = paramStringBuilder.Append('&');
                     }
-                }
-                else
-                {
-                    _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key));
+                    else
+                    {
+                        first = false;
+                    }
+
+                    bool innerFirst = true;
+                    bool hasValue = false;
+                    string[]? values = queryParams.GetValues(name);
+                    if (values is not null)
+                    {
+                        foreach (string? value in values)
+                        {
+                            if (value is not null)
+                            {
+                                hasValue = true;
+
+                                if (!innerFirst)
+                                {
+                                    _ = paramStringBuilder.Append('&');
+                                }
+                                else
+                                {
+                                    innerFirst = false;
+                                }
+
+                                _ = paramStringBuilder.Append(Uri.EscapeDataString(name)).Append('=').Append(Uri.EscapeDataString(value));
+                            }
+                        }
+                    }
+
+                    if (!hasValue)
+                    {
+                        _ = paramStringBuilder.Append(Uri.EscapeDataString(name));
+                    }
                 }
             }
         }
 
-        if (fragmentParams is not null && fragmentParams.Any())
+        uriBuilder.Query = uriBuilder.Query + paramStringBuilder.ToString();
+
+        paramStringBuilder.Clear();
+
+        if (fragmentParams is not null && fragmentParams.HasKeys())
         {
-            _ = relativeUri.Append('#');
+            if (!string.IsNullOrEmpty(uriBuilder.Fragment))
+            {
+                _ = paramStringBuilder.Append('&');
+            }
 
             bool first = true;
-            foreach (KeyValuePair<string, IEnumerable<string>> kvp in fragmentParams)
+            foreach (string? name in fragmentParams.AllKeys)
             {
-                if (!first)
+                if (name is not null)
                 {
-                    _ = relativeUri.Append('&');
-                }
-                else
-                {
-                    first = false;
-                }
-
-                if (kvp.Value.Any())
-                {
-                    bool innerFirst = true;
-                    foreach (string value in kvp.Value)
+                    if (!first)
                     {
-                        if (!innerFirst)
-                        {
-                            _ = relativeUri.Append('&');
-                        }
-                        else
-                        {
-                            innerFirst = false;
-                        }
-
-                        _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key)).Append('=').Append(Uri.EscapeDataString(value));
+                        _ = paramStringBuilder.Append('&');
                     }
-                }
-                else
-                {
-                    _ = relativeUri.Append(Uri.EscapeDataString(kvp.Key));
+                    else
+                    {
+                        first = false;
+                    }
+
+                    bool innerFirst = true;
+                    bool hasValue = false;
+                    string[]? values = fragmentParams.GetValues(name);
+                    if (values is not null)
+                    {
+                        foreach (string? value in values)
+                        {
+                            if (value is not null)
+                            {
+                                hasValue = true;
+
+                                if (!innerFirst)
+                                {
+                                    _ = paramStringBuilder.Append('&');
+                                }
+                                else
+                                {
+                                    innerFirst = false;
+                                }
+
+                                _ = paramStringBuilder.Append(Uri.EscapeDataString(name)).Append('=').Append(Uri.EscapeDataString(value));
+                            }
+                        }
+                    }
+
+                    if (!hasValue)
+                    {
+                        _ = paramStringBuilder.Append(Uri.EscapeDataString(name));
+                    }
                 }
             }
         }
 
-        return new Uri(baseUri, relativeUri.ToString());
+        uriBuilder.Fragment = uriBuilder.Fragment + paramStringBuilder.ToString();
+
+        return uriBuilder.Uri;
     }
 
     /// <summary>
@@ -135,7 +172,7 @@ public static partial class Util
     /// </summary>
     /// <param name="duration">A duration string in the format <c>1w2d3h4m5s</c>. 0-valued segments can be excluded.</param>
     /// <returns>A <see cref="TimeSpan"/> representing the time passed in.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">An unknown capture group was returned by <see cref="_durationRegex"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">An unknown capture group was returned by <see cref="DurationRegex"/>.</exception>
     public static TimeSpan DurationStringToTimeSpan(string duration)
     {
         TimeSpan t = new(0);
