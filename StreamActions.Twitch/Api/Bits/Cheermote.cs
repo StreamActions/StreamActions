@@ -21,6 +21,7 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
+using System.Collections.Specialized;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Bits;
@@ -131,11 +132,11 @@ public sealed record Cheermote
 
         session.RequireToken();
 
-        Dictionary<string, IEnumerable<string>> queryParams = new();
+        NameValueCollection queryParams = new();
 
         if (!string.IsNullOrWhiteSpace(broadcasterId))
         {
-            queryParams.Add("broadcaster_id", new List<string> { broadcasterId });
+            queryParams.Add("broadcaster_id", broadcasterId);
         }
 
         Uri uri = Util.BuildUri(new("/bits/cheermotes"), queryParams);

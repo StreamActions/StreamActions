@@ -23,6 +23,7 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -138,15 +139,15 @@ public sealed record Leaderboard
 
         count = Math.Clamp(count, 1, 100);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "count", new List<string> { count.ToString(CultureInfo.InvariantCulture) } },
-            { "period", new List<string> { period.JsonValue() ?? "" } }
+            { "count", count.ToString(CultureInfo.InvariantCulture) },
+            { "period", period.JsonValue() ?? "" }
         };
 
         if (!string.IsNullOrWhiteSpace(userId))
         {
-            queryParams.Add("user_id", new List<string> { userId });
+            queryParams.Add("user_id", userId);
         }
 
         if (startedAt.HasValue)
@@ -157,7 +158,7 @@ public sealed record Leaderboard
             }
             else
             {
-                queryParams.Add("started_at", new List<string> { startedAt.Value.Date.ToRfc3339() });
+                queryParams.Add("started_at", startedAt.Value.Date.ToRfc3339());
             }
         }
 

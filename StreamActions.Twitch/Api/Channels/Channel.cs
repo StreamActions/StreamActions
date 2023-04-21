@@ -146,7 +146,7 @@ public sealed partial record Channel
             throw new ArgumentOutOfRangeException(nameof(broadcasterId), broadcasterId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
+        Uri uri = Util.BuildUri(new("/channels"), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Channel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -236,7 +236,7 @@ public sealed partial record Channel
             parameters = parameters with { Delay = Math.Clamp(parameters.Delay.Value, 0, 900) };
         }
 
-        Uri uri = Util.BuildUri(new("/channels"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
+        Uri uri = Util.BuildUri(new("/channels"), new() { { "broadcaster_id", broadcasterId } });
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);

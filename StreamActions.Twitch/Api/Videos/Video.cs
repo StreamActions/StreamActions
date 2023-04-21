@@ -25,6 +25,7 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
+using System.Collections.Specialized;
 
 namespace StreamActions.Twitch.Api.Videos;
 
@@ -342,7 +343,7 @@ public sealed record Video
 
         first = Math.Clamp(first, 1, 100);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new();
+        NameValueCollection queryParams = new();
 
         if (id is not null && id.Any())
         {
@@ -351,34 +352,34 @@ public sealed record Video
 
         if (!string.IsNullOrWhiteSpace(userId))
         {
-            queryParams.Add("user_id", new List<string> { userId });
+            queryParams.Add("user_id", userId);
         }
 
         if (!string.IsNullOrWhiteSpace(gameId))
         {
-            queryParams.Add("game_id", new List<string> { gameId });
+            queryParams.Add("game_id", gameId);
         }
 
         if (id is null || !id.Any())
         {
-            queryParams.Add("first", new List<string> { first.ToString(CultureInfo.InvariantCulture) });
-            queryParams.Add("period", new List<string> { period.JsonValue() ?? "" });
-            queryParams.Add("sort", new List<string> { sort.JsonValue() ?? "" });
-            queryParams.Add("type", new List<string> { type.JsonValue() ?? "" });
+            queryParams.Add("first", first.ToString(CultureInfo.InvariantCulture));
+            queryParams.Add("period", period.JsonValue() ?? "");
+            queryParams.Add("sort", sort.JsonValue() ?? "");
+            queryParams.Add("type", type.JsonValue() ?? "");
 
             if (!string.IsNullOrWhiteSpace(language))
             {
-                queryParams.Add("language", new List<string> { language });
+                queryParams.Add("language", language);
             }
 
             if (!string.IsNullOrWhiteSpace(after))
             {
-                queryParams.Add("after", new List<string> { after });
+                queryParams.Add("after", after);
             }
 
             if (!string.IsNullOrWhiteSpace(before))
             {
-                queryParams.Add("before", new List<string> { before });
+                queryParams.Add("before", before);
             }
         }
 
@@ -438,7 +439,7 @@ public sealed record Video
             throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 5").Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/videos"), new Dictionary<string, IEnumerable<string>> { { "id", id } });
+        Uri uri = Util.BuildUri(new("/videos"), new() { { "id", id } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<string>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

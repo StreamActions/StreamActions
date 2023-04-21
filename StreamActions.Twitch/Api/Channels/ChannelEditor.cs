@@ -91,7 +91,7 @@ public sealed record ChannelEditor
 
         session.RequireToken(Scope.ChannelReadEditors);
 
-        Uri uri = Util.BuildUri(new("/channels/editors"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } } });
+        Uri uri = Util.BuildUri(new("/channels/editors"), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChannelEditor>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

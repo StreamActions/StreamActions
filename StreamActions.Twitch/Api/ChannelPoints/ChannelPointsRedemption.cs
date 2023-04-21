@@ -26,6 +26,7 @@ using System.Text.Json.Serialization;
 using System.Net.Http.Json;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
+using System.Collections.Specialized;
 
 namespace StreamActions.Twitch.Api.ChannelPoints;
 
@@ -237,11 +238,11 @@ public sealed record ChannelPointsRedemption
 
         session.RequireToken(Scope.ChannelReadRedemptions, Scope.ChannelManageRedemptions);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "broadcaster_id", new List<string> { broadcasterId } },
-            { "reward_id", new List<string> { rewardId.ToString("D", CultureInfo.InvariantCulture) } },
-            { "sort", new List<string> { sort.JsonValue() ?? "" } }
+            { "broadcaster_id", broadcasterId },
+            { "reward_id", rewardId.ToString("D", CultureInfo.InvariantCulture) },
+            { "sort", sort.JsonValue() ?? "" }
         };
 
         if (id is not null && id.Any())
@@ -250,13 +251,13 @@ public sealed record ChannelPointsRedemption
         }
         else
         {
-            queryParams.Add("status", new List<string> { status.JsonValue() ?? "" });
-            queryParams.Add("first", new List<string> { first.ToString(CultureInfo.InvariantCulture) });
+            queryParams.Add("status", status.JsonValue() ?? "");
+            queryParams.Add("first", first.ToString(CultureInfo.InvariantCulture));
         }
 
         if (!string.IsNullOrWhiteSpace(after))
         {
-            queryParams.Add("after", new List<string> { after });
+            queryParams.Add("after", after);
         }
 
         Uri uri = Util.BuildUri(new("/channel_points/custom_rewards/redemptions"), queryParams);
@@ -346,10 +347,10 @@ public sealed record ChannelPointsRedemption
 
         session.RequireToken(Scope.ChannelManageRedemptions);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "broadcaster_id", new List<string> { broadcasterId } },
-            { "reward_id", new List<string> { rewardId.ToString("D", CultureInfo.InvariantCulture) } },
+            { "broadcaster_id", broadcasterId },
+            { "reward_id", rewardId.ToString("D", CultureInfo.InvariantCulture) },
             { "id", id.Select(x => x.ToString("D", CultureInfo.InvariantCulture)) }
         };
 

@@ -23,6 +23,7 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -122,20 +123,20 @@ public sealed record ExtensionAnalytics
 
         first = Math.Clamp(first, 1, 100);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "first", new List<string> { first.ToString(CultureInfo.InvariantCulture) } },
-            { "type", new List<string> { type.JsonValue() ?? "" } }
+            { "first", first.ToString(CultureInfo.InvariantCulture) },
+            { "type", type.JsonValue() ?? "" }
         };
 
         if (!string.IsNullOrWhiteSpace(extensionId))
         {
-            queryParams.Add("extension_id", new List<string> { extensionId });
+            queryParams.Add("extension_id", extensionId);
         }
 
         if (!string.IsNullOrWhiteSpace(after))
         {
-            queryParams.Add("after", new List<string> { after });
+            queryParams.Add("after", after);
         }
 
         if ((!startedAt.HasValue && endedAt.HasValue) || (startedAt.HasValue && !endedAt.HasValue))
@@ -145,8 +146,8 @@ public sealed record ExtensionAnalytics
 
         if (startedAt.HasValue && endedAt.HasValue)
         {
-            queryParams.Add("started_at", new List<string> { startedAt.Value.Date.ToRfc3339() });
-            queryParams.Add("ended_at", new List<string> { endedAt.Value.Date.ToRfc3339() });
+            queryParams.Add("started_at", startedAt.Value.Date.ToRfc3339());
+            queryParams.Add("ended_at", endedAt.Value.Date.ToRfc3339());
         }
 
         Uri uri = Util.BuildUri(new("/analytics/extensions"), queryParams);

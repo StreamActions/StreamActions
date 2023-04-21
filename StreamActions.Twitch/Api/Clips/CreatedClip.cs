@@ -23,6 +23,7 @@ using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Text.Json.Serialization;
 using StreamActions.Common.Extensions;
+using System.Globalization;
 
 namespace StreamActions.Twitch.Api.Clips;
 
@@ -97,6 +98,7 @@ public sealed record CreatedClip
     /// </list>
     /// </para>
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<CreatedClip>?> CreateClip(TwitchSession session, string broadcasterId, bool hasDelay = false)
     {
         if (session is null)
@@ -111,7 +113,7 @@ public sealed record CreatedClip
 
         session.RequireToken(Scope.ClipsEdit);
 
-        Uri uri = Util.BuildUri(new("/clips"), new Dictionary<string, IEnumerable<string>> { { "broadcaster_id", new List<string> { broadcasterId } }, { "has_delay", new List<string> { hasDelay ? "true" : "false" } } });
+        Uri uri = Util.BuildUri(new("/clips"), new() { { "broadcaster_id", broadcasterId }, { "has_delay", hasDelay.ToString(CultureInfo.InvariantCulture).ToLowerInvariant() } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

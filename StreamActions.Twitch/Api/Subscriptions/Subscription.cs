@@ -25,6 +25,7 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using StreamActions.Common.Net;
 using StreamActions.Common.Extensions;
+using System.Collections.Specialized;
 
 namespace StreamActions.Twitch.Api.Subscriptions;
 
@@ -203,10 +204,10 @@ public sealed record Subscription
 
         first = Math.Clamp(first, 1, 100);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "broadcaster_id", new List<string> { broadcasterId } },
-            { "first", new List<string> { first.ToString(CultureInfo.InvariantCulture) } }
+            { "broadcaster_id", broadcasterId },
+            { "first", first.ToString(CultureInfo.InvariantCulture) }
         };
 
         if (userId is not null && userId.Any())
@@ -242,12 +243,12 @@ public sealed record Subscription
                 throw new InvalidOperationException(nameof(before) + " can not be used at the same time as " + nameof(after)).Log(TwitchApi.GetLogger());
             }
 
-            queryParams.Add("before", new List<string> { before });
+            queryParams.Add("before", before );
         }
 
         if (!string.IsNullOrWhiteSpace(after))
         {
-            queryParams.Add("after", new List<string> { after });
+            queryParams.Add("after", after);
         }
 
         Uri uri = Util.BuildUri(new("/subscriptions"), queryParams);
@@ -307,10 +308,10 @@ public sealed record Subscription
 
         session.RequireToken(Scope.UserReadSubscriptions);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "broadcaster_id", new List<string> { broadcasterId } },
-            { "user_id", new List<string> { userId } }
+            { "broadcaster_id", broadcasterId },
+            { "user_id", userId }
         };
 
         Uri uri = Util.BuildUri(new("/subscriptions/user"), queryParams);

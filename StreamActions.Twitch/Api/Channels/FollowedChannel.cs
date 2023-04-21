@@ -25,6 +25,7 @@ using System.Text.Json.Serialization;
 using System.Net.Http.Json;
 using StreamActions.Common.Extensions;
 using System.Globalization;
+using System.Collections.Specialized;
 
 namespace StreamActions.Twitch.Api.Channels;
 
@@ -123,20 +124,20 @@ public sealed record FollowedChannel
 
         first = Math.Clamp(first, 1, 100);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "user_id", new List<string> { userId } },
-            { "first", new List<string> { first.ToString(CultureInfo.InvariantCulture) } }
+            { "user_id", userId },
+            { "first", first.ToString(CultureInfo.InvariantCulture) }
         };
 
         if (broadcasterId is not null)
         {
-            queryParams.Add("broadcaster_id", new List<string> { broadcasterId });
+            queryParams.Add("broadcaster_id", broadcasterId);
         }
 
         if (after is not null)
         {
-            queryParams.Add("after", new List<string> { after });
+            queryParams.Add("after", after);
         }
 
         Uri uri = Util.BuildUri(new("/channels/followed"), queryParams);

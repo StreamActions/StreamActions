@@ -26,6 +26,7 @@ using System.Text.Json.Serialization;
 using System.Net.Http.Json;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
+using System.Collections.Specialized;
 
 namespace StreamActions.Twitch.Api.Polls;
 
@@ -207,10 +208,10 @@ public sealed record Poll
 
         first = Math.Clamp(first, 1, 20);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "broadcaster_id", new List<string> { broadcasterId } },
-            { "first", new List<string> { first.ToString(CultureInfo.InvariantCulture) } }
+            { "broadcaster_id", broadcasterId },
+            { "first", first.ToString(CultureInfo.InvariantCulture) }
         };
 
         if (id is not null && id.Any())
@@ -232,7 +233,7 @@ public sealed record Poll
 
         if (!string.IsNullOrWhiteSpace(after))
         {
-            queryParams.Add("after", new List<string> { after });
+            queryParams.Add("after", after);
         }
 
         Uri uri = Util.BuildUri(new("/polls"), queryParams);

@@ -27,6 +27,7 @@ using System.Drawing;
 using System.Net.Http.Json;
 using StreamActions.Common.Net;
 using StreamActions.Common.Extensions;
+using System.Collections.Specialized;
 
 namespace StreamActions.Twitch.Api.ChannelPoints;
 
@@ -226,9 +227,9 @@ public sealed record ChannelPointsReward
 
         session.RequireToken(Scope.ChannelReadRedemptions, Scope.ChannelManageRedemptions);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "broadcaster_id", new List<string> { broadcasterId } }
+            { "broadcaster_id", broadcasterId }
         };
 
         if (id is not null && id.Any())
@@ -238,7 +239,7 @@ public sealed record ChannelPointsReward
 
         if (onlyManageableRewards.HasValue)
         {
-            queryParams.Add("only_manageable_rewards", new List<string> { onlyManageableRewards.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant() });
+            queryParams.Add("only_manageable_rewards", onlyManageableRewards.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant());
         }
 
         Uri uri = Util.BuildUri(new("/channel_points/custom_rewards"), queryParams);
@@ -371,9 +372,9 @@ public sealed record ChannelPointsReward
             parameters = parameters with { BackgroundColor = parameters.BackgroundColor.ToUpperInvariant() };
         }
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "broadcaster_id", new List<string> { broadcasterId } }
+            { "broadcaster_id", broadcasterId }
         };
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
@@ -511,10 +512,10 @@ public sealed record ChannelPointsReward
             parameters = parameters with { BackgroundColor = parameters.BackgroundColor.ToUpperInvariant() };
         }
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "broadcaster_id", new List<string> { broadcasterId } },
-            { "id", new List<string> { id.ToString("D", CultureInfo.InvariantCulture) } }
+            { "broadcaster_id", broadcasterId },
+            { "id", id.ToString("D", CultureInfo.InvariantCulture) }
         };
 
         if (!(parameters.BackgroundColor is not null || parameters.IsEnabled.HasValue || parameters.Cost.HasValue || parameters.Title is not null || parameters.Prompt is not null
@@ -593,10 +594,10 @@ public sealed record ChannelPointsReward
 
         session.RequireToken(Scope.ChannelManageRedemptions);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "broadcaster_id", new List<string> { broadcasterId } },
-            { "id", new List<string> { id.ToString("D", CultureInfo.InvariantCulture) } }
+            { "broadcaster_id", broadcasterId },
+            { "id", id.ToString("D", CultureInfo.InvariantCulture) }
         };
 
         Uri uri = Util.BuildUri(new("/channel_points/custom_rewards"), queryParams);

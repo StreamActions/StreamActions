@@ -23,6 +23,7 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
+using System.Collections.Specialized;
 
 namespace StreamActions.Twitch.Api.Bits;
 
@@ -161,10 +162,10 @@ public sealed record ExtensionTransaction
 
         first = Math.Clamp(first, 1, 100);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new()
+        NameValueCollection queryParams = new()
         {
-            { "extension_id", new List<string> { extensionId } },
-            { "first", new List<string> { first.ToString(CultureInfo.InvariantCulture) } }
+            { "extension_id", extensionId },
+            { "first", first.ToString(CultureInfo.InvariantCulture) }
         };
 
         if (id is not null && id.Any())
@@ -186,13 +187,13 @@ public sealed record ExtensionTransaction
 
         if (!string.IsNullOrWhiteSpace(after))
         {
-            if (queryParams.ContainsKey("id"))
+            if (queryParams.AllKeys.Contains("id"))
             {
                 throw new InvalidOperationException("Can not use " + nameof(after) + " at the same time as " + nameof(id)).Log(TwitchApi.GetLogger());
             }
             else
             {
-                queryParams.Add("after", new List<string> { after });
+                queryParams.Add("after", after);
             }
         }
 

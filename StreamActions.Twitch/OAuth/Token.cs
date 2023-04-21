@@ -121,9 +121,8 @@ public sealed record Token : JsonApiResponse
         baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
 
         using StringContent content = new("");
-        Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, IEnumerable<string>> { { "grant_type", new List<string> { "refresh_token" } },
-            { "refresh_token", new List<string> { session.Token.Refresh ?? "" } }, { "client_id", new List<string> { TwitchApi.ClientId ?? "" } },
-            { "client_secret", new List<string> { TwitchApi.ClientSecret ?? "" } } });
+        Uri uri = Util.BuildUri(new(baseAddress), new() { { "grant_type", "refresh_token" }, { "refresh_token", session.Token.Refresh ?? "" },
+            { "client_id", TwitchApi.ClientId ?? "" }, { "client_secret", TwitchApi.ClientSecret ?? "" } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content, dontRefresh: true).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -151,9 +150,8 @@ public sealed record Token : JsonApiResponse
         baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
 
         using StringContent content = new("");
-        Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, IEnumerable<string>> { { "grant_type", new List<string> { "authorization_code" } },
-            { "code", new List<string> { code } }, { "client_id", new List<string> { TwitchApi.ClientId ?? "" } },
-            { "client_secret", new List<string> { TwitchApi.ClientSecret ?? "" } }, { "redirect_uri", new List<string> { redirectUri.ToString() } } });
+        Uri uri = Util.BuildUri(new(baseAddress), new() { { "grant_type", "authorization_code" }, { "code", code },
+            { "client_id", TwitchApi.ClientId ?? "" }, { "client_secret", TwitchApi.ClientSecret ?? "" }, { "redirect_uri", redirectUri.ToString() } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, TwitchSession.Empty, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -176,8 +174,7 @@ public sealed record Token : JsonApiResponse
         session.RequireToken();
 
         using StringContent content = new("");
-        Uri uri = Util.BuildUri(new(baseAddress), new Dictionary<string, IEnumerable<string>> { { "client_id", new List<string> { TwitchApi.ClientId ?? "" } },
-            { "token", new List<string> { session.Token?.OAuth ?? "" } } });
+        Uri uri = Util.BuildUri(new(baseAddress), new() { { "client_id", TwitchApi.ClientId ?? "" }, { "token", session.Token?.OAuth ?? "" } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

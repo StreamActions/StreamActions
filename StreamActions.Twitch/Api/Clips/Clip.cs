@@ -20,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -236,7 +237,7 @@ public sealed record Clip
 
         first = Math.Clamp(first, 1, 100);
 
-        Dictionary<string, IEnumerable<string>> queryParams = new();
+        NameValueCollection queryParams = new();
 
         if (id is not null && id.Any())
         {
@@ -245,36 +246,36 @@ public sealed record Clip
 
         if (!string.IsNullOrWhiteSpace(broadcasterId))
         {
-            queryParams.Add("broadcaster_id", new List<string> { broadcasterId });
+            queryParams.Add("broadcaster_id", broadcasterId);
         }
 
         if (!string.IsNullOrWhiteSpace(gameId))
         {
-            queryParams.Add("game_id", new List<string> { gameId });
+            queryParams.Add("game_id", gameId);
         }
 
         if (id is null || !id.Any())
         {
-            queryParams.Add("first", new List<string> { first.ToString(CultureInfo.InvariantCulture) });
+            queryParams.Add("first", first.ToString(CultureInfo.InvariantCulture));
 
             if (startedAt.HasValue)
             {
-                queryParams.Add("started_at", new List<string> { startedAt.Value.ToRfc3339() });
+                queryParams.Add("started_at", startedAt.Value.ToRfc3339());
             }
 
             if (endedAt.HasValue)
             {
-                queryParams.Add("ended_at", new List<string> { endedAt.Value.ToRfc3339() });
+                queryParams.Add("ended_at", endedAt.Value.ToRfc3339());
             }
 
             if (!string.IsNullOrWhiteSpace(after))
             {
-                queryParams.Add("after", new List<string> { after });
+                queryParams.Add("after", after);
             }
 
             if (!string.IsNullOrWhiteSpace(before))
             {
-                queryParams.Add("before", new List<string> { before });
+                queryParams.Add("before", before);
             }
         }
 
