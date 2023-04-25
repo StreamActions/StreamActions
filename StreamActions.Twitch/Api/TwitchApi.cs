@@ -214,8 +214,7 @@ public sealed partial class TwitchApi : IApi
 
                             if (refresh is not null && refresh.IsSuccessStatusCode)
                             {
-                                TwitchToken oldToken = session.Token;
-                                session.Token = new() { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires, Scopes = refresh.Scopes, Login = oldToken.Login, UserId = oldToken.UserId };
+                                session.Token = session.Token with { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires, Scopes = refresh.Scopes };
                                 _ = OnTokenRefreshed?.InvokeAsync(null, new(session));
                                 retry = true;
                             }
