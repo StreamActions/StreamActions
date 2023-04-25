@@ -146,11 +146,12 @@ public sealed record Goal
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster that created the goals. This ID must match the user ID in the user access token.</param>
-    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Channel"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Goal"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadGoals"/>.</exception>
-    /// <remarks><para>
+    /// <remarks>
+    /// <para>
     /// Response Codes:
     /// <list type="table">
     /// <item>

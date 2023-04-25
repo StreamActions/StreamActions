@@ -32,7 +32,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Api\Chat\" />
     <Folder Include="Api\Entitlements\" />
     <Folder Include="Api\Extensions\" />
     <Folder Include="Api\EventSub\" />
