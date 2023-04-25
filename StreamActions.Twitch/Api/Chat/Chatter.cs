@@ -23,7 +23,6 @@ using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Text.Json.Serialization;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Json.Serialization;
 using System.Globalization;
 using System.Collections.Specialized;
 
