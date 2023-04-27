@@ -31,7 +31,7 @@ public sealed record ChannelPointsRedemptionUpdateParameters
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Setting the status to <see cref="ChannelPointsRedemption.RedemptionStatus.Canceled"/> refunds the user’s channel points.
+    /// Setting the status to <see cref="ChannelPointsRedemption.RedemptionStatus.Canceled"/> refunds the user's channel points.
     /// </para>
     /// </remarks>
     [JsonPropertyName("status")]

@@ -27,7 +27,7 @@ namespace StreamActions.Twitch.Api.Polls;
 public sealed record PollEndParameters
 {
     /// <summary>
-    /// The ID of the broadcaster that’s running the poll. This ID must match the user ID in the user access token.
+    /// The ID of the broadcaster that's running the poll. This ID must match the user ID in the user access token.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
     public string? BroadcasterId { get; init; }

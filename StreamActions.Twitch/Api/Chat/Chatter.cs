@@ -30,7 +30,7 @@ namespace StreamActions.Twitch.Api.Chat;
 public sealed record Chatter
 {
     /// <summary>
-    /// The ID of a user that’s connected to the broadcaster's chat room.
+    /// The ID of a user that's connected to the broadcaster's chat room.
     /// </summary>
     [JsonPropertyName("user_id")]
     public string? UserId { get; init; }
