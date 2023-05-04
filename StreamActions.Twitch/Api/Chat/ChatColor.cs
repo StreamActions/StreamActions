@@ -23,13 +23,15 @@ using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Text.Json.Serialization;
 using StreamActions.Common.Extensions;
-using System.Globalization;
-using System.Collections.Specialized;
 using System.Drawing;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Net;
 
 namespace StreamActions.Twitch.Api.Chat;
+
+/// <summary>
+/// Sends and represents a response element for a request to retrieve or update a users chat color.
+/// </summary>
 public sealed record ChatColor
 {
     /// <summary>
@@ -125,7 +127,7 @@ public sealed record ChatColor
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="userId">The ID of the user whose username color you want to get. Limit: 100.</param>
-    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Chatter"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChatColor"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="userId"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>

@@ -27,6 +27,10 @@ using System.Globalization;
 using System.Collections.Specialized;
 
 namespace StreamActions.Twitch.Api.Chat;
+
+/// <summary>
+/// Sends and represents a response element for a request for a list of users in chat.
+/// </summary>
 public sealed record Chatter
 {
     /// <summary>
@@ -56,7 +60,7 @@ public sealed record Chatter
     /// <param name="first">The maximum number of items to return per page in the response. Minimum: 1. Maximum: 1,000.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Chatter"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="after"/> is not null, but is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="after"/> is not null, but is empty or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorReadChatters"/>.</exception>
     /// <remarks>
