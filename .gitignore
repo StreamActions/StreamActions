@@ -324,6 +324,7 @@ paket-files/
 .cr/personal
 
 # Python Tools for Visual Studio (PTVS)
+env/
 __pycache__/
 *.pyc
 
