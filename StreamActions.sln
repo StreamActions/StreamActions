@@ -14,12 +14,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		CODE_OF_CONDUCT.md = CODE_OF_CONDUCT.md
 		CONTRIBUTING.md = CONTRIBUTING.md
 		Directory.Build.props = Directory.Build.props
-		en-US.dic = en-US.dic
 		LICENSE = LICENSE
 		README.md = README.md
 		SECURITY.md = SECURITY.md
 		StreamActions.sln.licenseheader = StreamActions.sln.licenseheader
-		StreamActions.sln.vsspell = StreamActions.sln.vsspell
+		StreamActions.dic = StreamActions.dic
 		StreamActions.vsext = StreamActions.vsext
 	EndProjectSection
 EndProject
