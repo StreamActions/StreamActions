@@ -19,10 +19,15 @@
 namespace StreamActions.Common.Tests;
 
 /// <summary>
-/// Performs unit testing on the <see cref="Util.IsValidHexColor(string)"/> method.
+/// Performs unit testing on methods in <see cref="Util"/>.
 /// </summary>
 public class UtilTests
 {
+    /// <summary>
+    /// Unit tests for <see cref="Util.IsValidHexColor(string)"/>.
+    /// </summary>
+    /// <param name="hexColor">The input string to test.</param>
+    /// <param name="expected">The expected result.</param>
     [Theory]
     [InlineData("#000000", true)]
     [InlineData("#123456", true)]
