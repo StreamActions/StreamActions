@@ -17,8 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		LICENSE = LICENSE
 		README.md = README.md
 		SECURITY.md = SECURITY.md
-		StreamActions.sln.licenseheader = StreamActions.sln.licenseheader
 		StreamActions.dic = StreamActions.dic
+		StreamActions.sln.licenseheader = StreamActions.sln.licenseheader
 		StreamActions.vsext = StreamActions.vsext
 	EndProjectSection
 EndProject
@@ -55,6 +55,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Common", "Str
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Diff", "Diff\Diff.pyproj", "{109CC1EE-B198-4BF7-BD96-EBBD39D75DA9}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Common.Tests", "StreamActions.Common.Tests\StreamActions.Common.Tests.csproj", "{8528CCBE-3BF3-41F6-8664-DDFB2371D29D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -77,6 +79,8 @@ Global
 		{E0CC157B-5800-4E3B-8961-332E78B3D096}.Release|Any CPU.Build.0 = Release|Any CPU
 		{109CC1EE-B198-4BF7-BD96-EBBD39D75DA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{109CC1EE-B198-4BF7-BD96-EBBD39D75DA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8528CCBE-3BF3-41F6-8664-DDFB2371D29D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8528CCBE-3BF3-41F6-8664-DDFB2371D29D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
