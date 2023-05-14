@@ -2,7 +2,7 @@
   "id": "cc56eb8d-e805-4d4a-9340-473ea02a8a84",
   "name": "StreamActions Visual Studio Extensions",
   "description": "The recommended extensions for developing StreamActions with Visual Studio 2022",
-  "version": "1.6",
+  "version": "1.7",
   "extensions": [
     {
       "name": "CodeMaid VS2022",
@@ -15,6 +15,10 @@
     {
       "name": "File Icons",
       "vsixId": "3a7b4930-a5fb-46ec-a9b8-9610c8f953b8"
+    },
+    {
+      "name": "Fine Code Coverage",
+      "vsixId": "FineCodeCoverage2022.ad53fb28-7a11-4465-a27a-3550499ea4a1"
     },
     {
       "name": "Git Diff Margin",
@@ -35,6 +39,10 @@
     {
       "name": "Output enhancer",
       "vsixId": "VSOutputEnhancer.Nikolay Balakin.a06be4c3-f97e-425c-8a0d-bdef08ac2abb"
+    },
+    {
+      "name": "Productivity Power Tools Options Page 2022",
+      "vsixId": "PPTOptionsPage2022.666715a6-3ac4-4bb7-b538-4d7625f99666"
     },
     {
       "name": "Project System Tools 2022",
