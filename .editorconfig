@@ -8,6 +8,7 @@ vsspell_determine_resource_file_language_from_name = true
 vsspell_dictionary_languages_a4e49bed26214949a5f7facdc9362762 = en-US
 vsspell_spell_check_as_you_type = true
 vsspell_include_in_project_spell_check = true
+vsspell_code_analyzers_enabled = false
 vsspell_detect_doubled_words = true
 vsspell_ignore_words_with_digits = true
 vsspell_ignore_words_in_all_uppercase = true
