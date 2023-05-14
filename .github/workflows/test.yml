@@ -20,11 +20,9 @@ jobs:
             mkdir -p ./CollectedTestResults
             for x in `find . -path ./CollectedTestResults -prune -o -name 'coverage.info' -print`; do
                 echo $x
-                cp $x ./CollectedTestResults/`basename ${x/*/*}`.coverage.lcov
+                cp $x ./CollectedTestResults/`basename $(dirname $(dirname $(dirname ${x})))`.coverage.lcov
             done
-            echo "reports=`find ./CollectedTestResults -o -name '*.info' -print | awk '{print}' ORS=', ' | sed '$s/..$//'`" >> $GITHUB_OUTPUT
       - name: Report coverage to Codacy
         uses: codacy/codacy-coverage-reporter-action@v1
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          coverage-reports: ${{ steps.reports.outputs.reports }}
