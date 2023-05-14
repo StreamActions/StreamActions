@@ -104,9 +104,9 @@ public static partial class Util
             }
         }
 
-        uriBuilder.Query = uriBuilder.Query + paramStringBuilder.ToString();
+        uriBuilder.Query += paramStringBuilder.ToString();
 
-        paramStringBuilder.Clear();
+        _ = paramStringBuilder.Clear();
 
         if (fragmentParams is not null && fragmentParams.HasKeys())
         {
@@ -162,7 +162,7 @@ public static partial class Util
             }
         }
 
-        uriBuilder.Fragment = uriBuilder.Fragment + paramStringBuilder.ToString();
+        uriBuilder.Fragment += paramStringBuilder.ToString();
 
         return uriBuilder.Uri;
     }
