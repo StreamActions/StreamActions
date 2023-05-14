@@ -21,7 +21,7 @@ namespace StreamActions.Common.Tests;
 /// <summary>
 /// Performs unit testing on the <see cref="Util.IsValidHexColor(string)"/> method.
 /// </summary>
-public class IsValidHexColorTests
+public class UtilTests
 {
     [Theory]
     [InlineData("", false)]
