@@ -19,19 +19,25 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: '7.0.x'
+      - name: Install dotnet Tools
+        run: |
+            dotnet tool install -g dotnet-reportgenerator-globaltool
       - name: Build with dotnet
         run: dotnet build --configuration Debug
       - name: Test with dotnet
-        run: dotnet test --collect:"XPlat Code Coverage;Format=lcov"
+        run: dotnet test --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.UseSourceLink=true
       - name: Collect reports
         id: reports
         run: |
             mkdir -p ./CollectedTestResults
-            for x in `find . -path ./CollectedTestResults -prune -o -name 'coverage.info' -print`; do
+            for x in `find . -path ./CollectedTestResults -prune -o -name 'coverage.cobertura.xml' -print`; do
                 echo $x
-                cp $x ./CollectedTestResults/`basename $(dirname $(dirname $(dirname ${x})))`.coverage.lcov
+                cp $x ./CollectedTestResults/`basename $(dirname $(dirname $(dirname ${x})))`.coverage.cobertura.xml
             done
-      - name: Report coverage to Codacy
-        uses: codacy/codacy-coverage-reporter-action@v1
+      - name: Generate Code Coverage Report
+        run: reportgenerator -reports:"./CollectedTestResults/*.coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html;MarkdownSummaryGithub
+      - name: Upload Code Coverage Report
+        uses: actions/upload-artifact@v3
         with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+            name: coveragereport
+            path: ./coveragereport/
