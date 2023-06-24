@@ -2,67 +2,91 @@
   "id": "cc56eb8d-e805-4d4a-9340-473ea02a8a84",
   "name": "StreamActions Visual Studio Extensions",
   "description": "The recommended extensions for developing StreamActions with Visual Studio 2022",
-  "version": "1.7",
+  "version": "1.8",
   "extensions": [
     {
       "name": "CodeMaid VS2022",
-      "vsixId": "9079e73d-3fbb-4e07-8dab-f44fa5d8e8b5"
+      "vsixId": "9079e73d-3fbb-4e07-8dab-f44fa5d8e8b5",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=SteveCadwallader.CodeMaidVS2022",
+      "downloadUrl": "https://stevecadwallader.gallery.vsassets.io:443/_apis/public/gallery/publisher/SteveCadwallader/extension/CodeMaidVS2022/12.0.300/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Extension Manager 2022",
-      "vsixId": "4a196712-2c3f-4730-ad1d-e7cda4185eb3"
+      "vsixId": "3d183c28-64c6-4efb-a201-50310d65e675",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=Loop8ack.ExtensionManager2022",
+      "downloadUrl": "https://loop8ack.gallery.vsassets.io:443/_apis/public/gallery/publisher/Loop8ack/extension/ExtensionManager2022/1.2.162/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "File Icons",
-      "vsixId": "3a7b4930-a5fb-46ec-a9b8-9610c8f953b8"
+      "vsixId": "3a7b4930-a5fb-46ec-a9b8-9610c8f953b8",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=MadsKristensen.FileIcons",
+      "downloadUrl": "https://madskristensen.gallery.vsassets.io:443/_apis/public/gallery/publisher/MadsKristensen/extension/FileIcons/2.8.239/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Fine Code Coverage",
-      "vsixId": "FineCodeCoverage2022.ad53fb28-7a11-4465-a27a-3550499ea4a1"
+      "vsixId": "FineCodeCoverage2022.ad53fb28-7a11-4465-a27a-3550499ea4a1",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=FortuneNgwenya.FineCodeCoverage2022",
+      "downloadUrl": "https://fortunengwenya.gallery.vsassets.io:443/_apis/public/gallery/publisher/FortuneNgwenya/extension/FineCodeCoverage2022/1.1.192/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Git Diff Margin",
-      "vsixId": "GitDiffMargin..5ef9f816-d9ce-45cd-a8fa-cd67a807df0e"
+      "vsixId": "GitDiffMargin..5ef9f816-d9ce-45cd-a8fa-cd67a807df0e",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=LaurentKempe.GitDiffMargin",
+      "downloadUrl": "https://laurentkempe.gallery.vsassets.io:443/_apis/public/gallery/publisher/LaurentKempe/extension/GitDiffMargin/3.12.1/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Indent Guides for VS 2022",
-      "vsixId": "IndentGuide2022.SteveDower.0a67eb97-becd-451f-aa29-851d9fe5dd2b"
+      "vsixId": "IndentGuide2022.SteveDower.0a67eb97-becd-451f-aa29-851d9fe5dd2b",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=SteveDowerMSFT.IndentGuides2022",
+      "downloadUrl": "https://stevedowermsft.gallery.vsassets.io:443/_apis/public/gallery/publisher/SteveDowerMSFT/extension/IndentGuides2022/17.1.0.0/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "License Header Manager",
-      "vsixId": "4c570677-8476-4d33-bd0c-da36c89287c8"
+      "vsixId": "4c570677-8476-4d33-bd0c-da36c89287c8",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=StefanWenig.LicenseHeaderManager",
+      "downloadUrl": "https://stefanwenig.gallery.vsassets.io:443/_apis/public/gallery/publisher/StefanWenig/extension/LicenseHeaderManager/5.0.1/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Multiline Search and Replace",
-      "vsixId": "MultiLine.Search.459A0968-D0E0-4a63-83EB-7B6394DD674C"
+      "vsixId": "MultiLine.Search.459A0968-D0E0-4a63-83EB-7B6394DD674C",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=PeterMacej.MultilineSearchandReplace",
+      "downloadUrl": "https://petermacej.gallery.vsassets.io:443/_apis/public/gallery/publisher/PeterMacej/extension/MultilineSearchandReplace/3.4/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Output enhancer",
-      "vsixId": "VSOutputEnhancer.Nikolay Balakin.a06be4c3-f97e-425c-8a0d-bdef08ac2abb"
+      "vsixId": "VSOutputEnhancer.Nikolay Balakin.a06be4c3-f97e-425c-8a0d-bdef08ac2abb",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=NikolayBalakin.Outputenhancer",
+      "downloadUrl": "https://nikolaybalakin.gallery.vsassets.io:443/_apis/public/gallery/publisher/NikolayBalakin/extension/Outputenhancer/1.8/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Productivity Power Tools Options Page 2022",
-      "vsixId": "PPTOptionsPage2022.666715a6-3ac4-4bb7-b538-4d7625f99666"
+      "vsixId": "PPTOptionsPage2022.666715a6-3ac4-4bb7-b538-4d7625f99666",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=VisualStudioPlatformTeam.ProductivityPowerToolsOptionsPage2022",
+      "downloadUrl": "https://visualstudioplatformteam.gallery.vsassets.io:443/_apis/public/gallery/publisher/VisualStudioPlatformTeam/extension/ProductivityPowerToolsOptionsPage2022/17.0/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Project System Tools 2022",
-      "vsixId": "cb5b6a78-6fa1-4830-a272-760862eb77af"
+      "vsixId": "cb5b6a78-6fa1-4830-a272-760862eb77af",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=VisualStudioProductTeam.ProjectSystemTools2022",
+      "downloadUrl": "https://visualstudioproductteam.gallery.vsassets.io:443/_apis/public/gallery/publisher/VisualStudioProductTeam/extension/ProjectSystemTools2022/1.0.2.2305901/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Time Stamp Margin 2022",
-      "vsixId": "TimeStampMargin2022.255e8b14-4a53-4eb7-89a7-7ab741c1f612"
+      "vsixId": "TimeStampMargin2022.255e8b14-4a53-4eb7-89a7-7ab741c1f612",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=VisualStudioPlatformTeam.TimeStampMargin2022",
+      "downloadUrl": "https://visualstudioplatformteam.gallery.vsassets.io:443/_apis/public/gallery/publisher/VisualStudioPlatformTeam/extension/TimeStampMargin2022/17.0/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Trailing Whitespace Visualizer",
-      "vsixId": "dac582ef-fc73-42f6-ad45-afaad93d88a4"
+      "vsixId": "dac582ef-fc73-42f6-ad45-afaad93d88a4",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=MadsKristensen.TrailingWhitespace64",
+      "downloadUrl": "https://madskristensen.gallery.vsassets.io:443/_apis/public/gallery/publisher/MadsKristensen/extension/TrailingWhitespace64/2.6.98/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     },
     {
       "name": "Version Changer 2022",
-      "vsixId": "VersionChanger2022.315c8ff9-932e-4b23-b9d8-0fcd23bdb0be"
-    },
-    {
-      "name": "Visual Studio Spell Checker (VS2022 and Later)",
-      "vsixId": "E1019027-EE37-4B1A-AD4C-25CAA92CA2D5"
+      "vsixId": "VersionChanger2022.315c8ff9-932e-4b23-b9d8-0fcd23bdb0be",
+      "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=Newky2k.VersionChanger2022",
+      "downloadUrl": "https://newky2k.gallery.vsassets.io:443/_apis/public/gallery/publisher/Newky2k/extension/VersionChanger2022/3.3.0/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true&update=true"
     }
   ]
 }
