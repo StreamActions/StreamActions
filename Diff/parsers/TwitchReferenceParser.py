@@ -29,7 +29,7 @@ def parseFromFile(path:str) -> dict:
     Parse a Twitch API Reference page from the specified file and return a dict of parsed data
 
     Args:
-        path (str): The path to an HTML file containing a snapshop of a Twitch API Reference page
+        path (str): The path to an HTML file containing a snapshot of a Twitch API Reference page
 
     Returns:
         dict: A dict containing the parsed data (see parse(str))
