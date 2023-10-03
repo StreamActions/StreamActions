@@ -21,12 +21,16 @@
 Parse the HTML of a Twitch API Reference page and return a dict of parsed data
 """
 
-import requests
+import argparse
 from bs4 import BeautifulSoup
+import json
+import requests
 
 def parseFromFile(path:str) -> dict:
     """
     Parse a Twitch API Reference page from the specified file and return a dict of parsed data
+
+    The file should be stored in UTF-8 compatible encoding
 
     Args:
         path (str): The path to an HTML file containing a snapshot of a Twitch API Reference page
@@ -39,7 +43,7 @@ def parseFromFile(path:str) -> dict:
 
 def parseFromUrl(url:str) -> dict:
     """
-    Parse a Twitch API Reference page from the specified url and return a dict of parsed data
+    Parse a Twitch API Reference page from the specified URL and return a dict of parsed data
 
     The user agent is sent as: streamactions.diff.twitchreferenceparser/2023
 
@@ -310,3 +314,21 @@ def parse(html:str) -> dict:
                 "exampleRequestCurl": exampleRequestCurl,
                 "exampleResponse": exampleResponse
             }
+    return ret
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Parse the HTML of a Twitch API Reference page and return a dict of parsed data")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--file", action="store", help="Parse the HTML from a file stored in a UTF-8 compatible encoding")
+    group.add_argument("--url", action="store", help="Parse the HTML from a URL")
+    parser.add_argument("--out", action="store", help="Output as JSON to the specified file instead of STDOUT")
+    args = parser.parse_args()
+    if args.file != None:
+        ret = parseFromFile(args.file)
+    if args.url != None:
+        ret = parseFromUrl(args.url)
+    if args.out == None:
+        print(json.dumps(ret, indent=4))
+    else:
+        with open(args.out, "w", encoding="utf8") as out_file:
+            json.dump(ret, out_file)
