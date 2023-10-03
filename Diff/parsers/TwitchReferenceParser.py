@@ -180,7 +180,7 @@ def parse(html:str) -> dict:
                 elif tag.name == "p" or tag.name == "ul" or (tag.name == "table" and state < 5):
                     if state == 1:
                         strong = tag.find("strong")
-                        if strong != None and strong.string == "Rate Limits":
+                        if strong != None and strong.string.startswith("Rate Limit"):
                             description = (" ".join(data)).removeprefix("BETA ").removeprefix("NEW ").strip()
                             state = 2
                             newState = state
@@ -210,13 +210,13 @@ def parse(html:str) -> dict:
                         newState = 3
                     elif section == "URL":
                         newState = 4
-                    elif section == "Request Query Parameters":
+                    elif section.startswith("Request Query"):
                         newState = 5
-                    elif section == "Request Body":
+                    elif section.startswith("Request Body"):
                         newState = 6
-                    elif section == "Response Body":
+                    elif section.startswith("Response Body"):
                         newState = 7
-                    elif section == "Response Codes":
+                    elif section.startswith("Response Code"):
                         newState = 8
                 if newState != state:
                     if state == 0:
