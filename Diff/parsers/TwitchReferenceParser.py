@@ -186,7 +186,7 @@ def parse(html:str) -> dict:
                             newState = state
                             data = []
                     if state < 5:
-                    data.append(" ".join([str(x) for x in tag.stripped_strings]))
+                        data.append(" ".join([str(x) for x in tag.stripped_strings]))
                     else:
                         description += " ".join([str(x) for x in tag.stripped_strings])
                 elif tag.name == "table":
@@ -219,31 +219,25 @@ def parse(html:str) -> dict:
                     elif section.startswith("Response Code"):
                         newState = 8
                 if newState != state:
-                    if state == 0:
-                        data = []
-                    elif state == 1:
+                    if state == 1:
                         description = (" ".join(data)).removeprefix("BETA ").removeprefix("NEW ").strip()
-                        data.clear()
                     elif state == 2:
                         rateLimits = (" ".join(data)).strip()
-                        data.clear()
                     elif state == 3:
                         authorization = (" ".join(data)).strip()
-                        data.clear()
                     elif state == 4:
                         url = (" ".join(data)).strip()
-                        data = None
                     elif state == 5:
-                        reqQuery = data.copy()
-                        data = None
+                        reqQuery = data.copy() if data != None else None
                     elif state == 6:
-                        reqBody = data.copy()
-                        data = None
+                        reqBody = data.copy() if data != None else None
                     elif state == 7:
-                        resBody = data.copy()
-                        data = None
+                        resBody = data.copy() if data != None else None
                     elif state == 8:
-                        resCodes = data.copy()
+                        resCodes = data.copy() if data != None else None
+                    if newState <= 4:
+                        data = []
+                    else:
                         data = None
                     state = newState
             if state == 1:
@@ -278,27 +272,23 @@ def parse(html:str) -> dict:
                     exampleRequestDescription = (" ".join(data)).strip()
                     state = 2
                     newState = state
-                    data.clear()
+                    data = []
                 elif tag.name == "h3":
                     section = tag.string.strip()
                     if section == "Example Request":
                         newState = 1
                     elif section == "Example Response":
                         newState = 3
-                if tag.name != "h3":
+                if state > 0 and tag.name != "h3":
                     data.append(" ".join([str(x) for x in tag.stripped_strings]))
                 if newState != state:
-                    if state == 0:
-                        data = []
-                    elif state == 1:
+                    if state == 1:
                         exampleRequestDescription = (" ".join(data)).strip()
-                        data.clear()
                     elif state == 2:
                         exampleRequestCurl = (" ".join(data)).strip()
-                        data.clear()
                     elif state == 3:
                         exampleResponse = (" ".join(data)).strip()
-                        data.clear()
+                    data = []
                     state = newState
             if state == 1:
                 exampleRequestDescription = (" ".join(data)).strip()
