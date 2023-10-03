@@ -196,10 +196,10 @@ def parse(html:str) -> dict:
                         dataPoint = {}
                         dataPoint["parameter" if state == 5 else ("code" if state == 8 else "field")] = str(cells[0].string).strip()
                         add = 0
-                        if state <= 7:
+                        if state <= 7 and len(cells) > 2:
                             add += 1
                             dataPoint["type"] = str(cells[1].string).strip()
-                            if state <= 6:
+                            if state <= 6 and len(cells) > 3:
                                 add += 1
                                 dataPoint["required"] = str(cells[2].string).strip()
                         dataPoint["description"] = (" ".join([str(x) for x in cells[1 + add].stripped_strings])).strip()
