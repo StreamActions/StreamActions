@@ -191,7 +191,7 @@ def parse(html:str) -> dict:
                         description += " ".join([str(x) for x in tag.stripped_strings])
                 elif tag.name == "table":
                     data = []
-                    for entry in node.find("tbody").find_all("tr"):
+                    for entry in tag.find("tbody").find_all("tr"):
                         cells = entry.find_all("td")
                         dataPoint = {}
                         dataPoint["parameter" if state == 5 else ("code" if state == 8 else "field")] = str(cells[0].string).strip()
