@@ -177,15 +177,18 @@ def parse(html:str) -> dict:
                 if tag.name == "h2":
                     endpoint = str(tag.string).strip()
                     newState = 1
-                elif tag.name == "p":
+                elif tag.name == "p" or tag.name == "ul" or (tag.name == "table" and state < 5):
                     if state == 1:
                         strong = tag.find("strong")
                         if strong != None and strong.string == "Rate Limits":
                             description = (" ".join(data)).removeprefix("BETA ").removeprefix("NEW ").strip()
                             state = 2
                             newState = state
-                            data.clear()
+                            data = []
+                    if state < 5:
                     data.append(" ".join([str(x) for x in tag.stripped_strings]))
+                    else:
+                        description += " ".join([str(x) for x in tag.stripped_strings])
                 elif tag.name == "table":
                     data = []
                     for entry in node.find("tbody").find_all("tr"):
