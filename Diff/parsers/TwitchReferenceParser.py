@@ -83,7 +83,15 @@ def parse(html:str) -> dict:
                     },
                     ...
                 ],
-                "requestBody": [], // Same format as requestQuery
+                "requestBody": [
+                    {
+                        field": field,
+                        "type": jsonDataType,
+                        "required": isRequired,
+                        "description": description
+                    },
+                    ...
+                ],
                 "responseBody": [
                     {
                         "field": field,
@@ -172,6 +180,21 @@ def parse(html:str) -> dict:
                             newState = state
                             data.clear()
                     data.append(" ".join([str(x) for x in tag.stripped_strings]))
+                elif tag.name == "table":
+                    data = []
+                    for entry in node.find("tbody").find_all("tr"):
+                        cells = entry.find_all("td")
+                        dataPoint = {}
+                        dataPoint["parameter" if state == 5 else ("code" if state == 8 else "field")] = str(cells[0].string).strip()
+                        add = 0
+                        if state <= 7:
+                            add += 1
+                            dataPoint["type"] = str(cells[1].string).strip()
+                            if state <= 6:
+                                add += 1
+                                dataPoint["required"] = str(cells[2].string).strip()
+                        dataPoint["description"] = (" ".join([str(x) for x in cells[1 + add].stripped_strings])).strip()
+                        data.append(dataPoint)
                 elif tag.name == "h3":
                     section = tag.string.strip()
                     if section == "Authorization":
@@ -202,16 +225,16 @@ def parse(html:str) -> dict:
                         url = (" ".join(data)).strip()
                         data = None
                     elif state == 5:
-                        reqQuery = data
+                        reqQuery = data.copy()
                         data = None
                     elif state == 6:
-                        reqBody = data
+                        reqBody = data.copy()
                         data = None
                     elif state == 7:
-                        resBody = data
+                        resBody = data.copy()
                         data = None
                     elif state == 8:
-                        resCodes = data
+                        resCodes = data.copy()
                         data = None
                     state = newState
             if state == 1:
@@ -223,13 +246,13 @@ def parse(html:str) -> dict:
             elif state == 4:
                 url = (" ".join(data)).strip()
             elif state == 5:
-                reqQuery = data
+                reqQuery = data.copy()
             elif state == 6:
-                reqBody = data
+                reqBody = data.copy()
             elif state == 7:
-                resBody = data
+                resBody = data.copy()
             elif state == 8:
-                resCodes = data
+                resCodes = data.copy()
             example = node.find(_class="right-code")
             # 0 = Start
             # 1 = Request Description
