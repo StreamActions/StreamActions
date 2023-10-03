@@ -41,7 +41,7 @@ def parseFromUrl(url:str) -> dict:
     """
     Parse a Twitch API Reference page from the specified url and return a dict of parsed data
 
-    The user agent is sent as: gmt2001.diff.twitchreferenceparser/2023
+    The user agent is sent as: streamactions.diff.twitchreferenceparser/2023
 
     Args:
         url (str): The URL to a Twitch API Reference page
@@ -49,7 +49,7 @@ def parseFromUrl(url:str) -> dict:
     Returns:
         dict: A dict containing the parsed data (see parse(str))
     """
-    resp = requests.get(url, headers = { "User-Agent": "gmt2001.diff.twitchreferenceparser/2023" })
+    resp = requests.get(url, headers = { "User-Agent": "streamactions.diff.twitchreferenceparser/2023" })
     if resp.status_code != 200:
         exit(1)
     return parse(resp.text)
