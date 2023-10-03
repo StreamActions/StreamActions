@@ -149,7 +149,9 @@ def parse(html:str) -> dict:
                     "description": description
                 })
         else:
-            docs = node.find(_class="left-docs")
+            docs = node.find(class_="left-docs")
+            if docs == None:
+                continue
             # 0 = Start
             # 1 = Description
             # 2 = Per-Endpoint Rate Limits
