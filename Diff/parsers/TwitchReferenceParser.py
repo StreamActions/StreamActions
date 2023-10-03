@@ -262,7 +262,7 @@ def parse(html:str) -> dict:
                 resBody = data.copy()
             elif state == 8:
                 resCodes = data.copy()
-            example = node.find(_class="right-code")
+            example = node.find(class_="right-code")
             # 0 = Start
             # 1 = Request Description
             # 2 = Request cURL
