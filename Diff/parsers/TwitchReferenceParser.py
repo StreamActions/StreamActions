@@ -162,7 +162,7 @@ def parse(html:str) -> dict:
             # 7 = Response Body
             # 8 = Response Codes
             state = 0
-            data = None
+            data = []
             endpoint = None
             description = None
             rateLimits = None
@@ -206,7 +206,7 @@ def parse(html:str) -> dict:
                         data.append(dataPoint)
                 elif tag.name == "h3":
                     section = tag.string.strip()
-                    if section == "Authorization":
+                    if section == "Authorization" or section == "Authentication":
                         newState = 3
                     elif section == "URL":
                         newState = 4
@@ -214,7 +214,7 @@ def parse(html:str) -> dict:
                         newState = 5
                     elif section.startswith("Request Body"):
                         newState = 6
-                    elif section.startswith("Response Body"):
+                    elif section.startswith("Response Body") or section.startswith("Return Values"):
                         newState = 7
                     elif section.startswith("Response Code"):
                         newState = 8
@@ -266,49 +266,51 @@ def parse(html:str) -> dict:
             exampleRequestDescription = None
             exampleRequestCurl = None
             exampleResponse = None
-            for tag in example.children:
-                newState = state
-                if state == 1 and tag.name == "div":
-                    exampleRequestDescription = (" ".join(data)).strip()
-                    state = 2
+            if example != None:
+                for tag in example.children:
                     newState = state
-                    data = []
-                elif tag.name == "h3":
-                    section = tag.string.strip()
-                    if section == "Example Request":
-                        newState = 1
-                    elif section == "Example Response":
-                        newState = 3
-                if state > 0 and tag.name != "h3":
-                    data.append(" ".join([str(x) for x in tag.stripped_strings]))
-                if newState != state:
-                    if state == 1:
+                    if state == 1 and tag.name == "div":
                         exampleRequestDescription = (" ".join(data)).strip()
-                    elif state == 2:
-                        exampleRequestCurl = (" ".join(data)).strip()
-                    elif state == 3:
-                        exampleResponse = (" ".join(data)).strip()
-                    data = []
-                    state = newState
-            if state == 1:
-                exampleRequestDescription = (" ".join(data)).strip()
-            elif state == 2:
-                exampleRequestCurl = (" ".join(data)).strip()
-            elif state == 3:
-                exampleResponse = (" ".join(data)).strip()
-            ret["endpoints"][endpoint] = {
-                "description": description,
-                "rateLimits": rateLimits,
-                "authorization": authorization,
-                "url": url,
-                "requestQuery": reqQuery,
-                "requestBody": reqBody,
-                "responseBody": resBody,
-                "responseCodes": resCodes,
-                "exampleRequestDescription": exampleRequestDescription,
-                "exampleRequestCurl": exampleRequestCurl,
-                "exampleResponse": exampleResponse
-            }
+                        state = 2
+                        newState = state
+                        data = []
+                    elif tag.name == "h3":
+                        section = tag.string.strip()
+                        if section == "Example Request":
+                            newState = 1
+                        elif section == "Example Response":
+                            newState = 3
+                    if state > 0 and tag.name != "h3":
+                        data.append(" ".join([str(x) for x in tag.stripped_strings]))
+                    if newState != state:
+                        if state == 1:
+                            exampleRequestDescription = (" ".join(data)).strip()
+                        elif state == 2:
+                            exampleRequestCurl = (" ".join(data)).strip()
+                        elif state == 3:
+                            exampleResponse = (" ".join(data)).strip()
+                        data = []
+                        state = newState
+                if state == 1:
+                    exampleRequestDescription = (" ".join(data)).strip()
+                elif state == 2:
+                    exampleRequestCurl = (" ".join(data)).strip()
+                elif state == 3:
+                    exampleResponse = (" ".join(data)).strip()
+            if endpoint != None:
+                ret["endpoints"][endpoint] = {
+                    "description": description,
+                    "rateLimits": rateLimits,
+                    "authorization": authorization,
+                    "url": url,
+                    "requestQuery": reqQuery,
+                    "requestBody": reqBody,
+                    "responseBody": resBody,
+                    "responseCodes": resCodes,
+                    "exampleRequestDescription": exampleRequestDescription,
+                    "exampleRequestCurl": exampleRequestCurl,
+                    "exampleResponse": exampleResponse
+                }
     return ret
 
 if __name__ == "__main__":
