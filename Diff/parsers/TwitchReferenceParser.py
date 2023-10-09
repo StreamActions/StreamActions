@@ -323,7 +323,7 @@ def diffWithFileL(lhsPath:str, rhs:dict) -> dict:
 
     Args:
         lhsPath (str): The path to a JSON file containing the output of a previous call to parse(str). This will be the "original" file in the diff
-        rhs (dict): The dict created by a call to parse(str). This will be the "new/modified" file in the diff
+        rhs (dict): A dict created by a call to parse(str). This will be the "new/modified" file in the diff
 
     Returns:
         dict: A dict containing the diff data (see diff(dict, dict))
@@ -338,7 +338,7 @@ def diffWithFileR(lhs:dict, rhsPath:str) -> dict:
     The file should be stored in UTF-8 compatible encoding
 
     Args:
-        lhs (dict): The dict created by a call to parse(str). This will be the "original" file in the diff
+        lhs (dict): A dict created by a call to parse(str). This will be the "original" file in the diff
         rhsPath (str): The path to a JSON file containing the output of a previous call to parse(str). This will be the "new/modified" file in the diff
 
     Returns:
@@ -365,7 +365,83 @@ def diffWithFiles(lhsPath:str, rhsPath:str) -> dict:
             return diff(json.load(json_fileL.read()), json.load(json_fileR.read()))
 
 def diff(lhs:dict, rhs:dict) -> dict:
+    """
+    Diff two dicts created by parse(str)
 
+    The format of the dict depends on the operation for each entry. If the entire entry is new, the highest level possible will be marked.
+    For example:
+    {
+        "toc":{
+            "Ads": {
+                "_operation": "add"
+            }
+        }
+    }
+
+    The above dict indicates that the entire contents of the "Ads" resource in the RHS is newly added to the TOC, including the "Ads" key itself
+
+    {
+        "toc":{
+            "Ads": [
+                {
+                    "_operation": "add"
+                    "endpoint": "Start Commercial"
+                }
+            ]
+        }
+    }
+
+    By contrast, this dict indicates that the "Ads" resource was already in the TOC on the LHS, but the entire entry object for "Start Commercial" is new on the RHS
+
+    It is assumed that if a particular sub-object defined in parse(str) is marked as "add" or "remove" as above,
+    then the specified operation is applied to the entire sub-object, and the "endpoint", "parameter", "field", or "code" keys are being used as context
+
+    If a specific value has changed, but not the entire object, it will be defined in a sub-object defining the operation
+    For example:
+    {
+        "endpoints": {
+            "Start Commercial": {
+                "rateLimits": {
+                    "_operation": "replace"
+                    "lhs": "Only partners<del>/</del>affiliates may run commercials",
+                    "rhs": "Only partners<ins> and </ins>affiliates may run commercials",
+                    "combined": "Only partners<del>/</del><ins> and </ins>affiliates may run commercials"
+                },
+                "requestBody": [
+                    {
+                        "field": "broadcaster_id",
+                        "type": {
+                            "_operation": "replace"
+                            "lhs": "<del>Integer</del>"
+                            "rhs": "<ins>String</ins>"
+                            "combined": "<del>Integer</del><ins>String</ins>"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+    This dict indicates that in "rateLimits", a "/" was replaced with " and ". It also indicates that the "type" for the field "broadcaster_id" in the "requestBody" was
+    changed from "Integer" to "String"
+
+    As shown above, "replace" operations will output a string showing just the LHS with <del></del> tags surrounding the removed text, a string showing just the RHS
+    with <ins></ins> tags surrounding the added text, and a combined string showing both sets of tags
+
+    Operations:
+    - add: Add a new sub-object or string, where one previously did not exist or was set to None. See examples and explanation for how this is represented
+    - remove: Remove an existing sub-object or string. A string would be replaced with None, a sub-object would simply be removed from the dict or list. See examples and explanation for "add" for how this is represented
+    - insert: Insert the text that is surrounded by the <ins></ins> tags. Contains only sub-key "rhs" from the "replace" example. May contain only enough surrounding text to provide appropriate context
+    - delete: Remove the text that is surrounded by the <del></del> tags. Contains only sub-key "lhs" from the "replace" example. May contain only enough surrounding text to provide appropriate context
+    - replace: Replace the text that is surrounded by the <del></del> tags with the text that is surrounded by the <ins></ins> tags. See example and explanation for how this is represented
+
+    Args:
+        lhs (dict): A dict created by a call to parse(str). This will be the "original" file in the diff
+        rhs (dict): A dict created by a call to parse(str). This will be the "new/modified" file in the diff
+
+    Returns:
+        dict: A dict containing the diff data, as described above
+    """
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse a Twitch API Reference page into a format that can be diffed")
