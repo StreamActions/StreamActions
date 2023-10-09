@@ -89,7 +89,7 @@ def parse(html:str) -> dict:
                 ],
                 "requestBody": [
                     {
-                        field": field,
+                        "field": field,
                         "type": jsonDataType,
                         "required": isRequired,
                         "description": description
@@ -119,9 +119,11 @@ def parse(html:str) -> dict:
         }
     }
 
-    Note that in the "endpoints" sub-dict that any value which is not present in the documentation for a particular endpoint will be present, but set to None
+    Note that in the "endpoints" sub-dict that any value which is not present in the documentation for a particular endpoint will be present, but set to None.
+    All keys are type str. All values which are present are type str
 
-    Note that all values come from the highest level enclosing tag that will support the separation required. All child tags are stripped and the resulting strings joined with whitespace
+    Note that all values come from the highest level enclosing tag that will support the separation required.
+    All child tags are stripped and the resulting strings joined with whitespace
 
     Args:
         html (str): The HTML from a Twitch API Reference page which will be parsed
