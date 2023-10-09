@@ -446,7 +446,7 @@ def diff(lhs:dict, rhs:dict) -> dict:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse a Twitch API Reference page into a format that can be diffed")
     pgroup = parser.add_argument_group("Parse HTML", "Parse the HTML of a Twitch API Reference page and return a dict of parsed data")
-    pigroup = pgroup.add_mutually_exclusive_group(required=True)
+    pigroup = pgroup.add_mutually_exclusive_group()
     pigroup.add_argument("--file", action="store", help="Parse the HTML from a file stored in a UTF-8 compatible encoding")
     pigroup.add_argument("--url", action="store", help="Parse the HTML from a URL")
     dgroup = parser.add_argument_group("Diff", "Diff two dicts created by the parser. If only one of --lhs/--rhs is specified, the other is taken from the output of parsing --file/--url")
@@ -454,6 +454,8 @@ if __name__ == "__main__":
     dgroup.add_argument("--rhs", action="store", help="Load a JSON file created by parse as the RHS (New/Modified)")
     parser.add_argument("--out", action="store", help="Output as JSON to the specified file instead of STDOUT")
     args = parser.parse_args()
+    if args.url == None and args.file == None and args.lhs == None and args.rhs == None:
+        parser.error("must provide at least 1 argument")
     if args.file != None and args.lhs != None and args.rhs != None:
         parser.error("argument --file: not allowed when using both arguments --lhs and --rhs")
     if args.url != None and args.lhs != None and args.rhs != None:
