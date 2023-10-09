@@ -18,7 +18,7 @@
 #
 
 """
-Parse the HTML of a Twitch API Reference page and return a dict of parsed data
+Parse a Twitch API Reference page into a format that can be diffed
 """
 
 import argparse
@@ -315,17 +315,85 @@ def parse(html:str) -> dict:
                 }
     return ret
 
+def diffWithFileL(lhsPath:str, rhs:dict) -> dict:
+    """
+    Diff two dicts created by parse(str)
+
+    The file should be stored in UTF-8 compatible encoding
+
+    Args:
+        lhsPath (str): The path to a JSON file containing the output of a previous call to parse(str). This will be the "original" file in the diff
+        rhs (dict): The dict created by a call to parse(str). This will be the "new/modified" file in the diff
+
+    Returns:
+        dict: A dict containing the diff data (see diff(dict, dict))
+    """
+    with open(lhsPath, "r", encoding="utf8") as json_file:
+        return diff(json.load(json_file.read()), rhs)
+
+def diffWithFileR(lhs:dict, rhsPath:str) -> dict:
+    """
+    Diff two dicts created by parse(str)
+
+    The file should be stored in UTF-8 compatible encoding
+
+    Args:
+        lhs (dict): The dict created by a call to parse(str). This will be the "original" file in the diff
+        rhsPath (str): The path to a JSON file containing the output of a previous call to parse(str). This will be the "new/modified" file in the diff
+
+    Returns:
+        dict: A dict containing the diff data (see diff(dict, dict))
+    """
+    with open(rhsPath, "r", encoding="utf8") as json_file:
+        return diff(lhs, json.load(json_file.read()))
+
+def diffWithFiles(lhsPath:str, rhsPath:str) -> dict:
+    """
+    Diff two dicts created by parse(str)
+
+    The files should be stored in UTF-8 compatible encoding
+
+    Args:
+        lhsPath (str): The path to a JSON file containing the output of a previous call to parse(str). This will be the "original" file in the diff
+        rhsPath (str): The path to a JSON file containing the output of a previous call to parse(str). This will be the "new/modified" file in the diff
+
+    Returns:
+        dict: A dict containing the diff data (see diff(dict, dict))
+    """
+    with open(lhsPath, "r", encoding="utf8") as json_fileL:
+        with open(rhsPath, "r", encoding="utf8") as json_fileR:
+            return diff(json.load(json_fileL.read()), json.load(json_fileR.read()))
+
+def diff(lhs:dict, rhs:dict) -> dict:
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Parse the HTML of a Twitch API Reference page and return a dict of parsed data")
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--file", action="store", help="Parse the HTML from a file stored in a UTF-8 compatible encoding")
-    group.add_argument("--url", action="store", help="Parse the HTML from a URL")
+    parser = argparse.ArgumentParser(description="Parse a Twitch API Reference page into a format that can be diffed")
+    pgroup = parser.add_argument_group("Parse HTML", "Parse the HTML of a Twitch API Reference page and return a dict of parsed data")
+    pigroup = pgroup.add_mutually_exclusive_group(required=True)
+    pigroup.add_argument("--file", action="store", help="Parse the HTML from a file stored in a UTF-8 compatible encoding")
+    pigroup.add_argument("--url", action="store", help="Parse the HTML from a URL")
+    dgroup = parser.add_argument_group("Diff", "Diff two dicts created by the parser. If only one of --lhs/--rhs is specified, the other is taken from the output of parsing --file/--url")
+    dgroup.add_argument("--lhs", action="store", help="Load a JSON file created by parse as the LHS (Original)")
+    dgroup.add_argument("--rhs", action="store", help="Load a JSON file created by parse as the RHS (New/Modified)")
     parser.add_argument("--out", action="store", help="Output as JSON to the specified file instead of STDOUT")
     args = parser.parse_args()
+    if args.file != None and args.lhs != None and args.rhs != None:
+        parser.error("argument --file: not allowed when using both arguments --lhs and --rhs")
+    if args.url != None and args.lhs != None and args.rhs != None:
+        parser.error("argument --url: not allowed when using both arguments --lhs and --rhs")
+    if args.url == None and args.file == None and (args.lhs == None or args.rhs == None):
+        parser.error("can not diff with only 1 input")
     if args.file != None:
         ret = parseFromFile(args.file)
     if args.url != None:
         ret = parseFromUrl(args.url)
+    if args.lhs != None and args.rhs != None:
+        ret = diffWithFiles(args.lhs, args.rhs)
+    elif args.lhs != None:
+        ret = diffWithFileL(args.lhs, ret)
+    elif args.rhs != None:
+        ret = diffWithFileR(ret, args.rhs)
     if args.out == None:
         print(json.dumps(ret, indent=4))
     else:
