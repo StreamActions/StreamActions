@@ -39,20 +39,20 @@ public sealed class ETagAttribute : Attribute
     /// <param name="stripParameters">Parameters for <c>StripData.py</c>.</param>
     /// <remarks>
     /// <para>
-    /// Main RegEx (Python3): <code>r"\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\",\s*[^{]+{(?P<issuetags>.*)},\s*\"(?P<url>[^\"]+)\",\s*\"(?P<hash>[^\"]+)\",\s*\"(?P<date>[^\"]+)\",\s*[^{]+{(?P<params>.*)}\)\]"s</code>
+    /// Main RegEx (Python3): <code>r"\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\",\s*[^{]+{(?P<issuetags>.*)},\s*\"(?P<url>[^\"]+)\",\s*\"(?P<hash>[^\"]+)\",\s*\"(?P<date>[^\"]+)\",\s*\"(?P<parser>[^\"]+)\"\)\]"s</code>
     /// </para>
     /// <para>
     /// Array RegEx (Python3): <code>r"(\"(?P<param>([^\"]|\\\")+)\"(,|$))"gs</code>
     /// </para>
     /// </remarks>
-    public ETagAttribute(string friendlyName, string[] issueTags, string uri, string eTag, string timestamp, string[] stripParameters)
+    public ETagAttribute(string friendlyName, string[] issueTags, string uri, string eTag, string timestamp, string parser)
     {
         this.FriendlyName = friendlyName;
         this.IssueTags = issueTags;
         this.Uri = uri;
         this.ETag = eTag;
         this.Timestamp = DateTime.Parse(timestamp, CultureInfo.InvariantCulture);
-        this.StripParameters = stripParameters.ToList();
+        this.Parser = parser;
     }
 
     #endregion Public Constructors
@@ -75,9 +75,9 @@ public sealed class ETagAttribute : Attribute
     public IReadOnlyCollection<string> IssueTags { get; init; }
 
     /// <summary>
-    /// Parameters for <c>StripData.py</c>.
+    /// The parser module to use
     /// </summary>
-    public IReadOnlyCollection<string> StripParameters { get; init; }
+    public string Parser { get; init; }
 
     /// <summary>
     /// The timestamp when the <see cref="ETag"/> was updated.

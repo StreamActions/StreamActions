@@ -31,10 +31,7 @@ namespace StreamActions.Twitch.OAuth;
 /// </summary>
 [ETag("[Twitch] Validate OAuth", new string[] { "twitch", "api" },
     "https://dev.twitch.tv/docs/authentication/validate-tokens", "81447f40c4fba5d6daf3b948eaf73f32199d75a86593e52be3be863883bc2875",
-    "2022-10-16T20:43Z", new string[] { "-stripblank", "-strip", "-findfirst", "'<div class=\"main\">'", "-findlast",
-        "'<div class=\"subscribe-footer\">'", "-remre", "'cloudcannon[^\"]*'", "-rem",
-        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-new\">NEW</span></a>'",
-        "'<a href=\"/docs/product-lifecycle\"><span class=\"pill pill-beta\">BETA</span></a>'" })]
+    "2022-10-16T20:43Z", "TwitchValidateParser")]
 public sealed record Validate : JsonApiResponse
 {
     /// <summary>
