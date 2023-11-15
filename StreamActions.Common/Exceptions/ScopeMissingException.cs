@@ -46,7 +46,9 @@ public class ScopeMissingException : InvalidOperationException
     #endregion Public Constructors
 
     #region Public Properties
-
+    /// <summary>
+    /// The scope which was missing.
+    /// </summary>
     public string? Scope { get; init; }
 
     #endregion Public Properties
