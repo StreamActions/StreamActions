@@ -39,7 +39,7 @@ public sealed class ETagAttribute : Attribute
     /// <param name="stripParameters">Parameters for <c>StripData.py</c>.</param>
     /// <remarks>
     /// <para>
-    /// Main RegEx (Python3): <code>r"\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\",\s*[^{]+{(?P<issuetags>.*)},\s*\"(?P<url>[^\"]+)\",\s*\"(?P<hash>[^\"]+)\",\s*\"(?P<date>[^\"]+)\",\s*\"(?P<parser>[^\"]+)\"\)\]"s</code>
+    /// Main RegEx (Python3): <code>r"\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\",\s*[^{\[]+[{\[](?P<issuetags>.*)[}\]],\s*\"(?P<url>[^\"]+)\",\s*\"(?P<hash>[^\"]+)\",\s*\"(?P<date>[^\"]+)\",\s*\"(?P<parser>[^\"]+)\"\)\]"s</code>
     /// </para>
     /// <para>
     /// Array RegEx (Python3): <code>r"(\"(?P<param>([^\"]|\\\")+)\"(,|$))"gs</code>
