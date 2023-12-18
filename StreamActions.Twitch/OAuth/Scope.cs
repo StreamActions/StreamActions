@@ -26,7 +26,7 @@ namespace StreamActions.Twitch.OAuth;
 /// </summary>
 [ETag("[Twitch] Scopes", ["twitch", "api"],
     "https://dev.twitch.tv/docs/authentication/scopes", "3eb00b9d1a45b9cc4b85585eeaf852467dc4ce79baf55b777c942c7664376498",
-    "2023-01-21T06:21Z", "TwitchScopesParser")]
+    "2023-12-18T06:21Z", "TwitchScopesParser")]
 [JsonConverter(typeof(ScopeJsonConverter))]
 public sealed record Scope
 {
@@ -48,7 +48,7 @@ public sealed record Scope
     /// <summary>
     /// Backing dictionary for <see cref="Scopes"/>.
     /// </summary>
-    private static readonly Dictionary<string, Scope> _scopes = new();
+    private static readonly Dictionary<string, Scope> _scopes = [];
 
     #region Scopes
 
@@ -71,10 +71,25 @@ public sealed record Scope
     public static readonly Scope BitsRead = new("bits:read", "View Bits information for a channel.");
 
     /// <summary>
+    /// Allows the client's bot users access to a channel.
+    /// </summary>
+    /// <remarks>
+    /// This scope is used on a broadcaster to allow access to the EventSub Chat subscriptions when using an App Access Token. Alternatively, the bot user who was authorized with <see cref="UserBot"/> can be made a moderator.
+    /// </remarks>
+    /// <value>channel:bot</value>
+    public static readonly Scope ChannelBot = new("channel:bot", "Allows the client's bot users access to a channel.");
+
+    /// <summary>
     /// Run commercials on a channel.
     /// </summary>
     /// <value>channel:edit:commercial</value>
     public static readonly Scope ChannelEditCommercial = new("channel:edit:commercial", "Run commercials on a channel.");
+
+    /// <summary>
+    /// Manage ads schedule on a channel.
+    /// </summary>
+    /// <value>channel:manage:ads</value>
+    public static readonly Scope ChannelManageAds = new("channel:manage:ads", "Manage ads schedule on a channel.");
 
     /// <summary>
     /// Manage a channel's broadcast configuration, including updating channel configuration and managing stream markers and stream tags.
@@ -87,6 +102,12 @@ public sealed record Scope
     /// </summary>
     /// <value>channel:manage:extensions</value>
     public static readonly Scope ChannelManageExtensions = new("channel:manage:extensions", "Manage a channel's Extension configuration, including activating Extensions.");
+
+    /// <summary>
+    /// Manage Guest Star for your channel.
+    /// </summary>
+    /// <value>channel:manage:guest_star</value>
+    public static readonly Scope ChannelManageGuestStar = new("channel:manage:guest_star", "Manage Guest Star for your channel.");
 
     /// <summary>
     /// Add or remove the moderator role from users in your channel.
@@ -143,6 +164,12 @@ public sealed record Scope
     public static readonly Scope ChannelModerate = new("channel:moderate", "Perform moderation actions in a channel.");
 
     /// <summary>
+    /// Read the ads schedule and details on your channel.
+    /// </summary>
+    /// <value>channel:read:ads</value>
+    public static readonly Scope ChannelReadAds = new("channel:read:ads", "Read the ads schedule and details on your channel.");
+
+    /// <summary>
     /// Read charity campaign details and user donations on your channel.
     /// </summary>
     /// <value>channel:read:charity</value>
@@ -159,6 +186,12 @@ public sealed record Scope
     /// </summary>
     /// <value>channel:read:goals</value>
     public static readonly Scope ChannelReadGoals = new("channel:read:goals", "View Creator Goals for a channel.");
+
+    /// <summary>
+    /// Read Guest Star details for your channel.
+    /// </summary>
+    /// <value>channel:read:guest_star</value>
+    public static readonly Scope ChannelReadGuestStar = new("channel:read:guest_star", "Read Guest Star details for your channel.");
 
     /// <summary>
     /// View Hype Train information for a channel.
@@ -269,6 +302,12 @@ public sealed record Scope
     public static readonly Scope ModeratorManageChatSettings = new("moderator:manage:chat_settings", "Manage a broadcaster's chat room settings.");
 
     /// <summary>
+    /// Manage Guest Star for channels where you are a Guest Star moderator.
+    /// </summary>
+    /// <value>moderator:manage:guest_star</value>
+    public static readonly Scope ModeratorManageGuestStar = new("moderator:manage:guest_star", "Manage Guest Star for channels where you are a Guest Star moderator.");
+
+    /// <summary>
     /// Manage a broadcaster's Shield Mode status.
     /// </summary>
     /// <value>moderator:manage:shield_mode</value>
@@ -311,6 +350,12 @@ public sealed record Scope
     public static readonly Scope ModeratorReadFollowers = new("moderator:read:followers", "Read the followers of a broadcaster.");
 
     /// <summary>
+    /// Read Guest Star details for channels where you are a Guest Star moderator.
+    /// </summary>
+    /// <value>moderator:read:guest_star</value>
+    public static readonly Scope ModeratorReadGuestStar = new("moderator:read:guest_star", "Read Guest Star details for channels where you are a Guest Star moderator.");
+
+    /// <summary>
     /// View a broadcaster's Shield Mode status.
     /// </summary>
     /// <value>moderator:read:shield_mode</value>
@@ -327,6 +372,15 @@ public sealed record Scope
     /// </summary>
     /// <value>openid</value>
     public static readonly Scope OpenID = new("openid", "OpenID Connect.");
+
+    /// <summary>
+    /// Allows client's bot to act as this user.
+    /// </summary>
+    /// <remarks>
+    /// This scope is used on a Twitch user to allow access to act on their behalf as a registered bot with the EventSub Chat subscriptions when using an App Access Token.
+    /// </remarks>
+    /// <value>user:bot</value>
+    public static readonly Scope UserBot = new("user:bot", "Allows client's bot to act as this user.");
 
     /// <summary>
     /// Manage a user object.
@@ -365,6 +419,12 @@ public sealed record Scope
     public static readonly Scope UserReadBroadcast = new("user:read:broadcast", "View a user's broadcasting configuration, including Extension configurations.");
 
     /// <summary>
+    /// View live stream chat and room messages.
+    /// </summary>
+    /// <value>user:read:chat</value>
+    public static readonly Scope UserReadChat = new("user:read:chat", "View live stream chat and room messages.");
+
+    /// <summary>
     /// View a user's email address.
     /// </summary>
     /// <value>user:read:email</value>
@@ -381,6 +441,12 @@ public sealed record Scope
     /// </summary>
     /// <value>user:read:subscriptions</value>
     public static readonly Scope UserReadSubscriptions = new("user:read:subscriptions", "View if an authorized user is subscribed to specific channels.");
+
+    /// <summary>
+    /// Send whisper messages.
+    /// </summary>
+    /// <value>whispers:edit</value>
+    public static readonly Scope WhispersEdit = new("whispers:edit", "Send whisper messages.");
 
     /// <summary>
     /// View your whisper messages.
