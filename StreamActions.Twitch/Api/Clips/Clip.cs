@@ -237,7 +237,7 @@ public sealed record Clip
 
         first = Math.Clamp(first, 1, 100);
 
-        NameValueCollection queryParams = new();
+        NameValueCollection queryParams = [];
 
         if (id is not null && id.Any())
         {
