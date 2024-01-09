@@ -62,7 +62,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="6.29.0" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="6.34.0" />
     <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
   </ItemGroup>
 
