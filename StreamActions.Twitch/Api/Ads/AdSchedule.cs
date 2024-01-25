@@ -23,6 +23,7 @@ using StreamActions.Twitch.OAuth;
 using System.Text.Json.Serialization;
 using System.Net.Http.Json;
 using StreamActions.Common.Extensions;
+using StreamActions.Common;
 
 namespace StreamActions.Twitch.Api.Ads;
 
@@ -78,4 +79,97 @@ public sealed record AdSchedule
     /// </summary>
     [JsonIgnore]
     public TimeSpan? PrerollFreeTime => this.PrerollFreeTimeSeconds.HasValue ? TimeSpan.FromSeconds(this.PrerollFreeTimeSeconds.Value) : null;
+
+    /// <summary>
+    /// This endpoint returns ad schedule related information, including snooze, when the last ad was run, when the next ad is scheduled, and if the channel is currently in pre-roll free time. Note that a new ad cannot be run until 8 minutes after running a previous ad.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster whose ad schedule is being retrieved. This ID must match the user ID in the user access token.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="AdSchedule"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadAds"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the broadcaster's ad schedule.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public static async Task<ResponseData<AdSchedule>?> GetAdSchedule(TwitchSession session, string broadcasterId)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireToken(Scope.ChannelReadAds);
+
+        Uri uri = Util.BuildUri(new("/channels/ads"), new() { { "broadcaster_id", broadcasterId } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<AdSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// If available, pushes back the timestamp of the upcoming automatic mid-roll ad by 5 minutes. This endpoint duplicates the snooze functionality in the creator dashboard's Ads Manager.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster whose ads are being snoozed. This ID must match the user ID in the user access token.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="AdSchedule"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageAds"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// When this endpoint returns, only <see cref="SnoozeCount"/>, <see cref="SnoozeRefreshAt"/>, and <see cref="NextAdAt"/> will be populated.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>User's next ad is successfully snoozed. Their <see cref="SnoozeCount"/> is decremented and <see cref="SnoozeRefreshAt"/> and <see cref="NextAdAt"/> are both updated.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The channel is not live. The channel does not have an upcoming scheduled ad break. The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>429 Too Many Requests</term>
+    /// <description>Channel has no snoozes left.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public static async Task<ResponseData<AdSchedule>?> SnoozeNextAd(TwitchSession session, string broadcasterId)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireToken(Scope.ChannelManageAds);
+
+        Uri uri = Util.BuildUri(new("/channels/ads/schedule/snooze"), new() { { "broadcaster_id", broadcasterId } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<AdSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+    }
 }
