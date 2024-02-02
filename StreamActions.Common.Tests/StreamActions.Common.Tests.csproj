@@ -7,6 +7,10 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <Authors>StreamActions Team</Authors>
+    <Copyright>Copyright © 2019-2024 StreamActions Team</Copyright>
+    <RepositoryUrl>https://github.com/StreamActions/StreamActions</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>

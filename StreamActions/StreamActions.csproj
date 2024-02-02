@@ -15,7 +15,7 @@
     <Authors>StreamActions Team</Authors>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <Copyright>Copyright © 2019-2023 StreamActions Team</Copyright>
+    <Copyright>Copyright © 2019-2024 StreamActions Team</Copyright>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryType>git</RepositoryType>
     <NeutralLanguage>en-US</NeutralLanguage>

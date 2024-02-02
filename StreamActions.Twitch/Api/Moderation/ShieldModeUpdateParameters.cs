@@ -1,6 +1,6 @@
 ﻿/*
  * This file is part of StreamActions.
- * Copyright © 2019-2023 StreamActions Team (streamactions.github.io)
+ * Copyright © 2019-2024 StreamActions Team (streamactions.github.io)
  *
  * StreamActions is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Moderation;
