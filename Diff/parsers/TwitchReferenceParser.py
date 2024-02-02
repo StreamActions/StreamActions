@@ -77,7 +77,8 @@ def parse(html:str) -> dict:
                 "description": description, // BETA and NEW tags are stripped
                 "rateLimits": rateLimits,
                 "authorization": authorization,
-                "url": url,
+                "url": url, // Endpoint URL
+                "slug": slug, // Fragment for doc page
                 "requestQuery": [
                     {
                         "parameter": parameter,
@@ -170,6 +171,7 @@ def parse(html:str) -> dict:
             rateLimits = None
             authorization = None
             url = None
+            slug = None
             reqQuery = None
             reqBody = None
             resBody = None
@@ -178,6 +180,7 @@ def parse(html:str) -> dict:
                 newState = state
                 if tag.name == "h2":
                     endpoint = str(tag.string).strip()
+                    slug = str(tag["id"]).strip() if "id" in tag else None
                     newState = 1
                 elif tag.name == "p" or tag.name == "ul" or (tag.name == "table" and state < 5):
                     if state == 1:
@@ -216,7 +219,7 @@ def parse(html:str) -> dict:
                         newState = 5
                     elif section.startswith("Request Body"):
                         newState = 6
-                    elif section.startswith("Response Body") or section.startswith("Return Values"):
+                    elif section.startswith("Response Body") or section.startswith("Return Value"):
                         newState = 7
                     elif section.startswith("Response Code"):
                         newState = 8
@@ -305,6 +308,7 @@ def parse(html:str) -> dict:
                     "rateLimits": rateLimits,
                     "authorization": authorization,
                     "url": url,
+                    "slug": slug,
                     "requestQuery": reqQuery,
                     "requestBody": reqBody,
                     "responseBody": resBody,
