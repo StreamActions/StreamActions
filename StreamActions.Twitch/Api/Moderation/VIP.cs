@@ -139,7 +139,7 @@ public sealed record VIP
     /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVideos"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVips"/>.</exception>
     /// <remarks>
     /// <para>
     /// <b>Rate Limits</b>: The broadcaster may add a maximum of 10 VIPs within a 10-second window.
@@ -161,7 +161,7 @@ public sealed record VIP
     /// </item>
     /// <item>
     /// <term>404 Not Found</term>
-    /// <description><paramref name="userId"/> does not exist.</description>
+    /// <description><paramref name="broadcasterId"/> or <paramref name="userId"/> does not exist.</description>
     /// </item>
     /// <item>
     /// <term>409 Conflict</term>
@@ -209,6 +209,89 @@ public sealed record VIP
 
         Uri uri = Util.BuildUri(new("/channels/vips"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Removes the specified user as a VIP in the broadcaster's channel.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster who owns the channel where the user has VIP status.</param>
+    /// <param name="userId">The ID of the user to remove VIP status from.</param>
+    /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVips"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// If the broadcaster is removing the user's VIP status, the ID in the <paramref name="broadcasterId"/> parameter must match the user ID in the access token;
+    /// otherwise, if the user is removing their VIP status themselves, the ID in the <paramref name="userId"/> parameter must match the user ID in the access token.
+    /// </para>
+    /// <para>
+    /// <b>Rate Limits</b>: The broadcaster may remove a maximum of 10 VIPs within a 10-second window.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>204 No Content</term>
+    /// <description>Successfully removed the VIP status from the user.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>403 Forbidden</term>
+    /// <description>The <paramref name="broadcasterId"/> does not have permission to remove VIP status from <paramref name="userId"/>.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description><paramref name="broadcasterId"/> or <paramref name="userId"/> does not exist.</description>
+    /// </item>
+    /// <item>
+    /// <term>422 Unprocessable Entity</term>
+    /// <description><paramref name="userId"/> is not a VIP in the broadcaster's channel.</description>
+    /// </item>
+    /// <item>
+    /// <item>
+    /// <term>429 Too Many Requests</term>
+    /// <description><paramref name="broadcasterId"/> has exceeded the rate limit for this endpoint.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public static async Task<JsonApiResponse?> RemoveChannelVIP(TwitchSession session, string broadcasterId, string userId)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+        }
+
+
+        session.RequireToken(Scope.ChannelManageVips);
+
+        NameValueCollection queryParams = new() {
+            { "broadcaster_id", broadcasterId },
+            { "user_id", userId }
+        };
+
+        Uri uri = Util.BuildUri(new("/channels/vips"), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
