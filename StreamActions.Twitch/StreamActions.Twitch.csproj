@@ -34,7 +34,6 @@
   <ItemGroup>
     <Folder Include="Api\Entitlements\" />
     <Folder Include="Api\Extensions\" />
-    <Folder Include="Api\EventSub\" />
     <Folder Include="Api\Games\" />
     <Folder Include="Api\HypeTrain\" />
     <Folder Include="Api\Music\" />

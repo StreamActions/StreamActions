@@ -50,4 +50,20 @@ public record ResponseData<TDataType> : JsonApiResponse
     /// </summary>
     [JsonPropertyName("total")]
     public int? Total { get; init; }
+
+    /// <summary>
+    /// The sum of all subscription costs in a
+    /// <see cref="EventSub.EventSubSubscription.GetEventSubSubscriptions(TwitchSession, EventSub.EventSubSubscription.SubscriptionStatus?, string, string, string)"/>
+    /// response.
+    /// </summary>
+    [JsonPropertyName("total_cost")]
+    public int? TotalCost { get; init; }
+
+    /// <summary>
+    /// The maximum subscription cost that is allowed in a
+    /// <see cref="EventSub.EventSubSubscription.GetEventSubSubscriptions(TwitchSession, EventSub.EventSubSubscription.SubscriptionStatus?, string, string, string)"/>
+    /// response.
+    /// </summary>
+    [JsonPropertyName("max_total_cost")]
+    public int? MaxTotalCost { get; init; }
 }
