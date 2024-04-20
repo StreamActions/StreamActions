@@ -27,13 +27,14 @@ namespace StreamActions.Common.Json.Serialization;
 /// </summary>
 public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
+    #region Public Properties
+
+    /// <inheritdoc/>
+    public override bool HandleNull => true;
+
+    #endregion Public Properties
+
     #region Public Methods
-
-    /// <inheritdoc/>
-    public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => this.Convert(reader.GetString()!);
-
-    /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => writer?.WriteStringValue(this.Convert(value));
 
     /// <summary>
     /// Converts the given string into an enum value.
@@ -80,6 +81,12 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
 
         return Enum.GetName(value);
     }
+
+    /// <inheritdoc/>
+    public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => this.Convert(reader.GetString()!);
+
+    /// <inheritdoc/>
+    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => writer?.WriteStringValue(this.Convert(value));
 
     #endregion Public Methods
 }

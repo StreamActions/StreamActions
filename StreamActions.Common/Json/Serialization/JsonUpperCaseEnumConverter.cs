@@ -26,6 +26,13 @@ namespace StreamActions.Common.Json.Serialization;
 /// </summary>
 public sealed class JsonUpperCaseEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
+    #region Public Properties
+
+    /// <inheritdoc/>
+    public override bool HandleNull => true;
+
+    #endregion Public Properties
+
     #region Public Methods
 
     /// <inheritdoc/>

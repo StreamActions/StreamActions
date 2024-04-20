@@ -26,7 +26,12 @@ namespace StreamActions.Common.Json.Serialization;
 /// </summary>
 public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
-    #region Public Methods
+    #region Public Properties
+
+    /// <inheritdoc/>
+    public override bool HandleNull => true;
+
+    #endregion Public Properties
 
     /// <inheritdoc/>
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
