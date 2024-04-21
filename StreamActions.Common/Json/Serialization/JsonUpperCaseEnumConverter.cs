@@ -24,6 +24,7 @@ namespace StreamActions.Common.Json.Serialization;
 /// <summary>
 /// Converts an enum to/from a JSON string in upper case.
 /// </summary>
+/// <typeparam name="T">An enum whose values should be converted.</typeparam>
 public sealed class JsonUpperCaseEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
     #region Public Properties

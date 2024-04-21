@@ -25,6 +25,7 @@ namespace StreamActions.Common.Json.Serialization;
 /// <summary>
 /// Converts an enum to/from a JSON string as defined by an associated <see cref="JsonCustomEnumAttribute"/>.
 /// </summary>
+/// <typeparam name="T">An enum whose values are tagged with <see cref="JsonCustomEnumAttribute"/>.</typeparam>
 public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
     #region Public Properties
