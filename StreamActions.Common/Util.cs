@@ -193,16 +193,22 @@ public static partial class Util
     }
 
     /// <summary>
-    /// Indicates if the input string is a valid hex triplet color.
+    /// Get the default value for <typeparamref name="T"/>.
     /// </summary>
-    /// <param name="hexColor">The string to check.</param>
-    /// <returns><see langword="true"/> if the string is a valid hex triplet color.</returns>
-    /// <remarks>
-    /// <para>
-    /// This member only accepts full colors of the form <c>#RRGGBB</c>.
-    /// </para>
-    /// </remarks>
-    public static bool IsValidHexColor(string hexColor) => hexColor is not null && HexColorRegex().Match(hexColor).Success;
+    /// <typeparam name="T">The type to get the default value for.</typeparam>
+    /// <param name="argument">The argument to use for checking the default value.</param>
+    /// <returns>The default value; <see langword="null"/> if <paramref name="argument"/> is <see langword="null"/>.</returns>
+    public static object? GetDefault<T>(T argument)
+    {
+        if (argument is not null)
+        {
+            Type methodType = typeof(T);
+            Type argumentType = argument.GetType();
+            return argumentType.IsValueType && argumentType != methodType ? _defaults.GetOrAdd(argumentType, Activator.CreateInstance) : default;
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Converts a hex triplet color to a <see cref="Color"/>.
@@ -245,8 +251,6 @@ public static partial class Util
         return c;
     }
 
-
-
     /// <summary>
     /// Determines if <paramref name="argument"/> is <see langword="null"/> or default.
     /// </summary>
@@ -282,7 +286,25 @@ public static partial class Util
         return false;
     }
 
+    /// <summary>
+    /// Indicates if the input string is a valid hex triplet color.
+    /// </summary>
+    /// <param name="hexColor">The string to check.</param>
+    /// <returns><see langword="true"/> if the string is a valid hex triplet color.</returns>
+    /// <remarks>
+    /// <para>
+    /// This member only accepts full colors of the form <c>#RRGGBB</c>.
+    /// </para>
+    /// </remarks>
+    public static bool IsValidHexColor(string hexColor) => hexColor is not null && HexColorRegex().Match(hexColor).Success;
+
     #endregion Public Methods
+
+    #region Private Fields
+
+    private static readonly ConcurrentDictionary<Type, object?> _defaults = [];
+
+    #endregion Private Fields
 
     #region Private Methods
 
@@ -297,8 +319,6 @@ public static partial class Util
     /// </summary>
     [GeneratedRegex("^#((?<r>[0-9A-Fa-f]{2})(?<g>[0-9A-Fa-f]{2})(?<b>[0-9A-Fa-f]{2}))$")]
     private static partial Regex HexColorRegex();
-
-    private static readonly ConcurrentDictionary<Type, object?> _defaults = [];
 
     #endregion Private Methods
 }
