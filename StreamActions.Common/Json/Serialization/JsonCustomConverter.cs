@@ -30,7 +30,7 @@ namespace StreamActions.Common.Json.Serialization;
 /// This <see cref="JsonConverter{T}"/> only supports serializing and deserializing properties and fields into a JSON object.
 /// </remarks>
 /// <typeparam name="T">A class or record which is being serialized and deserialized.</typeparam>
-public abstract class CustomConverter<T> : JsonConverter<T>
+public abstract class JsonCustomConverter<T> : JsonConverter<T>
 {
     #region Public Methods
 
