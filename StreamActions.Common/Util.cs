@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using System.Drawing;
 using System.Globalization;
@@ -41,10 +42,7 @@ public static partial class Util
     /// <exception cref="ArgumentNullException"><paramref name="baseUri"/> is <see langword="null"/>.</exception>
     public static Uri BuildUri(Uri baseUri, NameValueCollection? queryParams = null, NameValueCollection? fragmentParams = null)
     {
-        if (baseUri is null)
-        {
-            throw new ArgumentNullException(nameof(baseUri));
-        }
+        ArgumentNullException.ThrowIfNull(baseUri);
 
         UriBuilder uriBuilder = new(baseUri);
 
@@ -247,6 +245,43 @@ public static partial class Util
         return c;
     }
 
+
+
+    /// <summary>
+    /// Determines if <paramref name="argument"/> is <see langword="null"/> or default.
+    /// </summary>
+    /// <typeparam name="T">The type to check.</typeparam>
+    /// <param name="argument">The argument to check.</param>
+    /// <returns><see langword="true"/> if <paramref name="argument"/> is <see langword="null"/> or default.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "Intentional.")]
+    public static bool IsNullOrDefault<T>(T argument)
+    {
+        if (argument == null)
+        {
+            return true;
+        }
+
+        if (Equals(argument, default(T)))
+        {
+            return true;
+        }
+
+        Type methodType = typeof(T);
+        if (Nullable.GetUnderlyingType(methodType) != null)
+        {
+            return false;
+        }
+
+        Type argumentType = argument.GetType();
+        if (argumentType.IsValueType && argumentType != methodType)
+        {
+            object? obj = _defaults.GetOrAdd(argumentType, Activator.CreateInstance);
+            return obj?.Equals(argument) ?? true;
+        }
+
+        return false;
+    }
+
     #endregion Public Methods
 
     #region Private Methods
@@ -262,6 +297,8 @@ public static partial class Util
     /// </summary>
     [GeneratedRegex("^#((?<r>[0-9A-Fa-f]{2})(?<g>[0-9A-Fa-f]{2})(?<b>[0-9A-Fa-f]{2}))$")]
     private static partial Regex HexColorRegex();
+
+    private static readonly ConcurrentDictionary<Type, object?> _defaults = [];
 
     #endregion Private Methods
 }
