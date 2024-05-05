@@ -29,9 +29,9 @@ namespace StreamActions.Twitch.OAuth;
 /// <summary>
 /// Record containing response data for the Validate endpoint.
 /// </summary>
-[ETag("[Twitch] Validate OAuth", ["twitch", "api"],
+[ETag("Validate OAuth", 82,
     "https://dev.twitch.tv/docs/authentication/validate-tokens", "81447f40c4fba5d6daf3b948eaf73f32199d75a86593e52be3be863883bc2875",
-    "2022-10-16T20:43Z", "TwitchValidateParser")]
+    "2022-10-16T20:43Z", "TwitchValidateParser", [])]
 public sealed record Validate : JsonApiResponse
 {
     /// <summary>

@@ -23,28 +23,24 @@ namespace StreamActions.Common.Attributes;
 /// <summary>
 /// Indicates the URI and ETag associated with a <see cref="Interfaces.IComponent"/>, allowing <c>Diff.py</c> to automatically detect when the source documentation has changed.
 /// </summary>
-/// <param name="friendlyName">The friendly name of the documentation, to be used when opening issues programmatically.</param>
-/// <param name="issueTags">Tags to be used when opening issues programmatically.</param>
+/// <param name="friendlyName">The friendly name of the documentation, to be used when updating issues programmatically.</param>
+/// <param name="issueId">The issue number for tracking the API.</param>
 /// <param name="uri">The URI of the source documentation for this component.</param>
 /// <param name="eTag">The ETag of the latest version of the documentation that this component conforms to.</param>
 /// <param name="timestamp">The timestamp when the <paramref name="eTag"/> was updated.</param>
-/// <param name="stripParameters">Parameters for <c>StripData.py</c>.</param>
+/// <param name="parser">The parser to use.</param>
+/// <param name="parameters">Parameters for <paramref name="parser"/>.</param>
 /// <remarks>
 /// <para>
-/// Main RegEx (Python3): <code>r"\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\",\s*[^{\[]+[{\[](?P<issuetags>.*)[}\]],\s*\"(?P<url>[^\"]+)\",\s*\"(?P<hash>[^\"]+)\",\s*\"(?P<date>[^\"]+)\",\s*\"(?P<parser>[^\"]+)\"\)\]"s</code>
+/// Main RegEx (Python3): <code>r"\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\"\s*,\s*(?P<issue>[0-9]+)\s*,\s*\"(?P<url>[^\"]+)\"\s*,\s*\"(?P<hash>[^\"]+)\"\s*,\s*\"(?P<date>[^\"]+)\"\s*,\s*\"(?P<parser>[^\"]+)\"\s*,\s*[^{\[]+[{\[](?P<parameters>.*)[}\]]\s*\)\]"s</code>
 /// </para>
 /// <para>
 /// Array RegEx (Python3): <code>r"(\"(?P<param>([^\"]|\\\")+)\"(,|$))"gs</code>
 /// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-public sealed class ETagAttribute(string friendlyName, string[] issueTags, string uri, string eTag, string timestamp, string parser) : Attribute
+public sealed class ETagAttribute(string friendlyName, int issueId, string uri, string eTag, string timestamp, string parser, string[] parameters) : Attribute
 {
-
-    #region Public Constructors
-
-    #endregion Public Constructors
-
     #region Public Properties
 
     /// <summary>
@@ -53,14 +49,19 @@ public sealed class ETagAttribute(string friendlyName, string[] issueTags, strin
     public string ETag { get; init; } = eTag;
 
     /// <summary>
-    /// The friendly name of the documentation, to be used when opening issues programmatically.
+    /// The friendly name of the documentation, to be used when updating issues programmatically.
     /// </summary>
     public string FriendlyName { get; init; } = friendlyName;
 
     /// <summary>
-    /// Tags to be used when opening issues programmatically.
+    /// The issue number for tracking the API.
     /// </summary>
-    public IReadOnlyCollection<string> IssueTags { get; init; } = issueTags;
+    public int IssueId { get; init; } = issueId;
+
+    /// <summary>
+    /// Additional parameters for <see cref="Parser"/>.
+    /// </summary>
+    public string[] Parameters { get; init; } = parameters;
 
     /// <summary>
     /// The parser module to use
