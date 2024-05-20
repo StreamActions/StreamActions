@@ -21,9 +21,9 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.EventSub.Conditions;
 
 /// <summary>
-/// An <see cref="EventSubCondition{T}"/> for receiving notifications about a drop entitlement grant.
+/// An <see cref="EventSubCondition"/> for receiving notifications about a drop entitlement grant.
 /// </summary>
-public sealed record DropEntitlementGrantCondition : EventSubCondition<DropEntitlementGrantCondition>
+public sealed record DropEntitlementGrantCondition : EventSubCondition
 {
     /// <summary>
     /// The ID of the organization that owns the game on the developer portal.

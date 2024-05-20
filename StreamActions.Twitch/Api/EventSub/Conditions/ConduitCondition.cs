@@ -21,9 +21,9 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.EventSub.Conditions;
 
 /// <summary>
-/// An <see cref="EventSubCondition{T}"/> for receiving notifications about a conduit.
+/// An <see cref="EventSubCondition"/> for receiving notifications about a conduit.
 /// </summary>
-public sealed record ConduitCondition : EventSubCondition<ConduitCondition>
+public sealed record ConduitCondition : EventSubCondition
 {
     /// <summary>
     /// Your application's client ID. The provided client ID must match the application access token.

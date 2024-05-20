@@ -21,9 +21,9 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.EventSub.Conditions;
 
 /// <summary>
-/// An <see cref="EventSubCondition{T}"/> containing the <c>client_id</c> field.
+/// An <see cref="EventSubCondition"/> containing the <c>client_id</c> field.
 /// </summary>
-public sealed record ClientIdCondition : EventSubCondition<ClientIdCondition>
+public sealed record ClientIdCondition : EventSubCondition
 {
     /// <summary>
     /// Your application's client ID. The provided client ID must match the application access token.

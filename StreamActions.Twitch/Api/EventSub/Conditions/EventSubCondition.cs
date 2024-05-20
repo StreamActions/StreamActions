@@ -21,7 +21,7 @@ namespace StreamActions.Twitch.Api.EventSub.Conditions;
 /// <summary>
 /// A condition in an <see cref="EventSubSubscription"/>.
 /// </summary>
-public abstract record EventSubCondition<T> where T : EventSubCondition<T>
+public abstract record EventSubCondition
 {
     private protected EventSubCondition() { }
 }

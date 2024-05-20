@@ -21,9 +21,9 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.EventSub.Conditions;
 
 /// <summary>
-/// An <see cref="EventSubCondition{T}"/> containing the <c>extension_client_id</c> field.
+/// An <see cref="EventSubCondition"/> containing the <c>extension_client_id</c> field.
 /// </summary>
-public sealed record ExtensionClientIdCondition : EventSubCondition<ExtensionClientIdCondition>
+public sealed record ExtensionClientIdCondition : EventSubCondition
 {
     /// <summary>
     /// The client ID of the extension to receive notifications for.

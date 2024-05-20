@@ -21,9 +21,9 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.EventSub.Conditions;
 
 /// <summary>
-/// An <see cref="EventSubCondition{T}"/> containing the <c>moderator_user_id</c> field.
+/// An <see cref="EventSubCondition"/> containing the <c>moderator_user_id</c> field.
 /// </summary>
-public sealed record ModeratorUserIdCondition : EventSubCondition<ModeratorUserIdCondition>
+public sealed record ModeratorUserIdCondition : EventSubCondition
 {
     /// <summary>
     /// The ID of the moderator to receive notifications for.
