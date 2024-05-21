@@ -20,7 +20,6 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Reflection;
 using System.Collections.Immutable;
-using StreamActions.Common.Logger;
 
 namespace StreamActions.Common.Json.Serialization;
 
