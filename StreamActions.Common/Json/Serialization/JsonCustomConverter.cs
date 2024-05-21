@@ -20,6 +20,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Reflection;
 using System.Collections.Immutable;
+using StreamActions.Common.Logger;
 
 namespace StreamActions.Common.Json.Serialization;
 
@@ -67,11 +68,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
             {
                 if (reader.TokenType is not JsonTokenType.PropertyName)
                 {
-                    Type? t = this.GetMemberType(obj, propertyName);
-                    if (t is not null)
-                    {
-                        this.SetMember(obj, propertyName, JsonSerializer.Deserialize(ref reader, t, options));
-                    }
+                    this.DefaultRead(ref reader, obj, propertyName, options);
                 }
                 else
                 {
@@ -122,8 +119,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
                 {
                     if (this.ShouldUseDefaultConversion(propertyName, jsonPropertyName))
                     {
-                        writer.WritePropertyName(jsonPropertyName);
-                        JsonSerializer.Serialize(writer, memberValue, options);
+                        this.DefaultWrite(writer, jsonPropertyName, memberValue, options);
                     }
                     else
                     {
@@ -148,6 +144,39 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
         T? obj = (T?)Activator.CreateInstance(typeof(T));
 
         return obj is null ? throw new ArgumentNullException(nameof(obj)) : obj;
+    }
+
+    /// <summary>
+    /// Performs the default JSON to CLR-type conversion for the value.
+    /// </summary>
+    /// <param name="reader">The reader.</param>
+    /// <param name="obj">The object instance that data is being deserialized into.</param>
+    /// <param name="propertyName">The property name to be deserialized.</param>
+    /// <param name="options">An object that specifies serialization options to use.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1045:Do not pass types by reference", Justification = "Passing struct with state.")]
+    protected void DefaultRead(ref Utf8JsonReader reader, T obj, string propertyName, JsonSerializerOptions options)
+    {
+        Type? t = this.GetMemberType(obj, propertyName);
+        if (t is not null)
+        {
+            this.SetMember(obj, propertyName, JsonSerializer.Deserialize(ref reader, t, options));
+        }
+    }
+
+    /// <summary>
+    /// Performs the default CLR-type to JSON conversion for the value.
+    /// </summary>
+    /// <param name="writer">The writer.</param>
+    /// <param name="jsonPropertyName">The JSON property name to serialize the value into.</param>
+    /// <param name="memberValue">The value to serialize.</param>
+    /// <param name="options">An object that specifies serialization options to use.</param>
+    protected void DefaultWrite(Utf8JsonWriter writer, string jsonPropertyName, object? memberValue, JsonSerializerOptions options)
+    {
+        if (writer is not null)
+        {
+            writer.WritePropertyName(jsonPropertyName);
+            JsonSerializer.Serialize(writer, memberValue, options);
+        }
     }
 
     /// <summary>
