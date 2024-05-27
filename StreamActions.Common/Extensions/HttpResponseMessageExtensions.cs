@@ -39,10 +39,7 @@ public static class HttpResponseMessageExtensions
     /// <returns>The task object representing the asynchronous operation.</returns>
     public static async Task<T?> ReadFromJsonAsync<T>(this HttpResponseMessage message, JsonSerializerOptions? options, CancellationToken cancellationToken = default) where T : JsonApiResponse
     {
-        if (message is null)
-        {
-            throw new ArgumentNullException(nameof(message));
-        }
+        ArgumentNullException.ThrowIfNull(message);
 
         T? response = await message.Content.ReadFromJsonAsync<T>(options, cancellationToken).ConfigureAwait(false);
 

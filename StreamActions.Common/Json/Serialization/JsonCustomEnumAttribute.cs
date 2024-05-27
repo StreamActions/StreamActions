@@ -21,16 +21,15 @@ namespace StreamActions.Common.Json.Serialization;
 /// <summary>
 /// Provides the JSON string value for the attached enum value, for serialization by <see cref="JsonCustomEnumConverter{T}"/>.
 /// </summary>
+/// <remarks>
+/// Attribute Constructor.
+/// </remarks>
+/// <param name="value">The serialized value of the enum value.</param>
 [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-public sealed class JsonCustomEnumAttribute : Attribute
+public sealed class JsonCustomEnumAttribute(string value) : Attribute
 {
-    #region Public Constructors
 
-    /// <summary>
-    /// Attribute Constructor.
-    /// </summary>
-    /// <param name="value">The serialized value of the enum value.</param>
-    public JsonCustomEnumAttribute(string value) => this.Value = value;
+    #region Public Constructors
 
     #endregion Public Constructors
 
@@ -39,7 +38,7 @@ public sealed class JsonCustomEnumAttribute : Attribute
     /// <summary>
     /// The serialized value of the enum value.
     /// </summary>
-    public string Value { get; init; }
+    public string Value { get; init; } = value;
 
     #endregion Public Properties
 }

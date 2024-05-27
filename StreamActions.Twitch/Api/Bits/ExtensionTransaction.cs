@@ -170,7 +170,7 @@ public sealed record ExtensionTransaction
 
         if (id is not null && id.Any())
         {
-            List<string> ids = new();
+            List<string> ids = [];
             foreach (string transactionId in id)
             {
                 if (!string.IsNullOrWhiteSpace(transactionId))
@@ -179,7 +179,7 @@ public sealed record ExtensionTransaction
                 }
             }
 
-            if (ids.Any())
+            if (ids.Count != 0)
             {
                 queryParams.Add("id", ids);
             }

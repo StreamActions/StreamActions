@@ -212,7 +212,7 @@ public sealed record Subscription
 
         if (userId is not null && userId.Any())
         {
-            List<string> userIds = new();
+            List<string> userIds = [];
             foreach (string pollId in userId)
             {
                 if (!string.IsNullOrWhiteSpace(pollId))
@@ -221,7 +221,7 @@ public sealed record Subscription
                 }
             }
 
-            if (userIds.Any())
+            if (userIds.Count != 0)
             {
                 if (!string.IsNullOrWhiteSpace(after))
                 {
@@ -243,7 +243,7 @@ public sealed record Subscription
                 throw new InvalidOperationException(nameof(before) + " can not be used at the same time as " + nameof(after)).Log(TwitchApi.GetLogger());
             }
 
-            queryParams.Add("before", before );
+            queryParams.Add("before", before);
         }
 
         if (!string.IsNullOrWhiteSpace(after))

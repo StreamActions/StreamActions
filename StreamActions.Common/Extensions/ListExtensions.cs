@@ -35,15 +35,9 @@ public static class ListExtensions
     /// <returns>The value at <paramref name="index"/>; <paramref name="defVal"/> if index is out of range.</returns>
     public static T? GetElementAtOrDefault<T>(this List<T> source, int index, T? defVal = default)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(source);
 
-        if (index < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(index));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
 
         try
         {
@@ -64,10 +58,7 @@ public static class ListExtensions
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static bool IsNullEmptyOrOutOfRange(this List<string> source, int index)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(source);
 
         try
         {
@@ -88,10 +79,7 @@ public static class ListExtensions
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     public static bool IsNullWhiteSpaceOrOutOfRange(this List<string?> source, int index)
     {
-        if (source is null)
-        {
-            throw new ArgumentNullException(nameof(source));
-        }
+        ArgumentNullException.ThrowIfNull(source);
 
         try
         {

@@ -34,15 +34,9 @@ public static class NameValueCollectionExtensions
     /// <exception cref="NotSupportedException">The collection is read-only.</exception>
     public static void Add(this NameValueCollection collection, string? name, IEnumerable<string?> values)
     {
-        if (collection is null)
-        {
-            throw new ArgumentNullException(nameof(collection));
-        }
+        ArgumentNullException.ThrowIfNull(collection);
 
-        if (values is null)
-        {
-            throw new ArgumentNullException(nameof(values));
-        }
+        ArgumentNullException.ThrowIfNull(values);
 
         foreach (string? value in values)
         {

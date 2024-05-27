@@ -343,7 +343,7 @@ public sealed record Video
 
         first = Math.Clamp(first, 1, 100);
 
-        NameValueCollection queryParams = new();
+        NameValueCollection queryParams = [];
 
         if (id is not null && id.Any())
         {

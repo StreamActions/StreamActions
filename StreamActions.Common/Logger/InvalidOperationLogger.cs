@@ -83,10 +83,7 @@ public static partial class InvalidOperationLogger
     /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
     public static ArgumentNullException Log(this ArgumentNullException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
     {
-        if (exception is null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
 
         logger?.ArgumentNull(exception.ParamName, exception.Message, exception, selfLocation, atLocation, addNamespace);
 
@@ -149,10 +146,7 @@ public static partial class InvalidOperationLogger
     /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
     public static ArgumentOutOfRangeException Log(this ArgumentOutOfRangeException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
     {
-        if (exception is null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
 
         logger?.ArgumentOutOfRange(exception.ParamName, exception.ActualValue, exception.Message, exception, selfLocation, atLocation, addNamespace);
 
@@ -211,10 +205,7 @@ public static partial class InvalidOperationLogger
     /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
     public static InvalidOperationException Log(this InvalidOperationException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
     {
-        if (exception is null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
 
         logger?.InvalidOperation(exception.Message, exception, selfLocation, atLocation, addNamespace);
 
@@ -275,10 +266,7 @@ public static partial class InvalidOperationLogger
     /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
     public static ScopeMissingException Log(this ScopeMissingException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
     {
-        if (exception is null)
-        {
-            throw new ArgumentNullException(nameof(exception));
-        }
+        ArgumentNullException.ThrowIfNull(exception);
 
         logger?.ScopeMissing(exception.Scope, exception.Message, exception, selfLocation, atLocation, addNamespace);
 

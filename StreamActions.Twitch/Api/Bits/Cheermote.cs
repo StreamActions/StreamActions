@@ -132,7 +132,7 @@ public sealed record Cheermote
 
         session.RequireToken();
 
-        NameValueCollection queryParams = new();
+        NameValueCollection queryParams = [];
 
         if (!string.IsNullOrWhiteSpace(broadcasterId))
         {

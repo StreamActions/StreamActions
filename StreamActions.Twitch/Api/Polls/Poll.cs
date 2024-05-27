@@ -216,7 +216,7 @@ public sealed record Poll
 
         if (id is not null && id.Any())
         {
-            List<string> ids = new();
+            List<string> ids = [];
             foreach (string pollId in id)
             {
                 if (!string.IsNullOrWhiteSpace(pollId))
@@ -225,7 +225,7 @@ public sealed record Poll
                 }
             }
 
-            if (ids.Any())
+            if (ids.Count != 0)
             {
                 queryParams.Add("id", ids);
             }
