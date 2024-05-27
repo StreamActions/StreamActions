@@ -45,10 +45,10 @@ public sealed record Shoutout
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorManageShoutouts"/>.</exception>
     /// <remarks>
     /// <para>
-    /// <paramref name="fromBroadcasterId"/> must be live and have 1 or more viewers according to Twitch, otherwise, the shoutout fails with <b>400 Bad Request</b>.
+    /// <paramref name="fromBroadcasterId"/> must be live and have 1 or more viewers according to Twitch, otherwise, the shoutout fails with <strong>400 Bad Request</strong>.
     /// </para>
     /// <para>
-    /// <b>Rate Limits</b>: The <paramref name="fromBroadcasterId"/> may send a Shoutout once every 2 minutes.
+    /// <strong>Rate Limits</strong>: The <paramref name="fromBroadcasterId"/> may send a Shoutout once every 2 minutes.
     /// The <paramref name="fromBroadcasterId"/> may only shoutout the same <paramref name="toBroadcasterId"/> once every 60 minutes.
     /// These rate limits are applied regardless of how a shoutout is triggered, either via API or the Twitch website.
     /// </para>

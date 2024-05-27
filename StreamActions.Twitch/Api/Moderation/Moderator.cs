@@ -142,7 +142,7 @@ public sealed record Moderator
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageModerators"/>.</exception>
     /// <remarks>
     /// <para>
-    /// <b>Rate Limits</b>: The broadcaster may add a maximum of 10 moderators within a 10-second window.
+    /// <strong>Rate Limits</strong>: The broadcaster may add a maximum of 10 moderators within a 10-second window.
     /// </para>
     /// <para>
     /// Response Codes:
@@ -212,7 +212,7 @@ public sealed record Moderator
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageModerators"/>.</exception>
     /// <remarks>
     /// <para>
-    /// <b>Rate Limits</b>: The broadcaster may remove a maximum of 10 moderators within a 10-second window.
+    /// <strong>Rate Limits</strong>: The broadcaster may remove a maximum of 10 moderators within a 10-second window.
     /// </para>
     /// <para>
     /// Response Codes:

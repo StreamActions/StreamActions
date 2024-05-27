@@ -58,7 +58,7 @@ public sealed record Announcement
         /// The channel's accent color.
         /// </summary>
         /// <remarks>
-        /// See <b>Profile Accent Color</b> under <i>Profile Settings</i> > <i>Channel and Videos</i> > <i>Brand</i>.
+        /// See <strong>Profile Accent Color</strong> under <em>Profile Settings</em> > <em>Channel and Videos</em> > <em>Brand</em>.
         /// </remarks>
         Primary,
         /// <summary>

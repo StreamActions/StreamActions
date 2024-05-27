@@ -142,7 +142,7 @@ public sealed record VIP
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVips"/>.</exception>
     /// <remarks>
     /// <para>
-    /// <b>Rate Limits</b>: The broadcaster may add a maximum of 10 VIPs within a 10-second window.
+    /// <strong>Rate Limits</strong>: The broadcaster may add a maximum of 10 VIPs within a 10-second window.
     /// </para>
     /// <para>
     /// Response Codes:
@@ -173,7 +173,7 @@ public sealed record VIP
     /// </item>
     /// <item>
     /// <term>425 Too Early</term>
-    /// <description><paramref name="broadcasterId"/> has not completed the <i>Build a Community</i> achievement in the Creator Dashboard.</description>
+    /// <description><paramref name="broadcasterId"/> has not completed the <em>Build a Community</em> achievement in the Creator Dashboard.</description>
     /// </item>
     /// <item>
     /// <term>429 Too Many Requests</term>
@@ -228,7 +228,7 @@ public sealed record VIP
     /// otherwise, if the user is removing their VIP status themselves, the ID in the <paramref name="userId"/> parameter must match the user ID in the access token.
     /// </para>
     /// <para>
-    /// <b>Rate Limits</b>: The broadcaster may remove a maximum of 10 VIPs within a 10-second window.
+    /// <strong>Rate Limits</strong>: The broadcaster may remove a maximum of 10 VIPs within a 10-second window.
     /// </para>
     /// <para>
     /// Response Codes:

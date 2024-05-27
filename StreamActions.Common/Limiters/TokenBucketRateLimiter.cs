@@ -55,7 +55,7 @@ public sealed class TokenBucketRateLimiter
     #region Public Enums
 
     /// <summary>
-    /// Represents the possible DateTime types of <i>headerReset</i> in <see cref="ParseHeaders(WebHeaderCollection, string, string, string)"/>.
+    /// Represents the possible DateTime types of <em>headerReset</em> in <see cref="ParseHeaders(WebHeaderCollection, string, string, string)"/>.
     /// </summary>
     public enum HeaderResetType
     {

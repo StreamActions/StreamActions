@@ -60,14 +60,14 @@ public sealed record Whisper
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.UserManageWhispers"/>.</exception>
     /// <remarks>
     /// <para>
-    /// <paramref name="fromUserId"/> must have a verified phone number (see the <b>Phone Number</b> setting in your Security and Privacy settings).
+    /// <paramref name="fromUserId"/> must have a verified phone number (see the <strong>Phone Number</strong> setting in your Security and Privacy settings).
     /// </para>
     /// <para>
     /// The API may silently drop whispers that it suspects of violating Twitch policies.
-    /// The API does not indicate that it dropped the whisper; it returns <b>204 No Content</b> as if it succeeded.
+    /// The API does not indicate that it dropped the whisper; it returns <strong>204 No Content</strong> as if it succeeded.
     /// </para>
     /// <para>
-    /// <b>Rate Limits</b>: You may whisper to a maximum of 40 unique recipients per day.
+    /// <strong>Rate Limits</strong>: You may whisper to a maximum of 40 unique recipients per day.
     /// Within the per day limit, you may whisper a maximum of 3 whispers per second and a maximum of 100 whispers per minute.
     /// </para>
     /// <para>

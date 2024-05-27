@@ -57,13 +57,13 @@ public sealed record Raid
     /// <remarks>
     /// <para>
     /// When you call the API from a chat bot or extension, the Twitch UX pops up a window at the top of the chat room that identifies the number of viewers in the raid.
-    /// The raid occurs when the broadcaster clicks <b>Raid Now</b> or after the 90-second countdown expires.
+    /// The raid occurs when the broadcaster clicks <strong>Raid Now</strong> or after the 90-second countdown expires.
     /// </para>
     /// <para>
-    /// To determine whether the raid successfully occurred, you must subscribe to the <i>Channel Raid</i> event on EventSub.
+    /// To determine whether the raid successfully occurred, you must subscribe to the <em>Channel Raid</em> event on EventSub.
     /// </para>
     /// <para>
-    /// <b>Rate Limits</b>: The limit is 10 requests within a 10-minute window.
+    /// <strong>Rate Limits</strong>: The limit is 10 requests within a 10-minute window.
     /// </para>
     /// <para>
     /// Response Codes:
@@ -71,8 +71,8 @@ public sealed record Raid
     /// <item>
     /// <term>200 OK</term>
     /// <description>Successfully requested to start a raid.
-    /// To determine whether the raid successfully occurred (that is, the broadcaster clicked <b>Raid Now</b> or the countdown expired),
-    /// you must subscribe to the <i>Channel Raid</i> event on EventSub.</description>
+    /// To determine whether the raid successfully occurred (that is, the broadcaster clicked <strong>Raid Now</strong> or the countdown expired),
+    /// you must subscribe to the <em>Channel Raid</em> event on EventSub.</description>
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
@@ -138,10 +138,10 @@ public sealed record Raid
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRaids"/>.</exception>
     /// <remarks>
     /// <para>
-    /// You can cancel a raid at any point up until the broadcaster clicks <b>Raid Now</b> in the Twitch UX or the 90-second countdown expires.
+    /// You can cancel a raid at any point up until the broadcaster clicks <strong>Raid Now</strong> in the Twitch UX or the 90-second countdown expires.
     /// </para>
     /// <para>
-    /// <b>Rate Limits</b>: The limit is 10 requests within a 10-minute window.
+    /// <strong>Rate Limits</strong>: The limit is 10 requests within a 10-minute window.
     /// </para>
     /// <para>
     /// Response Codes:
