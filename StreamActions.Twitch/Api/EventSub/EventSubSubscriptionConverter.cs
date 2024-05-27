@@ -29,31 +29,8 @@ namespace StreamActions.Twitch.Api.EventSub;
 /// </summary>
 public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSubSubscription>
 {
-    /// <summary>
-    /// Map of <see cref="EventSubSubscription.Type"/> to <see cref="EventSubCondition"/>.
-    /// </summary>
-    private static readonly ImmutableDictionary<string, Type> _subscriptionTypesToConditions = new Func<ImmutableDictionary<string, Type>>(() =>
-    {
-        Dictionary<string, Type> subscriptionTypesToConditions = [];
+    #region Protected Methods
 
-        foreach (Type type in Assembly.GetExecutingAssembly().GetTypes())
-        {
-            if (typeof(IEventSubType).IsAssignableFrom(type) && type.IsClass && !type.IsAbstract)
-            {
-                string? eventSubType = (string?)type.GetProperty(nameof(IEventSubType.Type), BindingFlags.Static)?.GetValue(null);
-                Type? eventSubConditionType = (Type?)type.GetProperty(nameof(IEventSubType.EventSubConditionType))?.GetValue(null);
-
-                if (eventSubType is not null && eventSubConditionType is not null)
-                {
-                    subscriptionTypesToConditions.Add(eventSubType, eventSubConditionType);
-                }
-            }
-        }
-
-        return subscriptionTypesToConditions.ToImmutableDictionary();
-    })();
-
-    protected override bool ShouldUseDefaultConversion(string propertyName, string jsonPropertyName) => propertyName is not nameof(EventSubSubscription.Condition) && base.ShouldUseDefaultConversion(propertyName, jsonPropertyName);
     protected override void Read(ref Utf8JsonReader reader, Utf8JsonReader newReader, Type typeToConvert, JsonSerializerOptions options, EventSubSubscription obj, string propertyName, string jsonPropertyName)
     {
         if (obj is null)
@@ -87,5 +64,38 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
             }
         }
     }
+
+    protected override bool ShouldUseDefaultConversion(string propertyName, string jsonPropertyName) => propertyName is not nameof(EventSubSubscription.Condition) && base.ShouldUseDefaultConversion(propertyName, jsonPropertyName);
+
     protected override void Write(Utf8JsonWriter writer, EventSubSubscription obj, JsonSerializerOptions options, string propertyName, string jsonPropertyName, object? value) => this.DefaultWrite(writer, jsonPropertyName, value, options);
+
+    #endregion Protected Methods
+
+    #region Private Fields
+
+    /// <summary>
+    /// Map of <see cref="EventSubSubscription.Type"/> to <see cref="EventSubCondition"/>.
+    /// </summary>
+    private static readonly ImmutableDictionary<string, Type> _subscriptionTypesToConditions = new Func<ImmutableDictionary<string, Type>>(() =>
+    {
+        Dictionary<string, Type> subscriptionTypesToConditions = [];
+
+        foreach (Type type in Assembly.GetExecutingAssembly().GetTypes())
+        {
+            if (typeof(IEventSubType).IsAssignableFrom(type) && type.IsClass && !type.IsAbstract)
+            {
+                string? eventSubType = (string?)type.GetProperty(nameof(IEventSubType.Type), BindingFlags.Static)?.GetValue(null);
+                Type? eventSubConditionType = (Type?)type.GetProperty(nameof(IEventSubType.EventSubConditionType))?.GetValue(null);
+
+                if (eventSubType is not null && eventSubConditionType is not null)
+                {
+                    subscriptionTypesToConditions.Add(eventSubType, eventSubConditionType);
+                }
+            }
+        }
+
+        return subscriptionTypesToConditions.ToImmutableDictionary();
+    })();
+
+    #endregion Private Fields
 }

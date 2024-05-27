@@ -288,6 +288,7 @@ public sealed record ChannelPointsReward
     /// </para>
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1862:Use the 'StringComparison' method overloads to perform case-insensitive string comparisons", Justification = "Intentional")]
     public static async Task<ResponseData<ChannelPointsReward>?> CreateCustomReward(TwitchSession session, string broadcasterId, ChannelPointsRewardCreationParameters parameters)
     {
         if (session is null)
