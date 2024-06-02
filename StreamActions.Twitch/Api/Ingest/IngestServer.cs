@@ -27,8 +27,8 @@ namespace StreamActions.Twitch.Api.Ingest;
 /// Sends and represents a response element for a request for ingest servers.
 /// </summary>
 [ETag("Ingest", 72,
-    "https://dev.twitch.tv/docs/video-broadcast/reference", "93b471e8222a9fbd55f7782fb258c096c1b2e8562faa9b618ff7d9891bee97ae",
-    "2023-01-22T13:58Z", "TwitchReferenceParser", [])]
+    "https://dev.twitch.tv/docs/video-broadcast/reference", "ECC44F51C6DE913DB8F135D5AB4CDD4171B646A790CBBC2B476BE9259CDFB4E5",
+    "2024-06-02T20:15Z", "TwitchReferenceParser", [])]
 public sealed record IngestServer
 {
     /// <summary>
