@@ -23,13 +23,29 @@ Find ETag attributes in a fodler structure and return their parameters
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 
 etagpattern = re.compile(r"(?s)\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\"\s*,\s*(?P<issue>[0-9]+)\s*,\s*\"(?P<url>[^\"]+)\"\s*,\s*\"(?P<hash>[^\"]+)\"\s*,\s*\"(?P<date>[^\"]+)\"\s*,\s*\"(?P<parser>[^\"]+)\"\s*,\s*[{\[](?P<parameters>.*?)[}\]]\s*\)\]")
 parampattern = re.compile(r"(?s)(\"(?P<param>([^\"]|\\\")+)\"(,|$))")
 
-def testfile(file):
+def testfolder(folder: str | Path):
+    """Tests if any files in the folder contain an ETag attribute and returns the results
+
+    folder: The folder to check
+
+    returns: A dict of files where at least 1 ETag attribute was found. The key is the filename relative to ETagFinder.py, the value is the output of testfile(file)
+    """
+    ret = {}
+    execpath = os.path.dirname(os.path.realpath(__file__))
+    for file in Path(folder).rglob("*.cs"):
+        data = testfile(file)
+        if data is not None:
+            ret[str(file.absolute().relative_to(execpath, walk_up=True))] = data
+    return ret
+
+def testfile(file: str | Path):
     """Tests if the file contains an ETag attribute and returns the result
 
     file: The file to check
@@ -77,11 +93,7 @@ if __name__ == "__main__":
     parser.add_argument("--folder", action="store", help="The folder to search")
     parser.add_argument("--out", action="store", help="Output as JSON to the specified file instead of STDOUT")
     args = parser.parse_args()
-    ret = {}
-    for file in Path(args.folder).rglob("*.cs"):
-        data = testfile(file)
-        if data is not None:
-            ret[str(file.absolute().relative_to(__file__, walk_up=True))] = data
+    ret = testfolder(args.folder)
     if args.out == None:
         print(json.dumps(ret, indent=4))
     else:
