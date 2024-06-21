@@ -19,30 +19,25 @@
 
 import argparse
 import hashlib
-import StripData
-
-#python3 Hash.py -stripblank -strip -findfirst '<div class="main">' -findlast '<div class="subscribe-footer">' -remre 'cloudcannon[^"]*' -rem '<a href="/docs/product-lifecycle"><span class="pill pill-new">NEW</span></a>' '<a href="/docs/product-lifecycle"><span class="pill pill-beta">BETA</span></a>' -file helix_2022-05-12.htm
 
 def hash(args, shouldReturn=False):
     """Performs a SHA3-256 hash of the input file
 
     args: A dict containing the args returned by argparse; args.file is always required
     shouldReturn:
-        If `False` (default), the hash is printed if the file contains content after any stripdata transformation;
+        If `False` (default), the hash is printed if the file contains content;
           otherwise, the string `"nocontent"` is printed if the file was empty or didn't exist
 
-        If `True`, the hash is returned if the file contains content after any stripdata transformation;
+        If `True`, the hash is returned if the file contains content;
           otherwise, `None` if the file was empty or didn't exist
 
-    returns: The hash if the file contains content after any stripdata transformations, or `None`, if shouldReturn is `True`
+    returns: The hash if the file contains content, or `None`, if shouldReturn is `True`
     """
     try:
         with open(args.file, encoding='utf-8') as f:
             lines = f.readlines()
     except:
         lines = []
-
-    lines = StripData.stripdata(args, lines)
 
     try:
         h = hashlib.sha3_256()
@@ -64,11 +59,8 @@ def hash(args, shouldReturn=False):
             print(digest)
 
 def parseargs(inargs):
-    parser = argparse.ArgumentParser(usage='%(prog)s [options] -file FILE')
-    coregroup = parser.add_argument_group('Core')
-    coregroup.add_argument('-file', help='Input file', required=True)
-    inputgroup = parser.add_argument_group('Input')
-    StripData.addargparse(inputgroup)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-file', help='Input file', required=True)
     args, _ = parser.parse_known_args(args=inargs)
     return args
 
