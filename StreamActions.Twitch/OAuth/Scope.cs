@@ -443,6 +443,12 @@ public sealed record Scope
     public static readonly Scope UserReadSubscriptions = new("user:read:subscriptions", "View if an authorized user is subscribed to specific channels.");
 
     /// <summary>
+    /// Send live stream chat messages using Send Chat Message API.
+    /// </summary>
+    /// <value>user:write:chat</value>
+    public static readonly Scope UserWriteChat = new("user:write:chat", "Send live stream chat messages using Send Chat Message API.");
+
+    /// <summary>
     /// Send whisper messages.
     /// </summary>
     /// <value>whispers:edit</value>
