@@ -20,21 +20,15 @@
 import argparse
 import hashlib
 
-def hash(args, shouldReturn=False):
+def hash(file):
     """Performs a SHA3-256 hash of the input file
 
-    args: A dict containing the args returned by argparse; args.file is always required
-    shouldReturn:
-        If `False` (default), the hash is printed if the file contains content;
-          otherwise, the string `"nocontent"` is printed if the file was empty or didn't exist
+    file: The file to hash
 
-        If `True`, the hash is returned if the file contains content;
-          otherwise, `None` if the file was empty or didn't exist
-
-    returns: The hash if the file contains content, or `None`, if shouldReturn is `True`
+    returns: The hash if the file contains content; otherwise `None`
     """
     try:
-        with open(args.file, encoding='utf-8') as f:
+        with open(file, encoding='utf-8') as f:
             lines = f.readlines()
     except:
         lines = []
@@ -48,23 +42,15 @@ def hash(args, shouldReturn=False):
         digest = None
 
     if len(lines) == 0 or digest == None or digest == 'a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a':
-        if shouldReturn:
-            return None
-        else:
-            print('nocontent')
+        return None
     else:
-        if shouldReturn:
-            return digest
-        else:
-            print(digest)
+        return digest
 
-def parseargs(inargs):
+def parseargs():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-file', help='Input file', required=True)
-    args, _ = parser.parse_known_args(args=inargs)
-    return args
+    parser.add_argument('--file', help='Input file', required=True)
+    return parser.parse_args()
 
 if __name__ == '__main__':
-    args = parseargs(None)
-    hash(args)
-
+    args = parseargs()
+    print(hash(args.file))
