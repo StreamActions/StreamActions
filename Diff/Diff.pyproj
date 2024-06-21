@@ -5,7 +5,8 @@
     <ProjectGuid>109cc1ee-b198-4bf7-bd96-ebbd39d75da9</ProjectGuid>
     <ProjectHome>
     </ProjectHome>
-    <StartupFile>Diff.py</StartupFile>
+    <StartupFile>
+    </StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -32,10 +33,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Diff.py" />
     <Compile Include="Hash.py" />
     <Compile Include="parsers\TwitchReferenceParser.py" />
-    <Compile Include="StripData.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="requirements.txt" />
