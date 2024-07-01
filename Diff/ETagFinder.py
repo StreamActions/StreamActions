@@ -91,7 +91,7 @@ def testfile(filePath: str | Path):
     return matches
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Find ETag attributes in a fodler structure and return their parameters")
+    parser = argparse.ArgumentParser(description="Find ETag attributes in a folder structure and return their parameters")
     parser.add_argument("--folder", action="store", help="The folder to search")
     parser.add_argument("--out", action="store", help="Output to the specified file instead of STDOUT")
     args = parser.parse_args()

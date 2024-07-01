@@ -23,6 +23,7 @@ Parse a Twitch API Reference page into a format that can be diffed
 
 import argparse
 from bs4 import BeautifulSoup
+from difflib import SequenceMatcher
 import json
 import requests
 
@@ -368,6 +369,89 @@ def diffWithFiles(lhsPath:str, rhsPath:str) -> dict:
         with open(rhsPath, "r", encoding="utf8") as json_fileR:
             return diff(json.load(json_fileL.read()), json.load(json_fileR.read()))
 
+def diffobj(lhs:any, rhs:any) -> dict:
+    """
+    Diff two objects
+
+    Args:
+        lhs (any): The "original" object in the diff
+        rhs (any): The "new/modified" object in the diff
+
+    Returns:
+        dict: A dict containing the diff data, as described in diff(dict, dict)
+    """
+    if isinstance(lhs, str) and rhs == None:
+            return {"_operation": "remove", "lhs": lhs}
+    elif isinstance(rhs, str) and lhs == None:
+            return {"_operation": "add", "rhs": rhs}
+    elif isinstance(lhs, dict) and rhs == None:
+            lhs["_operation"] = "remove"
+            return lhs
+    elif isinstance(rhs, dict) and lhs == None:
+            rhs["_operation"] = "add"
+            return rhs
+    elif rhs == lhs:
+        return {"_operation": "none"}
+    elif isinstance(lhs, dict) and isinstance(rhs, dict):
+        ret = {}
+        foundk = []
+        hasOp = False
+        for lk,lv in lhs.items():
+            if lk in rhs:
+                foundk.append(lk)
+                res = diffobj(lv, rhs[lk])
+                hasOp = True
+            else:
+                res = {"_operation": "remove"}
+                hasOp = True
+            if res["_operation"] != "none":
+                ret[lk] = res
+                hasOp = True
+        for rk in rhs:
+            if rk not in foundk:
+                ret[rk] = {"_operation": "add"}
+                hasOp = True
+        if hasOp == False:
+            ret["_operation"] = "none"
+        return ret
+    elif isinstance(lhs, str) and isinstance(rhs, str):
+        seqm = SequenceMatcher(None, lhs, rhs)
+        lhs_str = []
+        rhs_str = []
+        combined_str = []
+        hasIns = False
+        hasDel = False
+        for opcode, a0, a1, b0, b1 in seqm.get_opcodes():
+            if opcode == "equal":
+                lhs_str.append(seqm.a[a0:a1])
+                rhs_str.append(seqm.a[a0:a1])
+                combined_str.append(seqm.a[a0:a1])
+            elif opcode == "insert":
+                rhs_str.append("<ins>" + seqm.b[b0:b1] + "</ins>")
+                combined_str.append("<ins>" + seqm.b[b0:b1] + "</ins>")
+                hasIns = True
+            elif opcode == "delete":
+                lhs_str.append("<del>" + seqm.a[a0:a1] + "</del>")
+                combined_str.append("<del>" + seqm.a[a0:a1] + "</del>")
+                hasDel = True
+            elif opcode == "replace":
+                lhs_str.append("<del>" + seqm.a[a0:a1] + "</del>")
+                rhs_str.append("<ins>" + seqm.b[b0:b1] + "</ins>")
+                combined_str.append("<del>" + seqm.a[a0:a1] + "</del>")
+                combined_str.append("<ins>" + seqm.b[b0:b1] + "</ins>")
+                hasIns = True
+                hasDel = True
+        if hasIns:
+            if hasDel:
+                return {"_operation": "replace", "lhs": "".join(lhs_str), "rhs": "".join(rhs_str), "combined": "".join(combined_str)}
+            else:
+                return {"_operation": "insert", "rhs": "".join(rhs_str)}
+        elif hasDel:
+            return {"_operation": "delete", "lhs": "".join(lhs_str)}
+        else:
+            return {"_operation": "none"}
+    return {"_operation": "unknown", "lhs": lhs, "rhs": rhs}
+
 def diff(lhs:dict, rhs:dict) -> dict:
     """
     Diff two dicts created by parse(str)
@@ -438,6 +522,8 @@ def diff(lhs:dict, rhs:dict) -> dict:
     - insert: Insert the text that is surrounded by the <ins></ins> tags. Contains only sub-key "rhs" from the "replace" example. May contain only enough surrounding text to provide appropriate context
     - delete: Remove the text that is surrounded by the <del></del> tags. Contains only sub-key "lhs" from the "replace" example. May contain only enough surrounding text to provide appropriate context
     - replace: Replace the text that is surrounded by the <del></del> tags with the text that is surrounded by the <ins></ins> tags. See example and explanation for how this is represented
+    - none: No operation. Should not normally occur
+    - unknown: Unable to determine operation. Should not normally occur
 
     Args:
         lhs (dict): A dict created by a call to parse(str). This will be the "original" file in the diff
@@ -446,6 +532,83 @@ def diff(lhs:dict, rhs:dict) -> dict:
     Returns:
         dict: A dict containing the diff data, as described above
     """
+    diff = {}
+    foundk = []
+    for lk,larr in lhs["toc"].items():
+        if lk in rhs["toc"]:
+            foundk.append(lk)
+            rarr = rhs["toc"][lk]
+            founde = []
+            for lv in larr:
+                for rv in rarr:
+                    if lv["endpoint"] == rv["endpoint"]:
+                        founde.append(lv["endpoint"])
+                        if lv["description"] != rv["description"]:
+                            if "toc" not in diff:
+                                diff["toc"] = {}
+                            if lk not in diff["toc"]:
+                                diff["toc"][lk] = [];
+                            diff["toc"][lk].append({"endpoint": lv["endpoint"], "description": diffobj(lv["description"], rv["description"])});
+            for lv in larr:
+                if lv["endpoint"] not in founde:
+                    if "toc" not in diff:
+                        diff["toc"] = {}
+                    if lk not in diff["toc"]:
+                        diff["toc"][lk] = [];
+                    diff["toc"][lk].append({"endpoint": lv["endpoint"], "_operation": "remove"})
+            for rv in rarr:
+                if rv["endpoint"] not in founde:
+                    if "toc" not in diff:
+                        diff["toc"] = {}
+                    if lk not in diff["toc"]:
+                        diff["toc"][lk] = [];
+                    rv["_operation"] = "add"
+                    diff["toc"][lk].append(rv)
+        else:
+            if "toc" not in diff:
+                diff["toc"] = {}
+            diff["toc"][lk] = {"_operation": "remove"}
+    for rk in rhs["toc"]:
+        if rk not in foundk:
+            if "toc" not in diff:
+                diff["toc"] = {}
+            diff["toc"][rk] = {"_operation": "add"}
+    foundk = []
+    for lk,lv in lhs["endpoints"].items():
+        if lk in rhs["endpoints"]:
+            foundk.append(lk)
+            rv = rhs["endpoints"][lk]
+            hasOp = False
+            ret = {}
+            founddk = []
+            for ldk,ldv in lv.items():
+                if ldk in rv:
+                    founddk.append(ldk)
+                    rdv = rv[ldk]
+                    if ldv != rdv:
+                        ret[ldk] = diffobj(ldv, rdv)
+                        hasOp = True
+                else:
+                    ret[ldk] = {"_operation": "remove"}
+                    hasOp = True
+            for rdk in rv:
+                if rdk not in founddk:
+                    ret[rdk] = {"_operation": "add"}
+                    hasOp = True
+            if hasOp == True:
+                if "endpoints" not in diff:
+                    diff["endpoints"] = {}
+                diff["endpoints"][lk] = ret
+        else:
+            if "endpoints" not in diff:
+                diff["endpoints"] = {}
+            diff["endpoints"][lk] = {"_operation": "remove"}
+    for rk in rhs["endpoints"]:
+        if rk not in foundk:
+            if "endpoints" not in diff:
+                diff["endpoints"] = {}
+            diff["endpoints"][rk] = {"_operation": "add"}
+    return diff
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse a Twitch API Reference page into a format that can be diffed")
