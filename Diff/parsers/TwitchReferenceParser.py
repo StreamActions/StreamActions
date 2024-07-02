@@ -334,7 +334,7 @@ def diffWithFileL(lhsPath:str, rhs:dict) -> dict:
         dict: A dict containing the diff data (see diff(dict, dict))
     """
     with open(lhsPath, "r", encoding="utf8") as json_file:
-        return diff(json.load(json_file.read()), rhs)
+        return diff(json.load(json_file), rhs)
 
 def diffWithFileR(lhs:dict, rhsPath:str) -> dict:
     """
@@ -350,7 +350,7 @@ def diffWithFileR(lhs:dict, rhsPath:str) -> dict:
         dict: A dict containing the diff data (see diff(dict, dict))
     """
     with open(rhsPath, "r", encoding="utf8") as json_file:
-        return diff(lhs, json.load(json_file.read()))
+        return diff(lhs, json.load(json_file))
 
 def diffWithFiles(lhsPath:str, rhsPath:str) -> dict:
     """
@@ -367,7 +367,7 @@ def diffWithFiles(lhsPath:str, rhsPath:str) -> dict:
     """
     with open(lhsPath, "r", encoding="utf8") as json_fileL:
         with open(rhsPath, "r", encoding="utf8") as json_fileR:
-            return diff(json.load(json_fileL.read()), json.load(json_fileR.read()))
+            return diff(json.load(json_fileL), json.load(json_fileR))
 
 def diffobj(lhs:any, rhs:any) -> dict:
     """
