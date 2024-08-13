@@ -25,7 +25,7 @@ namespace StreamActions.Common.Limiters;
 /// <summary>
 /// Handles rate limits using a token bucket which trickles back tokens over a set period.
 /// </summary>
-public sealed class TokenBucketRateLimiter
+public sealed class TokenBucketRateLimiter : IDisposable
 {
     #region Public Constructors
 
@@ -450,6 +450,11 @@ public sealed class TokenBucketRateLimiter
     /// </summary>
     private int _remaining = 1;
 
+    /// <summary>
+    /// Ensures disposal only occurs once.
+    /// </summary>
+    private bool _disposedValue;
+
     #endregion Private Fields
 
     #region Private Methods
@@ -629,6 +634,29 @@ public sealed class TokenBucketRateLimiter
         {
             throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
         }
+    }
+
+    /// <summary>
+    /// Actually disposes of resources.
+    /// </summary>
+    /// <param name="disposing">If <see langword="true"/>, managed objects are disposed.</param>
+    private void Dispose(bool disposing)
+    {
+        if (!this._disposedValue)
+        {
+            if (disposing)
+            {
+                this._rwl.Dispose();
+            }
+
+            this._disposedValue = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        this.Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 
     #endregion Private Methods

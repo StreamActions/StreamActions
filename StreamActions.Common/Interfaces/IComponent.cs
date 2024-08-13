@@ -16,8 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Collections.Immutable;
-
 namespace StreamActions.Common.Interfaces;
 
 /// <summary>
@@ -35,7 +33,7 @@ public interface IComponent
     /// <summary>
     /// A collection of <see cref="Guid"/> of other components that this component is dependent on.
     /// </summary>
-    public static IReadOnlyCollection<Guid>? Dependencies => ImmutableArray<Guid>.Empty;
+    public static IReadOnlyCollection<Guid>? Dependencies => [];
 
     /// <summary>
     /// A description of the component.
