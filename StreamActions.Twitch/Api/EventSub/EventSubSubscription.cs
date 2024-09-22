@@ -26,7 +26,6 @@ using System.Text.Json.Serialization;
 using System.Collections.Specialized;
 using StreamActions.Common.Net;
 using System.Net.Http.Json;
-using System.Runtime.CompilerServices;
 
 namespace StreamActions.Twitch.Api.EventSub;
 
