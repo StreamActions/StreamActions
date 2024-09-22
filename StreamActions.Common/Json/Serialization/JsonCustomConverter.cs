@@ -269,7 +269,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     }
 
     /// <summary>
-    /// Maps the memebrs of <typeparamref name="T"/> to <see cref="JsonPropertyNameAttribute"/>.
+    /// Maps the members of <typeparamref name="T"/> to <see cref="JsonPropertyNameAttribute"/>.
     /// </summary>
     /// <remarks>
     /// Only members which have <see cref="JsonPropertyNameAttribute"/> are included in the returned dictionary.
