@@ -926,6 +926,7 @@ dotnet_diagnostic.CA2254.severity = suggestion
 dotnet_diagnostic.CA2256.severity = warning
 dotnet_diagnostic.CA2257.severity = warning
 dotnet_diagnostic.CA2258.severity = warning
+dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
 
 
 [*.vb]
