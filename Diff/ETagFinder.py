@@ -71,7 +71,7 @@ def testfile(filePath: str | Path):
         ...
     ]
     """
-    with open(filePath, "r", encoding="utf8") as file:
+    with open(filePath, "r", encoding="utf8", errors="ignore") as file:
         lines = file.read()
     m = etagpattern.search(lines)
     if m is None:
@@ -92,7 +92,7 @@ def testfile(filePath: str | Path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Find ETag attributes in a folder structure and return their parameters")
-    parser.add_argument("--folder", action="store", help="The folder to search")
+    parser.add_argument("--folder", action="store", help="The folder to search", required=True)
     parser.add_argument("--out", action="store", help="Output to the specified file instead of STDOUT")
     args = parser.parse_args()
     ret = testfolder(args.folder)
