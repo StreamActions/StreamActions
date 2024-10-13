@@ -1,0 +1,214 @@
+name: Update ETag Issues
+on:
+  schedule:
+    - cron: '11 4 * * 0,2,4'
+  workflow_dispatch:
+    inputs:
+        import:
+            description: Import an existing json output from a parser
+            required: true
+            default: false
+            type: boolean
+        importUrl:
+            description: The URL to import from
+            required: false
+            default: ''
+            type: string
+        importName:
+            description: Friendly name from ETagAttribute for the imported json
+            required: false
+            default: ''
+            type: string
+        diff:
+            description: Diff the cache with the available ETags and update issues
+            required: true
+            default: true
+            type: boolean
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  importjsonfile:
+    name: Import JSON File
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.import }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+            path: .cache
+            key: etag
+      - name: Check Inputs
+        env:
+            URL: ${{ inputs.importUrl }}
+            NAME: ${{ inputs.importName }}
+        run: |
+            if [ -z "${URL}" ] && [ -z "${NAME}" ]; then
+                echo "Missing URL and NAME"
+                exit 1;
+            elif [ -z "${URL}" ]; then
+                echo "Missing URL"
+                exit 1;
+            elif [ -z "${NAME}" ]; then
+                echo "Missing NAME"
+                exit 1;
+            fi
+      - name: Download File
+        env:
+            URL: ${{ inputs.importUrl }}
+            NAME: ${{ inputs.importName }}
+        run: |
+            NAME=$(echo $NAME | jq -Rj @uri)
+            mkdir -p .cache
+            wget -O ".cache/$NAME" "$URL"
+  diff:
+    name: Diff cache with available ETags and update issues
+    if: ${{ github.repository == 'StreamActions/StreamActions' && (github.event_name != 'workflow_dispatch' || inputs.diff) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.x'
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+            path: .cache
+            key: etag
+      - name: Run diffs
+        uses: actions/github-script@v7
+        with:
+            script: |
+                core.info('Preparing...');
+                const fs = require('fs');
+                const issuePattern = /(\[(?<Check>[ x])\] )?\[(?<Name>[^\]]+)\]\((?<URL>[^\)]+)\)/
+
+                await fs.mkdir('./.output');
+
+                core.info('Finding ETags...');
+                await exec.exec('python', ['./Diff/ETagFinder.py', '--folder', '.', '--out', './.output/etags.json']);
+
+                let etags = JSON.parse(fs.readFileSync('./.output/etags.json', 'utf8'))
+
+                core.info('Found ' + Object.keys(etags).length + ' ETags');
+                for (let etag of etags) {
+                    core.startGroup(etag.friendlyname);
+                    let name = encodeURIComponent(etag.friendlyname);
+                    try {
+                        fs.accessSync('./Diff/parsers/' + etag.parser + '.py')
+                    } catch (e) {
+                        core.warning('Parser ' + etag.parser + ' not found, skipping...')
+                        core.endGroup()
+                        continue;
+                    }
+
+                    let parameters = ['--url', etag.url, '--out', './.output/' + name + '.json'];
+                    let shouldDiff = false;
+                    try {
+                        fs.accessSync('./.cache/' + name + '.json')
+                        parameters = parameters.concat(['--rhs', './.cache/' + name + '.json', '--diffout', './.output/' + name + '.diff.json']);
+                        shouldDiff = true;
+                    } catch (e) {
+                        core.warning('Base file not found, will not diff')
+                    }
+
+                    parameters = parameters.concat(etag.parameters)
+
+                    core.info('Running parser ' + etag.parser + '...');
+                    let {exitCode, stderr} = await exec.getExecOutput('python', parameters);
+
+                    if (exitCode !== 0) {
+                        core.error('Encountered error running parser, skipping...');
+                        core.error(parameters);
+                        core.error(stderr);
+                        core.endGroup()
+                        continue;
+                    }
+
+                    if (shouldDiff) {
+                        let diff = JSON.parse(fs.readFileSync('./.output/etags.json', 'utf8'))
+                        if (Object.keys(diff).length === 0) {
+                            console.info('No diff found, skipping issue update...');
+                        } else {
+                            console.info('Downloading issue ' + etag.issue + '...');
+                            let {status, data: issue} = await github.rest.issues.get({
+                                owner: context.repo.owner,
+                                repo: context.repo.repo,
+                                issue_number: etag.issue
+                            });
+
+                            if (status !== 200) {
+                                console.warning('Issue ' + etag.issue + ' not found, skipping...');
+                                core.endGroup();
+                                continue;
+                            }
+
+                            let body = {
+                                header: [],
+                                data: {}
+                            };
+
+                            let section = '__HEADER';
+                            let category = '__header';
+                            for (let line of issue.body.split('\n')) {
+                                if (line.startsWith('# ')) {
+                                    issuePattern.lastIndex = 0;
+                                    let match = issuePattern.exec(line.substring(2));
+                                    if (match === null) {
+                                        core.warning('Found non-conforming section header, skipping...');
+                                        continue;
+                                    }
+                                    section = match.groups.Name;
+                                    let url = match.groups.URL;
+                                    if (!body.data.hasOwnProperty(section)) {
+                                        body.data[section] = {'__header': [], '__url': url, '__etag': '', '__date': ''};
+                                    }
+                                    category = '__header';
+                                } else if (line.startsWith('ETag: ') && section !== '__HEADER' && category === '__header') {
+                                    body.data[section]['__etag'] = line.substring(6);
+                                } else if (line.startsWith('Date: ') && section !== '__HEADER' && category === '__header') {
+                                    body.data[section]['__date'] = line.substring(6);
+                                } else if (line.startsWith('### ') && section !== '__HEADER') {
+                                    category = line.substring(4);
+                                    if (!body.data[section].hasOwnProperty(category)) {
+                                        body.data[section][category] = {};
+                                    }
+                                } else if (line.startsWith('- ') && section !== '__HEADER' && category !== '__header') {
+                                    issuePattern.lastIndex = 0;
+                                    let match = issuePattern.exec(line.substring(2));
+                                    if (match === null) {
+                                        core.warning('Found non-conforming item, skipping...');
+                                        continue;
+                                    }
+                                    let check = match.groups.Check;
+                                    let name = match.groups.Name;
+                                    let url = match.groups.URL;
+                                    if (!body.data[section][category].hasOwnProperty(name)) {
+                                        body.data[section][category][name] = {};
+                                    }
+                                    body.data[section][category][name].checked = check === 'x';
+                                    body.data[section][category][name].url = url;
+                                } else if (section !== '__HEADER' && category === '__header') {
+                                    body.data[section]['__header'].push(line);
+                                } else if (section === '__HEADER') {
+                                    body.header.push(line);
+                                } else {
+                                    core.warning('Found random line, skippng...' );
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+
+                    core.info('Updating base file...');
+                    fs.renameSync('./.output/' + name + '.json', './.output/' + name + '.diff.json');
+
+                    core.endGroup()
+                }
