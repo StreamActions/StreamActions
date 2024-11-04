@@ -132,10 +132,17 @@ jobs:
                         continue;
                     }
 
+                    let {stdout} = await exec.getExecOutput('sha256sum', ['./.output/' + name + '.json']);
+                    let sha = stdout.split(' ')[0].trim().toUpperCase()
+                    let date = new Date().toISOString().substring(0, d.lastIndexOf(':')) + d.substring(d.length - 1);
+
                     if (shouldDiff) {
                         let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'))
+                        let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'))
                         if (Object.keys(diff).length === 0) {
                             console.info('No diff found, skipping issue update...');
+                        } elseif (Object.keys(newData).length === 0) {
+                            console.info('No data found, skipping issue update...');
                         } else {
                             console.info('Downloading issue ' + etag.issue + '...');
                             let {status, data: issue} = await github.rest.issues.get({
@@ -208,6 +215,36 @@ jobs:
                                 }
                             }
                             core.debug(JSON.stringify(body));
+                            core.debug(JSON.stringify(diff));
+                            let section = etag.friendlyname;
+                            if (!body.data.hasOwnProperty(section)) {
+                                body.data[section] = {'__header': [], '__url': etag.url, '__etag': '', '__date': ''};
+                            }
+                            let diffKeys = Object.keys(diff['endpoints']);
+                            if (diffKeys.length > 0) {
+                                body.data[section]['__etag'] = sha;
+                                body.data[section]['__date'] = date;
+                                for (let category of Object.keys(newData.toc)) {
+                                    if (!body.data[section].hasOwnProperty(category)) {
+                                        body.data[section][category] = {};
+                                    }
+                                    for (let endpoint of newData.toc[category]) {
+                                        if (!body.data[section][category].hasOwnProperty(endpoint.endpoint)) {
+                                            body.data[section][category][endpoint.endpoint] = {'checked': false, 'url': ''};
+                                        }
+                                    }
+                                }
+                                for (let endpoint of diffKeys) {
+                                    for (let category in Object.keys(body.data[section])) {
+                                        if (body.data[section][category].hasOwnProperty(endpoint)) {
+                                            body.data[section][category][endpoint].checked = false;
+                                            if (newData.endpoints.hasOwnProperty(endpoint) && newData.endpoints[endpoint].slug !== null) {
+                                                body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             let newBody = [];
                             for (let line of body.header) {
                                 newBody.push(line);
@@ -257,7 +294,7 @@ jobs:
                     }
 
                     core.info('Updating base file...');
-                    fs.renameSync('./.output/' + name + '.json', './.output/' + name + '.diff.json');
+                    fs.renameSync('./.output/' + name + '.json', './.cache/' + name + '.json');
 
                     core.endGroup()
                 }
