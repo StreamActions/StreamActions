@@ -133,7 +133,7 @@ jobs:
                     }
 
                     if (shouldDiff) {
-                        let diff = JSON.parse(fs.readFileSync('./.output/etags.json', 'utf8'))
+                        let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'))
                         if (Object.keys(diff).length === 0) {
                             console.info('No diff found, skipping issue update...');
                         } else {
@@ -163,6 +163,7 @@ jobs:
                                     let match = issuePattern.exec(line.substring(2));
                                     if (match === null) {
                                         core.warning('Found non-conforming section header, skipping...');
+                                        core.debug(line);
                                         continue;
                                     }
                                     section = match.groups.Name;
@@ -185,6 +186,7 @@ jobs:
                                     let match = issuePattern.exec(line.substring(2));
                                     if (match === null) {
                                         core.warning('Found non-conforming item, skipping...');
+                                        core.debug(line);
                                         continue;
                                     }
                                     let check = match.groups.Check;
@@ -193,7 +195,7 @@ jobs:
                                     if (!body.data[section][category].hasOwnProperty(name)) {
                                         body.data[section][category][name] = {};
                                     }
-                                    body.data[section][category][name].checked = check === 'x';
+                                    body.data[section][category][name].checked = check.toLowerCase() === 'x';
                                     body.data[section][category][name].url = url;
                                 } else if (section !== '__HEADER' && category === '__header') {
                                     body.data[section]['__header'].push(line);
@@ -201,8 +203,55 @@ jobs:
                                     body.header.push(line);
                                 } else {
                                     core.warning('Found random line, skippng...' );
+                                    core.debug(line);
                                     continue;
                                 }
+                            }
+                            core.debug(JSON.stringify(body));
+                            let newBody = [];
+                            for (let line of body.header) {
+                                newBody.push(line);
+                            }
+                            for (let section of Object.keys(body.data)) {
+                                let sdata = body.data[section];
+                                newBody.push('');
+                                newBody.push('# [' + section + '](' + sdata['__url'] + ')');
+                                if (sdata['__etag'].length > 0) {
+                                    newBody.push('ETag: ' + sdata['__etag']);
+                                }
+                                if (sdata['__date'].length > 0) {
+                                    newBody.push('Date: ' + sdata['__date']);
+                                }
+                                if (sdata['__header'].length > 0) {
+                                    for (let line of sdata['__header']) {
+                                        newBody.push(line);
+                                    }
+                                }
+                                for (let category of Object.keys(sdata)) {
+                                    if (category === '__header' || category === '__url' || category === '__etag' || category === '__date') {
+                                        continue;
+                                    }
+                                    let cdata = sdata[category];
+                                    newBody.push('');
+                                    newBody.push('### ' + category);
+                                    for (let item of Object.keys(cdata)) {
+                                        let idata = cdata[item];
+                                        newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] [' + item + '](' + idata['url'] + ')');
+                                    }
+                                    newBody.push('');
+                                }
+                            }
+                            let {updateStatus} = await github.rest.issues.update({
+                                owner: context.repo.owner,
+                                repo: context.repo.repo,
+                                issue_number: etag.issue,
+                                body: newBody.join('\n');
+                            });
+
+                            if (supdateStatus !== 200) {
+                                console.warning('Failed to update issue ' + etag.issue + ', skipping...');
+                                core.endGroup();
+                                continue;
                             }
                         }
                     }
