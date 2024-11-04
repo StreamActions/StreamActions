@@ -63,7 +63,7 @@ class BaseParser:
         """
         Parse a from the input HTML and return a dict of parsed data
 
-        For compatibility with the GitHub Action, the output of this function should be a dict containing a `toc` key
+        For compatibility with the update-issues GitHub Action, the output of this function should be a dict containing a `toc` key
         and an `endpoints` key, where `endpoints` is a dict of endpoints
 
         For `toc`, the key should be the category name, and the value should be a list of dicts. Each dict should contain a key `endpoint`
