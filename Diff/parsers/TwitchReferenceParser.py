@@ -21,7 +21,7 @@
 Parse a Twitch API Reference page into a format that can be diffed
 """
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 from BaseParser import BaseParser
 
 class TwitchReferenceParser(BaseParser):
@@ -147,7 +147,7 @@ class TwitchReferenceParser(BaseParser):
                     newState = state
                     if tag.name == "h2":
                         endpoint = str(tag.string).strip()
-                        slug = str(tag["id"]).strip() if "id" in tag else None
+                        slug = "#" + str(tag.attrs["id"]).strip() if "id" in tag.attrs else None
                         newState = 1
                     elif tag.name == "p" or tag.name == "ul" or (tag.name == "table" and state < 5):
                         if state == 1:
@@ -270,7 +270,7 @@ class TwitchReferenceParser(BaseParser):
                             elif state == 2:
                                 exampleRequestCurl = (" ".join(data)).strip()
                             elif state == 3:
-                                exampleResponse = (" ".join(data)).strip()
+                                exampleResponse = (" ".join(data)).replace("\u00e2\u0080\u008b", "").strip()
                             data = []
                             state = newState
                     if state == 1:

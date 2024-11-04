@@ -63,6 +63,17 @@ class BaseParser:
         """
         Parse a from the input HTML and return a dict of parsed data
 
+        For compatibility with the GitHub Action, the output of this function should be either a dict of endpoints,
+        or a dict containing a `toc` key and an `endpoints` key, where `endpoints` is a dict of endpoints
+
+        For `endpoints`, the key should be the Friendly Name and the value should be a dict. In the dict, there should be a key `slug`
+        with a value of the URI fragment or relative path from the base API doc URL
+        {
+            "Start Commercial": {
+                "slug": "#start-commercial", // Fragment for doc page
+            },
+        }
+
         Args:
             html (str): The HTML from a page which will be parsed
 
