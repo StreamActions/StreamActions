@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
         import:
-            description: Import an existing json output from a parser
+            description: Import an existing JSON output from a parser
             required: true
             default: false
             type: boolean
@@ -15,7 +15,7 @@ on:
             default: ''
             type: string
         importName:
-            description: Friendly name from ETagAttribute for the imported json
+            description: Friendly name from ETagAttribute for the imported JSON
             required: false
             default: ''
             type: string
@@ -49,13 +49,13 @@ jobs:
             NAME: ${{ inputs.importName }}
         run: |
             if [ -z "${URL}" ] && [ -z "${NAME}" ]; then
-                echo "Missing URL and NAME"
+                echo "::error::Missing URL and NAME"
                 exit 1;
             elif [ -z "${URL}" ]; then
-                echo "Missing URL"
+                echo "::error::Missing URL"
                 exit 1;
             elif [ -z "${NAME}" ]; then
-                echo "Missing NAME"
+                echo "::error::Missing NAME"
                 exit 1;
             fi
       - name: Download File
