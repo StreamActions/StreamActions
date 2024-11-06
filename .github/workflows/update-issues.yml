@@ -232,11 +232,15 @@ jobs:
                                         body.data[section][category][name].checked = check.toLowerCase() === 'x';
                                         body.data[section][category][name].url = url;
                                     } else if (section !== '__HEADER' && category === '__header') {
-                                        core.debug('--Header line');
-                                        body.data[section]['__header'].push(line);
+                                        if (line.trim().length > 0) {
+                                            core.debug('--Header line');
+                                            body.data[section]['__header'].push(line);
+                                        }
                                     } else if (section === '__HEADER') {
-                                        core.debug('-Global Header Line');
-                                        body.header.push(line);
+                                        if (line.trim().length > 0) {
+                                            core.debug('-Global Header Line');
+                                            body.header.push(line);
+                                        }
                                     } else {
                                         if (line.trim().length > 0) {
                                             core.warning('Found random line, skipping...' );
