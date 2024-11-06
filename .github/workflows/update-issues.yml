@@ -65,7 +65,7 @@ jobs:
         run: |
             NAME=$(echo $NAME | jq -Rj @uri)
             mkdir -p .cache
-            wget -O ".cache/$NAME" "$URL"
+            wget -O ".cache/$NAME.json" "$URL"
   diff:
     name: Diff cache with available ETags and update issues
     if: ${{ github.repository == 'StreamActions/StreamActions' && (github.event_name != 'workflow_dispatch' || inputs.diff) }}
