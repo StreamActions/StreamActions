@@ -94,7 +94,7 @@ jobs:
             script: |
                 core.info('Preparing...');
                 const fs = require('fs');
-                const issuePattern = /(\[(?<Check>[ x])\] )?\[(?<Name>[^\]]+)\]\((?<URL>[^\)]+)\)/;
+                const issuePattern = /(\[(?<Check>[ x])\] )?\[(?<Name>[^\]]+)\]\((?<URL>[^\)]*)\)/;
 
                 fs.mkdirSync('./.output');
 
