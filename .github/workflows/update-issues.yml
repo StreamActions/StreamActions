@@ -177,6 +177,7 @@ jobs:
                                 let section = '__HEADER';
                                 let category = '__header';
                                 for (let line of issue.body.split('\n')) {
+                                    line = line.replace('\r', '');
                                     core.debug('Line: ' + line);
                                     if (line.startsWith('# ')) {
                                         core.debug('H1');
