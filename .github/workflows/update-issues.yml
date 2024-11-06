@@ -245,8 +245,9 @@ jobs:
                                         continue;
                                     }
                                 }
-                                core.debug(JSON.stringify(body));
-                                core.debug(JSON.stringify(diff));
+                                core.debug('body: ' + JSON.stringify(body));
+                                core.debug('diff: ' + JSON.stringify(diff));
+                                core.debug('newData: ' + JSON.stringify(newData));
                                 core.debug('Prep body');
                                 section = etag.friendlyname;
                                 core.debug('Section ' + section);
@@ -323,15 +324,18 @@ jobs:
                                         }
                                         core.debug('----Category ' + category);
                                         let cdata = sdata[category];
-                                        newBody.push('');
-                                        newBody.push('### ' + category);
-                                        for (let item of Object.keys(cdata)) {
-                                            core.debug('------Item ' + item);
-                                            let idata = cdata[item];
-                                            core.debug('--------Checked: ' + (idata['checked'] ? 'x' : ' ') + ' <> URL: ' + idata['url']);
-                                            newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] [' + item + '](' + idata['url'] + ')');
+                                        let ckeys = Object.keys(cdata);
+                                        if (ckeys.length > 0) {
+                                            newBody.push('');
+                                            newBody.push('### ' + category);
+                                            for (let item of ckeys) {
+                                                core.debug('------Item ' + item);
+                                                let idata = cdata[item];
+                                                core.debug('--------Checked: ' + (idata['checked'] ? 'x' : ' ') + ' <> URL: ' + idata['url']);
+                                                newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] [' + item + '](' + idata['url'] + ')');
+                                            }
+                                            newBody.push('');
                                         }
-                                        newBody.push('');
                                     }
                                 }
                                 core.debug('Update issue');
