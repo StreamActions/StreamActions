@@ -299,8 +299,8 @@ jobs:
                                 }
                                 for (let section of Object.keys(body.data)) {
                                     core.debug('--Section ' + section);
-                                    core.debug('----URL: ' + sdata['__url'])
                                     let sdata = body.data[section];
+                                    core.debug('----URL: ' + sdata['__url']);
                                     newBody.push('');
                                     newBody.push('# [' + section + '](' + sdata['__url'] + ')');
                                     if (sdata['__etag'].length > 0) {
@@ -327,8 +327,8 @@ jobs:
                                         newBody.push('### ' + category);
                                         for (let item of Object.keys(cdata)) {
                                             core.debug('------Item ' + item);
-                                            core.debug('--------Checked: ' + (idata['checked'] ? 'x' : ' ') + ' <> URL: ' + idata['url']);
                                             let idata = cdata[item];
+                                            core.debug('--------Checked: ' + (idata['checked'] ? 'x' : ' ') + ' <> URL: ' + idata['url']);
                                             newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] [' + item + '](' + idata['url'] + ')');
                                         }
                                         newBody.push('');
