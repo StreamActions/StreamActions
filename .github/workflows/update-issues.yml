@@ -108,6 +108,7 @@ jobs:
                         let name = encodeURIComponent(etag.friendlyname);
                         try {
                             fs.accessSync('./Diff/parsers/' + etag.parser + '.py');
+                            core.debug('Found parser');
                         } catch (e) {
                             core.warning('Parser ' + etag.parser + ' not found, skipping...');
                             core.endGroup();
@@ -118,6 +119,7 @@ jobs:
                         let shouldDiff = false;
                         try {
                             fs.accessSync('./.cache/' + name + '.json');
+                            core.debug('Found base file');
                             parameters = parameters.concat(['--rhs', './.cache/' + name + '.json', '--diffout', './.output/' + name + '.diff.json']);
                             shouldDiff = true;
                         } catch (e) {
@@ -141,16 +143,19 @@ jobs:
                         let sha = stdout.split(' ')[0].trim().toUpperCase();
                         let date = new Date().toISOString();
                         date = date.substring(0, date.lastIndexOf(':')) + date.substring(date.length - 1);
+                        core.debug(sha);
+                        core.debug(date);
 
                         if (shouldDiff) {
+                            core.debug('Diffing');
                             let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'));
                             let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'));
                             if (Object.keys(diff).length === 0) {
-                                console.info('No diff found, skipping issue update...');
+                                core.info('No diff found, skipping issue update...');
                             } else if (Object.keys(newData).length === 0) {
-                                console.info('No data found, skipping issue update...');
+                                core.info('No data found, skipping issue update...');
                             } else {
-                                console.info('Downloading issue ' + etag.issue + '...');
+                                core.info('Downloading issue ' + etag.issue + '...');
                                 let {status, data: issue} = await github.rest.issues.get({
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
@@ -158,7 +163,7 @@ jobs:
                                 });
 
                                 if (status !== 200) {
-                                    console.warning('Issue ' + etag.issue + ' not found, skipping...');
+                                    core.warning('Issue ' + etag.issue + ' not found, skipping...');
                                     core.endGroup();
                                     continue;
                                 }
@@ -168,10 +173,13 @@ jobs:
                                     data: {}
                                 };
 
+                                core.debug('Start parsing issue');
                                 let section = '__HEADER';
                                 let category = '__header';
                                 for (let line of issue.body.split('\n')) {
+                                    core.debug('Line: ' + line);
                                     if (line.startsWith('# ')) {
+                                        core.debug('H1');
                                         issuePattern.lastIndex = 0;
                                         let match = issuePattern.exec(line.substring(2));
                                         if (match === null) {
@@ -181,20 +189,27 @@ jobs:
                                         }
                                         section = match.groups.Name;
                                         let url = match.groups.URL;
+                                        core.debug('--Section: ' + section + ' <> URL: ' + url);
                                         if (!body.data.hasOwnProperty(section)) {
+                                            core.debug('--Add section');
                                             body.data[section] = {'__header': [], '__url': url, '__etag': '', '__date': ''};
                                         }
                                         category = '__header';
                                     } else if (line.startsWith('ETag: ') && section !== '__HEADER' && category === '__header') {
+                                        core.debug('--ETag');
                                         body.data[section]['__etag'] = line.substring(6);
                                     } else if (line.startsWith('Date: ') && section !== '__HEADER' && category === '__header') {
+                                        core.debug('--Date');
                                         body.data[section]['__date'] = line.substring(6);
                                     } else if (line.startsWith('### ') && section !== '__HEADER') {
+                                        core.debug('--H3');
                                         category = line.substring(4);
                                         if (!body.data[section].hasOwnProperty(category)) {
+                                            core.debug('----Add Category');
                                             body.data[section][category] = {};
                                         }
                                     } else if (line.startsWith('- ') && section !== '__HEADER' && category !== '__header') {
+                                        core.debug('LI');
                                         issuePattern.lastIndex = 0;
                                         let match = issuePattern.exec(line.substring(2));
                                         if (match === null) {
@@ -205,17 +220,21 @@ jobs:
                                         let check = match.groups.Check;
                                         let name = match.groups.Name;
                                         let url = match.groups.URL;
+                                        core.debug('Checked: ' + check + ' <> Name: ' + name + ' <> URL: ' + url);
                                         if (!body.data[section][category].hasOwnProperty(name)) {
+                                            core.debug('----Add item');
                                             body.data[section][category][name] = {};
                                         }
                                         body.data[section][category][name].checked = check.toLowerCase() === 'x';
                                         body.data[section][category][name].url = url;
                                     } else if (section !== '__HEADER' && category === '__header') {
+                                        core.debug('--Header line');
                                         body.data[section]['__header'].push(line);
                                     } else if (section === '__HEADER') {
+                                        core.debug('-Global Header Line');
                                         body.header.push(line);
                                     } else {
-                                        core.warning('Found random line, skippng...' );
+                                        core.warning('Found random line, skipping...' );
                                         core.debug(line);
                                         continue;
                                     }
@@ -292,7 +311,7 @@ jobs:
                                 });
 
                                 if (supdateStatus !== 200) {
-                                    console.warning('Failed to update issue ' + etag.issue + ', skipping...');
+                                    core.warning('Failed to update issue ' + etag.issue + ', skipping...');
                                     core.endGroup();
                                     continue;
                                 }
