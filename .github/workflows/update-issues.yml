@@ -141,7 +141,7 @@ jobs:
                         let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'));
                         if (Object.keys(diff).length === 0) {
                             console.info('No diff found, skipping issue update...');
-                        } elseif (Object.keys(newData).length === 0) {
+                        } else if (Object.keys(newData).length === 0) {
                             console.info('No data found, skipping issue update...');
                         } else {
                             console.info('Downloading issue ' + etag.issue + '...');
@@ -216,7 +216,7 @@ jobs:
                             }
                             core.debug(JSON.stringify(body));
                             core.debug(JSON.stringify(diff));
-                            let section = etag.friendlyname;
+                            section = etag.friendlyname;
                             if (!body.data.hasOwnProperty(section)) {
                                 body.data[section] = {'__header': [], '__url': etag.url, '__etag': '', '__date': ''};
                             }
@@ -282,7 +282,7 @@ jobs:
                                 owner: context.repo.owner,
                                 repo: context.repo.repo,
                                 issue_number: etag.issue,
-                                body: newBody.join('\n');
+                                body: newBody.join('\n')
                             });
 
                             if (supdateStatus !== 200) {
