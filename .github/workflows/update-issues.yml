@@ -122,7 +122,7 @@ jobs:
                         try {
                             fs.accessSync('./.cache/' + name + '.json');
                             core.debug('Found base file');
-                            parameters = parameters.concat(['--rhs', './.cache/' + name + '.json', '--diffout', './.output/' + name + '.diff.json']);
+                            parameters = parameters.concat(['--lhs', './.cache/' + name + '.json', '--diffout', './.output/' + name + '.diff.json']);
                             shouldDiff = true;
                         } catch (e) {
                             core.warning('Base file not found, will not diff');
