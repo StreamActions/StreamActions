@@ -92,7 +92,7 @@ jobs:
                 const fs = require('fs');
                 const issuePattern = /(\[(?<Check>[ x])\] )?\[(?<Name>[^\]]+)\]\((?<URL>[^\)]+)\)/;
 
-                await fs.mkdir('./.output');
+                fs.mkdirSync('./.output');
 
                 core.info('Finding ETags...');
                 await exec.exec('python', ['./Diff/ETagFinder.py', '--folder', '.', '--out', './.output/etags.json']);
