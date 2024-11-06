@@ -331,7 +331,7 @@ jobs:
                                     }
                                 }
                                 core.debug('Update issue');
-                                let {updateStatus} = await github.rest.issues.update({
+                                let {status: updateStatus} = await github.rest.issues.update({
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
                                     issue_number: etag.issue,
