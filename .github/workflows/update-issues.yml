@@ -299,6 +299,7 @@ jobs:
                                 }
                                 for (let section of Object.keys(body.data)) {
                                     core.debug('--Section ' + section);
+                                    core.debug('----URL: ' + sdata['__url'])
                                     let sdata = body.data[section];
                                     newBody.push('');
                                     newBody.push('# [' + section + '](' + sdata['__url'] + ')');
@@ -326,6 +327,7 @@ jobs:
                                         newBody.push('### ' + category);
                                         for (let item of Object.keys(cdata)) {
                                             core.debug('------Item ' + item);
+                                            core.debug('--------Checked: ' + (idata['checked'] ? 'x' : ' ') + ' <> URL: ' + idata['url']);
                                             let idata = cdata[item];
                                             newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] [' + item + '](' + idata['url'] + ')');
                                         }
