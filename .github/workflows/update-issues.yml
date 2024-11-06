@@ -205,6 +205,7 @@ jobs:
                                     } else if (line.startsWith('### ') && section !== '__HEADER') {
                                         core.debug('--H3');
                                         category = line.substring(4);
+                                        core.debug('----Category: ' + category)
                                         if (!body.data[section].hasOwnProperty(category)) {
                                             core.debug('----Add Category');
                                             body.data[section][category] = {};
