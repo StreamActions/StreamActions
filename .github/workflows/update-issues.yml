@@ -234,8 +234,10 @@ jobs:
                                         core.debug('-Global Header Line');
                                         body.header.push(line);
                                     } else {
-                                        core.warning('Found random line, skipping...' );
-                                        core.debug(line);
+                                        if (line.trim().length > 0) {
+                                            core.warning('Found random line, skipping...' );
+                                            core.debug(line);
+                                        }
                                         continue;
                                     }
                                 }
