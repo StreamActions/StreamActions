@@ -100,203 +100,205 @@ jobs:
                 let etags = JSON.parse(fs.readFileSync('./.output/etags.json', 'utf8'));
 
                 core.info('Found ' + Object.keys(etags).length + ' ETags');
-                for (let etag of etags) {
-                    core.startGroup(etag.friendlyname);
-                    let name = encodeURIComponent(etag.friendlyname);
-                    try {
-                        fs.accessSync('./Diff/parsers/' + etag.parser + '.py');
-                    } catch (e) {
-                        core.warning('Parser ' + etag.parser + ' not found, skipping...');
-                        core.endGroup();
-                        continue;
-                    }
+                for (let file of Object.keys(etags)) {
+                    for (let etag of etags[file]) {
+                        core.startGroup(etag.friendlyname);
+                        let name = encodeURIComponent(etag.friendlyname);
+                        try {
+                            fs.accessSync('./Diff/parsers/' + etag.parser + '.py');
+                        } catch (e) {
+                            core.warning('Parser ' + etag.parser + ' not found, skipping...');
+                            core.endGroup();
+                            continue;
+                        }
 
-                    let parameters = ['--url', etag.url, '--out', './.output/' + name + '.json'];
-                    let shouldDiff = false;
-                    try {
-                        fs.accessSync('./.cache/' + name + '.json');
-                        parameters = parameters.concat(['--rhs', './.cache/' + name + '.json', '--diffout', './.output/' + name + '.diff.json']);
-                        shouldDiff = true;
-                    } catch (e) {
-                        core.warning('Base file not found, will not diff');
-                    }
+                        let parameters = ['--url', etag.url, '--out', './.output/' + name + '.json'];
+                        let shouldDiff = false;
+                        try {
+                            fs.accessSync('./.cache/' + name + '.json');
+                            parameters = parameters.concat(['--rhs', './.cache/' + name + '.json', '--diffout', './.output/' + name + '.diff.json']);
+                            shouldDiff = true;
+                        } catch (e) {
+                            core.warning('Base file not found, will not diff');
+                        }
 
-                    parameters = parameters.concat(etag.parameters);
+                        parameters = parameters.concat(etag.parameters);
 
-                    core.info('Running parser ' + etag.parser + '...');
-                    let {exitCode, stderr} = await exec.getExecOutput('python', parameters);
+                        core.info('Running parser ' + etag.parser + '...');
+                        let {exitCode, stderr} = await exec.getExecOutput('python', parameters);
 
-                    if (exitCode !== 0) {
-                        core.error('Encountered error running parser, skipping...');
-                        core.error(parameters);
-                        core.error(stderr);
-                        core.endGroup();
-                        continue;
-                    }
+                        if (exitCode !== 0) {
+                            core.error('Encountered error running parser, skipping...');
+                            core.error(parameters);
+                            core.error(stderr);
+                            core.endGroup();
+                            continue;
+                        }
 
-                    let {stdout} = await exec.getExecOutput('sha256sum', ['./.output/' + name + '.json']);
-                    let sha = stdout.split(' ')[0].trim().toUpperCase();
-                    let date = new Date().toISOString().substring(0, d.lastIndexOf(':')) + d.substring(d.length - 1);
+                        let {stdout} = await exec.getExecOutput('sha256sum', ['./.output/' + name + '.json']);
+                        let sha = stdout.split(' ')[0].trim().toUpperCase();
+                        let date = new Date().toISOString().substring(0, d.lastIndexOf(':')) + d.substring(d.length - 1);
 
-                    if (shouldDiff) {
-                        let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'));
-                        let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'));
-                        if (Object.keys(diff).length === 0) {
-                            console.info('No diff found, skipping issue update...');
-                        } else if (Object.keys(newData).length === 0) {
-                            console.info('No data found, skipping issue update...');
-                        } else {
-                            console.info('Downloading issue ' + etag.issue + '...');
-                            let {status, data: issue} = await github.rest.issues.get({
-                                owner: context.repo.owner,
-                                repo: context.repo.repo,
-                                issue_number: etag.issue
-                            });
+                        if (shouldDiff) {
+                            let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'));
+                            let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'));
+                            if (Object.keys(diff).length === 0) {
+                                console.info('No diff found, skipping issue update...');
+                            } else if (Object.keys(newData).length === 0) {
+                                console.info('No data found, skipping issue update...');
+                            } else {
+                                console.info('Downloading issue ' + etag.issue + '...');
+                                let {status, data: issue} = await github.rest.issues.get({
+                                    owner: context.repo.owner,
+                                    repo: context.repo.repo,
+                                    issue_number: etag.issue
+                                });
 
-                            if (status !== 200) {
-                                console.warning('Issue ' + etag.issue + ' not found, skipping...');
-                                core.endGroup();
-                                continue;
-                            }
-
-                            let body = {
-                                header: [],
-                                data: {}
-                            };
-
-                            let section = '__HEADER';
-                            let category = '__header';
-                            for (let line of issue.body.split('\n')) {
-                                if (line.startsWith('# ')) {
-                                    issuePattern.lastIndex = 0;
-                                    let match = issuePattern.exec(line.substring(2));
-                                    if (match === null) {
-                                        core.warning('Found non-conforming section header, skipping...');
-                                        core.debug(line);
-                                        continue;
-                                    }
-                                    section = match.groups.Name;
-                                    let url = match.groups.URL;
-                                    if (!body.data.hasOwnProperty(section)) {
-                                        body.data[section] = {'__header': [], '__url': url, '__etag': '', '__date': ''};
-                                    }
-                                    category = '__header';
-                                } else if (line.startsWith('ETag: ') && section !== '__HEADER' && category === '__header') {
-                                    body.data[section]['__etag'] = line.substring(6);
-                                } else if (line.startsWith('Date: ') && section !== '__HEADER' && category === '__header') {
-                                    body.data[section]['__date'] = line.substring(6);
-                                } else if (line.startsWith('### ') && section !== '__HEADER') {
-                                    category = line.substring(4);
-                                    if (!body.data[section].hasOwnProperty(category)) {
-                                        body.data[section][category] = {};
-                                    }
-                                } else if (line.startsWith('- ') && section !== '__HEADER' && category !== '__header') {
-                                    issuePattern.lastIndex = 0;
-                                    let match = issuePattern.exec(line.substring(2));
-                                    if (match === null) {
-                                        core.warning('Found non-conforming item, skipping...');
-                                        core.debug(line);
-                                        continue;
-                                    }
-                                    let check = match.groups.Check;
-                                    let name = match.groups.Name;
-                                    let url = match.groups.URL;
-                                    if (!body.data[section][category].hasOwnProperty(name)) {
-                                        body.data[section][category][name] = {};
-                                    }
-                                    body.data[section][category][name].checked = check.toLowerCase() === 'x';
-                                    body.data[section][category][name].url = url;
-                                } else if (section !== '__HEADER' && category === '__header') {
-                                    body.data[section]['__header'].push(line);
-                                } else if (section === '__HEADER') {
-                                    body.header.push(line);
-                                } else {
-                                    core.warning('Found random line, skippng...' );
-                                    core.debug(line);
+                                if (status !== 200) {
+                                    console.warning('Issue ' + etag.issue + ' not found, skipping...');
+                                    core.endGroup();
                                     continue;
                                 }
-                            }
-                            core.debug(JSON.stringify(body));
-                            core.debug(JSON.stringify(diff));
-                            section = etag.friendlyname;
-                            if (!body.data.hasOwnProperty(section)) {
-                                body.data[section] = {'__header': [], '__url': etag.url, '__etag': '', '__date': ''};
-                            }
-                            let diffKeys = Object.keys(diff['endpoints']);
-                            if (diffKeys.length > 0) {
-                                body.data[section]['__etag'] = sha;
-                                body.data[section]['__date'] = date;
-                                for (let category of Object.keys(newData.toc)) {
-                                    if (!body.data[section].hasOwnProperty(category)) {
-                                        body.data[section][category] = {};
-                                    }
-                                    for (let endpoint of newData.toc[category]) {
-                                        if (!body.data[section][category].hasOwnProperty(endpoint.endpoint)) {
-                                            body.data[section][category][endpoint.endpoint] = {'checked': false, 'url': ''};
+
+                                let body = {
+                                    header: [],
+                                    data: {}
+                                };
+
+                                let section = '__HEADER';
+                                let category = '__header';
+                                for (let line of issue.body.split('\n')) {
+                                    if (line.startsWith('# ')) {
+                                        issuePattern.lastIndex = 0;
+                                        let match = issuePattern.exec(line.substring(2));
+                                        if (match === null) {
+                                            core.warning('Found non-conforming section header, skipping...');
+                                            core.debug(line);
+                                            continue;
                                         }
+                                        section = match.groups.Name;
+                                        let url = match.groups.URL;
+                                        if (!body.data.hasOwnProperty(section)) {
+                                            body.data[section] = {'__header': [], '__url': url, '__etag': '', '__date': ''};
+                                        }
+                                        category = '__header';
+                                    } else if (line.startsWith('ETag: ') && section !== '__HEADER' && category === '__header') {
+                                        body.data[section]['__etag'] = line.substring(6);
+                                    } else if (line.startsWith('Date: ') && section !== '__HEADER' && category === '__header') {
+                                        body.data[section]['__date'] = line.substring(6);
+                                    } else if (line.startsWith('### ') && section !== '__HEADER') {
+                                        category = line.substring(4);
+                                        if (!body.data[section].hasOwnProperty(category)) {
+                                            body.data[section][category] = {};
+                                        }
+                                    } else if (line.startsWith('- ') && section !== '__HEADER' && category !== '__header') {
+                                        issuePattern.lastIndex = 0;
+                                        let match = issuePattern.exec(line.substring(2));
+                                        if (match === null) {
+                                            core.warning('Found non-conforming item, skipping...');
+                                            core.debug(line);
+                                            continue;
+                                        }
+                                        let check = match.groups.Check;
+                                        let name = match.groups.Name;
+                                        let url = match.groups.URL;
+                                        if (!body.data[section][category].hasOwnProperty(name)) {
+                                            body.data[section][category][name] = {};
+                                        }
+                                        body.data[section][category][name].checked = check.toLowerCase() === 'x';
+                                        body.data[section][category][name].url = url;
+                                    } else if (section !== '__HEADER' && category === '__header') {
+                                        body.data[section]['__header'].push(line);
+                                    } else if (section === '__HEADER') {
+                                        body.header.push(line);
+                                    } else {
+                                        core.warning('Found random line, skippng...' );
+                                        core.debug(line);
+                                        continue;
                                     }
                                 }
-                                for (let endpoint of diffKeys) {
-                                    for (let category in Object.keys(body.data[section])) {
-                                        if (body.data[section][category].hasOwnProperty(endpoint)) {
-                                            body.data[section][category][endpoint].checked = false;
-                                            if (newData.endpoints.hasOwnProperty(endpoint) && newData.endpoints[endpoint].slug !== null) {
-                                                body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
+                                core.debug(JSON.stringify(body));
+                                core.debug(JSON.stringify(diff));
+                                section = etag.friendlyname;
+                                if (!body.data.hasOwnProperty(section)) {
+                                    body.data[section] = {'__header': [], '__url': etag.url, '__etag': '', '__date': ''};
+                                }
+                                let diffKeys = Object.keys(diff['endpoints']);
+                                if (diffKeys.length > 0) {
+                                    body.data[section]['__etag'] = sha;
+                                    body.data[section]['__date'] = date;
+                                    for (let category of Object.keys(newData.toc)) {
+                                        if (!body.data[section].hasOwnProperty(category)) {
+                                            body.data[section][category] = {};
+                                        }
+                                        for (let endpoint of newData.toc[category]) {
+                                            if (!body.data[section][category].hasOwnProperty(endpoint.endpoint)) {
+                                                body.data[section][category][endpoint.endpoint] = {'checked': false, 'url': ''};
+                                            }
+                                        }
+                                    }
+                                    for (let endpoint of diffKeys) {
+                                        for (let category in Object.keys(body.data[section])) {
+                                            if (body.data[section][category].hasOwnProperty(endpoint)) {
+                                                body.data[section][category][endpoint].checked = false;
+                                                if (newData.endpoints.hasOwnProperty(endpoint) && newData.endpoints[endpoint].slug !== null) {
+                                                    body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                            let newBody = [];
-                            for (let line of body.header) {
-                                newBody.push(line);
-                            }
-                            for (let section of Object.keys(body.data)) {
-                                let sdata = body.data[section];
-                                newBody.push('');
-                                newBody.push('# [' + section + '](' + sdata['__url'] + ')');
-                                if (sdata['__etag'].length > 0) {
-                                    newBody.push('ETag: ' + sdata['__etag']);
+                                let newBody = [];
+                                for (let line of body.header) {
+                                    newBody.push(line);
                                 }
-                                if (sdata['__date'].length > 0) {
-                                    newBody.push('Date: ' + sdata['__date']);
-                                }
-                                if (sdata['__header'].length > 0) {
-                                    for (let line of sdata['__header']) {
-                                        newBody.push(line);
-                                    }
-                                }
-                                for (let category of Object.keys(sdata)) {
-                                    if (category === '__header' || category === '__url' || category === '__etag' || category === '__date') {
-                                        continue;
-                                    }
-                                    let cdata = sdata[category];
+                                for (let section of Object.keys(body.data)) {
+                                    let sdata = body.data[section];
                                     newBody.push('');
-                                    newBody.push('### ' + category);
-                                    for (let item of Object.keys(cdata)) {
-                                        let idata = cdata[item];
-                                        newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] [' + item + '](' + idata['url'] + ')');
+                                    newBody.push('# [' + section + '](' + sdata['__url'] + ')');
+                                    if (sdata['__etag'].length > 0) {
+                                        newBody.push('ETag: ' + sdata['__etag']);
                                     }
-                                    newBody.push('');
+                                    if (sdata['__date'].length > 0) {
+                                        newBody.push('Date: ' + sdata['__date']);
+                                    }
+                                    if (sdata['__header'].length > 0) {
+                                        for (let line of sdata['__header']) {
+                                            newBody.push(line);
+                                        }
+                                    }
+                                    for (let category of Object.keys(sdata)) {
+                                        if (category === '__header' || category === '__url' || category === '__etag' || category === '__date') {
+                                            continue;
+                                        }
+                                        let cdata = sdata[category];
+                                        newBody.push('');
+                                        newBody.push('### ' + category);
+                                        for (let item of Object.keys(cdata)) {
+                                            let idata = cdata[item];
+                                            newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] [' + item + '](' + idata['url'] + ')');
+                                        }
+                                        newBody.push('');
+                                    }
                                 }
-                            }
-                            let {updateStatus} = await github.rest.issues.update({
-                                owner: context.repo.owner,
-                                repo: context.repo.repo,
-                                issue_number: etag.issue,
-                                body: newBody.join('\n')
-                            });
+                                let {updateStatus} = await github.rest.issues.update({
+                                    owner: context.repo.owner,
+                                    repo: context.repo.repo,
+                                    issue_number: etag.issue,
+                                    body: newBody.join('\n')
+                                });
 
-                            if (supdateStatus !== 200) {
-                                console.warning('Failed to update issue ' + etag.issue + ', skipping...');
-                                core.endGroup();
-                                continue;
+                                if (supdateStatus !== 200) {
+                                    console.warning('Failed to update issue ' + etag.issue + ', skipping...');
+                                    core.endGroup();
+                                    continue;
+                                }
                             }
                         }
+
+                        core.info('Updating base file...');
+                        fs.renameSync('./.output/' + name + '.json', './.cache/' + name + '.json');
+
+                        core.endGroup();
                     }
-
-                    core.info('Updating base file...');
-                    fs.renameSync('./.output/' + name + '.json', './.cache/' + name + '.json');
-
-                    core.endGroup();
                 }
