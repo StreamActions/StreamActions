@@ -139,7 +139,8 @@ jobs:
 
                         let {stdout} = await exec.getExecOutput('sha256sum', ['./.output/' + name + '.json']);
                         let sha = stdout.split(' ')[0].trim().toUpperCase();
-                        let date = new Date().toISOString().substring(0, d.lastIndexOf(':')) + d.substring(d.length - 1);
+                        let date = new Date().toISOString();
+                        date = date.substring(0, date.lastIndexOf(':')) + date.substring(date.length - 1);
 
                         if (shouldDiff) {
                             let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'));
