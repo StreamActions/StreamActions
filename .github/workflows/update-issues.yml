@@ -88,38 +88,38 @@ jobs:
             script: |
                 core.info('Preparing...');
                 const fs = require('fs');
-                const issuePattern = /(\[(?<Check>[ x])\] )?\[(?<Name>[^\]]+)\]\((?<URL>[^\)]+)\)/
+                const issuePattern = /(\[(?<Check>[ x])\] )?\[(?<Name>[^\]]+)\]\((?<URL>[^\)]+)\)/;
 
                 await fs.mkdir('./.output');
 
                 core.info('Finding ETags...');
                 await exec.exec('python', ['./Diff/ETagFinder.py', '--folder', '.', '--out', './.output/etags.json']);
 
-                let etags = JSON.parse(fs.readFileSync('./.output/etags.json', 'utf8'))
+                let etags = JSON.parse(fs.readFileSync('./.output/etags.json', 'utf8'));
 
                 core.info('Found ' + Object.keys(etags).length + ' ETags');
                 for (let etag of etags) {
                     core.startGroup(etag.friendlyname);
                     let name = encodeURIComponent(etag.friendlyname);
                     try {
-                        fs.accessSync('./Diff/parsers/' + etag.parser + '.py')
+                        fs.accessSync('./Diff/parsers/' + etag.parser + '.py');
                     } catch (e) {
-                        core.warning('Parser ' + etag.parser + ' not found, skipping...')
-                        core.endGroup()
+                        core.warning('Parser ' + etag.parser + ' not found, skipping...');
+                        core.endGroup();
                         continue;
                     }
 
                     let parameters = ['--url', etag.url, '--out', './.output/' + name + '.json'];
                     let shouldDiff = false;
                     try {
-                        fs.accessSync('./.cache/' + name + '.json')
+                        fs.accessSync('./.cache/' + name + '.json');
                         parameters = parameters.concat(['--rhs', './.cache/' + name + '.json', '--diffout', './.output/' + name + '.diff.json']);
                         shouldDiff = true;
                     } catch (e) {
-                        core.warning('Base file not found, will not diff')
+                        core.warning('Base file not found, will not diff');
                     }
 
-                    parameters = parameters.concat(etag.parameters)
+                    parameters = parameters.concat(etag.parameters);
 
                     core.info('Running parser ' + etag.parser + '...');
                     let {exitCode, stderr} = await exec.getExecOutput('python', parameters);
@@ -128,17 +128,17 @@ jobs:
                         core.error('Encountered error running parser, skipping...');
                         core.error(parameters);
                         core.error(stderr);
-                        core.endGroup()
+                        core.endGroup();
                         continue;
                     }
 
                     let {stdout} = await exec.getExecOutput('sha256sum', ['./.output/' + name + '.json']);
-                    let sha = stdout.split(' ')[0].trim().toUpperCase()
+                    let sha = stdout.split(' ')[0].trim().toUpperCase();
                     let date = new Date().toISOString().substring(0, d.lastIndexOf(':')) + d.substring(d.length - 1);
 
                     if (shouldDiff) {
-                        let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'))
-                        let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'))
+                        let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'));
+                        let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'));
                         if (Object.keys(diff).length === 0) {
                             console.info('No diff found, skipping issue update...');
                         } elseif (Object.keys(newData).length === 0) {
@@ -296,5 +296,5 @@ jobs:
                     core.info('Updating base file...');
                     fs.renameSync('./.output/' + name + '.json', './.cache/' + name + '.json');
 
-                    core.endGroup()
+                    core.endGroup();
                 }
