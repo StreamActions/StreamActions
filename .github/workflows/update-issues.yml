@@ -209,7 +209,7 @@ jobs:
                                             body.data[section][category] = {};
                                         }
                                     } else if (line.startsWith('- ') && section !== '__HEADER' && category !== '__header') {
-                                        core.debug('LI');
+                                        core.debug('----LI');
                                         issuePattern.lastIndex = 0;
                                         let match = issuePattern.exec(line.substring(2));
                                         if (match === null) {
@@ -220,9 +220,9 @@ jobs:
                                         let check = match.groups.Check;
                                         let name = match.groups.Name;
                                         let url = match.groups.URL;
-                                        core.debug('Checked: ' + check + ' <> Name: ' + name + ' <> URL: ' + url);
+                                        core.debug('------Checked: ' + check + ' <> Name: ' + name + ' <> URL: ' + url);
                                         if (!body.data[section][category].hasOwnProperty(name)) {
-                                            core.debug('----Add item');
+                                            core.debug('------Add item');
                                             body.data[section][category][name] = {};
                                         }
                                         body.data[section][category][name].checked = check.toLowerCase() === 'x';
@@ -243,50 +243,71 @@ jobs:
                                 }
                                 core.debug(JSON.stringify(body));
                                 core.debug(JSON.stringify(diff));
+                                core.debug('Prep body');
                                 section = etag.friendlyname;
+                                core.debug('Section ' + section);
                                 if (!body.data.hasOwnProperty(section)) {
+                                    core.debug('--Add section');
                                     body.data[section] = {'__header': [], '__url': etag.url, '__etag': '', '__date': ''};
                                 }
                                 let diffKeys = Object.keys(diff['endpoints']);
+                                core.debug('Check diffKeys');
                                 if (diffKeys.length > 0) {
+                                    core.debug('Found ' + diffKeys.length + ' keys');
                                     body.data[section]['__etag'] = sha;
                                     body.data[section]['__date'] = date;
+                                    core.debug('Iterate newData');
                                     for (let category of Object.keys(newData.toc)) {
+                                        core.debug('Category ' + category);
                                         if (!body.data[section].hasOwnProperty(category)) {
+                                            core.debug('--Add category');
                                             body.data[section][category] = {};
                                         }
                                         for (let endpoint of newData.toc[category]) {
+                                            core.debug('Endpoint ' + endpoint.endpoint);
                                             if (!body.data[section][category].hasOwnProperty(endpoint.endpoint)) {
+                                                core.debug('--Add endpoint');
                                                 body.data[section][category][endpoint.endpoint] = {'checked': false, 'url': ''};
                                             }
                                         }
                                     }
+                                    core.debug('Iterate diffKeys');
                                     for (let endpoint of diffKeys) {
+                                        core.debug('Endpoint ' + endpoint);
                                         for (let category in Object.keys(body.data[section])) {
+                                            core.debug('--Check category ' + category);
                                             if (body.data[section][category].hasOwnProperty(endpoint)) {
+                                                core.debug('----Found');
                                                 body.data[section][category][endpoint].checked = false;
                                                 if (newData.endpoints.hasOwnProperty(endpoint) && newData.endpoints[endpoint].slug !== null) {
+                                                    core.debug('------Has slug');
                                                     body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
                                                 }
                                             }
                                         }
                                     }
                                 }
+                                core.debug('Gather lines');
                                 let newBody = [];
+                                core.debug('--Global header');
                                 for (let line of body.header) {
                                     newBody.push(line);
                                 }
                                 for (let section of Object.keys(body.data)) {
+                                    core.debug('--Section ' + section);
                                     let sdata = body.data[section];
                                     newBody.push('');
                                     newBody.push('# [' + section + '](' + sdata['__url'] + ')');
                                     if (sdata['__etag'].length > 0) {
+                                        core.debug('----ETag');
                                         newBody.push('ETag: ' + sdata['__etag']);
                                     }
                                     if (sdata['__date'].length > 0) {
+                                        core.debug('----Date');
                                         newBody.push('Date: ' + sdata['__date']);
                                     }
                                     if (sdata['__header'].length > 0) {
+                                        core.debug('----Header');
                                         for (let line of sdata['__header']) {
                                             newBody.push(line);
                                         }
@@ -295,16 +316,19 @@ jobs:
                                         if (category === '__header' || category === '__url' || category === '__etag' || category === '__date') {
                                             continue;
                                         }
+                                        core.debug('----Category ' + category);
                                         let cdata = sdata[category];
                                         newBody.push('');
                                         newBody.push('### ' + category);
                                         for (let item of Object.keys(cdata)) {
+                                            core.debug('------Item ' + item);
                                             let idata = cdata[item];
                                             newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] [' + item + '](' + idata['url'] + ')');
                                         }
                                         newBody.push('');
                                     }
                                 }
+                                core.debug('Update issue');
                                 let {updateStatus} = await github.rest.issues.update({
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
