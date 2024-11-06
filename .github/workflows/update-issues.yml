@@ -338,7 +338,7 @@ jobs:
                                     body: newBody.join('\n')
                                 });
 
-                                if (supdateStatus !== 200) {
+                                if (updateStatus !== 200) {
                                     core.warning('Failed to update issue ' + etag.issue + ', skipping...');
                                     core.endGroup();
                                     continue;
