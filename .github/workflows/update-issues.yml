@@ -282,11 +282,14 @@ jobs:
                                         for (let category of Object.keys(body.data[section])) {
                                             core.debug('--Check category ' + category);
                                             if (body.data[section][category].hasOwnProperty(endpoint)) {
-                                                core.debug('----Found');
+                                                core.debug('----Found in body');
                                                 body.data[section][category][endpoint].checked = false;
-                                                if (newData.endpoints.hasOwnProperty(endpoint) && newData.endpoints[endpoint].slug !== null) {
-                                                    core.debug('------Has slug');
-                                                    body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
+                                                if (Object.keys(newData.endpoints).includes(endpoint)) {
+                                                    core.debug('----Found in newData');
+                                                    if (newData.endpoints[endpoint].slug !== null) {
+                                                        core.debug('------Has slug');
+                                                        body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
+                                                    }
                                                 }
                                             }
                                         }
