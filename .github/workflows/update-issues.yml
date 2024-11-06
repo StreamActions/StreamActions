@@ -276,7 +276,7 @@ jobs:
                                     core.debug('Iterate diffKeys');
                                     for (let endpoint of diffKeys) {
                                         core.debug('Endpoint ' + endpoint);
-                                        for (let category in Object.keys(body.data[section])) {
+                                        for (let category of Object.keys(body.data[section])) {
                                             core.debug('--Check category ' + category);
                                             if (body.data[section][category].hasOwnProperty(endpoint)) {
                                                 core.debug('----Found');
