@@ -112,7 +112,7 @@ jobs:
                             continue;
                         }
 
-                        let parameters = ['--url', etag.url, '--out', './.output/' + name + '.json'];
+                        let parameters = ['./Diff/parsers/' + etag.parser + '.py', '--url', etag.url, '--out', './.output/' + name + '.json'];
                         let shouldDiff = false;
                         try {
                             fs.accessSync('./.cache/' + name + '.json');
