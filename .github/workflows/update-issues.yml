@@ -26,7 +26,7 @@ on:
             type: boolean
 
 permissions:
-  actions: read
+  actions: write
   contents: read
   issues: write
 
@@ -70,7 +70,7 @@ jobs:
             wget -O ".cache/$NAME.json" "$URL"
   diff:
     name: Diff cache with available ETags and update issues
-    if: ${{ github.repository == 'StreamActions/StreamActions' && (github.event_name != 'workflow_dispatch' || inputs.diff) }}
+    if: ${{ github.repository == 'StreamActions/StreamActions' && (github.event_name != 'workflow_dispatch' || inputs.diff) && github.ref_name == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -158,14 +158,14 @@ jobs:
                                 core.info('No data found, skipping issue update...');
                             } else {
                                 core.info('Downloading issue ' + etag.issue + '...');
-                                let {status, data: issue} = await github.rest.issues.get({
+                                let {status: issueStatus, data: issue} = await github.rest.issues.get({
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
                                     issue_number: etag.issue
                                 });
 
-                                if (status !== 200) {
-                                    core.warning('Issue ' + etag.issue + ' not found, skipping...');
+                                if (issueStatus !== 200) {
+                                    core.warning('Issue ' + etag.issue + ' not found, skipping...' + issueStatus);
                                     core.endGroup();
                                     continue;
                                 }
@@ -354,7 +354,7 @@ jobs:
                                 });
 
                                 if (updateStatus !== 200) {
-                                    core.warning('Failed to update issue ' + etag.issue + ', skipping...');
+                                    core.warning('Failed to update issue ' + etag.issue + ', skipping...' + updateStatus);
                                     core.endGroup();
                                     continue;
                                 }
@@ -365,5 +365,38 @@ jobs:
                         fs.renameSync('./.output/' + name + '.json', './.cache/' + name + '.json');
 
                         core.endGroup();
+                    }
+                }
+
+                core.info('Cleaning up old caches...');
+                let {status: cacheStatus, data: caches} = await github.rest.actions.getActionsCacheList({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    key: 'etag',
+                    ref: 'refs/heads/main',
+                    sort: 'created_at',
+                    direction: 'desc'
+                });
+
+                if (cacheStatus !== 200) {
+                    core.warning('Failed to list caches...' + cacheStatus);
+                } else {
+                    let first = true;
+                    for (let cache of caches.actions_caches) {
+                        if (first) {
+                            first = false;
+                        } else {
+                            let {status: deleteStatus} = await github.rest.actions.deleteActionsCacheById({
+                                owner: context.repo.owner,
+                                repo: context.repo.repo,
+                                cache_id: cache.id
+                            });
+
+                            if (deleteStatus !== 200) {
+                                core.warning('Failed to delete cache ' + cache.key + ' (' + cache.id + ')...' + deleteStatus);
+                                core.endGroup();
+                                continue;
+                            }
+                        }
                     }
                 }
