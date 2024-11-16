@@ -393,7 +393,7 @@ jobs:
                                 cache_id: cache.id
                             });
 
-                            if (deleteStatus !== 200) {
+                            if (deleteStatus !== 204) {
                                 core.warning('Failed to delete cache ' + cache.key + ' (' + cache.id + ')...' + deleteStatus);
                                 core.endGroup();
                                 continue;
