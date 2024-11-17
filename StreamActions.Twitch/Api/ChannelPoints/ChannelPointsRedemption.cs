@@ -308,6 +308,7 @@ public sealed record ChannelPointsRedemption
     /// </list>
     /// </para>
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional.")]
     public static async Task<ResponseData<ChannelPointsReward>?> UpdateRedemptionStatus(TwitchSession session, IEnumerable<Guid> id, string broadcasterId, Guid rewardId, ChannelPointsRedemptionUpdateParameters parameters)
     {
         if (session is null)

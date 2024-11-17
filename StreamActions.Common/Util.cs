@@ -257,7 +257,6 @@ public static partial class Util
     /// <typeparam name="T">The type to check.</typeparam>
     /// <param name="argument">The argument to check.</param>
     /// <returns><see langword="true"/> if <paramref name="argument"/> is <see langword="null"/> or default.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "Intentional.")]
     public static bool IsNullOrDefault<T>(T argument)
     {
         if (argument == null)
@@ -265,7 +264,7 @@ public static partial class Util
             return true;
         }
 
-        if (Equals(argument, default(T)))
+        if (EqualityComparer<T>.Default.Equals(argument, default))
         {
             return true;
         }
@@ -296,7 +295,7 @@ public static partial class Util
     /// This member only accepts full colors of the form <c>#RRGGBB</c>.
     /// </para>
     /// </remarks>
-    public static bool IsValidHexColor(string hexColor) => hexColor is not null && HexColorRegex().Match(hexColor).Success;
+    public static bool IsValidHexColor(string? hexColor) => hexColor is not null && HexColorRegex().Match(hexColor).Success;
 
     #endregion Public Methods
 

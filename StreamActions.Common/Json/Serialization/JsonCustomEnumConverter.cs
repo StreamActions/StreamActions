@@ -70,7 +70,7 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
     /// <returns>The string value defined in the <see cref="JsonCustomEnumAttribute"/> applied to the enum value; <see cref="Enum.GetName{TEnum}(TEnum)"/> if the attribute is not present.</returns>
     public string? Convert(T value)
     {
-        MemberInfo? memberInfo = typeof(T).GetMember(Enum.GetName(typeof(T), value) ?? "__").FirstOrDefault();
+        MemberInfo? memberInfo = typeof(T).GetMember(Enum.GetName(value) ?? "__").FirstOrDefault();
         if (memberInfo is not null)
         {
             Attribute? attribute = Attribute.GetCustomAttribute(memberInfo, typeof(JsonCustomEnumAttribute));

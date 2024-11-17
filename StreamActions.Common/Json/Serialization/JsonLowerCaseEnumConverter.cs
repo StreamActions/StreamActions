@@ -34,6 +34,8 @@ public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : s
 
     #endregion Public Properties
 
+    #region Public Methods
+
     /// <inheritdoc/>
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

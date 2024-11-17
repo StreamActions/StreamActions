@@ -265,7 +265,7 @@ public sealed partial class TwitchApi : IApi
     /// <summary>
     /// The <see cref="ILogger"/> for logging.
     /// </summary>
-    private static readonly ILogger _logger = Logger.GetLogger(typeof(TwitchApi));
+    private static readonly ILogger _logger = Logger.GetLogger<TwitchApi>();
 
     #endregion Private Fields
 

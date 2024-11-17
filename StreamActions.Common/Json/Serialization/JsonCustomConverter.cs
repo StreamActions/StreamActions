@@ -46,7 +46,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <param name="typeToConvert">The type to convert.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
     /// <returns>The deserialized <typeparamref name="T"/>.</returns>
-    public override sealed T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public sealed override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         T obj = this.CreateInstance();
 
@@ -96,7 +96,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <param name="writer">The writer.</param>
     /// <param name="value">The value to convert to JSON.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
-    public override sealed void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+    public sealed override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
         if (writer is null)
         {
@@ -140,7 +140,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <exception cref="ArgumentNullException"><see cref="Activator.CreateInstance(Type)"/> returned <see langword="null"/>.</exception>
     protected virtual T CreateInstance()
     {
-        T? obj = (T?)Activator.CreateInstance(typeof(T));
+        T? obj = Activator.CreateInstance<T>();
 
         return obj is null ? throw new ArgumentNullException(nameof(obj)) : obj;
     }
@@ -153,6 +153,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <param name="propertyName">The property name to be deserialized.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1045:Do not pass types by reference", Justification = "Passing struct with state.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "Intentional.")]
     protected void DefaultRead(ref Utf8JsonReader reader, T obj, string propertyName, JsonSerializerOptions options)
     {
         Type? t = this.GetMemberType(obj, propertyName);
@@ -311,6 +312,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <param name="propertyName">The property name to be deserialized.</param>
     /// <param name="propertyName">The <see cref="JsonPropertyNameAttribute.Name"/> for the property; <paramref name="propertyName"/> if not specified.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1045:Do not pass types by reference", Justification = "Passing struct with state.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "Intentional.")]
     protected abstract void Read(ref Utf8JsonReader reader, Utf8JsonReader newReader, Type typeToConvert, JsonSerializerOptions options, T obj, string propertyName, string jsonPropertyName);
 
     /// <summary>

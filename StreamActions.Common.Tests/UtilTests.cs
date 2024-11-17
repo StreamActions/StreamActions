@@ -47,7 +47,7 @@ public class UtilTests
     [InlineData("#FF5733 is at the beginning of this line.", false)]
     [InlineData("This line ends with #FF5733.", false)]
     [InlineData(null, false)]
-    public void IsValidHexColor_ReturnsCorrectBoolean(string hexColor, bool expected) => Util.IsValidHexColor(hexColor).Should().Be(expected);
+    public void IsValidHexColor_ReturnsCorrectBoolean(string? hexColor, bool expected) => Util.IsValidHexColor(hexColor).Should().Be(expected);
 
     [Fact]
     [Trait("Member", "BuildUri")]

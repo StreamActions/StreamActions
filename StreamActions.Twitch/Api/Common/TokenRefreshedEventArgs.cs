@@ -21,26 +21,18 @@ namespace StreamActions.Twitch.Api.Common;
 /// <summary>
 /// Represents the event args for a <see cref="TwitchApi.OnTokenRefreshed"/> event.
 /// </summary>
-public sealed class TokenRefreshedEventArgs : EventArgs
+/// <remarks>
+/// Constructor.
+/// </remarks>
+/// <param name="session">The new <see cref="TwitchSession"/> that contains the newly refreshed token.</param>
+public sealed class TokenRefreshedEventArgs(TwitchSession session) : EventArgs
 {
-
-    #region Public Constructors
-
-    /// <summary>
-    /// Constructor.
-    /// </summary>
-    /// <param name="session">The new <see cref="TwitchSession"/> that contains the newly refreshed token.</param>
-    public TokenRefreshedEventArgs(TwitchSession session) => this.Session = session;
-
-    #endregion Public Constructors
-
     #region Public Properties
 
     /// <summary>
     /// The new <see cref="TwitchSession"/> that contains the newly refreshed token.
     /// </summary>
-    public TwitchSession Session { get; init; }
+    public TwitchSession Session { get; init; } = session;
 
     #endregion Public Properties
-
 }

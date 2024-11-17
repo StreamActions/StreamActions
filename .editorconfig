@@ -383,6 +383,7 @@ csharp_style_prefer_top_level_statements = true:silent
 csharp_style_prefer_utf8_string_literals = true:suggestion
 csharp_style_prefer_readonly_struct = true:suggestion
 csharp_style_prefer_primary_constructors = true:suggestion
+csharp_prefer_system_threading_lock = true:suggestion
 
 [*.{cs,vb}]
 
@@ -487,7 +488,7 @@ dotnet_diagnostic.CA1401.severity = warning
 
 dotnet_diagnostic.CA1501.severity =suggestion
 
-dotnet_diagnostic.CA1502.severity =suggestion
+dotnet_diagnostic.CA1502.severity = none
 
 dotnet_diagnostic.CA1505.severity =suggestion
 
@@ -521,7 +522,7 @@ dotnet_diagnostic.CA1720.severity = warning
 
 dotnet_diagnostic.CA1721.severity = warning
 
-dotnet_diagnostic.CA1724.severity = warning
+dotnet_diagnostic.CA1724.severity = none
 
 dotnet_diagnostic.CA1725.severity =warning
 

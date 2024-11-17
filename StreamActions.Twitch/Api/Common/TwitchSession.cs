@@ -86,7 +86,7 @@ public sealed record TwitchSession : IDisposable
         bool hasScope = false;
         if (scope is not null)
         {
-            hasScope = this.Token.HasScope(scope, alternateScope is null ? retIfNull : false);
+            hasScope = this.Token.HasScope(scope, alternateScope is null && retIfNull);
         }
 
         if (!hasScope && alternateScope is not null)

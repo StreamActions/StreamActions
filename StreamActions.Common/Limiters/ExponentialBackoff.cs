@@ -21,19 +21,13 @@ namespace StreamActions.Common.Limiters;
 /// <summary>
 /// Handles backoff timing using an exponentially increasing duration strategy.
 /// </summary>
-public sealed class ExponentialBackoff : BackoffBase
+/// <remarks>
+/// Constructor.
+/// </remarks>
+/// <param name="initialDuration">The initial duration of the backoff, after a reset.</param>
+/// <param name="maxDuration">The maximum allowed backoff duration.</param>
+public sealed class ExponentialBackoff(TimeSpan initialDuration, TimeSpan maxDuration) : BackoffBase(initialDuration, maxDuration)
 {
-    #region Public Constructors
-
-    /// <summary>
-    /// Constructor.
-    /// </summary>
-    /// <param name="initialDuration">The initial duration of the backoff, after a reset.</param>
-    /// <param name="maxDuration">The maximum allowed backoff duration.</param>
-    public ExponentialBackoff(TimeSpan initialDuration, TimeSpan maxDuration) : base(initialDuration, maxDuration) { }
-
-    #endregion Public Constructors
-
     #region Protected Methods
 
     /// <summary>

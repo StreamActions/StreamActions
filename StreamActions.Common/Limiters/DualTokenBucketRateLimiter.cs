@@ -21,30 +21,20 @@ namespace StreamActions.Common.Limiters;
 /// <summary>
 /// Handles rate limits using dual token buckets, where a token must be acquired from both a local bucket and a shared global bucket to succeed.
 /// </summary>
-public sealed class DualTokenBucketRateLimiter
+/// <remarks>
+/// Constructor.
+/// </remarks>
+/// <param name="localBucket">The local <see cref="TokenBucketRateLimiter"/>.</param>
+/// <param name="globalBucket">The shared global <see cref="TokenBucketRateLimiter"/>.</param>
+/// <exception cref="ArgumentNullException"><paramref name="localBucket"/> or <paramref name="globalBucket"/> is <see langword="null"/>.</exception>
+public sealed class DualTokenBucketRateLimiter(TokenBucketRateLimiter localBucket, TokenBucketRateLimiter globalBucket)
 {
-    #region Public Constructors
-
-    /// <summary>
-    /// Constructor.
-    /// </summary>
-    /// <param name="localBucket">The local <see cref="TokenBucketRateLimiter"/>.</param>
-    /// <param name="globalBucket">The shared global <see cref="TokenBucketRateLimiter"/>.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="localBucket"/> or <paramref name="globalBucket"/> is <see langword="null"/>.</exception>
-    public DualTokenBucketRateLimiter(TokenBucketRateLimiter localBucket, TokenBucketRateLimiter globalBucket)
-    {
-        this.LocalBucket = localBucket ?? throw new ArgumentNullException(nameof(localBucket));
-        this.GlobalBucket = globalBucket ?? throw new ArgumentNullException(nameof(globalBucket));
-    }
-
-    #endregion Public Constructors
-
     #region Public Properties
 
     /// <summary>
     /// The shared global <see cref="TokenBucketRateLimiter"/>.
     /// </summary>
-    public TokenBucketRateLimiter GlobalBucket { get; init; }
+    public TokenBucketRateLimiter GlobalBucket { get; init; } = globalBucket ?? throw new ArgumentNullException(nameof(globalBucket));
 
     /// <summary>
     /// Indicates if both <see cref="GlobalBucket"/> and <see cref="LocalBucket"/> are full.
@@ -54,7 +44,7 @@ public sealed class DualTokenBucketRateLimiter
     /// <summary>
     /// The local <see cref="TokenBucketRateLimiter"/>.
     /// </summary>
-    public TokenBucketRateLimiter LocalBucket { get; init; }
+    public TokenBucketRateLimiter LocalBucket { get; init; } = localBucket ?? throw new ArgumentNullException(nameof(localBucket));
 
     #endregion Public Properties
 
