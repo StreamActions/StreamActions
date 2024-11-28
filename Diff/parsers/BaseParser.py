@@ -274,6 +274,9 @@ class BaseParser:
         then the specified operation is applied to the entire sub-object, and the "endpoint", "parameter", "field", or "code" keys are being used as context
 
         If a specific value has changed, but not the entire object, it will be defined in a sub-object defining the operation
+
+        To limit code complexity of the parser, changes of a sub-object inside of a list are represented as a "remove" and "add"
+
         For example:
         {
             "endpoints": {
@@ -287,12 +290,15 @@ class BaseParser:
                     "requestBody": [
                         {
                             "field": "broadcaster_id",
-                            "type": {
-                                "_operation": "replace"
-                                "lhs": "<del>Integer</del>"
-                                "rhs": "<ins>String</ins>"
-                                "combined": "<del>Integer</del><ins>String</ins>"
-                            }
+                            "type": "Integer",
+                            "description": "The ID of the partner or affiliate broadcaster that wants to run the commercial. This ID must match the user ID found in the OAuth token.",
+                            "_operation": "remove"
+                        },
+                        {
+                            "field": "broadcaster_id",
+                            "type": "String",
+                            "description": "The ID of the partner or affiliate broadcaster that wants to run the commercial. This ID must match the user ID found in the OAuth token.",
+                            "_operation": "add"
                         }
                     ]
                 }
