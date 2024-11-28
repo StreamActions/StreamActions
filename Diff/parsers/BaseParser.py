@@ -400,6 +400,9 @@ class BaseParser:
         return diff
 
     def main(self):
+        """
+        Processes the argument parser, executes requested operations, and produces output to the specified location
+        """
         parser = argparse.ArgumentParser(description="Parse a page into a JSON format that can be diffed")
         pgroup = parser.add_argument_group("Parse HTML", "Parse the HTML of a page and return a dict of parsed data")
         pigroup = pgroup.add_mutually_exclusive_group()
