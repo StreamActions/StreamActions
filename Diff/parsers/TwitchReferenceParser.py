@@ -17,14 +17,13 @@
 # along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""
-Parse a Twitch API Reference page into a format that can be diffed
-"""
-
 from bs4 import BeautifulSoup
 from BaseParser import BaseParser
 
 class TwitchReferenceParser(BaseParser):
+    """
+    Parse a Twitch API Reference page into a format that can be diffed
+    """
     def parse(self, html:str) -> dict:
         """
         Parse a Twitch API Reference page from the input HTML and return a dict of parsed data

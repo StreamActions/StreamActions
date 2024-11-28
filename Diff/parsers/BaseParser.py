@@ -17,16 +17,15 @@
 # along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-"""
-Base class for a parser which converts a page into a JSON format that can be diffed
-"""
-
 import argparse
 from difflib import SequenceMatcher
 import json
 import requests
 
 class BaseParser:
+    """
+    Base class for a parser which converts a page into a JSON format that can be diffed
+    """
     def parseFromFile(self, path:str) -> dict:
         """
         Parse a page from the specified file and return a dict of parsed data
