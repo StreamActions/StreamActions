@@ -318,10 +318,12 @@ class BaseParser:
         pigroup.add_argument("--file", action="store", help="Parse the HTML from a file stored in a UTF-8 compatible encoding")
         pigroup.add_argument("--url", action="store", help="Parse the HTML from a URL")
         pgroup.add_argument("--out", action="store", help="Output JSON object from HTML to the specified file instead of STDOUT")
+        pgroup.add_argument("--pretty", action="store_true", help="Prettyfi the parser output when using --out")
         dgroup = parser.add_argument_group("Diff", "Diff two dicts created by the parser. If only one of --lhs/--rhs is specified, the other is taken from the output of parsing --file/--url")
         dgroup.add_argument("--lhs", action="store", help="Load a JSON file created by parse as the LHS (Original)")
         dgroup.add_argument("--rhs", action="store", help="Load a JSON file created by parse as the RHS (New/Modified)")
         dgroup.add_argument("--diffout", action="store", help="Output diff as JSON to the specified file instead of STDOUT")
+        dgroup.add_argument("--diffpretty", action="store_true", help="Prettyfi the parser output when using --diffout")
         args = parser.parse_args()
         if args.url == None and args.file == None and args.lhs == None and args.rhs == None:
             parser.error("must provide at least 1 argument")
@@ -347,13 +349,21 @@ class BaseParser:
             if args.out == None:
                 print(json.dumps(retp, indent=4))
             else:
+                if args.pretty:
+                    indent=4
+                else:
+                    indent=None
                 with open(args.out, "w", encoding="utf8") as pout_file:
-                    json.dump(retp, pout_file)
+                    json.dump(retp, pout_file, indent=indent)
         if retd != None:
             if retp != None and args.out == None:
                 print("")
             if args.diffout == None:
                 print(json.dumps(retd, indent=4))
             else:
+                if args.diffpretty:
+                    indent=4
+                else:
+                    indent=None
                 with open(args.diffout, "w", encoding="utf8") as dout_file:
-                    json.dump(retd, dout_file)
+                    json.dump(retd, dout_file, indent=indent)
