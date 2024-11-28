@@ -1,7 +1,7 @@
 # coding=utf-8
 #
 # This file is part of StreamActions.
-# Copyright © 2019-2024 StreamActions Team (streamactions.github.io)
+# Copyright Â© 2019-2024 StreamActions Team (streamactions.github.io)
 #
 # StreamActions is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -169,6 +169,19 @@ class BaseParser:
                 return rhs
         elif rhs == lhs:
             return {"_operation": "none"}
+        elif isinstance(lhs, list) and isinstance(rhs, list):
+            ret = []
+            for lk,lv in enumerate(lhs):
+                if lv not in rhs:
+                    res = lv
+                    res["_operation"] = "remove"
+                    ret.append(res)
+            for rk,rv in enumerate(rhs):
+                if rv not in lhs:
+                    res = rv
+                    res["_operation"] = "add"
+                    ret.append(res)
+            return ret
         elif isinstance(lhs, dict) and isinstance(rhs, dict):
             ret = {}
             foundk = []
@@ -309,7 +322,83 @@ class BaseParser:
         Returns:
             dict: A dict containing the diff data, as described above
         """
-        return self.diffobj(lhs, rhs)
+        diff = {}
+        foundk = []
+        for lk,larr in lhs["toc"].items():
+            if lk in rhs["toc"]:
+                foundk.append(lk)
+                rarr = rhs["toc"][lk]
+                founde = []
+                for lv in larr:
+                    for rv in rarr:
+                        if lv["endpoint"] == rv["endpoint"]:
+                            founde.append(lv["endpoint"])
+                            if lv["description"] != rv["description"]:
+                                if "toc" not in diff:
+                                    diff["toc"] = {}
+                                if lk not in diff["toc"]:
+                                    diff["toc"][lk] = [];
+                                diff["toc"][lk].append({"endpoint": lv["endpoint"], "description": self.diffobj(lv["description"], rv["description"])});
+                for lv in larr:
+                    if lv["endpoint"] not in founde:
+                        if "toc" not in diff:
+                            diff["toc"] = {}
+                        if lk not in diff["toc"]:
+                            diff["toc"][lk] = [];
+                        diff["toc"][lk].append({"endpoint": lv["endpoint"], "_operation": "remove"})
+                for rv in rarr:
+                    if rv["endpoint"] not in founde:
+                        if "toc" not in diff:
+                            diff["toc"] = {}
+                        if lk not in diff["toc"]:
+                            diff["toc"][lk] = [];
+                        rv["_operation"] = "add"
+                        diff["toc"][lk].append(rv)
+            else:
+                if "toc" not in diff:
+                    diff["toc"] = {}
+                diff["toc"][lk] = {"_operation": "remove"}
+        for rk in rhs["toc"]:
+            if rk not in foundk:
+                if "toc" not in diff:
+                    diff["toc"] = {}
+                diff["toc"][rk] = {"_operation": "add"}
+        foundk = []
+        for lk,lv in lhs["endpoints"].items():
+            if lk in rhs["endpoints"]:
+                foundk.append(lk)
+                rv = rhs["endpoints"][lk]
+                hasOp = False
+                ret = {}
+                founddk = []
+                for ldk,ldv in lv.items():
+                    if ldk in rv:
+                        founddk.append(ldk)
+                        rdv = rv[ldk]
+                        if ldv != rdv:
+                            ret[ldk] = self.diffobj(ldv, rdv)
+                            hasOp = True
+                    else:
+                        ret[ldk] = {"_operation": "remove"}
+                        hasOp = True
+                for rdk in rv:
+                    if rdk not in founddk:
+                        ret[rdk] = {"_operation": "add"}
+                        hasOp = True
+                if hasOp == True:
+                    if "endpoints" not in diff:
+                        diff["endpoints"] = {}
+                    diff["endpoints"][lk] = ret
+            else:
+                if "endpoints" not in diff:
+                    diff["endpoints"] = {}
+                diff["endpoints"][lk] = {"_operation": "remove"}
+        for rk in rhs["endpoints"]:
+            if rk not in foundk:
+                if "endpoints" not in diff:
+                    diff["endpoints"] = {}
+                diff["endpoints"][rk] = {"_operation": "add"}
+        return diff
 
     def main(self):
         parser = argparse.ArgumentParser(description="Parse a page into a JSON format that can be diffed")
