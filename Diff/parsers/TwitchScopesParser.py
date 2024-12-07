@@ -20,7 +20,7 @@
 from bs4 import BeautifulSoup
 from BaseParser import BaseParser
 
-class TwitchScopeParser(BaseParser):
+class TwitchScopesParser(BaseParser):
     """
     Parse a Twitch API Scope page into a format that can be diffed
     """
@@ -108,5 +108,5 @@ class TwitchScopeParser(BaseParser):
         return ret
 
 if __name__ == "__main__":
-    parser = TwitchScopeParser()
+    parser = TwitchScopesParser()
     parser.main()
