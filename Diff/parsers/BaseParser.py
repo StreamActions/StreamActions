@@ -173,11 +173,15 @@ class BaseParser:
             ret = []
             for lk,lv in enumerate(lhs):
                 if lv not in rhs:
+                    if isinstance(lv, str):
+                        lv = {"string": lv}
                     res = lv
                     res["_operation"] = "remove"
                     ret.append(res)
             for rk,rv in enumerate(rhs):
                 if rv not in lhs:
+                    if isinstance(rv, str):
+                        rv = {"string": rv}
                     res = rv
                     res["_operation"] = "add"
                     ret.append(res)
