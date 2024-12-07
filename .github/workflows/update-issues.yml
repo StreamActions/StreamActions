@@ -319,7 +319,7 @@ jobs:
                                                 body.data[section][category][endpoint].checked = false;
                                                 if (Object.keys(newData.endpoints).includes(endpoint)) {
                                                     core.debug('----Found in newData');
-                                                    if (newData.endpoints[endpoint].slug !== null) {
+                                                    if (newData.endpoints[endpoint].slug !== undefined && newData.endpoints[endpoint].slug !== null) {
                                                         core.debug('------Has slug');
                                                         body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
                                                     }
