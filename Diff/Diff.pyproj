@@ -35,6 +35,7 @@
   <ItemGroup>
     <Compile Include="ETagFinder.py" />
     <Compile Include="parsers\BaseParser.py" />
+    <Compile Include="parsers\TwitchScopeParser.py" />
     <Compile Include="parsers\TwitchReferenceParser.py" />
   </ItemGroup>
   <ItemGroup>
