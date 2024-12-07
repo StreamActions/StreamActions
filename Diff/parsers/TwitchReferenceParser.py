@@ -86,7 +86,7 @@ class TwitchReferenceParser(BaseParser):
             }
         }
 
-        Note that in the "endpoints" sub-dict that any value which is not present in the documentation for a particular endpoint will be present, but set to None.
+        Note that in the "endpoints" sub-dict that any value which is not present in the documentation for a particular endpoint will be present, but set to None (or possibly [] for lists).
         All keys are type str. All values which are present are type str
 
         Note that all values come from the highest level enclosing tag that will support the separation required.

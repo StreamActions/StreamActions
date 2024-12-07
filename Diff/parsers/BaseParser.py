@@ -66,7 +66,8 @@ class BaseParser:
         and an `endpoints` key, where `endpoints` is a dict of endpoints
 
         For `toc`, the key should be the category name, and the value should be a list of dicts. Each dict should contain a key `endpoint`
-        with a value which matches the Friendly Name used in the `endpoints` dict as described below
+        with a value which matches the Friendly Name used in the `endpoints` dict as described below. The toc endpoint entries can also have
+        an optional `description` key
 
         For `endpoints`, the key should be the Friendly Name and the value should be a dict. In the dict, there should be a key `slug`
         with a value of the URI fragment or relative path from the base API doc URL
@@ -338,12 +339,13 @@ class BaseParser:
                     for rv in rarr:
                         if lv["endpoint"] == rv["endpoint"]:
                             founde.append(lv["endpoint"])
-                            if lv["description"] != rv["description"]:
-                                if "toc" not in diff:
-                                    diff["toc"] = {}
-                                if lk not in diff["toc"]:
-                                    diff["toc"][lk] = [];
-                                diff["toc"][lk].append({"endpoint": lv["endpoint"], "description": self.diffobj(lv["description"], rv["description"])});
+                            if "description" in lv and "description" in rv:
+                                if lv["description"] != rv["description"]:
+                                    if "toc" not in diff:
+                                        diff["toc"] = {}
+                                    if lk not in diff["toc"]:
+                                        diff["toc"][lk] = [];
+                                    diff["toc"][lk].append({"endpoint": lv["endpoint"], "description": self.diffobj(lv["description"], rv["description"])})
                 for lv in larr:
                     if lv["endpoint"] not in founde:
                         if "toc" not in diff:

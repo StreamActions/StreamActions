@@ -31,21 +31,21 @@ class TwitchScopeParser(BaseParser):
         The format of the returned dict is:
         {
             "toc": {
-                category: [
+                category: [ // Name of category from H2 tag
                     {
-                        "endpoint": scopeName
+                        "endpoint": scopeName // Scope
                     }
                 ]
             },
             "endpoints": {
-                scopeName: {
-                    "description": description,
+                scopeName: { // Scope from the 1st column of the table
+                    "description": description, // Description. Typically the first line in the 2nd column of the table
                     "api": [
-                        endpoint,
+                        endpoint, // Names of Twitch API Reference endpoints after the `API` strong tag in the 2nd column of the table
                         ...
                     ],
                     "eventsub": [
-                        topic,
+                        topic, // Names of EventSub topics after the `EventSub` strong tag in the 2nd column of the table
                         ...
                     ]
                 },
@@ -53,14 +53,14 @@ class TwitchScopeParser(BaseParser):
             }
         }
 
-        Note that in the "endpoints" sub-dict that any value which is not present in the documentation for a particular endpoint will be present, but set to None.
+        Note that in the "endpoints" sub-dict that any value which is not present in the documentation for a particular endpoint will be present, but set to None (or possibly [] for lists).
         All keys are type str. All values which are present are type str
 
         Note that all values come from the highest level enclosing tag that will support the separation required.
         All child tags are stripped and the resulting strings joined with whitespace
 
         Args:
-            html (str): The HTML from a Twitch API Reference page which will be parsed
+            html (str): The HTML from a Twitch API Scope page which will be parsed
 
         Returns:
             dict: A dict containing the parsed data, as described above
