@@ -315,7 +315,7 @@ jobs:
                                             core.debug('--Check category ' + category);
                                             if (body.data[section][category].hasOwnProperty(endpoint)) {
                                                 core.debug('----Found in body');
-                                                core.info(endpoint + ': ' + (diffKeys[endpoint].hasOwnProperty('_operation') && diffKeys[endpoint]['_operation'] !== 'none' ? diffKeys[endpoint]['_operation'] : 'changed'))
+                                                core.info(endpoint + ': ' + (diff['endpoints'][endpoint].hasOwnProperty('_operation') && diff['endpoints'][endpoint]['_operation'] !== 'none' ? diff['endpoints'][endpoint]['_operation'] : 'changed'))
                                                 body.data[section][category][endpoint].checked = false;
                                                 if (Object.keys(newData.endpoints).includes(endpoint)) {
                                                     core.debug('----Found in newData');
