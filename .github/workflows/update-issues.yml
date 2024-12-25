@@ -362,6 +362,7 @@ jobs:
                                         let cdata = sdata[category];
                                         let ckeys = Object.keys(cdata);
                                         if (ckeys.length > 0) {
+                                            ckeys.sort();
                                             newBody.push('');
                                             newBody.push('### ' + category);
                                             for (let item of ckeys) {
