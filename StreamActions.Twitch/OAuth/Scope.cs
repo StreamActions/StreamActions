@@ -314,16 +314,40 @@ public sealed record Scope
     public static readonly Scope ModeratorManageShoutouts = new("moderator:manage:shoutouts", "Manage a broadcaster's shoutouts.");
 
     /// <summary>
+    /// Manage a broadcaster's unban requests.
+    /// </summary>
+    /// <value>moderator:manage:unban_requests</value>
+    public static readonly Scope ModeratorManageUnbanRequests = new("moderator:manage:unban_requests", "Manage a broadcaster's unban requests.");
+
+    /// <summary>
+    /// Warn users in channels where you have the moderator role.
+    /// </summary>
+    /// <value>moderator:manage:warnings</value>
+    public static readonly Scope ModeratorManageWarnings = new("moderator:manage:warnings", "Warn users in channels where you have the moderator role.");
+
+    /// <summary>
     /// View a broadcaster's AutoMod settings.
     /// </summary>
     /// <value>moderator:read:automod_settings</value>
     public static readonly Scope ModeratorReadAutomodSettings = new("moderator:read:automod_settings", "View a broadcaster's AutoMod settings.");
 
     /// <summary>
+    /// Read the list of bans or unbans in channels where you have the moderator role.
+    /// </summary>
+    /// <value>moderator:read:banned_users</value>
+    public static readonly Scope ModeratorReadBannedUsers = new("moderator:read:banned_users", "Read the list of bans or unbans in channels where you have the moderator role.");
+
+    /// <summary>
     /// View a broadcaster's list of blocked terms.
     /// </summary>
     /// <value>moderator:read:blocked_terms</value>
     public static readonly Scope ModeratorReadBlockedTerms = new("moderator:read:blocked_terms", "View a broadcaster's list of blocked terms.");
+
+    /// <summary>
+    /// Read deleted chat messages in channels where you have the moderator role.
+    /// </summary>
+    /// <value>moderator:read:chat_messages</value>
+    public static readonly Scope ModeratorReadChatMessages = new("moderator:read:chat_messages", "Read deleted chat messages in channels where you have the moderator role.");
 
     /// <summary>
     /// View a broadcaster's chat room settings.
@@ -350,6 +374,12 @@ public sealed record Scope
     public static readonly Scope ModeratorReadGuestStar = new("moderator:read:guest_star", "Read Guest Star details for channels where you are a Guest Star moderator.");
 
     /// <summary>
+    /// Read the list of moderators in channels where you have the moderator role.
+    /// </summary>
+    /// <value>moderator:read:moderators</value>
+    public static readonly Scope ModeratorReadModerators = new("moderator:read:moderators", "Read the list of moderators in channels where you have the moderator role.");
+
+    /// <summary>
     /// View a broadcaster's Shield Mode status.
     /// </summary>
     /// <value>moderator:read:shield_mode</value>
@@ -360,6 +390,30 @@ public sealed record Scope
     /// </summary>
     /// <value>moderator:read:shoutouts</value>
     public static readonly Scope ModeratorReadShoutouts = new("moderator:read:shoutouts", "View a broadcaster's shoutouts.");
+
+    /// <summary>
+    /// Read chat messages from suspicious users and see users flagged as suspicious in channels where you have the moderator role.
+    /// </summary>
+    /// <value>moderator:read:suspicious_users</value>
+    public static readonly Scope ModeratorReadSuspiciousUsers = new("moderator:read:suspicious_users", "Read chat messages from suspicious users and see users flagged as suspicious in channels where you have the moderator role.");
+
+    /// <summary>
+    /// View a broadcaster's unban requests.
+    /// </summary>
+    /// <value>moderator:read:unban_requests</value>
+    public static readonly Scope ModeratorReadUnbanRequests = new("moderator:read:unban_requests", "View a broadcaster's unban requests.");
+
+    /// <summary>
+    /// Read the list of VIPs in channels where you have the moderator role.
+    /// </summary>
+    /// <value>moderator:read:vips</value>
+    public static readonly Scope ModeratorReadVips = new("moderator:read:vips", "Read the list of VIPs in channels where you have the moderator role.");
+
+    /// <summary>
+    /// Read warnings in channels where you have the moderator role.
+    /// </summary>
+    /// <value>moderator:read:warnings</value>
+    public static readonly Scope ModeratorReadWarnings = new("moderator:read:warnings", "Read warnings in channels where you have the moderator role.");
 
     /// <summary>
     /// OpenID Connect.
@@ -381,6 +435,12 @@ public sealed record Scope
     /// </summary>
     /// <value>user:edit</value>
     public static readonly Scope UserEdit = new("user:edit", "Manage a user object.");
+
+    /// <summary>
+    /// View and edit a user's broadcasting configuration, including Extension configurations.
+    /// </summary>
+    /// <value>user:edit:broadcast</value>
+    public static readonly Scope UserEditBroadcast = new("user:edit:broadcast", "View and edit a user's broadcasting configuration, including Extension configurations.");
 
     /// <summary>
     /// Manage the block list of a user.
@@ -425,16 +485,34 @@ public sealed record Scope
     public static readonly Scope UserReadEmail = new("user:read:email", "View a user's email address.");
 
     /// <summary>
+    /// View emotes available to a user.
+    /// </summary>
+    /// <value>user:read:emotes</value>
+    public static readonly Scope UserReadEmotes = new("user:read:emotes", "View emotes available to a user.");
+
+    /// <summary>
     /// View the list of channels a user follows.
     /// </summary>
     /// <value>user:read:follows</value>
     public static readonly Scope UserReadFollows = new("user:read:follows", "View the list of channels a user follows.");
 
     /// <summary>
+    /// Read the list of channels you have moderator privileges in.
+    /// </summary>
+    /// <value>user:read:moderated_channels</value>
+    public static readonly Scope UserReadModeratedChannels = new("user:read:moderated_channels", "Read the list of channels you have moderator privileges in.");
+
+    /// <summary>
     /// View if an authorized user is subscribed to specific channels.
     /// </summary>
     /// <value>user:read:subscriptions</value>
     public static readonly Scope UserReadSubscriptions = new("user:read:subscriptions", "View if an authorized user is subscribed to specific channels.");
+
+    /// <summary>
+    /// Receive whispers sent to your user.
+    /// </summary>
+    /// <value>user:read:whispers</value>
+    public static readonly Scope UserReadWhispers = new("user:read:whispers", "Receive whispers sent to your user.");
 
     /// <summary>
     /// Send chat messages to a chatroom.
