@@ -25,8 +25,8 @@ namespace StreamActions.Twitch.OAuth;
 /// A Twitch OAuth scope.
 /// </summary>
 [ETag("Twitch API Scopes", 82,
-    "https://dev.twitch.tv/docs/authentication/scopes", "3eb00b9d1a45b9cc4b85585eeaf852467dc4ce79baf55b777c942c7664376498",
-    "2023-12-18T06:21Z", "TwitchScopesParser", [])]
+    "https://dev.twitch.tv/docs/authentication/scopes", "C5C47EB0D3003023F71C158B871FA4769E7C12CF551F4062467977336462F271",
+    "2024-12-07T22:24Z", "TwitchScopesParser", [])]
 [JsonConverter(typeof(ScopeJsonConverter))]
 public sealed record Scope
 {
@@ -71,13 +71,13 @@ public sealed record Scope
     public static readonly Scope BitsRead = new("bits:read", "View Bits information for a channel.");
 
     /// <summary>
-    /// Allows the client's bot users access to a channel.
+    /// Join your channel's chatroom as a bot user, and perform chat-related actions as that user.
     /// </summary>
     /// <remarks>
-    /// This scope is used on a broadcaster to allow access to the EventSub Chat subscriptions when using an App Access Token. Alternatively, the bot user who was authorized with <see cref="UserBot"/> can be made a moderator.
+    /// This scope is used on a broadcaster to allow access to the EventSub Chat subscriptions and sending chat messages when using an App Access Token. Alternatively, the bot user who was authorized with <see cref="UserBot"/> can be made a moderator.
     /// </remarks>
     /// <value>channel:bot</value>
-    public static readonly Scope ChannelBot = new("channel:bot", "Allows the client's bot users access to a channel.");
+    public static readonly Scope ChannelBot = new("channel:bot", "Join your channel's chatroom as a bot user, and perform chat-related actions as that user.");
 
     /// <summary>
     /// Run commercials on a channel.
@@ -158,12 +158,6 @@ public sealed record Scope
     public static readonly Scope ChannelManageVips = new("channel:manage:vips", "Add or remove the VIP role from users in your channel.");
 
     /// <summary>
-    /// Perform moderation actions in a channel.
-    /// </summary>
-    /// <value>channel:moderate</value>
-    public static readonly Scope ChannelModerate = new("channel:moderate", "Perform moderation actions in a channel.");
-
-    /// <summary>
     /// Read the ads schedule and details on your channel.
     /// </summary>
     /// <value>channel:read:ads</value>
@@ -236,16 +230,16 @@ public sealed record Scope
     public static readonly Scope ChannelReadVips = new("channel:read:vips", "Read the list of VIPs in your channel.");
 
     /// <summary>
-    /// Send live stream chat messages.
+    /// Send chat messages to a chatroom using an IRC connection.
     /// </summary>
     /// <value>chat:edit</value>
-    public static readonly Scope ChatEdit = new("chat:edit", "Send live stream chat messages.");
+    public static readonly Scope ChatEdit = new("chat:edit", "Send chat messages to a chatroom using an IRC connection.");
 
     /// <summary>
-    /// View live stream chat messages.
+    /// View chat messages sent in a chatroom using an IRC connection.
     /// </summary>
     /// <value>chat:read</value>
-    public static readonly Scope ChatRead = new("chat:read", "View live stream chat messages.");
+    public static readonly Scope ChatRead = new("chat:read", "View chat messages sent in a chatroom using an IRC connection.");
 
     /// <summary>
     /// Manage Clips for a channel.
@@ -374,13 +368,13 @@ public sealed record Scope
     public static readonly Scope OpenID = new("openid", "OpenID Connect.");
 
     /// <summary>
-    /// Allows client's bot to act as this user.
+    /// Join a specified chat channel as your user and appear as a bot, and perform chat-related actions as your user.
     /// </summary>
     /// <remarks>
-    /// This scope is used on a Twitch user to allow access to act on their behalf as a registered bot with the EventSub Chat subscriptions when using an App Access Token.
+    /// This scope is used on a Twitch user to allow access to act on their behalf as a registered bot with the EventSub Chat subscriptions and sending chat messages when using an App Access Token.
     /// </remarks>
     /// <value>user:bot</value>
-    public static readonly Scope UserBot = new("user:bot", "Allows client's bot to act as this user.");
+    public static readonly Scope UserBot = new("user:bot", "Join a specified chat channel as your user and appear as a bot, and perform chat-related actions as your user.");
 
     /// <summary>
     /// Manage a user object.
@@ -401,10 +395,10 @@ public sealed record Scope
     public static readonly Scope UserManageChatColor = new("user:manage:chat_color", "Update the color used for the user's name in chat.");
 
     /// <summary>
-    /// Read whispers that you send and receive, and send whispers on your behalf.
+    /// Receive whispers sent to your user, and send whispers on your user's behalf.
     /// </summary>
     /// <value>user:manage:whispers</value>
-    public static readonly Scope UserManageWhispers = new("user:manage:whispers", "Read whispers that you send and receive, and send whispers on your behalf.");
+    public static readonly Scope UserManageWhispers = new("user:manage:whispers", "Receive whispers sent to your user, and send whispers on your user's behalf.");
 
     /// <summary>
     /// View the block list of a user.
@@ -419,10 +413,10 @@ public sealed record Scope
     public static readonly Scope UserReadBroadcast = new("user:read:broadcast", "View a user's broadcasting configuration, including Extension configurations.");
 
     /// <summary>
-    /// View live stream chat and room messages.
+    /// Receive chatroom messages and informational notifications relating to a channel's chatroom.
     /// </summary>
     /// <value>user:read:chat</value>
-    public static readonly Scope UserReadChat = new("user:read:chat", "View live stream chat and room messages.");
+    public static readonly Scope UserReadChat = new("user:read:chat", "Receive chatroom messages and informational notifications relating to a channel's chatroom.");
 
     /// <summary>
     /// View a user's email address.
@@ -443,22 +437,16 @@ public sealed record Scope
     public static readonly Scope UserReadSubscriptions = new("user:read:subscriptions", "View if an authorized user is subscribed to specific channels.");
 
     /// <summary>
-    /// Send live stream chat messages using Send Chat Message API.
+    /// Send chat messages to a chatroom.
     /// </summary>
     /// <value>user:write:chat</value>
-    public static readonly Scope UserWriteChat = new("user:write:chat", "Send live stream chat messages using Send Chat Message API.");
+    public static readonly Scope UserWriteChat = new("user:write:chat", "Send chat messages to a chatroom.");
 
     /// <summary>
-    /// Send whisper messages.
-    /// </summary>
-    /// <value>whispers:edit</value>
-    public static readonly Scope WhispersEdit = new("whispers:edit", "Send whisper messages.");
-
-    /// <summary>
-    /// View your whisper messages.
+    /// Receive whisper messages for your user using PubSub.
     /// </summary>
     /// <value>whispers:read</value>
-    public static readonly Scope WhispersRead = new("whispers:read", "View your whisper messages.");
+    public static readonly Scope WhispersRead = new("whispers:read", "Receive whisper messages for your user using PubSub.");
 
     #endregion Scopes
 
