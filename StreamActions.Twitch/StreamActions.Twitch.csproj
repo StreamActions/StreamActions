@@ -36,7 +36,6 @@
     <Folder Include="Api\Extensions\" />
     <Folder Include="Api\Games\" />
     <Folder Include="Api\HypeTrain\" />
-    <Folder Include="Api\Music\" />
     <Folder Include="Api\Users\" />
     <Folder Include="Api\Teams\" />
     <Folder Include="Api\Streams\" />
