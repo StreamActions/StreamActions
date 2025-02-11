@@ -19,6 +19,11 @@ on:
             required: false
             default: ''
             type: string
+        cache-artifact:
+            description: Upload the starting and ending states of the cache as an artifact
+            required: true
+            default: false
+            type: boolean
         diff:
             description: Diff the cache with the available ETags and update issues
             required: true
@@ -88,6 +93,12 @@ jobs:
             key: etag-${{ github.run_id }}
             restore-keys: |
                 etag
+      - name: Upload starting cache artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.cache-artifact }}
+        uses: actions/upload-artifact@v4
+        with:
+            name: cache-start
+            path: .cache
       - name: Run diffs
         uses: actions/github-script@v7
         with:
@@ -435,3 +446,9 @@ jobs:
                     }
                     core.endGroup();
                 }
+      - name: Upload ending cache artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.cache-artifact }}
+        uses: actions/upload-artifact@v4
+        with:
+            name: cache-end
+            path: .cache
