@@ -124,7 +124,8 @@ jobs:
                 const fs = require('fs');
                 const issuePattern = /(\[(?<Check>[ x])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?/;
 
-                fs.mkdirSync('./.output');
+                fs.mkdirSync('./.cache', { recursive: true });
+                fs.mkdirSync('./.output', { recursive: true });
 
                 core.info('Finding ETags...');
                 await exec.exec('python', ['./Diff/ETagFinder.py', '--folder', '.', '--out', './.output/etags.json']);
@@ -376,7 +377,7 @@ jobs:
                                         }
                                     }
                                 }
-                                core.debug('Update issue');
+                                core.info('Updating issue...');
                                 let {status: updateStatus} = await github.rest.issues.update({
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
@@ -413,8 +414,10 @@ jobs:
                     core.warning('Failed to list caches...' + cacheStatus);
                 } else {
                     let first = true;
+                    core.startGroup('Cache Cleanup');
                     for (let cache of caches.actions_caches) {
                         if (first) {
+                            core.info('Keeping cache ' + cache.key + ' (' + cache.id + ')');
                             first = false;
                         } else {
                             let {status: deleteStatus} = await github.rest.actions.deleteActionsCacheById({
@@ -425,7 +428,10 @@ jobs:
 
                             if (deleteStatus !== 204) {
                                 core.warning('Failed to delete cache ' + cache.key + ' (' + cache.id + ')...' + deleteStatus);
+                            } else {
+                                core.info('Deleted cache ' + cache.key + ' (' + cache.id + ')');
                             }
                         }
                     }
+                    core.endGroup();
                 }
