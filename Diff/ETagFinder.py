@@ -30,14 +30,16 @@ import re
 etagpattern = re.compile(r"(?s)\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\"\s*,\s*(?P<issue>[0-9]+)\s*,\s*\"(?P<url>[^\"]+)\"\s*,\s*\"(?P<hash>[^\"]+)\"\s*,\s*\"(?P<date>[^\"]+)\"\s*,\s*\"(?P<parser>[^\"]+)\"\s*,\s*[{\[](?P<parameters>.*?)[}\]]\s*\)\]")
 parampattern = re.compile(r"(?s)(\"(?P<param>([^\"]|\\\")+)\"(,|$))")
 
-def testfolder(folder: str | Path, glob: str = "*.cs"):
-    """Tests if any files in the folder, or sub-folders, matching the glob contain an ETag attribute and returns the results
+def testfolder(folder: str | Path, glob: str = "*.cs") -> dict:
+    """
+    Tests if any files in the folder, or sub-folders, matching the glob contain an ETag attribute and returns the results
 
-    folder: The folder to check
+    Args:
+        folder (str | Path): The folder to check
+        glob (str): The glob to use for picking files to check. Default: ".cs"
 
-    glob: The glob to use for picking files to check
-
-    returns: A dict of files where at least 1 ETag attribute was found. The key is the file path relative to ETagFinder.py, the value is the output of testfile(filePath)
+    Returns:
+        dict: A dict of files where at least 1 ETag attribute was found. The key is the file path relative to ETagFinder.py, the value is the output of testfile(filePath)
     """
     ret = {}
     execpath = os.path.dirname(os.path.realpath(__file__))
@@ -47,12 +49,15 @@ def testfolder(folder: str | Path, glob: str = "*.cs"):
             ret[str(file.absolute().relative_to(execpath, walk_up=True))] = data
     return ret
 
-def testfile(filePath: str | Path):
-    """Tests if the file contains an ETag attribute and returns the result
+def testfile(filePath: str | Path) -> list | None:
+    """
+    Tests if the file contains an ETag attribute and returns the result
 
-    filePath: The file to check
+    Args:
+        filePath (str | Path): The file to check
 
-    returns: `None` if no matches are found; otherwise a list containing dicts as described below
+    Returns:
+        list | None: None if no matches are found; otherwise a list containing dicts as described below
 
     For a description of the values in the output dicts, see StreamActions.Common.Attributes.ETagAttribute
     [
