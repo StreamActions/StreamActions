@@ -18,7 +18,7 @@
 #
 
 """
-Find ETag attributes in a fodler structure and return their parameters
+Find ETag attributes in a folder structure and return their parameters
 """
 
 import argparse
