@@ -45,7 +45,7 @@ class BaseParser:
         """
         Parse a page from the specified URL and return a dict of parsed data
 
-        The user agent is sent as: streamactions.diff.parser/2024
+        The user agent is sent as: streamactions.diff.parser/1
 
         Args:
             url (str): The URL to a page
@@ -53,7 +53,7 @@ class BaseParser:
         Returns:
             dict: A dict containing the parsed data (see parse(str))
         """
-        resp = requests.get(url, headers = { "User-Agent": "streamactions.diff.parser/2024" })
+        resp = requests.get(url, headers = { "User-Agent": "streamactions.diff.parser/1" })
         if resp.status_code != 200:
             exit(1)
         return self.parse(resp.text)
