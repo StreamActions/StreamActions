@@ -47,6 +47,8 @@ class BaseParser:
 
         The user agent is sent as: streamactions.diff.parser/1
 
+        If the HTTP status code is not 200, the script exits with status 1
+
         Args:
             url (str): The URL to a page
 
