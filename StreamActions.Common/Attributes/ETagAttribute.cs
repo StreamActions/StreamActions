@@ -24,18 +24,18 @@ namespace StreamActions.Common.Attributes;
 /// Indicates the URI and ETag associated with a <see cref="Interfaces.IComponent"/>, allowing a diff parser to automatically detect when the source documentation has changed.
 /// </summary>
 /// <param name="friendlyName">The friendly name of the documentation, to be used when updating issues programmatically.</param>
-/// <param name="issueId">The issue number for tracking the API.</param>
+/// <param name="issueId">The GitHub issue number for tracking the API.</param>
 /// <param name="uri">The URI of the source documentation for this component.</param>
 /// <param name="eTag">The ETag of the latest version of the documentation that this component conforms to. This is usually a hash of the output from <paramref name="parser"/>.</param>
 /// <param name="timestamp">The timestamp when the <paramref name="eTag"/> was updated.</param>
 /// <param name="parser">The parser to use. See <c>Diff/parsers</c>.</param>
-/// <param name="parameters">Parameters for <paramref name="parser"/>.</param>
+/// <param name="parameters">Additional parameters for <paramref name="parser"/>.</param>
 /// <remarks>
 /// <para>
-/// Main RegEx (Python3): <code>r"(?s)\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\"\s*,\s*(?P<issue>[0-9]+)\s*,\s*\"(?P<url>[^\"]+)\"\s*,\s*\"(?P<hash>[^\"]+)\"\s*,\s*\"(?P<date>[^\"]+)\"\s*,\s*\"(?P<parser>[^\"]+)\"\s*,\s*[{\[](?P<parameters>.*?)[}\]]\s*\)\]"</code>
+/// RegEx (Python3): <c><![CDATA[r"(?s)\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\"\s*,\s*(?P<issue>[0-9]+)\s*,\s*\"(?P<url>[^\"]+)\"\s*,\s*\"(?P<hash>[^\"]+)\"\s*,\s*\"(?P<date>[^\"]+)\"\s*,\s*\"(?P<parser>[^\"]+)\"\s*,\s*[{\[](?P<parameters>.*?)[}\]]\s*\)\]"]]></c>
 /// </para>
 /// <para>
-/// Array RegEx (Python3): <code>r"(?s)(\"(?P<param>([^\"]|\\\")+)\"(,|$))"</code>
+/// <paramref name="parameters"/> RegEx (Python3): <c><![CDATA[r"(?s)(\"(?P<param>([^\"]|\\\")+)\"(,|$))"]]></c>
 /// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
@@ -54,7 +54,7 @@ public sealed class ETagAttribute(string friendlyName, int issueId, string uri, 
     public string FriendlyName { get; init; } = friendlyName;
 
     /// <summary>
-    /// The issue number for tracking the API.
+    /// The GitHub issue number for tracking the API.
     /// </summary>
     public int IssueId { get; init; } = issueId;
 
