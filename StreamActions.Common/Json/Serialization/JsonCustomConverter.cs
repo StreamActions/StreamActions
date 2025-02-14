@@ -50,7 +50,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     {
         T obj = this.CreateInstance();
 
-        Utf8JsonReader newReader = reader;
+        Utf8JsonReader copyReader = reader;
         ImmutableDictionary<string, string> propertyMap = this.MapFromJsonPropertyNames();
         string propertyName = "";
         string jsonPropertyName = "";
@@ -78,6 +78,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
             }
             else
             {
+                Utf8JsonReader newReader = copyReader;
                 this.Read(ref reader, newReader, typeToConvert, options, obj, propertyName, jsonPropertyName);
             }
         }
