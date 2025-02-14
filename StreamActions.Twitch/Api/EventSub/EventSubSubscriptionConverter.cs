@@ -33,12 +33,12 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
 
     protected override void Read(ref Utf8JsonReader reader, Utf8JsonReader newReader, Type typeToConvert, JsonSerializerOptions options, EventSubSubscription obj, string propertyName, string jsonPropertyName)
     {
-        if (obj is null)
+        if (obj is null || propertyName is null)
         {
             return;
         }
 
-        if (propertyName is nameof(EventSubSubscription.Condition))
+        if (propertyName == this.MapToJsonPropertyNames().GetValueOrDefault(nameof(EventSubSubscription.Condition), nameof(EventSubSubscription.Condition)))
         {
             string? subscriptionType = obj.Type;
 

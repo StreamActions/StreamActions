@@ -17,14 +17,14 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
-using System.Text.Json.Serialization;
 using System.Net.Http.Json;
-using StreamActions.Common.Net;
-using StreamActions.Common.Extensions;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace StreamActions.Twitch.Api.Channels;

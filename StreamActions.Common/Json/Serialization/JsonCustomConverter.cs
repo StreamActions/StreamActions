@@ -16,10 +16,10 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Text.Json.Serialization;
-using System.Text.Json;
-using System.Reflection;
 using System.Collections.Immutable;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Common.Json.Serialization;
 
@@ -46,7 +46,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <param name="typeToConvert">The type to convert.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
     /// <returns>The deserialized <typeparamref name="T"/>.</returns>
-    public override sealed T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public sealed override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         T obj = this.CreateInstance();
 
@@ -96,7 +96,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <param name="writer">The writer.</param>
     /// <param name="value">The value to convert to JSON.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
-    public override sealed void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+    public sealed override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
         if (writer is null)
         {

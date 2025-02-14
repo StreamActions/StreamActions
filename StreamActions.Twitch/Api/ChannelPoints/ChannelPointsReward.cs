@@ -17,17 +17,17 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
-using System.Globalization;
-using System.Text.Json.Serialization;
-using System.Drawing;
-using System.Net.Http.Json;
-using StreamActions.Common.Net;
-using StreamActions.Common.Extensions;
 using System.Collections.Specialized;
+using System.Drawing;
+using System.Globalization;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.ChannelPoints;
 

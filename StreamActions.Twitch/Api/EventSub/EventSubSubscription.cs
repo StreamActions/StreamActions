@@ -16,16 +16,16 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Extensions;
 using StreamActions.Common;
+using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.EventSub.Conditions;
-using System.Text.Json.Serialization;
 using System.Collections.Specialized;
-using StreamActions.Common.Net;
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.EventSub;
 
