@@ -62,7 +62,7 @@ class BaseParser:
 
     def parse(self, html:str) -> dict:
         """
-        Parse a from the input HTML and return a dict of parsed data
+        Parse from the input HTML and return a dict of parsed data
 
         For compatibility with the update-issues GitHub Action, the output of this function should be a dict containing a `toc` key
         and an `endpoints` key, where `endpoints` is a dict of endpoints
@@ -275,10 +275,7 @@ class BaseParser:
             }
         }
 
-        By contrast, this dict indicates that the "Ads" resource was already in the TOC on the LHS, but the entire entry object for "Start Commercial" is new on the RHS
-
-        It is assumed that if a particular sub-object defined in parse(str) is marked as "add" or "remove" as above,
-        then the specified operation is applied to the entire sub-object, and the "endpoint", "parameter", "field", or "code" keys are being used as context
+        By contrast, this dict indicates that the "Ads" resource was already in the TOC on the LHS, but the entry object for "Start Commercial" is new on the RHS
 
         If a specific value has changed, but not the entire object, it will be defined in a sub-object defining the operation
 
@@ -319,11 +316,11 @@ class BaseParser:
         with <ins></ins> tags surrounding the added text, and a combined string showing both sets of tags
 
         Operations:
-        - add: Add a new sub-object or string, where one previously did not exist or was set to None. See examples and explanation for how this is represented
-        - remove: Remove an existing sub-object or string. A string would be replaced with None, a sub-object would simply be removed from the dict or list. See examples and explanation for "add" for how this is represented
+        - add: Add a new sub-object or string, where one previously did not exist or was set to None
+        - remove: Remove an existing sub-object or string. A string would be replaced with None, a sub-object would simply be removed from the dict or list
         - insert: Insert the text that is surrounded by the <ins></ins> tags. Contains only sub-key "rhs" from the "replace" example. May contain only enough surrounding text to provide appropriate context
         - delete: Remove the text that is surrounded by the <del></del> tags. Contains only sub-key "lhs" from the "replace" example. May contain only enough surrounding text to provide appropriate context
-        - replace: Replace the text that is surrounded by the <del></del> tags with the text that is surrounded by the <ins></ins> tags. See example and explanation for how this is represented
+        - replace: Replace the text that is surrounded by the <del></del> tags with the text that is surrounded by the <ins></ins> tags
         - none: No operation. Should not normally occur
         - unknown: Unable to determine operation. Should not normally occur
 
