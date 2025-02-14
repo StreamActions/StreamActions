@@ -26,7 +26,7 @@ public interface IPlugin : IComponent
     #region Public Properties
 
     /// <summary>
-    /// Whether the plugin should always be enabled for all channels. This should only be true in core plugins and special circumstances.
+    /// Whether the plugin should always be enabled for all channels. This should only be <see langword="true"/> in core plugins and special circumstances.
     /// </summary>
     public bool AlwaysEnabled { get; }
 
