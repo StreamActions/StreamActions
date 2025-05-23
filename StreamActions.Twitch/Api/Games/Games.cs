@@ -77,6 +77,25 @@ public sealed record Game
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> or <see cref="TwitchToken.OAuth"/> is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="ArgumentException">Neither <paramref name="gameIds"/>, <paramref name="gameNames"/>, nor <paramref name="igdbIds"/> were provided, or the total number of IDs/names exceeds 100.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the specified games.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>A query parameter was missing or invalid (e.g., no identifiers provided, or the combined count of identifiers exceeds 100).</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid, missing, or the Client-Id header was invalid or mismatched.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<ResponseData<Game>?> GetGames(TwitchSession session, IEnumerable<string>? gameIds = null, IEnumerable<string>? gameNames = null, IEnumerable<string>? igdbIds = null)
     {
         if (session is null)
@@ -134,6 +153,25 @@ public sealed record Game
     /// <param name="before">The cursor that identifies the page of results to retrieve.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Game"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the list of top games.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>A query parameter was invalid (e.g., 'first' parameter out of range, or an invalid 'after'/'before' cursor).</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid, missing, or the Client-Id header was invalid or mismatched.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<ResponseData<Game>?> GetTopGames(TwitchSession session, int first = 20, string? after = null, string? before = null)
     {
         if (session is null)
