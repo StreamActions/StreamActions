@@ -16,20 +16,14 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Exceptions; // Included as per subtask requirements
-using StreamActions.Twitch.OAuth; // For TwitchToken, which is part of TwitchSession.Token
-using StreamActions.Common.Util; // For Util.BuildUri
-using System.Globalization; // For CultureInfo.InvariantCulture
+using System.Globalization;
+using StreamActions.Common;
+using System.Collections.Specialized;
 
 namespace StreamActions.Twitch.Api.Games;
 
@@ -42,28 +36,28 @@ public sealed record Game
     /// An ID that uniquely identifies the game.
     /// </summary>
     [JsonPropertyName("id")]
-    public string Id { get; init; } = "";
+    public string? Id { get; init; }
 
     /// <summary>
     /// The name of the game.
     /// </summary>
     [JsonPropertyName("name")]
-    public string Name { get; init; } = "";
+    public string? Name { get; init; }
 
     /// <summary>
-    /// A URL to the game’s box art. You must replace the {width}x{height} placeholders with the size of the image you want.
+    /// A URL to the game's box art. You must replace the {width}x{height} placeholders with the size of the image you want.
     /// </summary>
     [JsonPropertyName("box_art_url")]
-    public string BoxArtUrl { get; init; } = "";
+    public Uri? BoxArtUrl { get; init; }
 
     /// <summary>
-    /// The game’s ID on IGDB.
+    /// The game's ID on IGDB.
     /// </summary>
     /// <remarks>
     /// Note: The API documentation indicates that this can be an empty string if not available for a game.
     /// </remarks>
     [JsonPropertyName("igdb_id")]
-    public string IgdbId { get; init; } = "";
+    public string? IgdbId { get; init; }
 
     /// <summary>
     /// Gets information about one or more specified games.
@@ -87,11 +81,11 @@ public sealed record Game
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>A query parameter was missing or invalid (e.g., no identifiers provided, or the combined count of identifiers exceeds 100).</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
-    /// <description>The OAuth token was invalid, missing, or the Client-Id header was invalid or mismatched.</description>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// </list>
     /// </para>
@@ -103,11 +97,9 @@ public sealed record Game
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        // Removed explicit token check as session.RequireToken() handles it.
-
-        List<string> gameIdList = gameIds?.ToList() ?? new List<string>();
-        List<string> gameNameList = gameNames?.ToList() ?? new List<string>();
-        List<string> igdbIdList = igdbIds?.ToList() ?? new List<string>();
+        List<string> gameIdList = gameIds?.ToList() ?? [];
+        List<string> gameNameList = gameNames?.ToList() ?? [];
+        List<string> igdbIdList = igdbIds?.ToList() ?? [];
 
         int totalIds = gameIdList.Count + gameNameList.Count + igdbIdList.Count;
 
@@ -116,28 +108,28 @@ public sealed record Game
             throw new ArgumentNullException(nameof(gameIds) + "," + nameof(gameNames) + "," + nameof(igdbIds), "At least one game ID, game name, or IGDB ID must be provided.").Log(TwitchApi.GetLogger());
         }
 
-        if (totalIds > 100) // MaxIdsPerRequest replaced with 100
+        if (totalIds > 100)
         {
             throw new ArgumentOutOfRangeException(nameof(gameIds) + "," + nameof(gameNames) + "," + nameof(igdbIds), totalIds, "The total number of IDs, names, and IGDB IDs must not exceed 100.").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(); // No specific scope needed for Get Games
+        session.RequireToken();
 
-        Dictionary<string, ICollection<string>> queryParameters = new();
+        NameValueCollection queryParameters = [];
         if (gameIdList.Count > 0)
         {
-            queryParameters["id"] = gameIdList;
+            queryParameters.Add("id", gameIdList);
         }
         if (gameNameList.Count > 0)
         {
-            queryParameters["name"] = gameNameList;
+            queryParameters.Add("name", gameNameList);
         }
         if (igdbIdList.Count > 0)
         {
-            queryParameters["igdb_id"] = igdbIdList;
+            queryParameters.Add("igdb_id", igdbIdList);
         }
 
-        Uri requestUri = Util.BuildUri("/games", queryParameters);
+        Uri requestUri = Util.BuildUri(new("/games"), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Game>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
@@ -163,11 +155,11 @@ public sealed record Game
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>A query parameter was invalid (e.g., 'first' parameter out of range, or an invalid 'after'/'before' cursor).</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
-    /// <description>The OAuth token was invalid, missing, or the Client-Id header was invalid or mismatched.</description>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// </list>
     /// </para>
@@ -179,26 +171,23 @@ public sealed record Game
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(); // No specific scope needed for Get Top Games
+        session.RequireToken();
 
-        // ArgumentOutOfRangeException for 'first' removed as per requirements.
+        NameValueCollection queryParameters = [];
 
-        Dictionary<string, ICollection<string>> queryParameters = new();
-
-        // 'first' parameter is no longer nullable, Math.Clamp handles the range.
         first = Math.Clamp(first, 1, 100);
-        queryParameters.Add("first", new[] { first.ToString(CultureInfo.InvariantCulture) });
+        queryParameters.Add("first", first.ToString(CultureInfo.InvariantCulture));
 
         if (!string.IsNullOrWhiteSpace(after))
         {
-            queryParameters.Add("after", new[] { after });
+            queryParameters.Add("after", after);
         }
         if (!string.IsNullOrWhiteSpace(before))
         {
-            queryParameters.Add("before", new[] { before });
+            queryParameters.Add("before", before);
         }
 
-        Uri requestUri = Util.BuildUri("/games/top", queryParameters);
+        Uri requestUri = Util.BuildUri(new("/games/top"), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Game>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
