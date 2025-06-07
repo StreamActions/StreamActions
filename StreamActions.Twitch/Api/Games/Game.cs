@@ -16,14 +16,14 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Net.Http.Json;
-using System.Text.Json.Serialization;
+using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
-using System.Globalization;
-using StreamActions.Common;
 using System.Collections.Specialized;
+using System.Globalization;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Games;
 
@@ -120,10 +120,12 @@ public sealed record Game
         {
             queryParameters.Add("id", gameIdList);
         }
+
         if (gameNameList.Count > 0)
         {
             queryParameters.Add("name", gameNameList);
         }
+
         if (igdbIdList.Count > 0)
         {
             queryParameters.Add("igdb_id", igdbIdList);
@@ -133,7 +135,6 @@ public sealed record Game
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Game>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        // Removed try-catch block for HTTP and deserialization calls. Exceptions will propagate.
     }
 
     /// <summary>

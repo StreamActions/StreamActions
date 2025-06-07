@@ -15,22 +15,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 using StreamActions.Common;
-using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
-using System;
-using System.Collections.Generic;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
-using StreamActions.Twitch.Api;
+using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using StreamActions.Common.Util;
 
 namespace StreamActions.Twitch.Api.Users
 {
@@ -48,17 +41,17 @@ namespace StreamActions.Twitch.Api.Users
             /// <summary>
             /// A Twitch Partner.
             /// </summary>
-            [JsonStringEnumMember("partner")]
+            [JsonCustomEnum("partner")]
             Partner,
             /// <summary>
             /// A Twitch Affiliate.
             /// </summary>
-            [JsonStringEnumMember("affiliate")]
+            [JsonCustomEnum("affiliate")]
             Affiliate,
             /// <summary>
             /// A normal broadcaster (neither Partner nor Affiliate).
             /// </summary>
-            [JsonStringEnumMember("")]
+            [JsonCustomEnum("")]
             Normal
         }
 
@@ -71,22 +64,22 @@ namespace StreamActions.Twitch.Api.Users
             /// <summary>
             /// A Twitch staff member.
             /// </summary>
-            [JsonStringEnumMember("staff")]
+            [JsonCustomEnum("staff")]
             Staff,
             /// <summary>
             /// A Twitch administrator.
             /// </summary>
-            [JsonStringEnumMember("admin")]
+            [JsonCustomEnum("admin")]
             Admin,
             /// <summary>
             /// A global moderator.
             /// </summary>
-            [JsonStringEnumMember("global_mod")]
+            [JsonCustomEnum("global_mod")]
             GlobalMod,
             /// <summary>
             /// A normal user.
             /// </summary>
-            [JsonStringEnumMember("")]
+            [JsonCustomEnum("")]
             NormalUser
         }
 
@@ -97,7 +90,7 @@ namespace StreamActions.Twitch.Api.Users
         public UserBroadcasterType? BroadcasterType { get; init; }
 
         /// <summary>
-        /// The user’s channel description.
+        /// The user's channel description.
         /// </summary>
         [JsonPropertyName("description")]
         public string? Description { get; init; }
@@ -109,25 +102,25 @@ namespace StreamActions.Twitch.Api.Users
         public string? DisplayName { get; init; }
 
         /// <summary>
-        /// User’s ID.
+        /// User's ID.
         /// </summary>
         [JsonPropertyName("id")]
         public string? Id { get; init; }
 
         /// <summary>
-        /// User’s login name.
+        /// User's login name.
         /// </summary>
         [JsonPropertyName("login")]
         public string? Login { get; init; }
 
         /// <summary>
-        /// URL of the user’s offline image.
+        /// URL of the user's offline image.
         /// </summary>
         [JsonPropertyName("offline_image_url")]
         public Uri? OfflineImageUrl { get; init; }
 
         /// <summary>
-        /// URL of the user’s profile image.
+        /// URL of the user's profile image.
         /// </summary>
         [JsonPropertyName("profile_image_url")]
         public Uri? ProfileImageUrl { get; init; }
@@ -139,7 +132,7 @@ namespace StreamActions.Twitch.Api.Users
         public UserType? Type { get; init; }
 
         /// <summary>
-        /// Date when the user’s account was created.
+        /// Date when the user's account was created.
         /// </summary>
         [JsonPropertyName("created_at")]
         public DateTime? CreatedAt { get; init; }
@@ -148,32 +141,52 @@ namespace StreamActions.Twitch.Api.Users
         /// Gets information about one or more specified Twitch users.
         /// </summary>
         /// <param name="session">The Twitch session.</param>
-        /// <param name="ids">A list of user IDs to look up. You may specify a maximum of 100 IDs.</param>
-        /// <param name="logins">A list of user login names to look up. You may specify a maximum of 100 login names.</param>
-        /// <returns>A task representing the asynchronous operation, with a result of <see cref="JsonApiResponse{T}"/> containing an array of <see cref="User"/> objects.</returns>
+        /// <param name="ids">A list of user IDs to look up. You may specify a combined maximum of 100 IDs and login names.</param>
+        /// <param name="logins">A list of user login names to look up. You may specify a combined maximum of 100 IDs and login names.</param>
+        /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="User"/> containing the response, or <see langword="null"/> if the request fails.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> or <see cref="TwitchToken.OAuth"/> is <see langword="null"/> or whitespace.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if the combined count of user IDs and login names exceeds 100.</exception>
         /// <remarks>
-        /// <para>If you have the user:read:email scope, the response includes the user's email address. If the user’s account is missing a verified email address, null is returned.</para>
+        /// <para>If you don't specify IDs or login names, the request returns information about the user in the access token if you specify a user access token.</para>
+        /// <para>If you have the user:read:email scope, the response includes the user's email address. If the user's account is missing a verified email address, null is returned.</para>
         /// <para>HTTP Response Codes:</para>
-        /// <list type="bullet">
-        /// <item><term>200 OK</term><description>The request was successful, and the user information is in the body.</description></item>
-        /// <item><term>400 Bad Request</term><description>The request was not valid. Common reasons include: One of the query parameters is missing or not valid; or The number of IDs and logins exceeds the maximum limit of 100.</description></item>
-        /// <item><term>401 Unauthorized</term><description>The request requires an access token, but the Authorization header is missing an access token or the token is not valid; or the client ID specified in the Client-Id header is not valid.</description></item>
+        /// <list type="table">
+        /// <item>
+        /// <term>200 OK</term>
+        /// <description>Successfully retrieved the specified users' information..</description>
+        /// </item>
+        /// <item>
+        /// <term>400 Bad Request</term>
+        /// <description>The described parameter was missing or invalid.</description>
+        /// </item>
+        /// <item>
+        /// <term>401 Unauthorized</term>
+        /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+        /// </item>
+        /// </list>
+        /// </para>
         /// </list>
         /// </remarks>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if the combined count of user IDs and login names exceeds 100.</exception>
         public static async Task<ResponseData<User>?> GetUsers(TwitchSession session, IEnumerable<string>? ids = null, IEnumerable<string>? logins = null)
         {
+            if (session is null)
+            {
+                throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+            }
+
             int idCount = ids?.Count() ?? 0;
             int loginCount = logins?.Count() ?? 0;
 
             if ((idCount + loginCount) > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(ids) + "," + nameof(logins), (idCount + loginCount), "The total number of supplied IDs and logins cannot exceed 100.").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(ids) + "," + nameof(logins), idCount + loginCount, "The total number of supplied IDs and logins cannot exceed 100.").Log(TwitchApi.GetLogger());
             }
-            session.RequireToken();
-            NameValueCollection queryParameters = new();
 
-            if (ids != null)
+            session.RequireToken();
+
+            NameValueCollection queryParameters = [];
+            if (ids is not null && ids.Any())
             {
                 foreach (string idStr in ids)
                 {
@@ -183,7 +196,8 @@ namespace StreamActions.Twitch.Api.Users
                     }
                 }
             }
-            if (logins != null)
+
+            if (logins is not null && logins.Any())
             {
                 foreach (string loginStr in logins)
                 {
