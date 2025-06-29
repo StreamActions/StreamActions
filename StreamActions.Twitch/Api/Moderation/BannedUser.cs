@@ -20,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Net.Http.Json;
@@ -60,7 +61,7 @@ public sealed record BannedUser
     /// The UTC date and time (in RFC3339 format) of when the user was banned or put in a timeout.
     /// </summary>
     [JsonPropertyName("created_at")]
-    public DateTime CreatedAt { get; init; }
+    public DateTime? CreatedAt { get; init; }
 
     /// <summary>
     /// The reason the user was banned or put in a timeout if the moderator provided one.
@@ -125,14 +126,9 @@ public sealed record BannedUser
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        if (broadcasterId is null)
-        {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
-        }
-
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentException("Broadcaster ID cannot be empty or whitespace.", nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         List<string> userIdList = userIds?.ToList() ?? [];
@@ -141,7 +137,12 @@ public sealed record BannedUser
             throw new ArgumentOutOfRangeException(nameof(userIds), userIdList.Count, "The total number of user IDs must not exceed 100.").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
+        {
+            throw new InvalidOperationException("Cannot specify both 'after' and 'before' cursors.").Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireToken(new[] { OAuth.Scope.ModerationRead, OAuth.Scope.ModeratorManageBannedUsers }, null);
 
         NameValueCollection queryParameters = [];
         queryParameters.Add("broadcaster_id", broadcasterId);
