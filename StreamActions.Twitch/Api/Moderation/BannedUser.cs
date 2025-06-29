@@ -139,10 +139,10 @@ public sealed record BannedUser
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new InvalidOperationException("Cannot specify both 'after' and 'before' cursors.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(new[] { OAuth.Scope.ModerationRead, OAuth.Scope.ModeratorManageBannedUsers }, null);
+        session.RequireToken(OAuth.Scope.ModerationRead, OAuth.Scope.ModeratorManageBannedUsers);
 
         NameValueCollection queryParameters = [];
         queryParameters.Add("broadcaster_id", broadcasterId);
