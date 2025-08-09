@@ -26,10 +26,46 @@ namespace StreamActions.Twitch.Api.Common;
 /// </summary>
 public sealed record TwitchToken
 {
+    #region Public Fields
+
     /// <summary>
     /// An empty token, for requests that do not need one.
     /// </summary>
     public static readonly TwitchToken Empty = new();
+
+    #endregion Public Fields
+
+    #region Public Enums
+
+    /// <summary>
+    /// The type of OAuth token.
+    /// </summary>
+    public enum TokenType
+    {
+        /// <summary>
+        /// A User token.
+        /// </summary>
+        User,
+
+        /// <summary>
+        /// An App token.
+        /// </summary>
+        App
+    }
+
+    #endregion Public Enums
+
+    #region Public Properties
+
+    /// <summary>
+    /// The expiration timestamp of the <see cref="OAuth"/>.
+    /// </summary>
+    public DateTime? Expires { get; init; }
+
+    /// <summary>
+    /// The login name associated with the OAuth token.
+    /// </summary>
+    public string? Login { get; init; }
 
     /// <summary>
     /// The OAuth token.
@@ -42,19 +78,9 @@ public sealed record TwitchToken
     }
 
     /// <summary>
-    /// Backer for <see cref="OAuth"/>.
-    /// </summary>
-    private string? _oauth;
-
-    /// <summary>
     /// The refresh token.
     /// </summary>
     public string? Refresh { get; init; }
-
-    /// <summary>
-    /// The expiration timestamp of the <see cref="OAuth"/>.
-    /// </summary>
-    public DateTime? Expires { get; init; }
 
     /// <summary>
     /// The scopes that are authorized under the OAuth token.
@@ -62,14 +88,18 @@ public sealed record TwitchToken
     public IReadOnlyList<Scope>? Scopes { get; init; }
 
     /// <summary>
-    /// The login name associated with the OAuth token.
+    /// The type of OAuth token.
     /// </summary>
-    public string? Login { get; init; }
+    public TokenType? Type { get; init; }
 
     /// <summary>
     /// The User Id associated with the OAuth token.
     /// </summary>
     public string? UserId { get; init; }
+
+    #endregion Public Properties
+
+    #region Public Methods
 
     /// <summary>
     /// Checks if the specified scope is present in <see cref="Scopes"/>.
@@ -85,4 +115,15 @@ public sealed record TwitchToken
     /// <param name="retIfNull">Returned if <see cref="Scopes"/> is <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if <see cref="Scopes"/> contains <paramref name="scope"/>; <paramref name="retIfNull"/> if <see cref="Scopes"/> is <see langword="null"/>.</returns>
     public bool HasScope(Scope? scope, bool retIfNull = false) => scope is not null && (this.Scopes is null ? retIfNull : this.Scopes.Contains(scope));
+
+    #endregion Public Methods
+
+    #region Private Fields
+
+    /// <summary>
+    /// Backer for <see cref="OAuth"/>.
+    /// </summary>
+    private string? _oauth;
+
+    #endregion Private Fields
 }
