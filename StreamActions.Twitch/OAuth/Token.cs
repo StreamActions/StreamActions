@@ -93,7 +93,7 @@ public sealed record Token : JsonApiResponse
     /// Attempts to refresh the OAuth token assigned to the specified <see cref="TwitchSession"/>.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to refresh.</param>
-    /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> for default.</param>
+    /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> to read from OpenID Connect configuration.</param>
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="session"/> does not have a valid refresh token.</exception>
@@ -114,10 +114,9 @@ public sealed record Token : JsonApiResponse
 
         baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
 
-        using StringContent content = new("");
-        Uri uri = Util.BuildUri(new(baseAddress), new() { { "grant_type", "refresh_token" }, { "refresh_token", session.Token.Refresh ?? "" },
+        using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "grant_type", "refresh_token" }, { "refresh_token", session.Token.Refresh ?? "" },
             { "client_id", TwitchApi.ClientId ?? "" }, { "client_secret", TwitchApi.ClientSecret ?? "" } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content, dontRefresh: true).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), session, content, dontRefresh: true).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -126,7 +125,7 @@ public sealed record Token : JsonApiResponse
     /// </summary>
     /// <param name="code">The authorization code.</param>
     /// <param name="redirectUri">The redirect Uri that was used.</param>
-    /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> for default.</param>
+    /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> to read from OpenID Connect configuration.</param>
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="code"/> is <see langword="null"/> or whitespace, or <paramref name="redirectUri"/> is <see langword="null"/>.</exception>
     public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null)
@@ -143,10 +142,9 @@ public sealed record Token : JsonApiResponse
 
         baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
 
-        using StringContent content = new("");
-        Uri uri = Util.BuildUri(new(baseAddress), new() { { "grant_type", "authorization_code" }, { "code", code },
+        using FormUrlEncodedContent content = new(new Dictionary<string, string>{ { "grant_type", "authorization_code" }, { "code", code },
             { "client_id", TwitchApi.ClientId ?? "" }, { "client_secret", TwitchApi.ClientSecret ?? "" }, { "redirect_uri", redirectUri.ToString() } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, TwitchSession.Empty, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), TwitchSession.Empty, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -167,9 +165,8 @@ public sealed record Token : JsonApiResponse
 
         session.RequireToken();
 
-        using StringContent content = new("");
-        Uri uri = Util.BuildUri(new(baseAddress), new() { { "client_id", TwitchApi.ClientId ?? "" }, { "token", session.Token?.OAuth ?? "" } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
+        using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "client_id", TwitchApi.ClientId ?? "" }, { "token", session.Token?.OAuth ?? "" } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
