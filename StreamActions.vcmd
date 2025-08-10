@@ -1,0 +1,224 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SerializableSnippets xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <commands>
+    <Snippet>
+      <id>1</id>
+      <name>CodeMaid Cleanup Active Document (records support)</name>
+      <code>using EnvDTE;
+using EnvDTE80;
+using System;
+using System.Windows.Forms;
+
+public class C : VisualCommanderExt.ICommand
+{
+	public void Run(EnvDTE80.DTE2 DTE, Microsoft.VisualStudio.Shell.Package package) 
+	{
+		TextSelection selection = (TextSelection)DTE.ActiveDocument.Selection;
+		selection.StartOfDocument();
+
+		EnvDTE.vsFindResult result;
+		DTE.Find.Action = EnvDTE.vsFindAction.vsFindActionReplace;
+		DTE.Find.Backwards = false;
+		DTE.Find.FilesOfType = @"";
+		DTE.Find.KeepModifiedDocumentsOpen = true;
+		DTE.Find.MatchCase = false;
+		DTE.Find.MatchInHiddenText = true;
+		DTE.Find.MatchWholeWord = false;
+		DTE.Find.PatternSyntax = EnvDTE.vsFindPatternSyntax.vsFindPatternSyntaxRegExpr;
+		DTE.Find.ResultsLocation = EnvDTE.vsFindResultsLocation.vsFindResultsNone;
+		DTE.Find.SearchPath = @"Current Document";
+		DTE.Find.SearchSubfolders = false;
+		DTE.Find.Target = EnvDTE.vsFindTarget.vsFindTargetCurrentDocument;
+
+		DTE.Find.FindWhat = @"(^[a-z ]+) record ([a-z0-9 ]+)";
+		DTE.Find.ReplaceWith = @"$1 class $2/*record*/";
+		do
+		{
+			try
+			{
+				result = DTE.Find.Execute();
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(DTE.ActiveDocument.FullName + Environment.NewLine + Environment.NewLine + ex.ToString(), "Exception Executing DTE.Find.Execute(1)", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				break;
+			}
+		}
+		while (result == EnvDTE.vsFindResult.vsFindResultFound || result == EnvDTE.vsFindResult.vsFindResultReplaceAndFound);
+
+		try
+		{
+			DTE.ExecuteCommand("CodeMaid.CleanupActiveDocument");
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show(DTE.ActiveDocument.FullName + Environment.NewLine + Environment.NewLine + ex.ToString(), "Exception Executing CodeMaid.CleanupActiveDocument", MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
+
+		DTE.Find.FindWhat = @"(^[a-z ]+) class ([a-z0-9 ]+)/\*record\*/";
+		DTE.Find.ReplaceWith = @"$1 record $2";
+		do
+		{
+			try
+			{
+				result = DTE.Find.Execute();
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(DTE.ActiveDocument.FullName + Environment.NewLine + Environment.NewLine + ex.ToString(), "Exception Executing DTE.Find.Execute(2)", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				break;
+			}
+		}
+		while (result == EnvDTE.vsFindResult.vsFindResultFound || result == EnvDTE.vsFindResult.vsFindResultReplaceAndFound);
+
+		try
+		{
+			DTE.ActiveDocument.Save();
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show(DTE.ActiveDocument.FullName + Environment.NewLine + Environment.NewLine + ex.ToString(), "Exception Executing DTE.ActiveDocument.Save", MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
+	}
+}
+</code>
+      <referencedAssemblies />
+      <type>Command</type>
+      <lang>CS</lang>
+      <langVersion>v4.0</langVersion>
+      <enabled>true</enabled>
+      <includeDebugInformation>false</includeDebugInformation>
+    </Snippet>
+    <Snippet>
+      <id>2</id>
+      <name>Sort .vsext</name>
+      <code>using EnvDTE;
+using EnvDTE80;
+using System;
+using System.Collections.Generic;
+using System.Windows.Forms;
+
+public class C : VisualCommanderExt.ICommand
+{
+	public void Run(EnvDTE80.DTE2 DTE, Microsoft.VisualStudio.Shell.Package package) 
+	{
+		TextSelection selection = (TextSelection)DTE.ActiveDocument.Selection;
+		selection.StartOfDocument();
+		int lastSelection = selection.TopPoint.Line;
+
+		EnvDTE.vsFindResult result = vsFindResult.vsFindResultNotFound;
+		DTE.Find.Action = EnvDTE.vsFindAction.vsFindActionFind;
+		DTE.Find.Backwards = false;
+		DTE.Find.FilesOfType = @"";
+		DTE.Find.KeepModifiedDocumentsOpen = true;
+		DTE.Find.MatchCase = false;
+		DTE.Find.MatchInHiddenText = true;
+		DTE.Find.MatchWholeWord = false;
+		DTE.Find.PatternSyntax = EnvDTE.vsFindPatternSyntax.vsFindPatternSyntaxRegExpr;
+		DTE.Find.ResultsLocation = EnvDTE.vsFindResultsLocation.vsFindResultsNone;
+		DTE.Find.SearchPath = @"Current Document";
+		DTE.Find.SearchSubfolders = false;
+		DTE.Find.Target = EnvDTE.vsFindTarget.vsFindTargetCurrentDocument;
+
+		DTE.Find.FindWhat = @"""extensions"": \[";
+		try
+		{
+			result = DTE.Find.Execute();
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show(DTE.ActiveDocument.FullName + Environment.NewLine + Environment.NewLine + ex.ToString(), "Exception Executing DTE.Find.Execute(1)", MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
+
+		if (result != EnvDTE.vsFindResult.vsFindResultFound) {
+			return;
+		}
+
+		int arrayStartLine = selection.BottomPoint.Line + 1;
+
+		SortedDictionary&lt;string, string&gt; extensions = new SortedDictionary&lt;string, string&gt;();
+		DTE.Find.FindWhat = @"(\r|\n| |\t)+{"
+		+ @"(\r|\n| |\t)+""(vsixId|name|moreInfoUrl|downloadUrl)"":(\r|\n| |\t)+""[^""]+"","
+		+ @"(\r|\n| |\t)+""(vsixId|name|moreInfoUrl|downloadUrl)"":(\r|\n| |\t)+""[^""]+"","
+		+ @"(\r|\n| |\t)+""(vsixId|name|moreInfoUrl|downloadUrl)"":(\r|\n| |\t)+""[^""]+"","
+		+ @"(\r|\n| |\t)+""(vsixId|name|moreInfoUrl|downloadUrl)"":(\r|\n| |\t)+""[^""]+"""
+		+ @"(\r|\n| |\t)+}";
+
+		do
+		{
+			selection.LineDown();
+			selection.StartOfLine();
+			try
+			{
+				result = DTE.Find.Execute();
+				if (result == EnvDTE.vsFindResult.vsFindResultFound)
+				{
+					if (selection.TopPoint.Line &lt;= lastSelection)
+					{
+						break;
+					}
+					lastSelection = selection.TopPoint.Line;
+
+					string entry = selection.Text;
+					int start = entry.IndexOf(@"""", entry.IndexOf(@"name") + 5) + 1;
+					string key = entry.Substring(start, entry.IndexOf(@"""", start) - start);
+
+					extensions.Add(key, entry);
+				}
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(DTE.ActiveDocument.FullName + Environment.NewLine + Environment.NewLine + ex.ToString(), "Exception Executing DTE.Find.Execute(2)", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				break;
+			}
+		}
+		while(result == EnvDTE.vsFindResult.vsFindResultFound);
+
+		DTE.Find.FindWhat = @"( |\t)+](\r|\n| |\t)+}";
+		DTE.Find.Execute();
+
+		int arrayEndLine = selection.TopPoint.Line - 1;
+		selection.GotoLine(arrayEndLine);
+		selection.EndOfLine();
+		int arrayEndChar = selection.TopPoint.LineCharOffset;
+
+		string output = "";
+		foreach (KeyValuePair&lt;string, string&gt; kvp in extensions)
+		{
+			if (output.Length &gt; 0)
+			{
+				output += "," + Environment.NewLine;
+			}
+
+			output += kvp.Value;
+		}
+
+		selection.GotoLine(arrayStartLine);
+		selection.StartOfLine();
+		selection.MoveToLineAndOffset(arrayEndLine, arrayEndChar, true);
+
+		selection.Delete();
+		selection.Insert(output);
+
+		try
+		{
+			DTE.ActiveDocument.Save();
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show(DTE.ActiveDocument.FullName + Environment.NewLine + Environment.NewLine + ex.ToString(), "Exception Executing DTE.ActiveDocument.Save", MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
+	}
+}
+</code>
+      <referencedAssemblies />
+      <type>Command</type>
+      <lang>CS</lang>
+      <langVersion>v4.0</langVersion>
+      <enabled>true</enabled>
+      <includeDebugInformation>false</includeDebugInformation>
+    </Snippet>
+  </commands>
+  <extensions />
+  <commonCode />
+</SerializableSnippets>
