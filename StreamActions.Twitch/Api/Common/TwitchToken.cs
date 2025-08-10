@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Immutable;
 
@@ -42,6 +43,10 @@ public sealed record TwitchToken
     /// </summary>
     public enum TokenType
     {
+        /// <summary>
+        /// Unknown Token type.
+        /// </summary>
+        Unknown,
         /// <summary>
         /// A User token.
         /// </summary>
@@ -100,6 +105,32 @@ public sealed record TwitchToken
     #endregion Public Properties
 
     #region Public Methods
+
+    /// <summary>
+    /// Constructs a TwitchToken from the API response in a <see cref="Token"/>.
+    /// </summary>
+    /// <param name="response">The <see cref="Token"/> containing the API response.</param>
+    /// <param name="type">The token type.</param>
+    /// <param name="userId">The user ID of the user represented by this token.</param>
+    /// <param name="login">The login name of the user represented by this token.</param>
+    /// <returns>A new TwitchToken.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="response"/> is <see langword="null"/>.</exception>
+    public static TwitchToken FromApiResponse(Token response, TokenType type, string? userId = null, string? login = null) => response is null
+            ? throw new ArgumentNullException(nameof(response)).Log(Logger.GetLogger<TwitchToken>())
+            : new() { Expires = response.Expires, Login = login, OAuth = response.AccessToken, Refresh = response.RefreshToken, Scopes = response.Scopes, Type = type, UserId = userId };
+
+    /// <summary>
+    /// Constructs a TwitchToken from the API response in a <see cref="Token"/> and an old TwitchToken.
+    /// </summary>
+    /// <param name="response">The <see cref="Token"/> containing the API response.</param>
+    /// <param name="oldToken">The old TwitchToken to construct from.</param>
+    /// <returns>A new TwitchToken.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="response"/> or <paramref name="oldToken"/> is <see langword="null"/>.</exception>
+    public static TwitchToken FromApiResponse(Token response, TwitchToken oldToken) => response is null
+            ? throw new ArgumentNullException(nameof(response)).Log(Logger.GetLogger<TwitchToken>())
+            : (oldToken is null
+            ? throw new ArgumentNullException(nameof(oldToken)).Log(Logger.GetLogger<TwitchToken>())
+            : oldToken with { Expires = response.Expires, OAuth = response.AccessToken, Refresh = response.RefreshToken, Scopes = response.Scopes });
 
     /// <summary>
     /// Checks if the specified scope is present in <see cref="Scopes"/>.
