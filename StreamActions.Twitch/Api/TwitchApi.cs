@@ -198,39 +198,53 @@ public sealed partial class TwitchApi : IApi
 
             HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
 
-            if (!retry && !dontRefresh && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token != TwitchToken.Empty && !string.IsNullOrWhiteSpace(session.Token.Refresh))
+            if (!retry && !dontRefresh && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token != TwitchToken.Empty)
             {
-                string oldRefresh = session.Token.Refresh;
-                if (session._refreshLock.WaitOne(TimeSpan.FromSeconds(30)))
+                switch (session.Token.Type.GetValueOrDefault())
                 {
-                    try
-                    {
-                        if (session.Token.Refresh == oldRefresh)
+                    case TwitchToken.TokenType.User:
+                        if (!string.IsNullOrWhiteSpace(session.Token.Refresh))
                         {
-                            Token? refresh = await Token.RefreshOAuth(session).ConfigureAwait(false);
-
-                            if (refresh is not null && refresh.IsSuccessStatusCode)
+                            string oldRefresh = session.Token.Refresh;
+                            if (session._refreshLock.WaitOne(TimeSpan.FromSeconds(30)))
                             {
-                                session.Token = session.Token with { OAuth = refresh.AccessToken, Refresh = refresh.RefreshToken, Expires = refresh.Expires, Scopes = refresh.Scopes };
-                                _ = OnTokenRefreshed?.InvokeAsync(null, new(session));
-                                retry = true;
+                                try
+                                {
+                                    if (session.Token.Refresh == oldRefresh)
+                                    {
+                                        Token? refresh = await Token.RefreshOAuth(session).ConfigureAwait(false);
+
+                                        if (refresh is not null && refresh.IsSuccessStatusCode)
+                                        {
+                                            session.Token = TwitchToken.FromApiResponse(refresh, session.Token);
+                                            _ = OnTokenRefreshed?.InvokeAsync(null, new(session));
+                                            retry = true;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        retry = true;
+                                    }
+                                }
+                                finally
+                                {
+                                    session._refreshLock.ReleaseMutex();
+                                }
+                            }
+
+                            if (retry)
+                            {
+
+                                goto performhttprequest_start;
                             }
                         }
-                        else
-                        {
-                            retry = true;
-                        }
-                    }
-                    finally
-                    {
-                        session._refreshLock.ReleaseMutex();
-                    }
-                }
-
-                if (retry)
-                {
-
-                    goto performhttprequest_start;
+                        break;
+                    case TwitchToken.TokenType.App:
+                        break;
+                    case TwitchToken.TokenType.Unknown:
+                    default:
+                        _logger.Warning("Unknown Twitch token type: " + Enum.GetName(session.Token.Type.GetValueOrDefault()));
+                        break;
                 }
             }
 
