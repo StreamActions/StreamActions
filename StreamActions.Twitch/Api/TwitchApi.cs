@@ -240,10 +240,45 @@ public sealed partial class TwitchApi : IApi
                         }
                         break;
                     case TwitchToken.TokenType.App:
+                        if (!string.IsNullOrWhiteSpace(session.Token.OAuth))
+                        {
+                            string oldOAuth = session.Token.OAuth;
+                            if (session._refreshLock.WaitOne(TimeSpan.FromSeconds(30)))
+                            {
+                                try
+                                {
+                                    if (session.Token.OAuth == oldOAuth)
+                                    {
+                                        Token? refresh = await Token.AuthorizeApp().ConfigureAwait(false);
+
+                                        if (refresh is not null && refresh.IsSuccessStatusCode)
+                                        {
+                                            session.Token = TwitchToken.FromApiResponse(refresh, session.Token);
+                                            _ = OnTokenRefreshed?.InvokeAsync(null, new(session));
+                                            retry = true;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        retry = true;
+                                    }
+                                }
+                                finally
+                                {
+                                    session._refreshLock.ReleaseMutex();
+                                }
+                            }
+
+                            if (retry)
+                            {
+
+                                goto performhttprequest_start;
+                            }
+                        }
                         break;
                     case TwitchToken.TokenType.Unknown:
                     default:
-                        _logger.Warning("Unknown Twitch token type: " + Enum.GetName(session.Token.Type.GetValueOrDefault()));
+                        _logger.Warning("Unknown or uninitialized Twitch token: " + Enum.GetName(session.Token.Type.GetValueOrDefault()));
                         break;
                 }
             }
