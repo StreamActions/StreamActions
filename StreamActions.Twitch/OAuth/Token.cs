@@ -115,7 +115,7 @@ public sealed record Token : JsonApiResponse
 
         using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "grant_type", "refresh_token" }, { "refresh_token", session.Token.Refresh ?? "" },
             { "client_id", TwitchApi.ClientId ?? "" }, { "client_secret", TwitchApi.ClientSecret ?? "" } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), session, content, dontRefresh: true).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), TwitchSession.Empty, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -180,7 +180,7 @@ public sealed record Token : JsonApiResponse
         session.RequireToken();
 
         using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "client_id", TwitchApi.ClientId ?? "" }, { "token", session.Token?.OAuth ?? "" } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), TwitchSession.Empty, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
