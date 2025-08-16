@@ -14,6 +14,10 @@ public class C : VisualCommanderExt.ICommand
 	public void Run(EnvDTE80.DTE2 DTE, Microsoft.VisualStudio.Shell.Package package) 
 	{
 		TextSelection selection = (TextSelection)DTE.ActiveDocument.Selection;
+		int topPointLine = selection.TopPoint.Line;
+		int topPointChar = selection.TopPoint.LineCharOffset;
+		int bottomPointLine = selection.BottomPoint.Line;
+		int bottomPointChar = selection.BottomPoint.LineCharOffset;
 		selection.StartOfDocument();
 
 		EnvDTE.vsFindResult result;
@@ -79,6 +83,9 @@ public class C : VisualCommanderExt.ICommand
 		{
 			MessageBox.Show(DTE.ActiveDocument.FullName + Environment.NewLine + Environment.NewLine + ex.ToString(), "Exception Executing DTE.ActiveDocument.Save", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
+
+		selection.MoveToLineAndOffset(topPointLine, topPointChar);
+		selection.MoveToLineAndOffset(bottomPointLine, bottomPointChar, true);
 	}
 }
 </code>
