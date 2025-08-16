@@ -55,6 +55,22 @@ public sealed class TwitchScopeMissingException : ScopeMissingException
     /// <summary>
     /// Constructor.
     /// </summary>
+    /// <param name="scopes">The scopes that are missing from the OAuth token.</param>
+    public TwitchScopeMissingException(params string?[] scopes) : base(scopes)
+    {
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scopes">The scopes that are missing from the OAuth token.</param>
+    public TwitchScopeMissingException(params Scope?[] scopes) : base(scopes?.Select(scope => scope?.Name).ToArray() ?? [])
+    {
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
     /// <param name="scope">The scope that is missing from the OAuth token.</param>
     /// <param name="innerException">The inner exception that caused the current exception.</param>
     public TwitchScopeMissingException(string? scope, Exception? innerException) : base(scope, innerException)
@@ -67,6 +83,24 @@ public sealed class TwitchScopeMissingException : ScopeMissingException
     /// <param name="scope">The scope that is missing from the OAuth token.</param>
     /// <param name="innerException">The inner exception that caused the current exception.</param>
     public TwitchScopeMissingException(Scope? scope, Exception? innerException) : base(scope?.Name, innerException)
+    {
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scopes">The scopes that are missing from the OAuth token.</param>
+    /// <param name="innerException">The inner exception that caused the current exception.</param>
+    public TwitchScopeMissingException(string?[] scopes, Exception? innerException) : base(scopes, innerException)
+    {
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scopes">The scopes that are missing from the OAuth token.</param>
+    /// <param name="innerException">The inner exception that caused the current exception.</param>
+    public TwitchScopeMissingException(Scope?[] scopes, Exception? innerException) : base(scopes?.Select(scope => scope?.Name).ToArray() ?? [], innerException)
     {
     }
 

@@ -43,6 +43,19 @@ public class ScopeMissingException : InvalidOperationException
     /// <param name="innerException">The inner exception that caused the current exception.</param>
     public ScopeMissingException(string? scope, Exception? innerException) : base("Missing scope " + scope ?? "Unknown" + ".", innerException) => this.Scope = scope;
 
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scopes">The scopes that are missing from the OAuth token.</param>
+    public ScopeMissingException(params string?[] scopes) : base("Missing scopes " + string.Join(", ", scopes ?? ["Unknown"]) + ".") => this.Scope = string.Join(", ", scopes ?? ["Unknown"]);
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="scopes">The scopes that are missing from the OAuth token.</param>
+    /// <param name="innerException">The inner exception that caused the current exception.</param>
+    public ScopeMissingException(string?[] scopes, Exception? innerException) : base("Missing scopes " + string.Join(", ", scopes ?? ["Unknown"]) + ".", innerException) => this.Scope = string.Join(", ", scopes ?? ["Unknown"]);
+
     #endregion Public Constructors
 
     #region Public Properties
