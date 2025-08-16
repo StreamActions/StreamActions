@@ -1,0 +1,89 @@
+﻿/*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2025 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+namespace StreamActions.Common.Exceptions;
+
+/// <summary>
+/// The exception that is thrown when a token, such as an OAuth token, is of the incorrect token type.
+/// </summary>
+public class TokenTypeException : InvalidOperationException
+{
+    #region Public Constructors
+
+    /// <summary>
+    /// Default Constructor.
+    /// </summary>
+    public TokenTypeException() : base("Incorrect token type.")
+    {
+        this.ExpectedType = null;
+        this.ActualType = null;
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="exected">The expected token type.</param>
+    /// <param name="actual">The actual token type.</param>
+    public TokenTypeException(string? exected, string? actual) : this("Incorrect token type. Expected: " + exected + ". Actual: " + actual + ".")
+    {
+        this.ExpectedType = exected;
+        this.ActualType = actual;
+    }
+
+    /// <summary>
+    /// Constructor.
+    /// </summary>
+    /// <param name="exected">The expected token type.</param>
+    /// <param name="actual">The actual token type.</param>
+    /// <param name="innerException">The inner exception that caused the current exception.</param>
+    public TokenTypeException(string? exected, string? actual, Exception? innerException) : this("Incorrect token type. Expected: " + exected + ". Actual: " + actual + ".", innerException)
+    {
+        this.ExpectedType = exected;
+        this.ActualType = actual;
+    }
+
+    #endregion Public Constructors
+
+    #region Public Properties
+
+    /// <summary>
+    /// The actual token type.
+    /// </summary>
+    public string? ActualType { get; init; }
+
+    /// <summary>
+    /// The expected token type.
+    /// </summary>
+    public string? ExpectedType { get; init; }
+
+    #endregion Public Properties
+
+    #region Private Constructors
+
+    /// <inheritdoc/>
+    private TokenTypeException(string message) : base(message)
+    {
+    }
+
+    /// <inheritdoc/>
+    private TokenTypeException(string message, Exception? innerException) : base(message, innerException)
+    {
+    }
+
+    #endregion Private Constructors
+}

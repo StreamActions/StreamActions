@@ -231,8 +231,8 @@ public static partial class InvalidOperationLogger
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="type">The type that threw the exception.</param>
     /// <param name="member">The member that threw the exception.</param>
-    /// <param name="scope">The message that was missing.</param>
-    /// <param name="message">A message that describes the error.</param>
+    /// <param name="scope">The scope that was missing.</param>
+    /// <param name="message">A message that describes the error. Can use the <c>{scope}</c> placeholder to insert the scope.</param>
     /// <param name="exception">The exception that was thrown.</param>
     public static void ScopeMissing(this ILogger logger, string type, string member, string? scope = null, string? message = null, Exception? exception = null) => logger.ScopeMissing(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(scope), scope } }, message), exception);
 
@@ -240,8 +240,8 @@ public static partial class InvalidOperationLogger
     /// Logs that a <see cref="Exceptions.ScopeMissingException"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-    /// <param name="scope">The message that was missing.</param>
-    /// <param name="message">A message that describes the error.</param>
+    /// <param name="scope">The scope that was missing.</param>
+    /// <param name="message">A message that describes the error. Can use the <c>{scope}</c> placeholder to insert the scope.</param>
     /// <param name="exception">The exception that was thrown.</param>
     /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
     /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
@@ -269,6 +269,69 @@ public static partial class InvalidOperationLogger
         ArgumentNullException.ThrowIfNull(exception);
 
         logger?.ScopeMissing(exception.Scope, exception.Message, exception, selfLocation, atLocation, addNamespace);
+
+        return exception;
+    }
+
+    /// <summary>
+    /// Logs that a <see cref="Exceptions.TokenTypeException"/> was thrown.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="member">The member that threw the exception.</param>
+    /// <param name="message">A message that describes the error.</param>
+    /// <param name="exception">The exception that was thrown.</param>
+    [LoggerMessage(
+        EventId = 1020,
+        Level = LogLevel.Error,
+        Message = "[{Member}] Token Type: {Message}")]
+    public static partial void TokenType(this ILogger logger, string member, string message, Exception? exception = null);
+
+    /// <summary>
+    /// Logs that a <see cref="Exceptions.TokenTypeException"/> was thrown.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="type">The type that threw the exception.</param>
+    /// <param name="member">The member that threw the exception.</param>
+    /// <param name="expected">The expected token type.</param>
+    /// <param name="actual">The actual token type.</param>
+    /// <param name="message">A message that describes the error. Can use <c>{expected}</c> and <c>{actual}</c> to insert the expected and actual token types.</param>
+    /// <param name="exception">The exception that was thrown.</param>
+    public static void TokenType(this ILogger logger, string type, string member, string? expected = null, string? actual = null, string? message = null, Exception? exception = null) => logger.TokenType(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(expected), expected }, { nameof(actual), actual } }, message), exception);
+
+    /// <summary>
+    /// Logs that a <see cref="Exceptions.TokenTypeException"/> was thrown.
+    /// </summary>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="expected">The expected token type.</param>
+    /// <param name="actual">The actual token type.</param>
+    /// <param name="message">A message that describes the error. Can use <c>{expected}</c> and <c>{actual}</c> to insert the expected and actual token types.</param>
+    /// <param name="exception">The exception that was thrown.</param>
+    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
+    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
+    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
+    public static void TokenType(this ILogger logger, string? expected = null, string? actual = null, string? message = null, Exception? exception = null, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
+    {
+        if (logger?.IsEnabled(LogLevel.Error) ?? false)
+        {
+            logger.TokenType(Logger.GetCaller(selfLocation, atLocation, addNamespace), Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(expected), expected }, { nameof(actual), actual } }, message), exception);
+        }
+    }
+
+    /// <summary>
+    /// Logs that a <see cref="Exceptions.TokenTypeException"/> was thrown.
+    /// </summary>
+    /// <param name="exception">The exception that was thrown.</param>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
+    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
+    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
+    /// <returns><paramref name="exception"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
+    public static TokenTypeException Log(this TokenTypeException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        logger?.TokenType(exception.ExpectedType, exception.ActualType, exception.Message, exception, selfLocation, atLocation, addNamespace);
 
         return exception;
     }
