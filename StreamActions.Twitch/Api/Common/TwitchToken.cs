@@ -179,7 +179,7 @@ public sealed record TwitchToken
     /// </remarks>
     /// <param name="scopes">The scopes to find.</param>
     /// <returns>A tuple listing the scopes that were found and missing.</returns>
-    public (Scope[] Found, Scope[] Missing) CheckScopes(params Scope[] scopes)
+    public (Scope?[] Found, Scope?[] Missing) CheckScopes(params Scope?[] scopes)
     {
         if (scopes is null)
         {
@@ -191,10 +191,10 @@ public sealed record TwitchToken
             return (scopes, []);
         }
 
-        List<Scope> found = [];
-        List<Scope> missing = [];
+        List<Scope?> found = [];
+        List<Scope?> missing = [];
 
-        foreach (Scope scope in scopes)
+        foreach (Scope? scope in scopes)
         {
             if (this.HasScope(scope))
             {
