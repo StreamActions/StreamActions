@@ -47,6 +47,7 @@ public sealed record TwitchToken
         /// Unknown Token type.
         /// </summary>
         Unknown,
+
         /// <summary>
         /// A User token.
         /// </summary>
@@ -131,6 +132,20 @@ public sealed record TwitchToken
             : (oldToken is null
             ? throw new ArgumentNullException(nameof(oldToken)).Log(Logger.GetLogger<TwitchToken>())
             : oldToken with { Expires = response.Expires, OAuth = response.AccessToken, Refresh = response.RefreshToken, Scopes = response.Scopes });
+
+    /// <summary>
+    /// Checks if all specified scopes are present in <see cref="Scopes"/>.
+    /// </summary>
+    /// <param name="scopes">The scopes to find.</param>
+    /// <returns><see langword="true"/> if <see cref="Scopes"/> is <see langword="null"/> or contains all scopes in <paramref name="scopes"/>.</returns>
+    public bool HasAllScopes(params string[] scopes) => scopes.All(scope => this.HasScope(Scope.Scopes.GetValueOrDefault(scope)));
+
+    /// <summary>
+    /// Checks if any of the specified scopes are present in <see cref="Scopes"/>.
+    /// </summary>
+    /// <param name="scopes">The scopes to find.</param>
+    /// <returns><see langword="true"/> if <see cref="Scopes"/> is <see langword="null"/> or contains all scopes in <paramref name="scopes"/>.</returns>
+    public bool HasAnyScope(params string[] scopes) => scopes.Any(scope => this.HasScope(Scope.Scopes.GetValueOrDefault(scope)));
 
     /// <summary>
     /// Checks if the specified scope is present in <see cref="Scopes"/>.
