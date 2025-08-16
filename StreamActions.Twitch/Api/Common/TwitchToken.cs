@@ -134,6 +134,82 @@ public sealed record TwitchToken
             : oldToken with { Expires = response.Expires, OAuth = response.AccessToken, Refresh = response.RefreshToken, Scopes = response.Scopes });
 
     /// <summary>
+    /// Checks if all specified scopes are present in <see cref="Scopes"/> and returns a tuple with the results.
+    /// </summary>
+    /// <remarks>
+    /// If <see cref="Scopes"/> is <see langword="null"/>, all scopes will be marked as found.
+    /// </remarks>
+    /// <param name="scopes">The scopes to find.</param>
+    /// <returns>A tuple listing the scopes that were found and missing.</returns>
+    public (string[] Found, string[] Missing) CheckScopes(params string[] scopes)
+    {
+        if (scopes is null)
+        {
+            return ([], []);
+        }
+
+        if (this.Scopes is null)
+        {
+            return (scopes, []);
+        }
+
+        List<string> found = [];
+        List<string> missing = [];
+
+        foreach (string scope in scopes)
+        {
+            if (this.HasScope(scope))
+            {
+                found.Add(scope);
+            }
+            else
+            {
+                missing.Add(scope);
+            }
+        }
+
+        return (found.ToArray(), missing.ToArray());
+    }
+
+    /// <summary>
+    /// Checks if all specified scopes are present in <see cref="Scopes"/> and returns a tuple with the results.
+    /// </summary>
+    /// <remarks>
+    /// If <see cref="Scopes"/> is <see langword="null"/>, all scopes will be marked as found.
+    /// </remarks>
+    /// <param name="scopes">The scopes to find.</param>
+    /// <returns>A tuple listing the scopes that were found and missing.</returns>
+    public (Scope[] Found, Scope[] Missing) CheckScopes(params Scope[] scopes)
+    {
+        if (scopes is null)
+        {
+            return ([], []);
+        }
+
+        if (this.Scopes is null)
+        {
+            return (scopes, []);
+        }
+
+        List<Scope> found = [];
+        List<Scope> missing = [];
+
+        foreach (Scope scope in scopes)
+        {
+            if (this.HasScope(scope))
+            {
+                found.Add(scope);
+            }
+            else
+            {
+                missing.Add(scope);
+            }
+        }
+
+        return (found.ToArray(), missing.ToArray());
+    }
+
+    /// <summary>
     /// Checks if all specified scopes are present in <see cref="Scopes"/>.
     /// </summary>
     /// <param name="scopes">The scopes to find.</param>
