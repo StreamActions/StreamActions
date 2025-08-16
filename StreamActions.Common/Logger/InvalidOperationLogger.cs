@@ -30,7 +30,7 @@ public static partial class InvalidOperationLogger
     #region Public Methods
 
     /// <summary>
-    /// Logs that an <see cref="Argument<see langword="null"/>Exception"/> was thrown.
+    /// Logs that an <see cref="ArgumentNullException"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="member">The member that threw the exception.</param>
@@ -43,7 +43,7 @@ public static partial class InvalidOperationLogger
     public static partial void ArgumentNull(this ILogger logger, string member, string message, Exception? exception = null);
 
     /// <summary>
-    /// Logs that an <see cref="Argument<see langword="null"/>Exception"/> was thrown.
+    /// Logs that an <see cref="ArgumentNullException"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="type">The type that threw the exception.</param>
@@ -54,7 +54,7 @@ public static partial class InvalidOperationLogger
     public static void ArgumentNull(this ILogger logger, string type, string member, string? paramName = null, string? message = null, Exception? exception = null) => logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName } }, message), exception);
 
     /// <summary>
-    /// Logs that an <see cref="Argument<see langword="null"/>Exception"/> was thrown.
+    /// Logs that an <see cref="ArgumentNullException"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
     /// <param name="paramName">The message that was <see langword="null"/>.</param>
@@ -69,25 +69,6 @@ public static partial class InvalidOperationLogger
         {
             logger.ArgumentNull(Logger.GetCaller(selfLocation, atLocation, addNamespace), Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName } }, message), exception);
         }
-    }
-
-    /// <summary>
-    /// Logs that an <see cref="Argument<see langword="null"/>Exception"/> was thrown.
-    /// </summary>
-    /// <param name="exception">The exception that was thrown.</param>
-    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
-    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
-    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
-    /// <returns><paramref name="exception"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
-    public static ArgumentNullException Log(this ArgumentNullException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        logger?.ArgumentNull(exception.ParamName, exception.Message, exception, selfLocation, atLocation, addNamespace);
-
-        return exception;
     }
 
     /// <summary>
@@ -135,25 +116,6 @@ public static partial class InvalidOperationLogger
     }
 
     /// <summary>
-    /// Logs that an <see cref="ArgumentOutOfRangeException"/> was thrown.
-    /// </summary>
-    /// <param name="exception">The exception that was thrown.</param>
-    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
-    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
-    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
-    /// <returns><paramref name="exception"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
-    public static ArgumentOutOfRangeException Log(this ArgumentOutOfRangeException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        logger?.ArgumentOutOfRange(exception.ParamName, exception.ActualValue, exception.Message, exception, selfLocation, atLocation, addNamespace);
-
-        return exception;
-    }
-
-    /// <summary>
     /// Logs that an <see cref="InvalidOperationException"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
@@ -194,6 +156,44 @@ public static partial class InvalidOperationLogger
     }
 
     /// <summary>
+    /// Logs that an <see cref="ArgumentNullException"/> was thrown.
+    /// </summary>
+    /// <param name="exception">The exception that was thrown.</param>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
+    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
+    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
+    /// <returns><paramref name="exception"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
+    public static ArgumentNullException Log(this ArgumentNullException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        logger?.ArgumentNull(exception.ParamName, exception.Message, exception, selfLocation, atLocation, addNamespace);
+
+        return exception;
+    }
+
+    /// <summary>
+    /// Logs that an <see cref="ArgumentOutOfRangeException"/> was thrown.
+    /// </summary>
+    /// <param name="exception">The exception that was thrown.</param>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
+    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
+    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
+    /// <returns><paramref name="exception"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
+    public static ArgumentOutOfRangeException Log(this ArgumentOutOfRangeException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        logger?.ArgumentOutOfRange(exception.ParamName, exception.ActualValue, exception.Message, exception, selfLocation, atLocation, addNamespace);
+
+        return exception;
+    }
+
+    /// <summary>
     /// Logs that an <see cref="InvalidOperationException"/> was thrown.
     /// </summary>
     /// <param name="exception">The exception that was thrown.</param>
@@ -208,6 +208,44 @@ public static partial class InvalidOperationLogger
         ArgumentNullException.ThrowIfNull(exception);
 
         logger?.InvalidOperation(exception.Message, exception, selfLocation, atLocation, addNamespace);
+
+        return exception;
+    }
+
+    /// <summary>
+    /// Logs that a <see cref="Exceptions.ScopeMissingException"/> was thrown.
+    /// </summary>
+    /// <param name="exception">The exception that was thrown.</param>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
+    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
+    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
+    /// <returns><paramref name="exception"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
+    public static ScopeMissingException Log(this ScopeMissingException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        logger?.ScopeMissing(exception.Scope, exception.Message, exception, selfLocation, atLocation, addNamespace);
+
+        return exception;
+    }
+
+    /// <summary>
+    /// Logs that a <see cref="Exceptions.TokenTypeException"/> was thrown.
+    /// </summary>
+    /// <param name="exception">The exception that was thrown.</param>
+    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
+    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
+    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
+    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
+    /// <returns><paramref name="exception"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
+    public static TokenTypeException Log(this TokenTypeException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        logger?.TokenType(exception.ExpectedType, exception.ActualType, exception.Message, exception, selfLocation, atLocation, addNamespace);
 
         return exception;
     }
@@ -255,25 +293,6 @@ public static partial class InvalidOperationLogger
     }
 
     /// <summary>
-    /// Logs that a <see cref="Exceptions.ScopeMissingException"/> was thrown.
-    /// </summary>
-    /// <param name="exception">The exception that was thrown.</param>
-    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
-    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
-    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
-    /// <returns><paramref name="exception"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
-    public static ScopeMissingException Log(this ScopeMissingException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        logger?.ScopeMissing(exception.Scope, exception.Message, exception, selfLocation, atLocation, addNamespace);
-
-        return exception;
-    }
-
-    /// <summary>
     /// Logs that a <see cref="Exceptions.TokenTypeException"/> was thrown.
     /// </summary>
     /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
@@ -315,25 +334,6 @@ public static partial class InvalidOperationLogger
         {
             logger.TokenType(Logger.GetCaller(selfLocation, atLocation, addNamespace), Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(expected), expected }, { nameof(actual), actual } }, message), exception);
         }
-    }
-
-    /// <summary>
-    /// Logs that a <see cref="Exceptions.TokenTypeException"/> was thrown.
-    /// </summary>
-    /// <param name="exception">The exception that was thrown.</param>
-    /// <param name="logger">The <see cref="ILogger"/> to write to.</param>
-    /// <param name="selfLocation">The location within a <see cref="StackTrace"/> where the caller will be found. <code>2</code> is the caller of the message calling this method.</param>
-    /// <param name="atLocation">If not <see langword="null"/> and greater than <paramref name="selfLocation"/>, then <code>@[Namespace.]Type.Name</code> of the caller at this location is additionally appended.</param>
-    /// <param name="addNamespace">If <see langword="true"/>, the namespace of the caller is also added.</param>
-    /// <returns><paramref name="exception"/>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="exception"/> was <see langword="null"/>.</exception>
-    public static TokenTypeException Log(this TokenTypeException exception, ILogger logger, int selfLocation = 2, int? atLocation = 3, bool addNamespace = false)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        logger?.TokenType(exception.ExpectedType, exception.ActualType, exception.Message, exception, selfLocation, atLocation, addNamespace);
-
-        return exception;
     }
 
     #endregion Public Methods
