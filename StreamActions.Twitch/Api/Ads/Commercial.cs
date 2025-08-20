@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
@@ -70,6 +71,7 @@ public sealed record Commercial
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentNullException"><see cref="StartCommercialParameters.BroadcasterId"/> is <see langword="null"/>, empty, or whitespace; <see cref="StartCommercialParameters.Length"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelEditCommercial"/>.</exception>
     /// <remarks>
     /// <para>
@@ -124,7 +126,7 @@ public sealed record Commercial
             throw new ArgumentNullException(nameof(parameters.Length)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelEditCommercial);
+        session.RequireUserToken(Scope.ChannelEditCommercial);
 
         if (Math.Clamp(parameters.Length.Value, 1, 180) != parameters.Length.Value)
         {

@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
@@ -68,6 +69,7 @@ public sealed record ChannelFollower
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelFollower"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="broadcasterId"/> is <see langword="null"/>; <paramref name="userId"/> or <paramref name="after"/> is not <see langword="null"/>, but is empty or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <remarks>
     /// <para>
     /// If <paramref name="userId"/> is specified, the response will contain a single element
@@ -106,7 +108,7 @@ public sealed record ChannelFollower
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserToken();
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {

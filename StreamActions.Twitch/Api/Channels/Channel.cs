@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
 using StreamActions.Common.Net;
@@ -108,6 +109,7 @@ public sealed partial record Channel
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/> or has 0 elements.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="broadcasterId"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <remarks>
     /// <para>
     /// Response Codes:
@@ -134,7 +136,7 @@ public sealed partial record Channel
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         if (broadcasterId is null || !broadcasterId.Any())
         {
@@ -162,6 +164,7 @@ public sealed partial record Channel
     /// <exception cref="ArgumentNullException"><see cref="ModifyChannelParameters.Title"/> is empty or whitespace; an element in <see cref="ModifyChannelParameters.Tags"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="ModifyChannelParameters.Tags"/> has more than 10 elements; an element in <see cref="ModifyChannelParameters.Tags"/> has more than 25 characters, a whitespace character, or a special character.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageBroadcast"/>.</exception>
     /// <remarks>
     /// <para>
@@ -200,7 +203,7 @@ public sealed partial record Channel
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManageBroadcast);
+        session.RequireUserToken(Scope.ChannelManageBroadcast);
 
         if (parameters.Title is not null && string.IsNullOrWhiteSpace(parameters.Title))
         {

@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
@@ -69,6 +70,7 @@ public sealed record FollowedChannel
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="FollowedChannel"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="userId"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="after"/> is not <see langword="null"/>, but is empty or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.UserReadFollows"/>.</exception>
     /// <remarks>
     /// <para>
@@ -105,7 +107,7 @@ public sealed record FollowedChannel
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.UserReadFollows);
+        session.RequireUserToken(Scope.UserReadFollows);
 
         if (string.IsNullOrWhiteSpace(userId))
         {

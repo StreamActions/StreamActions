@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
@@ -118,6 +119,7 @@ public sealed record ExtensionTransaction
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not <see langword="null"/> and contains more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><paramref name="after"/> is specified at the same time as a valid value in <paramref name="id"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/>.</exception>
     /// <remarks>
     /// <para>
     /// Response Codes:
@@ -148,7 +150,7 @@ public sealed record ExtensionTransaction
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireAppToken();
 
         if (string.IsNullOrWhiteSpace(extensionId))
         {
