@@ -43,7 +43,7 @@ public sealed record TwitchSession : IDisposable
     /// <summary>
     /// Rate Limiter for TwitchAPI.
     /// </summary>
-    public TokenBucketRateLimiter RateLimiter { get; init; } = new(1, TimeSpan.FromSeconds(60));
+    public TokenBucketRateLimiter RateLimiter { get; init; } = new(20, TimeSpan.FromSeconds(60));
 
     /// <summary>
     /// The OAuth token data.
