@@ -59,11 +59,12 @@ public sealed record SendChat
     /// <exception cref="ArgumentNullException"><see cref="SendChatParameters.BroadcasterId"/>, <see cref="SendChatParameters.SenderId"/>, or <see cref="SendChatParameters.Message"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentNullException"><see cref="SendChatParameters.ReplyParentMessageId"/> is specified and is equal to <see cref="Guid.Empty"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="SendChatParameters.Message"/> contains more than 500 characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="SendChatParameters.ForSourceOnly"/> is not <see langword="null"/> and <paramref name="session"/> is a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.UserWriteChat"/>.</exception>
     /// <remarks>
     /// <para>
-    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an app access token, this endpoint additionally requires:
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires:
     /// <list type="bullet">
     /// <item>The app to have an authorization from <see cref="SendChatParameters.SenderId"/> which includes the <see cref="Scope.UserWriteChat"/> and <see cref="Scope.UserBot"/> scopes.</item>
     /// <item>
@@ -139,7 +140,12 @@ public sealed record SendChat
             throw new ArgumentOutOfRangeException(nameof(parameters.Message), parameters.Message.Length, "length must be < 500").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.UserWriteChat);
+        if (parameters.ForSourceOnly.HasValue && session.Token?.Type is TwitchToken.TokenType.User)
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.ForSourceOnly), "must be null when using a user token").Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireUserOrAppToken(Scope.UserWriteChat);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/chat/messages"), session, content).ConfigureAwait(false);
