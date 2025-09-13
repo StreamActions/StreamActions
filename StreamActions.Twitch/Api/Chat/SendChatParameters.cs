@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
@@ -61,4 +62,24 @@ public sealed record SendChatParameters
     [JsonPropertyName("for_source_only")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? ForSourceOnly { get; init; }
+
+    /// <summary>
+    /// Converts a given message into a <c>/me</c> message.
+    /// </summary>
+    /// <param name="message">The message to convert.</param>
+    /// <returns>The altered message.</returns>
+    public static string ConvertMessageToSlashMe(string message)
+    {
+        if (message is null)
+        {
+            throw new ArgumentNullException(nameof(message)).Log(TwitchApi.GetLogger());
+        }
+
+        if (message.StartsWith("/me "))
+        {
+            message = message.Substring(2);
+        }
+
+        return char.ConvertFromUtf32(1) + "ACTION " + message + char.ConvertFromUtf32(1);
+    }
 }
