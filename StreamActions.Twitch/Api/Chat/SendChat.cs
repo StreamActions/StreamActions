@@ -65,7 +65,7 @@ public sealed record SendChat
     /// <para>
     /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an app access token, this endpoint additionally requires:
     /// <list type="bullet">
-    /// <item>The app to have an authorization from <see cref="SendChatParameters.SenderId"/> which includes the <see cref="Scope.UserBot"/> scope.</item>
+    /// <item>The app to have an authorization from <see cref="SendChatParameters.SenderId"/> which includes the <see cref="Scope.UserWriteChat"/> and <see cref="Scope.UserBot"/> scopes.</item>
     /// <item>
     /// One of:
     /// <list type="bullet">
