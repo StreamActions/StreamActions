@@ -97,7 +97,7 @@ public sealed record TwitchSession : IDisposable
     /// <remarks>
     /// If <see cref="TwitchToken.Scopes"/> is <see langword="null"/>, then checking of <paramref name="scopes"/> is skipped.
     /// </remarks>
-    public void RequireUserOrAppToken(params Scope?[] scopes)
+    public void RequireUserOrAppToken(params Scope?[]? scopes)
     {
         if (this.Token is null)
         {
@@ -135,7 +135,7 @@ public sealed record TwitchSession : IDisposable
     /// <remarks>
     /// If <see cref="TwitchToken.Scopes"/> is <see langword="null"/>, then checking of <paramref name="scopes"/> is skipped.
     /// </remarks>
-    public void RequireUserToken(params Scope?[] scopes)
+    public void RequireUserToken(params Scope?[]? scopes)
     {
         if (this.Token is null)
         {
