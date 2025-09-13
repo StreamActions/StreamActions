@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Chat;
@@ -47,5 +48,17 @@ public sealed record SendChatParameters
     /// If replying to an existing chat message, the ID of the chat message being replied to.
     /// </summary>
     [JsonPropertyName("reply_parent_message_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Guid? ReplyParentMessageId { get; init; }
+
+    /// <summary>
+    /// Determines if the chat message is sent only to the source channel (defined by <see cref="BroadcasterId"/>) during a shared chat session.
+    /// This has no effect if the message is not sent during a shared chat session.
+    /// </summary>
+    /// <remarks>
+    /// This parameter is only usable when using an <see cref="TwitchToken.TokenType.App"/> token, it MUST be set to <see langword="null"/> when using a <see cref="TwitchToken.TokenType.User"/> token.
+    /// </remarks>
+    [JsonPropertyName("for_source_only")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ForSourceOnly { get; init; }
 }
