@@ -67,13 +67,9 @@ public sealed record TwitchSession : IDisposable
     /// <summary>
     /// Checks if an app token is present.
     /// </summary>
-    /// <param name="scopes">The scopes to check for.</param>
     /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/>.</exception>
-    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Scopes"/> does not contain all of the scopes defined in <paramref name="scopes"/>.</exception>
-    /// <remarks>
-    /// If <see cref="TwitchToken.Scopes"/> is <see langword="null"/>, then checking of <paramref name="scopes"/> is skipped.
-    public void RequireAppToken(params Scope?[]? scopes)
+    public void RequireAppToken()
     {
         if (this.Token is null)
         {
@@ -89,27 +85,19 @@ public sealed record TwitchSession : IDisposable
         {
             throw new TokenTypeException(Enum.GetName(TwitchToken.TokenType.App), Enum.GetName(this.Token.Type ?? TwitchToken.TokenType.Unknown)).Log(TwitchApi.GetLogger());
         }
-
-        (_, Scope?[] Missing) = this.Token.CheckScopes(scopes);
-
-        if (Missing.Length > 0)
-        {
-            throw new TwitchScopeMissingException(Missing).Log(TwitchApi.GetLogger());
-        }
     }
 
     /// <summary>
-    /// Checks if either an app or user token is present and has the specified scopes.
+    /// Checks if either an app or user token is present. If it is a user token, also checks if the specified scopes are present.
     /// </summary>
-    /// <param name="userScopes">The scopes to check for, if the token is a user token.</param>
-    /// <param name="appScopes">The scopes to check for, if the token is an app token.</param>
+    /// <param name="scopes">The scopes to check for.</param>
     /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
-    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Scopes"/> does not contain all of the scopes defined in <paramref name="userScopes"/> or <paramref name="appScopes"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Type"/> is <see cref="TwitchToken.TokenType.User"/> and <see cref="TwitchToken.Scopes"/> does not contain all of the scopes defined in <paramref name="scopes"/>.</exception>
     /// <remarks>
     /// If <see cref="TwitchToken.Scopes"/> is <see langword="null"/>, then checking of <paramref name="scopes"/> is skipped.
     /// </remarks>
-    public void RequireUserOrAppToken(Scope?[]? userScopes = null, Scope?[]? appScopes = null)
+    public void RequireUserOrAppToken(params Scope?[] scopes)
     {
         if (this.Token is null)
         {
@@ -126,11 +114,14 @@ public sealed record TwitchSession : IDisposable
             throw new TokenTypeException(Enum.GetName(TwitchToken.TokenType.App) + " or " + Enum.GetName(TwitchToken.TokenType.User), Enum.GetName(this.Token.Type ?? TwitchToken.TokenType.Unknown)).Log(TwitchApi.GetLogger());
         }
 
-        (_, Scope?[] Missing) = this.Token.CheckScopes(this.Token.Type is TwitchToken.TokenType.User ? userScopes : appScopes);
-
-        if (Missing.Length > 0)
+        if (this.Token.Type is TwitchToken.TokenType.User)
         {
-            throw new TwitchScopeMissingException(Missing).Log(TwitchApi.GetLogger());
+            (_, Scope?[] Missing) = this.Token.CheckScopes(scopes);
+
+            if (Missing.Length > 0)
+            {
+                throw new TwitchScopeMissingException(Missing).Log(TwitchApi.GetLogger());
+            }
         }
     }
 
@@ -144,7 +135,7 @@ public sealed record TwitchSession : IDisposable
     /// <remarks>
     /// If <see cref="TwitchToken.Scopes"/> is <see langword="null"/>, then checking of <paramref name="scopes"/> is skipped.
     /// </remarks>
-    public void RequireUserToken(params Scope?[]? scopes)
+    public void RequireUserToken(params Scope?[] scopes)
     {
         if (this.Token is null)
         {

@@ -141,7 +141,7 @@ public sealed record TwitchToken
     /// </remarks>
     /// <param name="scopes">The scopes to find.</param>
     /// <returns>A tuple listing the scopes that were found and missing.</returns>
-    public (string[] Found, string[] Missing) CheckScopes(params string[]? scopes)
+    public (string[] Found, string[] Missing) CheckScopes(params string[] scopes)
     {
         if (scopes is null)
         {
@@ -179,7 +179,7 @@ public sealed record TwitchToken
     /// </remarks>
     /// <param name="scopes">The scopes to find.</param>
     /// <returns>A tuple listing the scopes that were found and missing.</returns>
-    public (Scope?[] Found, Scope?[] Missing) CheckScopes(params Scope?[]? scopes)
+    public (Scope?[] Found, Scope?[] Missing) CheckScopes(params Scope?[] scopes)
     {
         if (scopes is null)
         {
