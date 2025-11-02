@@ -91,6 +91,8 @@ jobs:
       - name: Upload starting cache artifact
         uses: actions/upload-artifact@v4
         with:
+            compression-level: 9
+            include-hidden-files: true
             name: cache-start
             path: .cache
       - name: Run diffs
@@ -443,5 +445,7 @@ jobs:
       - name: Upload ending cache artifact
         uses: actions/upload-artifact@v4
         with:
+            compression-level: 9
+            include-hidden-files: true
             name: cache-end
-            path: .cache
+            path: ./.cache
