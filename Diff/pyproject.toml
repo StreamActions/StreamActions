@@ -1,0 +1,9 @@
+[project]
+name = "diff"
+version = "1.0.0"
+description = "Performs diff operations on documentation in support of GitHub Actions workflows"
+requires-python = ">=3.13"
+dependencies = [
+    "beautifulsoup4>=4.12.2",
+    "requests>=2.31.0",
+]
