@@ -35,6 +35,7 @@ The following is a set of guidelines and rules for contributing to StreamActions
     - [Recommended Tools](#recommended-tools)
     - [Recommended Extensions](#recommended-extensions)
   - [Additional Notes](#additional-notes)
+    - [Use of AI](#use-of-ai)
     - [Issue and Pull Request Labels](#issue-and-pull-request-labels)
       - [Type of Issue and Issue State](#type-of-issue-and-issue-state)
   - [Acknowledgments](#acknowledgments)
@@ -170,7 +171,7 @@ While the prerequisites above must be satisfied prior to having your pull reques
 
 ### C# Styleguide
 
-All C# must adhere to [Microsoft .NET Framework Design Guidelines](https://docs.microsoft.com/en-us/dotnet/standard/design-guidelines/).
+All C# must adhere to [Microsoft .NET Framework Design Guidelines](https://docs.microsoft.com/en-us/dotnet/standard/design-guidelines/), as specified by the enabled rules in _.editorconfig_.
 
 #### Types and Type Members
 * Insert XML Documentation tags on all types and type members
@@ -286,11 +287,11 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 * Non-public members should also be tested, to the greatest practical extent
 * Tests must be in a separate test project
 
-### PostgresDB Styleguide
-* Table names should be the plural name of the document in camelCase, with the word _Document_ removed (e.g., The table for _PermissionGroupDocument_ is named _permissionGroups_)
+### Database Styleguide
+* Table names should be the plural name of the POCO in camelCase (e.g., The table for _PermissionGroup_ is named _permissionGroups_)
 * Index names should be in the format of _tableName\_indexType\_Field1-Field2-etc_ (e.g., _permissionGroups\_unique\_ChannelId-GroupName_)
     * Foreign keys must use _ON UPDATE CASCADE ON DELETE CASCADE_ to prevent orphaned rows
-* All documents must have a unique auto-id for each row. If the document references a specific user/channel, add that as a foreign key to the _users_ table
+* All tables must have a unique auto-id for each row. If the row references a specific user/channel, add that as a foreign key to the _users_ table
     * Exact naming of the _UserId_ field can be chosen based on context, such as _ChannelId_ for a channel context or _FollowerId_ for a follower context
 * Only create indexes across fields that will regularly be used in the _WHERE_, _SORT_, or _GROUP BY_ clauses
 
@@ -310,9 +311,9 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 
 ### Required Tools
 To work on StreamActions, the following tools are required:
-* ASP.NET 7 Runtime/SDK
+* ASP.NET 9.0 Runtime/SDK
 * Git
-    * Configured to use GPG if, setup
+    * Configured to use GPG if setup
 * A GitHub account linked to your git commit email address
 * Python 3 (only if testing/running Python scripts)
 * GPG (Optional, but highly recommended to digitally sign your commits)
@@ -320,9 +321,10 @@ To work on StreamActions, the following tools are required:
 :information_source: NOTE: Although not required at this time, the StreamActions team reserves the right to require digitally signed commits in the future.
 
 ### Recommended Tools
-If you are working on StreamActions from a Windows 10 or later environment, the following tools are recommended to achieve the requirements above:
-* [Visual Studio 2022](https://visualstudio.microsoft.com/) (Any edition)
-    * Workload: _ASP.NET and web development_
+If you are working on StreamActions from a Windows 11 or later environment, the following tools are recommended to achieve the requirements above:
+* [Visual Studio 2026](https://visualstudio.microsoft.com/) (Any edition)
+    * Workload: _ASP.NET and web development_ 
+        * Individual Component: _.NET 9.0 Runtime_
     * Workload: _Python development_ (If testing/running Python scripts)
     * Individual Component: _Git for Windows_ (If not being installed separately)
     * The extensions listed in the next section
@@ -330,22 +332,23 @@ If you are working on StreamActions from a Windows 10 or later environment, the 
 * [Git for Windows](https://git-scm.com/) (If not installed from the Visual Studio Installer)
     * Configured to use GPG if Gpg4win is setup
 
-NOTE: If you are using Visual Studio, you must use 2022 or later to access the ASP.NET 7 Runtime/SDK.
+NOTE: If you are using Visual Studio, you must use 2022 or later to access the ASP.NET 9.0 Runtime/SDK.
 
 ### Recommended Extensions
-We have included an _StreamActions.vsext_ file which contains direct references to the below extensions for easy installation. Just install [Extension Manager 2022](https://marketplace.visualstudio.com/items?itemName=MadsKristensen.ExtensionManager2022), restart Visual Studio, and then use the _Extensions > Import and Export Extensions > Import Extensions..._ menu option to import it. The dialog will allow you to select which extensions you want to use. This makes it easy to keep up as our extension set evolves, as you can simply re-run the action to import new extensions.
+We have included a _StreamActions.vsext_ file which contains direct references to the below extensions for easy installation. Just install [Extension Manager 2022](https://marketplace.visualstudio.com/items?itemName=Loop8ack.ExtensionManager2022), restart Visual Studio, and then use the _Extensions > Import and Export Extensions > Import Extensions..._ menu option to import it. The dialog will allow you to select which extensions you want to use. This makes it easy to keep up as our extension set evolves, as you can simply re-run the action to import new extensions.
+
+We have included a _StreamActions.vcmd_ file which imports our _Visual Commander_ commands for easy installation. This includes a command which allows CodeMaid to execute its _Cleanup Active Document_ function on records, which is highly recommended to help maintain code quality. The command can be found under _Extensions > VCmd_.
 
 To make following the C# styleguide and producing good code easier, we recommend using the following extensions with Visual Studio:
  * CodeMaid VS2022 - Performs a lot of the basic style fixes automatically upon saving the file, such as organizing usings, regions, type sorting, and license headers
+ * Visual Commander - Allows running custom commands, such as our included CodeMaid records support command
  * Trailing Whitespace Visualizer - Marks red background when there is excess whitespace at the end of the line
  * Indent Guides for VS 2022 - Displays dotted lines between paired opening and closing braces
- * Visual Studio Spell Checker (VS2022 and Later) - Spell check for comments and strings, uses our included custom dictionary
 
  The following extensions are also recommended to improve productivity or user experience with Visual Studio:
  * License Header Manager - Provides a right-click menu entry in _Solution Explorer_ to automatically add the license header
  * File Icons - Adds more file-type icons to _Solution Explorer_
  * Git Diff Margin - Shows colors in the left margin denoting adds, changes, and removes that are not committed
- * Markdown Editor v2 - Provides IntelliSense and live preview of Markdown files, including support for GitHub Flavored Markdown (GFM)
  * Multiline Search and Replace - Assists with performing Search/Replace operations containing multiline text
  * Output enhancer - Color-codes the _Output_ window
  * Time Stamp Margin 2022 - Adds timestamps to the margin of the _Output_ window
@@ -361,6 +364,13 @@ To make following the C# styleguide and producing good code easier, we recommend
  :information_source: NOTE: Our CodeMaid config will regionize and then re-order regions every time the file is saved, overwriting existing regions.
 
 ## Additional Notes
+
+### Use of AI
+We allow the use of AI tools to assist in code generation, such as Jules and GitHub Copilot.
+
+All use of AI tools must adhere to the contribution guidelines.
+
+All AI tools should read and follow the instructions in the AGENTS.md file in the root of this repository.
 
 ### Issue and Pull Request Labels
 
