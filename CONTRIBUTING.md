@@ -328,6 +328,7 @@ If you are working on StreamActions from a Windows 11 or later environment, the 
     * Workload: _Python development_ (If testing/running Python scripts)
     * Individual Component: _Git for Windows_ (If not being installed separately)
     * The extensions listed in the next section
+* [uv](https://docs.astral.sh/uv/) (Optional, but highly recommended to run and manage Python environments)
 * [Gpg4win](https://gpg4win.org/) (Optional, but highly recommended to digitally sign your commits)
 * [Git for Windows](https://git-scm.com/) (If not installed from the Visual Studio Installer)
     * Configured to use GPG if Gpg4win is setup
