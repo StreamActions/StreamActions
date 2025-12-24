@@ -1,8 +1,8 @@
 {
   "id": "cc56eb8d-e805-4d4a-9340-473ea02a8a84",
   "name": "StreamActions Visual Studio Extensions",
-  "description": "The recommended extensions for developing StreamActions with Visual Studio 2022",
-  "version": "1.9",
+  "description": "The recommended extensions for developing StreamActions with Visual Studio 2022/2026",
+  "version": "1.10",
   "extensions": [
     {
       "vsixId": "9079e73d-3fbb-4e07-8dab-f44fa5d8e8b5",
@@ -74,7 +74,7 @@
       "vsixId": "dac582ef-fc73-42f6-ad45-afaad93d88a4",
       "name": "Trailing Whitespace Visualizer",
       "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=MadsKristensen.TrailingWhitespace64",
-      "downloadUrl": "https://madskristensen.gallery.vsassets.io:443/_apis/public/gallery/publisher/MadsKristensen/extension/TrailingWhitespace64/2.6.105/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true\u0026update=true"
+      "downloadUrl": "https://madskristensen.gallery.vsassets.io:443/_apis/public/gallery/publisher/MadsKristensen/extension/TrailingWhitespace64/2.6.125/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true\u0026update=true"
     },
     {
       "vsixId": "VersionChanger2022.315c8ff9-932e-4b23-b9d8-0fcd23bdb0be",
@@ -86,7 +86,7 @@
       "vsixId": "9a7ebb7f-b08c-4e35-9898-a7b73468a624",
       "name": "Visual Commander",
       "moreInfoUrl": "https://marketplace.visualstudio.com/items?itemName=SergeyVlasov.VisualCommander",
-      "downloadUrl": "https://sergeyvlasov.gallery.vsassets.io:443/_apis/public/gallery/publisher/SergeyVlasov/extension/VisualCommander/3.5.0/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true\u0026update=true"
+      "downloadUrl": "https://sergeyvlasov.gallery.vsassets.io:443/_apis/public/gallery/publisher/SergeyVlasov/extension/VisualCommander/3.6.0/assetbyname/Microsoft.VisualStudio.Ide.Payload?redirect=true\u0026update=true"
     }
   ]
 }
