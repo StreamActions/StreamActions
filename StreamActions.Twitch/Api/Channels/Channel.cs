@@ -265,7 +265,12 @@ public sealed partial record Channel
 
                 if (ccl.Id is null)
                 {
-                    throw new ArgumentNullException(nameof(ContentClassificationLabel.Id), "a content classification label id may not be null").Log(TwitchApi.GetLogger());
+                    throw new ArgumentNullException(nameof(ContentClassificationLabel.Id)).Log(TwitchApi.GetLogger());
+                }
+
+                if (ccl.IsEnabled is null)
+                {
+                    throw new ArgumentNullException(nameof(ContentClassificationLabel.IsEnabled)).Log(TwitchApi.GetLogger());
                 }
             }
         }

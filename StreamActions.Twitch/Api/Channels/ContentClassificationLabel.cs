@@ -36,7 +36,7 @@ public sealed record ContentClassificationLabel
     /// Whether the label should be enabled or disabled.
     /// </summary>
     [JsonPropertyName("is_enabled")]
-    public bool IsEnabled { get; init; }
+    public bool? IsEnabled { get; init; }
 
     /// <summary>
     /// Known content classification label identifiers returned/accepted by the API.
