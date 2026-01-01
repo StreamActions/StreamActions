@@ -139,7 +139,7 @@ public sealed record Emote
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         Uri uri = Util.BuildUri(new("/chat/emotes"), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
@@ -175,7 +175,7 @@ public sealed record Emote
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         Uri uri = Util.BuildUri(new("/chat/emotes/global"));
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
