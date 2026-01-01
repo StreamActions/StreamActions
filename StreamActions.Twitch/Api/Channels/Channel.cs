@@ -1,4 +1,4 @@
-﻿/*
+/*
  * This file is part of StreamActions.
  * Copyright © 2019-2025 StreamActions Team (streamactions.github.io)
  *
@@ -89,6 +89,18 @@ public sealed partial record Channel
     public int? Delay { get; init; }
 
     /// <summary>
+    /// The CCLs (Content Classification Labels) applied to the channel.
+    /// </summary>
+    [JsonPropertyName("content_classification_labels")]
+    public IReadOnlyList<ContentClassificationLabel.LabelId>? ContentClassificationLabels { get; init; }
+
+    /// <summary>
+    /// Boolean flag indicating if the channel has branded content.
+    /// </summary>
+    [JsonPropertyName("is_branded_content")]
+    public bool? IsBrandedContent { get; init; }
+
+    /// <summary>
     /// The tags applied to the channel.
     /// </summary>
     [JsonPropertyName("tags")]
@@ -171,16 +183,24 @@ public sealed partial record Channel
     /// Response Codes:
     /// <list type="table">
     /// <item>
-    /// <term>200 OK</term>
+    /// <term>204 No Content</term>
     /// <description>Successfully updated the channel's properties.</description>
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>The described parameter was missing or invalid.</description>
+    /// <description>The described parameter was missing or invalid. A tag failed AutoMod review. An age or region restriction is in effect for the specified game.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
     /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>403 Forbidden</term>
+    /// <description>The broadcaster does not have permission to use one of the provided <see cref="ContentClassificationLabel.LabelId"/>.</description>
+    /// </item>
+    /// <item>
+    /// <term>409 Conflict / Too Many Requests</term>
+    /// <description>Branded content flag updated too frequently.</description>
     /// </item>
     /// </list>
     /// </para>
@@ -230,6 +250,22 @@ public sealed partial record Channel
                 else if (tag.Length > 25)
                 {
                     throw new ArgumentOutOfRangeException(nameof(parameters.Tags), tag, "a tags length must be <= 25").Log(TwitchApi.GetLogger());
+                }
+            }
+        }
+
+        if (parameters.ContentClassificationLabels is not null && parameters.ContentClassificationLabels.Any())
+        {
+            foreach (ContentClassificationLabel ccl in parameters.ContentClassificationLabels)
+            {
+                if (ccl is null)
+                {
+                    throw new ArgumentNullException(nameof(parameters.ContentClassificationLabels), "a content classification label entry may not be null").Log(TwitchApi.GetLogger());
+                }
+
+                if (ccl.Id is null)
+                {
+                    throw new ArgumentNullException(nameof(ContentClassificationLabel.Id), "a content classification label id may not be null").Log(TwitchApi.GetLogger());
                 }
             }
         }

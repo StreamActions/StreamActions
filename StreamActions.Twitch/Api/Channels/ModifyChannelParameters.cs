@@ -1,4 +1,4 @@
-﻿/*
+/*
  * This file is part of StreamActions.
  * Copyright © 2019-2025 StreamActions Team (streamactions.github.io)
  *
@@ -102,4 +102,28 @@ public sealed record ModifyChannelParameters
     [JsonPropertyName("tags")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<string>? Tags { get; init; }
+
+    /// <summary>
+    /// The Content Classification Labels (CCLs) to add or remove from the channel.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("content_classification_labels")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<ContentClassificationLabel>? ContentClassificationLabels { get; init; }
+
+    /// <summary>
+    /// Boolean flag indicating if the channel has branded content.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// To not update this field, use <see langword="null"/>.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("is_branded_content")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsBrandedContent { get; init; }
 }
