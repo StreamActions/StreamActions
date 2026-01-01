@@ -183,7 +183,7 @@ namespace StreamActions.Twitch.Api.Users
                 throw new ArgumentOutOfRangeException(nameof(ids) + "," + nameof(logins), idCount + loginCount, "The total number of supplied IDs and logins cannot exceed 100.").Log(TwitchApi.GetLogger());
             }
 
-            session.RequireToken();
+            session.RequireUserOrAppToken();
 
             NameValueCollection queryParameters = [];
             if (ids is not null && ids.Any())

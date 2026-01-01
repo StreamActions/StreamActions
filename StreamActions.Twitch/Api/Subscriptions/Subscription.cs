@@ -200,7 +200,7 @@ public sealed record Subscription
             throw new ArgumentOutOfRangeException(nameof(userId), userId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelReadSubscriptions);
+        session.RequireUserToken(Scope.ChannelReadSubscriptions);
 
         first = Math.Clamp(first, 1, 100);
 
@@ -306,7 +306,7 @@ public sealed record Subscription
             throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.UserReadSubscriptions);
+        session.RequireUserToken(Scope.UserReadSubscriptions);
 
         NameValueCollection queryParams = new()
         {

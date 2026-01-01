@@ -113,7 +113,7 @@ public sealed record Chatter
 
         first = Math.Clamp(first, 1, 1000);
 
-        session.RequireToken(Scope.ModeratorReadChatters);
+        session.RequireUserToken(Scope.ModeratorReadChatters);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },

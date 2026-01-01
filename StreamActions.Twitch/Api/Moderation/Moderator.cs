@@ -108,7 +108,7 @@ public sealed record Moderator
 
         first = Math.Clamp(first, 1, 100);
 
-        session.RequireToken(Scope.ModerationRead, Scope.ChannelManageModerators);
+        session.RequireUserToken(Scope.ModerationRead, Scope.ChannelManageModerators);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
@@ -188,7 +188,7 @@ public sealed record Moderator
         }
 
 
-        session.RequireToken(Scope.ChannelManageModerators);
+        session.RequireUserToken(Scope.ChannelManageModerators);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
@@ -254,7 +254,7 @@ public sealed record Moderator
         }
 
 
-        session.RequireToken(Scope.ChannelManageModerators);
+        session.RequireUserToken(Scope.ChannelManageModerators);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },

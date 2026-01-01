@@ -111,7 +111,7 @@ public sealed record CreatedClip
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ClipsEdit);
+        session.RequireUserToken(Scope.ClipsEdit);
 
         Uri uri = Util.BuildUri(new("/clips"), new() { { "broadcaster_id", broadcasterId }, { "has_delay", hasDelay.ToString(CultureInfo.InvariantCulture).ToLowerInvariant() } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);

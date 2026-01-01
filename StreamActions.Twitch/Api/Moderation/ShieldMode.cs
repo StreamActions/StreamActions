@@ -121,7 +121,7 @@ public sealed record ShieldMode
             throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ModeratorReadShieldMode, Scope.ModeratorManageShieldMode);
+        session.RequireUserToken(Scope.ModeratorReadShieldMode, Scope.ModeratorManageShieldMode);
 
         Uri uri = Util.BuildUri(new("/moderation/shield_mode"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
@@ -189,7 +189,7 @@ public sealed record ShieldMode
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ModeratorManageShieldMode);
+        session.RequireUserToken(Scope.ModeratorManageShieldMode);
 
         Uri uri = Util.BuildUri(new("/moderation/shield_mode"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);

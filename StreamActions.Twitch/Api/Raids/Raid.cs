@@ -110,7 +110,7 @@ public sealed record Raid
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManageRaids);
+        session.RequireUserToken(Scope.ChannelManageRaids);
 
         if (string.IsNullOrWhiteSpace(fromBroadcasterId))
         {
@@ -176,7 +176,7 @@ public sealed record Raid
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManageRaids);
+        session.RequireUserToken(Scope.ChannelManageRaids);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {

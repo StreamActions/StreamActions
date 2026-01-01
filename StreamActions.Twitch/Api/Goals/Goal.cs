@@ -181,7 +181,7 @@ public sealed record Goal
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelReadGoals);
+        session.RequireUserToken(Scope.ChannelReadGoals);
 
         Uri uri = Util.BuildUri(new("/goals"), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);

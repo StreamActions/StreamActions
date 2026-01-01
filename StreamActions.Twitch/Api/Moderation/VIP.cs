@@ -108,7 +108,7 @@ public sealed record VIP
 
         first = Math.Clamp(first, 1, 100);
 
-        session.RequireToken(Scope.ChannelReadVips, Scope.ChannelManageVips);
+        session.RequireUserToken(Scope.ChannelReadVips, Scope.ChannelManageVips);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
@@ -200,7 +200,7 @@ public sealed record VIP
         }
 
 
-        session.RequireToken(Scope.ChannelManageVips);
+        session.RequireUserToken(Scope.ChannelManageVips);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
@@ -283,7 +283,7 @@ public sealed record VIP
         }
 
 
-        session.RequireToken(Scope.ChannelManageVips);
+        session.RequireUserToken(Scope.ChannelManageVips);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },

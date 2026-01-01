@@ -107,7 +107,7 @@ public sealed record Whisper
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.UserManageWhispers);
+        session.RequireUserToken(Scope.UserManageWhispers);
 
         if (string.IsNullOrWhiteSpace(fromUserId))
         {

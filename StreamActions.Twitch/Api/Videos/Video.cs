@@ -306,7 +306,7 @@ public sealed record Video
             throw new ArgumentNullException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "must provide at least one of these parameters").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         bool hasId = false;
         if (!string.IsNullOrWhiteSpace(userId))
@@ -432,7 +432,7 @@ public sealed record Video
             throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManageVideos);
+        session.RequireUserToken(Scope.ChannelManageVideos);
 
         if (id.Count() > 5)
         {
