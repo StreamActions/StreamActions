@@ -225,7 +225,7 @@ public sealed record ChannelPointsReward
             throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 50").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelReadRedemptions, Scope.ChannelManageRedemptions);
+        session.RequireUserToken(Scope.ChannelReadRedemptions, Scope.ChannelManageRedemptions);
 
         NameValueCollection queryParams = new()
         {
@@ -326,7 +326,7 @@ public sealed record ChannelPointsReward
             throw new ArgumentOutOfRangeException(nameof(parameters.Cost), parameters.Cost.Value, "must be >= 1").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManageRedemptions);
+        session.RequireUserToken(Scope.ChannelManageRedemptions);
 
         if (!string.IsNullOrWhiteSpace(parameters.Prompt) && parameters.Prompt.Length > 200)
         {
@@ -452,7 +452,7 @@ public sealed record ChannelPointsReward
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManageRedemptions);
+        session.RequireUserToken(Scope.ChannelManageRedemptions);
 
         if (parameters.Title is not null && string.IsNullOrWhiteSpace(parameters.Title))
         {
@@ -594,7 +594,7 @@ public sealed record ChannelPointsReward
             throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManageRedemptions);
+        session.RequireUserToken(Scope.ChannelManageRedemptions);
 
         NameValueCollection queryParams = new()
         {

@@ -218,7 +218,7 @@ public sealed record EventSubSubscription
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         NameValueCollection queryParams = [];
 
@@ -326,7 +326,7 @@ public sealed record EventSubSubscription
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         if (string.IsNullOrEmpty(parameters.Type))
         {
@@ -431,7 +431,7 @@ public sealed record EventSubSubscription
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         if (id == Guid.Empty)
         {

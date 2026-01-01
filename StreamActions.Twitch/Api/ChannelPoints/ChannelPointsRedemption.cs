@@ -236,7 +236,7 @@ public sealed record ChannelPointsRedemption
 
         first = Math.Clamp(first, 1, 50);
 
-        session.RequireToken(Scope.ChannelReadRedemptions, Scope.ChannelManageRedemptions);
+        session.RequireUserToken(Scope.ChannelReadRedemptions, Scope.ChannelManageRedemptions);
 
         NameValueCollection queryParams = new()
         {
@@ -346,7 +346,7 @@ public sealed record ChannelPointsRedemption
             throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be Fulfilled or Canceled").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManageRedemptions);
+        session.RequireUserToken(Scope.ChannelManageRedemptions);
 
         NameValueCollection queryParams = new()
         {

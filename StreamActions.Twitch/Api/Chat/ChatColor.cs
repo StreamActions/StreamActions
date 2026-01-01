@@ -167,7 +167,7 @@ public sealed record ChatColor
             throw new ArgumentOutOfRangeException(nameof(userId), userId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         Uri uri = Util.BuildUri(new("/chat/color"), new() { { "user_id", userId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
@@ -227,7 +227,7 @@ public sealed record ChatColor
             throw new ArgumentOutOfRangeException(nameof(hex), hex, "must be a valid rgb hex string #rrggbb").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.UserManageChatColor);
+        session.RequireUserToken(Scope.UserManageChatColor);
 
         string scolor;
 

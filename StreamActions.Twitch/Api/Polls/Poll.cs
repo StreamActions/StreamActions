@@ -204,7 +204,7 @@ public sealed record Poll
             throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 20").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelReadPolls, Scope.ChannelManagePolls);
+        session.RequireUserToken(Scope.ChannelReadPolls, Scope.ChannelManagePolls);
 
         first = Math.Clamp(first, 1, 20);
 
@@ -288,7 +288,7 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManagePolls);
+        session.RequireUserToken(Scope.ChannelManagePolls);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {
@@ -395,7 +395,7 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManagePolls);
+        session.RequireUserToken(Scope.ChannelManagePolls);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {

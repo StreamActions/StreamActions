@@ -190,7 +190,7 @@ public sealed record Clip
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         if (string.IsNullOrWhiteSpace(broadcasterId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
         {

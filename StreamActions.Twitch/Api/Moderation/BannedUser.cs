@@ -142,7 +142,7 @@ public sealed record BannedUser
             throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(OAuth.Scope.ModerationRead, OAuth.Scope.ModeratorManageBannedUsers);
+        session.RequireUserToken(OAuth.Scope.ModerationRead, OAuth.Scope.ModeratorManageBannedUsers);
 
         NameValueCollection queryParameters = [];
         queryParameters.Add("broadcaster_id", broadcasterId);

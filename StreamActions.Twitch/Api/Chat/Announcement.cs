@@ -116,7 +116,7 @@ public sealed record Announcement
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ModeratorManageAnnouncements);
+        session.RequireUserToken(Scope.ModeratorManageAnnouncements);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {

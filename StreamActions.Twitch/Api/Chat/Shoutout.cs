@@ -89,7 +89,7 @@ public sealed record Shoutout
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ModeratorManageShoutouts);
+        session.RequireUserToken(Scope.ModeratorManageShoutouts);
 
         if (string.IsNullOrWhiteSpace(fromBroadcasterId))
         {

@@ -113,7 +113,7 @@ public sealed record Game
             throw new ArgumentOutOfRangeException(nameof(gameIds) + "," + nameof(gameNames) + "," + nameof(igdbIds), totalIds, "The total number of IDs, names, and IGDB IDs must not exceed 100.").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         NameValueCollection queryParameters = [];
         if (gameIdList.Count > 0)
@@ -172,7 +172,7 @@ public sealed record Game
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserOrAppToken();
 
         NameValueCollection queryParameters = [];
 
