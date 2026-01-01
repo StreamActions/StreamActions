@@ -50,7 +50,7 @@ public sealed record Emote
     public EmoteImage? Images { get; init; }
 
     /// <summary>
-    /// The subscriber tier at which the emote is unlocked.
+    /// The subscriber tier at which the emote is unlocked. This field contains the tier information only if <see cref="EmoteType"/> is set to <see cref="EmoteTypes.Subscriptions"/>.
     /// </summary>
     /// <remarks>
     /// This field is not present for global emotes.
@@ -59,13 +59,13 @@ public sealed record Emote
     public string? Tier { get; init; }
 
     /// <summary>
-    /// The type of emote.
+    /// The type of emote. For a list of possible values, see <see cref="EmoteTypes"/>.
     /// </summary>
     /// <remarks>
     /// This field is not present for global emotes.
     /// </remarks>
     [JsonPropertyName("emote_type")]
-    public EmoteType? EmoteType { get; init; }
+    public EmoteTypes? EmoteType { get; init; }
 
     /// <summary>
     /// An ID that identifies the emote set that the emote belongs to.
@@ -97,96 +97,22 @@ public sealed record Emote
     /// <summary>
     /// A templated URL.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Use the values from the <see cref="Id"/>, <see cref="Format"/>, <see cref="Scale"/>, and <see cref="ThemeMode"/> fields to replace the like-named placeholder strings in the templated URL to create a CDN URL that you use to fetch the emote.
+    /// </para>
+    /// <para>
+    /// The placeholders are <c>{{id}}</c>, <c>{{format}}</c>, <c>{{scale}}</c>, and <c>{{theme_mode}}</c>.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("template")]
     public string? Template { get; init; }
 
     /// <summary>
-    /// Gets the broadcaster’s list of custom emotes.
-    /// </summary>
-    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">An ID that identifies the broadcaster whose emotes you want to get.</param>
-    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Emote"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <remarks>
-    /// <para>
-    /// Response Codes:
-    /// <list type="table">
-    /// <item>
-    /// <term>200 OK</term>
-    /// <description>Successfully retrieved broadcaster's list of custom emotes.</description>
-    /// </item>
-    /// <item>
-    /// <term>400 Bad Request</term>
-    /// <description>The described parameter was missing or invalid.</description>
-    /// </item>
-    /// <item>
-    /// <term>401 Unauthorized</term>
-    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
-    /// </item>
-    /// </list>
-    /// </para>
-    /// </remarks>
-    public static async Task<ResponseData<Emote>?> GetChannelEmotes(TwitchSession session, string broadcasterId)
-    {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
-
-        if (string.IsNullOrWhiteSpace(broadcasterId))
-        {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserOrAppToken();
-
-        Uri uri = Util.BuildUri(new("/chat/emotes"), new() { { "broadcaster_id", broadcasterId } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<ResponseData<Emote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Gets the list of global emotes.
-    /// </summary>
-    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Emote"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <remarks>
-    /// <para>
-    /// Response Codes:
-    /// <list type="table">
-    /// <item>
-    /// <term>200 OK</term>
-    /// <description>Successfully retrieved Twitch's list of global emotes.</description>
-    /// </item>
-    /// <item>
-    /// <term>401 Unauthorized</term>
-    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
-    /// </item>
-    /// </list>
-    /// </para>
-    /// </remarks>
-    public static async Task<ResponseData<Emote>?> GetGlobalEmotes(TwitchSession session)
-    {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserOrAppToken();
-
-        Uri uri = Util.BuildUri(new("/chat/emotes/global"));
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<ResponseData<Emote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-    }
-
-    /// <summary>
     /// The type of emote.
     /// </summary>
-    [JsonConverter(typeof(JsonCustomEnumConverter<EmoteType>))]
-    public enum EmoteType
+    [JsonConverter(typeof(JsonCustomEnumConverter<EmoteTypes>))]
+    public enum EmoteTypes
     {
         /// <summary>
         /// A custom Bits tier emote.
@@ -262,5 +188,87 @@ public sealed record Emote
         /// </summary>
         [JsonCustomEnum("light")]
         Light
+    }
+
+    /// <summary>
+    /// Gets the broadcaster's list of custom emotes.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="broadcasterId">An ID that identifies the broadcaster whose emotes you want to get.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Emote"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the broadcaster's list of custom emotes.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public static async Task<ResponseData<Emote>?> GetChannelEmotes(TwitchSession session, string broadcasterId)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireUserOrAppToken();
+
+        Uri uri = Util.BuildUri(new("/chat/emotes"), new() { { "broadcaster_id", broadcasterId } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<Emote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the list of global emotes.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Emote"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved Twitch's list of global emotes.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public static async Task<ResponseData<Emote>?> GetGlobalEmotes(TwitchSession session)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireUserOrAppToken();
+
+        Uri uri = Util.BuildUri(new("/chat/emotes/global"));
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<Emote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
