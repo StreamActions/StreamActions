@@ -31,7 +31,7 @@ namespace StreamActions.Twitch.Api.Chat;
 /// You should use the templated URL in the <see cref="Emote.Template"/> field to fetch the image instead of using these URLs.
 /// </para>
 /// </remarks>
-public sealed record EmoteImage
+public sealed record EmoteImages
 {
     /// <summary>
     /// A URL to the small version (28px x 28px) of the emote.

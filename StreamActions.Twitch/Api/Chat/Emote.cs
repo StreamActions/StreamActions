@@ -46,8 +46,16 @@ public sealed record Emote
     /// <summary>
     /// The image URLs for the emote.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// These image URLs always provide a static, non-animated emote image with a light background.
+    /// </para>
+    /// <para>
+    /// You should use the templated URL in the <see cref="Emote.Template"/> field to fetch the image instead of using these URLs.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("images")]
-    public EmoteImage? Images { get; init; }
+    public EmoteImages? Images { get; init; }
 
     /// <summary>
     /// The subscriber tier at which the emote is unlocked. This field contains the tier information only if <see cref="EmoteType"/> is set to <see cref="EmoteTypes.Subscriptions"/>.
