@@ -1,4 +1,4 @@
-﻿/*
+/*
  * This file is part of StreamActions.
  * Copyright © 2019-2025 StreamActions Team (streamactions.github.io)
  *
@@ -27,8 +27,8 @@ namespace StreamActions.Twitch.Api.Ingest;
 /// Sends and represents a response element for a request for ingest servers.
 /// </summary>
 [ETag("Ingest", 72,
-    "https://dev.twitch.tv/docs/video-broadcast/reference/", "ECC44F51C6DE913DB8F135D5AB4CDD4171B646A790CBBC2B476BE9259CDFB4E5",
-    "2024-06-02T20:15Z", "TwitchReferenceParser", [])]
+    "https://dev.twitch.tv/docs/video-broadcast/reference/", "8D3047C5357A923A37E9C9B7CD356E57237A85A117BEF7D56328DB4E89737CAC",
+    "2024-11-06T05:24Z", "TwitchReferenceParser", [])]
 public sealed record IngestServer
 {
     /// <summary>
