@@ -27,7 +27,7 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.Chat;
 
 /// <summary>
-/// Represents a Twitch emote.
+/// Sends and represents a response element for a request for emotes.
 /// </summary>
 public sealed record Emote
 {
