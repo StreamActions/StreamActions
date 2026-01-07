@@ -61,8 +61,12 @@ public sealed record Emote
     /// The subscriber tier at which the emote is unlocked.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// This field contains the tier information only if <see cref="EmoteType"/> is set to <see cref="EmoteTypes.Subscriptions"/>.
-    /// <para>This field is not present in the <see cref="GetGlobalEmotes"/> or <see cref="GetUserEmotes"/> APIs.</para>
+    /// </para>
+    /// <para>
+    /// This field is not present in the <see cref="GetGlobalEmotes"/>, <see cref="GetEmoteSets"/>, or <see cref="GetUserEmotes"/> APIs.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("tier")]
     public string? Tier { get; init; }
@@ -71,7 +75,9 @@ public sealed record Emote
     /// The type of emote. For a list of possible values, see <see cref="EmoteTypes"/>.
     /// </summary>
     /// <remarks>
-    /// <para>This field is not present in the <see cref="GetGlobalEmotes"/> API.</para>
+    /// <para>
+    /// This field is not present in the <see cref="GetGlobalEmotes"/> API.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("emote_type")]
     public EmoteTypes? EmoteType { get; init; }
@@ -80,8 +86,12 @@ public sealed record Emote
     /// An ID that identifies the emote set that the emote belongs to.
     /// </summary>
     /// <remarks>
-    /// <para>This field is not present in the <see cref="GetGlobalEmotes"/> API.</para>
-    /// <para>This may be blank for some global emotes, such as those with an <see cref="EmoteType"/> of <see cref="EmoteTypes.Hypetrain"/>.</para>
+    /// <para>
+    /// This field is not present in the <see cref="GetGlobalEmotes"/> API.
+    /// </para>
+    /// <para>
+    /// This may be blank for some global emotes, such as those with an <see cref="EmoteType"/> of <see cref="EmoteTypes.Hypetrain"/>.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("emote_set_id")]
     public string? EmoteSetId { get; init; }
@@ -90,7 +100,9 @@ public sealed record Emote
     /// The ID of the broadcaster who owns the emote.
     /// </summary>
     /// <remarks>
-    /// <para>This field is only present in the <see cref="GetEmoteSets"/> and <see cref="GetUserEmotes"/> APIs.</para>
+    /// <para>
+    /// This field is only present in the <see cref="GetEmoteSets"/> and <see cref="GetUserEmotes"/> APIs.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("owner_id")]
     public string? OwnerId { get; init; }
