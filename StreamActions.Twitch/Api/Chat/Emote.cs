@@ -377,7 +377,7 @@ public sealed record Emote
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>The emote_set_id query parameter is required; or the number of emote_set_id query parameters exceeds the maximum allowed.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
@@ -440,7 +440,7 @@ public sealed record Emote
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>The user_id query parameter is required; or the ID in the user_id query parameter is not valid.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
