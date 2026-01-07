@@ -58,10 +58,15 @@ public sealed record Emote
     public EmoteImages? Images { get; init; }
 
     /// <summary>
-    /// The subscriber tier at which the emote is unlocked. This field contains the tier information only if <see cref="EmoteType"/> is set to <see cref="EmoteTypes.Subscriptions"/>.
+    /// The subscriber tier at which the emote is unlocked.
     /// </summary>
     /// <remarks>
-    /// This field is not present for global emotes.
+    /// <para>
+    /// This field contains the tier information only if <see cref="EmoteType"/> is set to <see cref="EmoteTypes.Subscriptions"/>.
+    /// </para>
+    /// <para>
+    /// This field is not present in the <see cref="GetGlobalEmotes"/>, <see cref="GetEmoteSets"/>, or <see cref="GetUserEmotes"/> APIs.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("tier")]
     public string? Tier { get; init; }
@@ -70,7 +75,9 @@ public sealed record Emote
     /// The type of emote. For a list of possible values, see <see cref="EmoteTypes"/>.
     /// </summary>
     /// <remarks>
-    /// This field is not present for global emotes.
+    /// <para>
+    /// This field is not present in the <see cref="GetGlobalEmotes"/> API.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("emote_type")]
     public EmoteTypes? EmoteType { get; init; }
@@ -79,10 +86,26 @@ public sealed record Emote
     /// An ID that identifies the emote set that the emote belongs to.
     /// </summary>
     /// <remarks>
-    /// This field is not present for global emotes.
+    /// <para>
+    /// This field is not present in the <see cref="GetGlobalEmotes"/> API.
+    /// </para>
+    /// <para>
+    /// This may be blank for some global emotes, such as those with an <see cref="EmoteType"/> of <see cref="EmoteTypes.Hypetrain"/>.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("emote_set_id")]
     public string? EmoteSetId { get; init; }
+
+    /// <summary>
+    /// The ID of the broadcaster who owns the emote.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This field is only present in the <see cref="GetEmoteSets"/> and <see cref="GetUserEmotes"/> APIs.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("owner_id")]
+    public string? OwnerId { get; init; }
 
     /// <summary>
     /// The formats that the emote is available in.
@@ -123,6 +146,11 @@ public sealed record Emote
     public enum EmoteTypes
     {
         /// <summary>
+        /// No emote type was assigned to this emote.
+        /// </summary>
+        [JsonCustomEnum("none")]
+        None,
+        /// <summary>
         /// A custom Bits tier emote.
         /// </summary>
         [JsonCustomEnum("bitstier")]
@@ -136,7 +164,57 @@ public sealed record Emote
         /// A custom subscriber emote.
         /// </summary>
         [JsonCustomEnum("subscriptions")]
-        Subscriptions
+        Subscriptions,
+        /// <summary>
+        /// An emote granted by using channel points.
+        /// </summary>
+        [JsonCustomEnum("channelpoints")]
+        ChannelPoints,
+        /// <summary>
+        /// An emote granted to the user through a special event.
+        /// </summary>
+        [JsonCustomEnum("rewards")]
+        Rewards,
+        /// <summary>
+        /// An emote granted for participation in a Hype Train.
+        /// </summary>
+        [JsonCustomEnum("hypetrain")]
+        HypeTrain,
+        /// <summary>
+        /// An emote granted for linking an Amazon Prime account.
+        /// </summary>
+        [JsonCustomEnum("prime")]
+        Prime,
+        /// <summary>
+        /// An emote granted for having Twitch Turbo.
+        /// </summary>
+        [JsonCustomEnum("turbo")]
+        Turbo,
+        /// <summary>
+        /// Emoticons supported by Twitch.
+        /// </summary>
+        [JsonCustomEnum("smilies")]
+        Smilies,
+        /// <summary>
+        /// An emote accessible by everyone.
+        /// </summary>
+        [JsonCustomEnum("globals")]
+        Globals,
+        /// <summary>
+        /// Emotes related to Overwatch League 2019.
+        /// </summary>
+        [JsonCustomEnum("owl2019")]
+        OWL2019,
+        /// <summary>
+        /// Emotes granted by enabling two-factor authentication on an account.
+        /// </summary>
+        [JsonCustomEnum("twofactor")]
+        TwoFactor,
+        /// <summary>
+        /// Emotes that were granted for only a limited time.
+        /// </summary>
+        [JsonCustomEnum("limitedtime")]
+        LimitedTime
     }
 
     /// <summary>
@@ -276,6 +354,128 @@ public sealed record Emote
         session.RequireUserOrAppToken();
 
         Uri uri = Util.BuildUri(new("/chat/emotes/global"));
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<Emote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets emotes for one or more specified emote sets.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="emoteSetIds">An ID that identifies the emote set to get. You may specify a maximum of 25 IDs.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Emote"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="emoteSetIds"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Too many emote set ids were specified.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <remarks>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the emotes for the specified emote sets.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public static async Task<ResponseData<Emote>?> GetEmoteSets(TwitchSession session, IEnumerable<string> emoteSetIds)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        if (emoteSetIds is null || !emoteSetIds.Any())
+        {
+            throw new ArgumentNullException(nameof(emoteSetIds)).Log(TwitchApi.GetLogger());
+        }
+
+        if (emoteSetIds.Count() > 25)
+        {
+            throw new ArgumentOutOfRangeException(nameof(emoteSetIds), emoteSetIds.Count(), "A maximum of 25 emote set ids can be specified.").Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireUserOrAppToken();
+
+        System.Collections.Specialized.NameValueCollection query = new();
+        foreach (string emoteSetId in emoteSetIds)
+        {
+            query.Add("emote_set_id", emoteSetId);
+        }
+
+        Uri uri = Util.BuildUri(new("/chat/emotes/set"), query);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<Emote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Retrieves emotes available to the user across all channels.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="userId">The ID of the user. This ID must match the user ID in the user access token.</param>
+    /// <param name="broadcasterId">The User ID of a broadcaster you wish to get follower emotes of.</param>
+    /// <param name="after">The cursor used to get the next page of results.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Emote"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException">The user token is missing the required 'user:read:emotes' scope.</exception>
+    /// <remarks>
+    /// <para>
+    /// If the user specified in <paramref name="userId"/> is subscribed to the broadcaster specified in <paramref name="broadcasterId"/>, their follower emotes will appear in the response body regardless if this query parameter is used.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the emotes.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public static async Task<ResponseData<Emote>?> GetUserEmotes(TwitchSession session, string userId, string? broadcasterId = null, string? after = null)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireUserToken(Scope.UserReadEmotes);
+
+        System.Collections.Specialized.NameValueCollection query = new() { { "user_id", userId } };
+
+        if (!string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            query.Add("broadcaster_id", broadcasterId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(after))
+        {
+            query.Add("after", after);
+        }
+
+        Uri uri = Util.BuildUri(new("/chat/emotes/user"), query);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Emote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
