@@ -108,22 +108,22 @@ public sealed record Emote
     public string? OwnerId { get; init; }
 
     /// <summary>
-    /// The formats that the emote is available in.
+    /// The formats that the emote is available in. For a list of possible values, see <see cref="Formats"/>.
     /// </summary>
     [JsonPropertyName("format")]
-    public Format[]? Format { get; init; }
+    public Formats[]? Format { get; init; }
 
     /// <summary>
-    /// The sizes that the emote is available in.
+    /// The sizes that the emote is available in. For a list of possible values, see <see cref="Scales"/>.
     /// </summary>
     [JsonPropertyName("scale")]
-    public Scale[]? Scale { get; init; }
+    public Scales[]? Scale { get; init; }
 
     /// <summary>
-    /// The background themes that the emote is available in.
+    /// The background themes that the emote is available in. For a list of possible values, see <see cref="ThemeModes"/>.
     /// </summary>
     [JsonPropertyName("theme_mode")]
-    public ThemeMode[]? ThemeMode { get; init; }
+    public ThemeModes[]? ThemeMode { get; init; }
 
     /// <summary>
     /// A templated URL.
@@ -220,8 +220,8 @@ public sealed record Emote
     /// <summary>
     /// The formats that the emote is available in.
     /// </summary>
-    [JsonConverter(typeof(JsonCustomEnumConverter<Format>))]
-    public enum Format
+    [JsonConverter(typeof(JsonCustomEnumConverter<Formats>))]
+    public enum Formats
     {
         /// <summary>
         /// An animated GIF is available for this emote.
@@ -238,8 +238,8 @@ public sealed record Emote
     /// <summary>
     /// The sizes that the emote is available in.
     /// </summary>
-    [JsonConverter(typeof(JsonCustomEnumConverter<Scale>))]
-    public enum Scale
+    [JsonConverter(typeof(JsonCustomEnumConverter<Scales>))]
+    public enum Scales
     {
         /// <summary>
         /// A small version (28px x 28px) is available.
@@ -261,8 +261,8 @@ public sealed record Emote
     /// <summary>
     /// The background themes that the emote is available in.
     /// </summary>
-    [JsonConverter(typeof(JsonCustomEnumConverter<ThemeMode>))]
-    public enum ThemeMode
+    [JsonConverter(typeof(JsonCustomEnumConverter<ThemeModes>))]
+    public enum ThemeModes
     {
         /// <summary>
         /// A dark theme is available.
