@@ -71,7 +71,7 @@ public sealed record Emote
     /// The type of emote. For a list of possible values, see <see cref="EmoteTypes"/>.
     /// </summary>
     /// <remarks>
-    /// This field is not present in the <see cref="GetGlobalEmotes"/> API.
+    /// <para>This field is not present in the <see cref="GetGlobalEmotes"/> API.</para>
     /// </remarks>
     [JsonPropertyName("emote_type")]
     public EmoteTypes? EmoteType { get; init; }
@@ -80,7 +80,7 @@ public sealed record Emote
     /// An ID that identifies the emote set that the emote belongs to.
     /// </summary>
     /// <remarks>
-    /// This field is not present in the <see cref="GetGlobalEmotes"/> API.
+    /// <para>This field is not present in the <see cref="GetGlobalEmotes"/> API.</para>
     /// <para>This may be blank for some global emotes, such as those with an <see cref="EmoteType"/> of <see cref="EmoteTypes.Hypetrain"/>.</para>
     /// </remarks>
     [JsonPropertyName("emote_set_id")]
@@ -89,7 +89,9 @@ public sealed record Emote
     /// <summary>
     /// The ID of the broadcaster who owns the emote.
     /// </summary>
-    /// <remarks>This field is only present in the <see cref="GetEmoteSets"/> and <see cref="GetUserEmotes"/> APIs.</remarks>
+    /// <remarks>
+    /// <para>This field is only present in the <see cref="GetEmoteSets"/> and <see cref="GetUserEmotes"/> APIs.</para>
+    /// </remarks>
     [JsonPropertyName("owner_id")]
     public string? OwnerId { get; init; }
 
@@ -447,7 +449,7 @@ public sealed record Emote
             throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken("user:read:emotes");
+        session.RequireUserToken(Scope.UserReadEmotes);
 
         System.Collections.Specialized.NameValueCollection query = new() { { "user_id", userId } };
 
