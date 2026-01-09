@@ -108,6 +108,9 @@ public record ChatSettings
     /// <param name="broadcasterId">The ID of the broadcaster whose chat settings you want to get.</param>
     /// <param name="moderatorId">The ID of the broadcaster or one of the broadcaster's moderators.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChatSettings"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; or <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; or the token is not valid.</exception>
+    /// <exception cref="TwitchScopeMissingException">The user or app token is missing the required <see cref="Scope.ModeratorReadChatSettings"/> or <see cref="Scope.ModeratorManageChatSettings"/> scope.</exception>
     /// <remarks>
     /// <para>
     /// HTTP Response Status Codes:
@@ -159,6 +162,9 @@ public record ChatSettings
     /// <param name="moderatorId">The ID of a user that has permission to moderate the broadcaster's chat room, or the broadcaster's ID if they're making the update.</param>
     /// <param name="settings">The chat settings to update.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChatSettings"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; or <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace; or <paramref name="settings"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; or the token is not valid.</exception>
+    /// <exception cref="TwitchScopeMissingException">The user token is missing the required <see cref="Scope.ModeratorManageChatSettings"/> scope.</exception>
     /// <remarks>
     /// <para>
     /// HTTP Response Status Codes:
