@@ -180,6 +180,15 @@ public record ChatSettings
     /// </item>
     /// </list>
     /// </para>
+    /// <para>
+    /// To set the <c>slow_mode_wait_time</c> or <c>follower_mode_duration</c> field to its default value, set the corresponding <c>slow_mode</c> or <c>follower_mode</c> field to true (and don't include the <c>slow_mode_wait_time</c> or <c>follower_mode_duration</c> field).
+    /// </para>
+    /// <para>
+    /// To set the <c>slow_mode_wait_time</c>, <c>follower_mode_duration</c>, or <c>non_moderator_chat_delay_duration</c> field's value, you must set the corresponding <c>slow_mode</c>, <c>follower_mode</c>, or <c>non_moderator_chat_delay</c> field to true.
+    /// </para>
+    /// <para>
+    /// To remove the <c>slow_mode_wait_time</c>, <c>follower_mode_duration</c>, or <c>non_moderator_chat_delay_duration</c> field's value, set the corresponding <c>slow_mode</c>, <c>follower_mode</c>, or <c>non_moderator_chat_delay</c> field to false (and don't include the <c>slow_mode_wait_time</c>, <c>follower_mode_duration</c>, or <c>non_moderator_chat_delay_duration</c> field).
+    /// </para>
     /// </remarks>
     public static async Task<ResponseData<ChatSettings>?> UpdateChatSettings(TwitchSession session, string broadcasterId, string moderatorId, ChatSettings settings)
     {
