@@ -118,11 +118,11 @@ public record ChatSettings
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>The <c>broadcaster_id</c> query parameter is required.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
-    /// <description>The Authorization header is required and must specify a valid app access token or user access token.</description>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// </list>
     /// </para>
@@ -140,13 +140,14 @@ public record ChatSettings
 
         session.RequireUserOrAppToken(Scope.ModeratorReadChatSettings, Scope.ModeratorManageChatSettings);
 
-        var query = new List<KeyValuePair<string, string>> { new("broadcaster_id", broadcasterId) };
+        System.Collections.Specialized.NameValueCollection query = new() { { "broadcaster_id", broadcasterId } };
         if (!string.IsNullOrWhiteSpace(moderatorId))
         {
-            query.Add(new("moderator_id", moderatorId));
+            query.Add("moderator_id", moderatorId);
         }
 
-        using var response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new Uri($"/chat/settings?{await new FormUrlEncodedContent(query).ReadAsStringAsync()}", UriKind.Relative), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/settings"), query);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -168,26 +169,26 @@ public record ChatSettings
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>A parameter is missing or invalid.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
-    /// <description>The Authorization header is required and must specify a user access token.</description>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
-    /// <description>The user in <c>moderator_id</c> must have moderator privileges in the broadcaster's channel.</description>
+    /// <description>The user in <paramref name="moderatorId"/> must have moderator privileges in the broadcaster's channel.</description>
     /// </item>
     /// </list>
     /// </para>
     /// <para>
-    /// To set the <c>slow_mode_wait_time</c> or <c>follower_mode_duration</c> field to its default value, set the corresponding <c>slow_mode</c> or <c>follower_mode</c> field to true (and don't include the <c>slow_mode_wait_time</c> or <c>follower_mode_duration</c> field).
+    /// To set the <see cref="SlowModeWaitTime"/> or <see cref="FollowerModeDuration"/> field to its default value, set the corresponding <see cref="SlowMode"/> or <see cref="FollowerMode"/> field to <see langword="true"/> (and don't include the <see cref="SlowModeWaitTime"/> or <see cref="FollowerModeDuration"/> field).
     /// </para>
     /// <para>
-    /// To set the <c>slow_mode_wait_time</c>, <c>follower_mode_duration</c>, or <c>non_moderator_chat_delay_duration</c> field's value, you must set the corresponding <c>slow_mode</c>, <c>follower_mode</c>, or <c>non_moderator_chat_delay</c> field to true.
+    /// To set the <see cref="SlowModeWaitTime"/>, <see cref="FollowerModeDuration"/>, or <see cref="NonModeratorChatDelayDuration"/> field's value, you must set the corresponding <see cref="SlowMode"/>, <see cref="FollowerMode"/>, or <see cref="NonModeratorChatDelay"/> field to <see langword="true"/>.
     /// </para>
     /// <para>
-    /// To remove the <c>slow_mode_wait_time</c>, <c>follower_mode_duration</c>, or <c>non_moderator_chat_delay_duration</c> field's value, set the corresponding <c>slow_mode</c>, <c>follower_mode</c>, or <c>non_moderator_chat_delay</c> field to false (and don't include the <c>slow_mode_wait_time</c>, <c>follower_mode_duration</c>, or <c>non_moderator_chat_delay_duration</c> field).
+    /// To remove the <see cref="SlowModeWaitTime"/>, <see cref="FollowerModeDuration"/>, or <see cref="NonModeratorChatDelayDuration"/> field's value, set the corresponding <see cref="SlowMode"/>, <see cref="FollowerMode"/>, or <see cref="NonModeratorChatDelay"/> field to <see langword="false"/> (and don't include the <see cref="SlowModeWaitTime"/>, <see cref="FollowerModeDuration"/>, or <see cref="NonModeratorChatDelayDuration"/> field).
     /// </para>
     /// </remarks>
     public static async Task<ResponseData<ChatSettings>?> UpdateChatSettings(TwitchSession session, string broadcasterId, string moderatorId, ChatSettings settings)
@@ -211,14 +212,15 @@ public record ChatSettings
 
         session.RequireUserToken(Scope.ModeratorManageChatSettings);
 
-        var query = new List<KeyValuePair<string, string>>
+        System.Collections.Specialized.NameValueCollection query = new()
         {
-            new("broadcaster_id", broadcasterId),
-            new("moderator_id", moderatorId)
+            { "broadcaster_id", broadcasterId },
+            { "moderator_id", moderatorId }
         };
 
-        using var content = JsonContent.Create(settings, options: TwitchApi.SerializerOptions);
-        using var response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new Uri($"/chat/settings?{await new FormUrlEncodedContent(query).ReadAsStringAsync()}", UriKind.Relative), session, content).ConfigureAwait(false);
+        using HttpContent content = JsonContent.Create(settings, options: TwitchApi.SerializerOptions);
+        Uri uri = Util.BuildUri(new("/chat/settings"), query);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
