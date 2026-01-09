@@ -37,19 +37,19 @@ public record ChatSettings
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWriting)]
-    public string BroadcasterId { get; init; } = null!;
+    public string? BroadcasterId { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether chat messages must contain only emotes.
     /// </summary>
     [JsonPropertyName("emote_mode")]
-    public bool EmoteMode { get; init; }
+    public bool? EmoteMode { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether the broadcaster restricts the chat room to followers only.
     /// </summary>
     [JsonPropertyName("follower_mode")]
-    public bool FollowerMode { get; init; }
+    public bool? FollowerMode { get; init; }
 
     /// <summary>
     /// The length of time, in minutes, that users must follow the broadcaster before being able to participate in the chat room.
@@ -58,7 +58,7 @@ public record ChatSettings
     public int? FollowerModeDuration { get; init; }
 
     /// <summary>
-    /// The moderator’s ID.
+    /// The moderator's ID.
     /// </summary>
     [JsonPropertyName("moderator_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWriting)]
@@ -80,7 +80,7 @@ public record ChatSettings
     /// A Boolean value that determines whether the broadcaster limits how often users in the chat room are allowed to send messages.
     /// </summary>
     [JsonPropertyName("slow_mode")]
-    public bool SlowMode { get; init; }
+    public bool? SlowMode { get; init; }
 
     /// <summary>
     /// The amount of time, in seconds, that users must wait between sending messages.
@@ -89,37 +89,55 @@ public record ChatSettings
     public int? SlowModeWaitTime { get; init; }
 
     /// <summary>
-    /// A Boolean value that determines whether only users that subscribe to the broadcaster’s channel may talk in the chat room.
+    /// A Boolean value that determines whether only users that subscribe to the broadcaster's channel may talk in the chat room.
     /// </summary>
     [JsonPropertyName("subscriber_mode")]
-    public bool SubscriberMode { get; init; }
+    public bool? SubscriberMode { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether the broadcaster requires users to post only unique messages in the chat room.
     /// </summary>
     [JsonPropertyName("unique_chat_mode")]
-    public bool UniqueChatMode { get; init; }
+    public bool? UniqueChatMode { get; init; }
 
     /// <summary>
-    /// Gets the broadcaster’s chat settings.
+    /// Gets the broadcaster's chat settings.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster whose chat settings you want to get.</param>
-    /// <param name="moderatorId">The ID of the broadcaster or one of the broadcaster’s moderators.</param>
+    /// <param name="moderatorId">The ID of the broadcaster or one of the broadcaster's moderators.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChatSettings"/> containing the response.</returns>
+    /// <remarks>
+    /// <para>
+    /// HTTP Response Status Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully retrieved the broadcaster's chat settings.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The <c>broadcaster_id</c> query parameter is required.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The Authorization header is required and must specify a valid app access token or user access token.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<ResponseData<ChatSettings>?> GetChatSettings(TwitchSession session, string broadcasterId, string? moderatorId = null)
     {
-        if (session is null) throw new ArgumentNullException(nameof(session));
-        if (string.IsNullOrWhiteSpace(broadcasterId)) throw new ArgumentNullException(nameof(broadcasterId));
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session));
+        }
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentNullException(nameof(broadcasterId));
+        }
 
-        if (session.IsUserToken)
-        {
-            session.RequireUserToken(Scope.ModeratorReadChatSettings, Scope.ModeratorManageChatSettings);
-        }
-        else
-        {
-            session.RequireAppToken();
-        }
+        session.RequireUserOrAppToken(Scope.ModeratorReadChatSettings, Scope.ModeratorManageChatSettings);
 
         var query = new List<KeyValuePair<string, string>> { new("broadcaster_id", broadcasterId) };
         if (!string.IsNullOrWhiteSpace(moderatorId))
@@ -132,19 +150,54 @@ public record ChatSettings
     }
 
     /// <summary>
-    /// Updates the broadcaster’s chat settings.
+    /// Updates the broadcaster's chat settings.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster whose chat settings you want to update.</param>
-    /// <param name="moderatorId">The ID of a user that has permission to moderate the broadcaster’s chat room, or the broadcaster’s ID if they’re making the update.</param>
+    /// <param name="moderatorId">The ID of a user that has permission to moderate the broadcaster's chat room, or the broadcaster's ID if they're making the update.</param>
     /// <param name="settings">The chat settings to update.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChatSettings"/> containing the response.</returns>
+    /// <remarks>
+    /// <para>
+    /// HTTP Response Status Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>200 OK</term>
+    /// <description>Successfully updated the broadcaster's chat settings.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>A parameter is missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The Authorization header is required and must specify a user access token.</description>
+    /// </item>
+    /// <item>
+    /// <term>403 Forbidden</term>
+    /// <description>The user in <c>moderator_id</c> must have moderator privileges in the broadcaster's channel.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
     public static async Task<ResponseData<ChatSettings>?> UpdateChatSettings(TwitchSession session, string broadcasterId, string moderatorId, ChatSettings settings)
     {
-        if (session is null) throw new ArgumentNullException(nameof(session));
-        if (string.IsNullOrWhiteSpace(broadcasterId)) throw new ArgumentNullException(nameof(broadcasterId));
-        if (string.IsNullOrWhiteSpace(moderatorId)) throw new ArgumentNullException(nameof(moderatorId));
-        if (settings is null) throw new ArgumentNullException(nameof(settings));
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session));
+        }
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentNullException(nameof(broadcasterId));
+        }
+        if (string.IsNullOrWhiteSpace(moderatorId))
+        {
+            throw new ArgumentNullException(nameof(moderatorId));
+        }
+        if (settings is null)
+        {
+            throw new ArgumentNullException(nameof(settings));
+        }
 
         session.RequireUserToken(Scope.ModeratorManageChatSettings);
 
