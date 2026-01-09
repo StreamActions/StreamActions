@@ -21,6 +21,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
+using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -130,11 +131,11 @@ public record ChatSettings
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorReadChatSettings, Scope.ModeratorManageChatSettings);
@@ -184,19 +185,19 @@ public record ChatSettings
     {
         if (session is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId));
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId));
+            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
         }
         if (settings is null)
         {
-            throw new ArgumentNullException(nameof(settings));
+            throw new ArgumentNullException(nameof(settings)).Log(TwitchApi.GetLogger());
         }
 
         session.RequireUserToken(Scope.ModeratorManageChatSettings);
