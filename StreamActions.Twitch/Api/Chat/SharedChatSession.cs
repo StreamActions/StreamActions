@@ -56,13 +56,13 @@ public sealed record SharedChatSession
     /// The UTC date and time (in RFC3339 format) for when the session was created.
     /// </summary>
     [JsonPropertyName("created_at")]
-    public string? CreatedAt { get; init; }
+    public DateTime? CreatedAt { get; init; }
 
     /// <summary>
     /// The UTC date and time (in RFC3339 format) for when the session was last updated.
     /// </summary>
     [JsonPropertyName("updated_at")]
-    public string? UpdatedAt { get; init; }
+    public DateTime? UpdatedAt { get; init; }
 
     /// <summary>
     /// Retrieves the active shared chat session for a channel.
