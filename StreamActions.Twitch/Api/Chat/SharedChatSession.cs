@@ -32,49 +32,37 @@ namespace StreamActions.Twitch.Api.Chat;
 /// <summary>
 /// A shared chat session.
 /// </summary>
-public sealed partial record SharedChatSession
+public sealed record SharedChatSession
 {
-    /// <summary>
-    /// A participant in a shared chat session.
-    /// </summary>
-    public sealed record Participant
-    {
-        /// <summary>
-        /// The User ID of the participant channel.
-        /// </summary>
-        [JsonPropertyName("broadcaster_id")]
-        public required string BroadcasterId { get; init; }
-    }
-
     /// <summary>
     /// The unique identifier for the shared chat session.
     /// </summary>
     [JsonPropertyName("session_id")]
-    public required string SessionId { get; init; }
+    public string? SessionId { get; init; }
 
     /// <summary>
     /// The User ID of the host channel.
     /// </summary>
     [JsonPropertyName("host_broadcaster_id")]
-    public required string HostBroadcasterId { get; init; }
+    public string? HostBroadcasterId { get; init; }
 
     /// <summary>
     /// The list of participants in the session.
     /// </summary>
     [JsonPropertyName("participants")]
-    public required IReadOnlyList<Participant> Participants { get; init; }
+    public IReadOnlyList<SharedChatParticipant>? Participants { get; init; }
 
     /// <summary>
     /// The UTC date and time (in RFC3339 format) for when the session was created.
     /// </summary>
     [JsonPropertyName("created_at")]
-    public required string CreatedAt { get; init; }
+    public string? CreatedAt { get; init; }
 
     /// <summary>
     /// The UTC date and time (in RFC3339 format) for when the session was last updated.
     /// </summary>
     [JsonPropertyName("updated_at")]
-    public required string UpdatedAt { get; init; }
+    public string? UpdatedAt { get; init; }
 
     /// <summary>
     /// Retrieves the active shared chat session for a channel.
@@ -118,7 +106,7 @@ public sealed partial record SharedChatSession
 
         session.RequireUserOrAppToken();
 
-        Uri uri = Util.BuildUri(new("/shared_chat/session"), new() { { "broadcaster_id", broadcasterId } });
+        Uri uri = Util.BuildUri(new("/chat/shared_chat/session"), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<SharedChatSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
