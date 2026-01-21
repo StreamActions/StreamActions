@@ -134,6 +134,7 @@ jobs:
                 const issuePattern = /(\[(?<Check>[ x])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?/;
 
                 fs.mkdirSync('./.cache', { recursive: true });
+                fs.mkdirSync('./.diff', { recursive: true });
                 fs.mkdirSync('./.output', { recursive: true });
 
                 core.info('Finding ETags...');
@@ -404,6 +405,11 @@ jobs:
 
                         core.info('Updating base file...');
                         fs.renameSync('./.output/' + name + '.json', './.cache/' + name + '.json');
+                        try {
+                            fs.renameSync('./.output/' + name + '.diff.json', './.diff/' + name + '.diff.json');
+                        } catch (e) {
+                            core.debug('No diff file to move');
+                        }
 
                         core.endGroup();
                     }
@@ -444,6 +450,13 @@ jobs:
                     }
                     core.endGroup();
                 }
+      - name: Upload diff artifact
+        uses: actions/upload-artifact@v4
+        with:
+            compression-level: 9
+            include-hidden-files: true
+            name: diff
+            path: ./.diff
       - name: Upload ending cache artifact
         uses: actions/upload-artifact@v4
         with:
