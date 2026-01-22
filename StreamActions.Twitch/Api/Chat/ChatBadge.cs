@@ -20,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Chat;
@@ -39,7 +40,7 @@ public record ChatBadge
     /// The list of chat badges in this set.
     /// </summary>
     [JsonPropertyName("versions")]
-    public List<ChatBadgeVersion>? Versions { get; init; }
+    public IReadOnlyList<ChatBadgeVersion>? Versions { get; init; }
 
     /// <summary>
     /// Gets the broadcaster's list of custom chat badges.
