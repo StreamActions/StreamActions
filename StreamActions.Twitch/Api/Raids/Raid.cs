@@ -40,11 +40,6 @@ public sealed record Raid
     public DateTime? CreatedAt { get; init; }
 
     /// <summary>
-    /// A Boolean value that indicates whether the channel being raided contains mature content.
-    /// </summary>
-    public bool? IsMature { get; init; }
-
-    /// <summary>
     /// Raid another channel by sending the broadcaster's viewers to the targeted channel.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
