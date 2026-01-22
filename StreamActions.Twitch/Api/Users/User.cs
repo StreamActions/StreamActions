@@ -30,7 +30,7 @@ namespace StreamActions.Twitch.Api.Users
     /// <summary>
     /// Represents a Twitch user, providing details like ID, login name, display name, and broadcaster type.
     /// </summary>
-    public record User
+    public sealed record User
     {
         /// <summary>
         /// Defines the broadcaster type of a user.

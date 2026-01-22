@@ -31,7 +31,7 @@ namespace StreamActions.Twitch.Api.Chat;
 /// <summary>
 /// Represents the chat settings for a broadcaster's channel.
 /// </summary>
-public record ChatSettings
+public sealed record ChatSettings
 {
     /// <summary>
     /// The ID of the broadcaster.
