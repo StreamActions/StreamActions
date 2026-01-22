@@ -70,7 +70,7 @@ public record ChatBadge
     }
 
     /// <summary>
-    /// Gets Twitch's list of chat badges.
+    /// Gets Twitch's list of chat badges, which users may use in any channel's chat room.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChatBadge"/> containing the response.</returns>
