@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.Api.Chat;
 /// <summary>
 /// Represents a chat badge.
 /// </summary>
-public record ChatBadge
+public sealed record ChatBadge
 {
     /// <summary>
     /// An ID that identifies this set of chat badges.
