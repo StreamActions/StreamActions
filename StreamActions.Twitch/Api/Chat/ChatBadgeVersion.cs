@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Chat;
@@ -35,19 +36,19 @@ public record ChatBadgeVersion
     /// A URL to the small version (18px x 18px) of the badge.
     /// </summary>
     [JsonPropertyName("image_url_1x")]
-    public string? ImageUrl1x { get; init; }
+    public Uri? ImageUrl1x { get; init; }
 
     /// <summary>
     /// A URL to the medium version (36px x 36px) of the badge.
     /// </summary>
     [JsonPropertyName("image_url_2x")]
-    public string? ImageUrl2x { get; init; }
+    public Uri? ImageUrl2x { get; init; }
 
     /// <summary>
     /// A URL to the large version (72px x 72px) of the badge.
     /// </summary>
     [JsonPropertyName("image_url_4x")]
-    public string? ImageUrl4x { get; init; }
+    public Uri? ImageUrl4x { get; init; }
 
     /// <summary>
     /// The title of the badge.
@@ -71,5 +72,5 @@ public record ChatBadgeVersion
     /// The URL to navigate to when clicking on the badge.
     /// </summary>
     [JsonPropertyName("click_url")]
-    public string? ClickUrl { get; init; }
+    public Uri? ClickUrl { get; init; }
 }
