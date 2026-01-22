@@ -125,6 +125,11 @@ public sealed record EventSubSubscription
         [JsonCustomEnum("user_removed")]
         UserRemoved,
         /// <summary>
+        /// The user specified in the <see cref="Condition"/> object was banned from the broadcaster's chat.
+        /// </summary>
+        [JsonCustomEnum("chat_user_banned")]
+        ChatUserBanned,
+        /// <summary>
         /// The subscription to subscription type and version is no longer supported.
         /// </summary>
         [JsonCustomEnum("version_removed")]
@@ -168,7 +173,12 @@ public sealed record EventSubSubscription
         /// The Twitch WebSocket server experienced a network error writing the message to the client.
         /// </summary>
         [JsonCustomEnum("websocket_network_error")]
-        WebsocketNetworkError
+        WebsocketNetworkError,
+        /// <summary>
+        /// The client failed to reconnect to the Twitch WebSocket server within the required time after a Reconnect Message.
+        /// </summary>
+        [JsonCustomEnum("websocket_failed_to_reconnect")]
+        WebsocketFailedToReconnect
     }
 
     /// <summary>
@@ -178,10 +188,11 @@ public sealed record EventSubSubscription
     /// <param name="status">Filter subscriptions by its status.</param>
     /// <param name="type">Filter subscriptions by subscription type.</param>
     /// <param name="userId">Filter subscriptions by a user ID in the condition.</param>
+    /// <param name="subscriptionId">Filter to the specified subscription ID, or blank if it does not exist.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="EventSubSubscription"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">More than one of <paramref name="status"/>, <paramref name="type"/>, <paramref name="userId"/> were defined.</exception>
+    /// <exception cref="InvalidOperationException">More than one of <paramref name="status"/>, <paramref name="type"/>, <paramref name="userId"/>, <paramref name="subscriptionId"/> were defined.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
@@ -211,7 +222,7 @@ public sealed record EventSubSubscription
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ResponseData<EventSubSubscription>?> GetEventSubSubscriptions(TwitchSession session, SubscriptionStatus? status = null, string? type = null, string? userId = null, string? after = null)
+    public static async Task<ResponseData<EventSubSubscription>?> GetEventSubSubscriptions(TwitchSession session, SubscriptionStatus? status = null, string? type = null, string? userId = null, Guid? subscriptionId = null, string? after = null)
     {
         if (session is null)
         {
@@ -232,6 +243,10 @@ public sealed record EventSubSubscription
             {
                 throw new InvalidOperationException(nameof(status) + " can not be used at the same time as " + nameof(userId)).Log(TwitchApi.GetLogger());
             }
+            else if (subscriptionId.HasValue)
+            {
+                throw new InvalidOperationException(nameof(status) + " can not be used at the same time as " + nameof(subscriptionId)).Log(TwitchApi.GetLogger());
+            }
 
             queryParams.Add("status", status.Value.JsonValue());
         }
@@ -241,6 +256,9 @@ public sealed record EventSubSubscription
             if (!string.IsNullOrWhiteSpace(userId))
             {
                 throw new InvalidOperationException(nameof(type) + " can not be used at the same time as " + nameof(userId)).Log(TwitchApi.GetLogger());
+            } else if (subscriptionId.HasValue)
+            {
+                throw new InvalidOperationException(nameof(type) + " can not be used at the same time as " + nameof(subscriptionId)).Log(TwitchApi.GetLogger());
             }
 
             queryParams.Add("type", type);
@@ -248,7 +266,17 @@ public sealed record EventSubSubscription
 
         if (!string.IsNullOrWhiteSpace(userId))
         {
+            if (subscriptionId.HasValue)
+            {
+                throw new InvalidOperationException(nameof(userId) + " can not be used at the same time as " + nameof(subscriptionId)).Log(TwitchApi.GetLogger());
+            }
+
             queryParams.Add("user_id", userId);
+        }
+
+        if (subscriptionId.HasValue)
+        {
+            queryParams.Add("subscription_id", subscriptionId.Value.ToString());
         }
 
         if (!string.IsNullOrWhiteSpace(after))
