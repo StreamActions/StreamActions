@@ -55,7 +55,7 @@ public sealed record Emote
     /// </para>
     /// </remarks>
     [JsonPropertyName("images")]
-    public EmoteImages? Images { get; init; }
+    public Images? Images { get; init; }
 
     /// <summary>
     /// The subscriber tier at which the emote is unlocked.
