@@ -209,7 +209,7 @@ public sealed record Prediction
             throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 25").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelReadPredictions, Scope.ChannelManagePredictions);
+        session.RequireUserToken(Scope.ChannelReadPredictions, Scope.ChannelManagePredictions);
 
         first = Math.Clamp(first, 1, 25);
 
@@ -291,7 +291,7 @@ public sealed record Prediction
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManagePredictions);
+        session.RequireUserToken(Scope.ChannelManagePredictions);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {
@@ -393,7 +393,7 @@ public sealed record Prediction
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.ChannelManagePredictions);
+        session.RequireUserToken(Scope.ChannelManagePredictions);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {

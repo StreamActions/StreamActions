@@ -135,7 +135,7 @@ public sealed record UserInfo : JsonApiResponse
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken(Scope.OpenID);
+        session.RequireUserToken(Scope.OpenID);
 
         baseAddress ??= Token._openIdConnectConfiguration.Value.UserInfoEndpoint;
 

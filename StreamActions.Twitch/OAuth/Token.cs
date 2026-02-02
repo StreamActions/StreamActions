@@ -104,7 +104,7 @@ public sealed record Token : JsonApiResponse
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserToken();
 
         if (string.IsNullOrWhiteSpace(session.Token?.Refresh))
         {
@@ -177,7 +177,7 @@ public sealed record Token : JsonApiResponse
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireToken();
+        session.RequireUserToken();
 
         using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "client_id", TwitchApi.ClientId ?? "" }, { "token", session.Token?.OAuth ?? "" } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), TwitchSession.Empty, content).ConfigureAwait(false);

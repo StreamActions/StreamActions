@@ -126,18 +126,6 @@ public sealed record TwitchSession : IDisposable
     }
 
     /// <summary>
-    /// Checks if either an app or user token is present and contains any of the specified scopes.
-    /// </summary>
-    /// <param name="scopes">The scopes to check for.</param>
-    /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
-    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Type"/> is <see cref="TwitchToken.TokenType.User"/> and <see cref="TwitchToken.Scopes"/> does not contain any of the scopes defined in <paramref name="scopes"/>.</exception>
-    /// <remarks>
-    /// If <see cref="TwitchToken.Scopes"/> is <see langword="null"/>, then checking of <paramref name="scopes"/> is skipped.
-    /// </remarks>
-    public void RequireToken(params Scope?[]? scopes) => this.RequireUserOrAppToken(scopes);
-
-    /// <summary>
     /// Checks if a user token is present and contains any of the specified scopes.
     /// </summary>
     /// <param name="scopes">The scopes to check for.</param>
