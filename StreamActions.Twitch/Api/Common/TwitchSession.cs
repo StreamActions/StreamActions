@@ -88,12 +88,12 @@ public sealed record TwitchSession : IDisposable
     }
 
     /// <summary>
-    /// Checks if either an app or user token is present. If it is a user token, also checks if the specified scopes are present.
+    /// Checks if either an app or user token is present. If it is a user token, also checks if any of the specified scopes are present.
     /// </summary>
     /// <param name="scopes">The scopes to check for.</param>
     /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
-    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Type"/> is <see cref="TwitchToken.TokenType.User"/> and <see cref="TwitchToken.Scopes"/> does not contain all of the scopes defined in <paramref name="scopes"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Type"/> is <see cref="TwitchToken.TokenType.User"/> and <see cref="TwitchToken.Scopes"/> does not contain any of the scopes defined in <paramref name="scopes"/>.</exception>
     /// <remarks>
     /// If <see cref="TwitchToken.Scopes"/> is <see langword="null"/>, then checking of <paramref name="scopes"/> is skipped.
     /// </remarks>
@@ -116,9 +116,9 @@ public sealed record TwitchSession : IDisposable
 
         if (this.Token.Type is TwitchToken.TokenType.User)
         {
-            (_, Scope?[] Missing) = this.Token.CheckScopes(scopes);
+            (Scope?[] Found, Scope?[] Missing) = this.Token.CheckScopes(scopes);
 
-            if (Missing.Length > 0)
+            if (scopes is not null && scopes.Length > 0 && Found.Length == 0)
             {
                 throw new TwitchScopeMissingException(Missing).Log(TwitchApi.GetLogger());
             }
@@ -126,12 +126,24 @@ public sealed record TwitchSession : IDisposable
     }
 
     /// <summary>
-    /// Checks if a user token is present and contains the specified scopes.
+    /// Checks if either an app or user token is present and contains any of the specified scopes.
+    /// </summary>
+    /// <param name="scopes">The scopes to check for.</param>
+    /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Type"/> is <see cref="TwitchToken.TokenType.User"/> and <see cref="TwitchToken.Scopes"/> does not contain any of the scopes defined in <paramref name="scopes"/>.</exception>
+    /// <remarks>
+    /// If <see cref="TwitchToken.Scopes"/> is <see langword="null"/>, then checking of <paramref name="scopes"/> is skipped.
+    /// </remarks>
+    public void RequireToken(params Scope?[]? scopes) => this.RequireUserOrAppToken(scopes);
+
+    /// <summary>
+    /// Checks if a user token is present and contains any of the specified scopes.
     /// </summary>
     /// <param name="scopes">The scopes to check for.</param>
     /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
-    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Scopes"/> does not contain all of the scopes defined in <paramref name="scopes"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException"><see cref="TwitchToken.Scopes"/> does not contain any of the scopes defined in <paramref name="scopes"/>.</exception>
     /// <remarks>
     /// If <see cref="TwitchToken.Scopes"/> is <see langword="null"/>, then checking of <paramref name="scopes"/> is skipped.
     /// </remarks>
@@ -152,9 +164,9 @@ public sealed record TwitchSession : IDisposable
             throw new TokenTypeException(Enum.GetName(TwitchToken.TokenType.User), Enum.GetName(this.Token.Type ?? TwitchToken.TokenType.Unknown)).Log(TwitchApi.GetLogger());
         }
 
-        (_, Scope?[] Missing) = this.Token.CheckScopes(scopes);
+        (Scope?[] Found, Scope?[] Missing) = this.Token.CheckScopes(scopes);
 
-        if (Missing.Length > 0)
+        if (scopes is not null && scopes.Length > 0 && Found.Length == 0)
         {
             throw new TwitchScopeMissingException(Missing).Log(TwitchApi.GetLogger());
         }

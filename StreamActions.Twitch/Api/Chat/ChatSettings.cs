@@ -19,6 +19,7 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
@@ -37,7 +38,7 @@ public sealed record ChatSettings
     /// The ID of the broadcaster.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWriting)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? BroadcasterId { get; init; }
 
     /// <summary>
@@ -62,7 +63,7 @@ public sealed record ChatSettings
     /// The moderator's ID.
     /// </summary>
     [JsonPropertyName("moderator_id")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWriting)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ModeratorId { get; init; }
 
     /// <summary>
