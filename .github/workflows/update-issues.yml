@@ -387,7 +387,7 @@ jobs:
                                                 let idata = cdata[item];
                                                 core.debug('--------Checked: ' + (idata['checked'] ? 'x' : ' ') + ' <> URL: ' + idata['url']);
                                                 let hasNoURL = idata['url'] === undefined || idata['url'] === null || idata['url'].trim().length === 0;
-                                                newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] ' + (!hasNoURL ? '[' : '') + item + (!hasNoURL ? '](' + idata['url'] + ')' : '') + (idata['workflow'] !== undefined && idata['workflow'] !== null ? ' *&nbsp;* [?](' + idata['workflow'] + ')'));
+                                                newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] ' + (!hasNoURL ? '[' : '') + item + (!hasNoURL ? '](' + idata['url'] + ')' : '') + (idata['workflow'] !== undefined && idata['workflow'] !== null ? ' *&nbsp;* [?](' + idata['workflow'] + ')' : ''));
                                             }
                                             newBody.push('');
                                         }
