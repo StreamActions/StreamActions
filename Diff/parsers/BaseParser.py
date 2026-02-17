@@ -58,7 +58,7 @@ class BaseParser:
         resp = requests.get(url, headers = { "User-Agent": "streamactions.diff.parser/1" })
         if resp.status_code != 200:
             exit(1)
-        return self.parse(resp.text)
+        return self.parse(resp.text.decode('utf-8').encode('ascii', 'ignore'))
 
     def parse(self, html:str) -> dict:
         """
