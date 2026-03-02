@@ -165,7 +165,8 @@ public sealed record ChatSettings
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChatSettings"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; or <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace; or <paramref name="settings"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; or the token is not valid.</exception>
-    /// <exception cref="TwitchScopeMissingException">The user token is missing the required <see cref="Scope.ModeratorManageChatSettings"/> scope.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException">The user or app token is missing the required <see cref="Scope.ModeratorManageChatSettings"/> scope.</exception>
     /// <remarks>
     /// <para>
     /// HTTP Response Status Codes:
@@ -217,7 +218,7 @@ public sealed record ChatSettings
             throw new ArgumentNullException(nameof(settings)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ModeratorManageChatSettings);
+        session.RequireUserOrAppToken(Scope.ModeratorManageChatSettings);
 
         System.Collections.Specialized.NameValueCollection query = new()
         {

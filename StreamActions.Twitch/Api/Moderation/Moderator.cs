@@ -64,6 +64,7 @@ public sealed record Moderator
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="after"/> is not null, but is empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModerationRead"/> or <see cref="Scope.ChannelManageModerators"/>.</exception>
     /// <remarks>
     /// <para>
@@ -108,7 +109,7 @@ public sealed record Moderator
 
         first = Math.Clamp(first, 1, 100);
 
-        session.RequireUserToken(Scope.ModerationRead, Scope.ChannelManageModerators);
+        session.RequireUserOrAppToken(Scope.ModerationRead, Scope.ChannelManageModerators);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
@@ -139,6 +140,7 @@ public sealed record Moderator
     /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageModerators"/>.</exception>
     /// <remarks>
     /// <para>
@@ -188,7 +190,7 @@ public sealed record Moderator
         }
 
 
-        session.RequireUserToken(Scope.ChannelManageModerators);
+        session.RequireUserOrAppToken(Scope.ChannelManageModerators);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
@@ -209,6 +211,7 @@ public sealed record Moderator
     /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageModerators"/>.</exception>
     /// <remarks>
     /// <para>
@@ -254,7 +257,7 @@ public sealed record Moderator
         }
 
 
-        session.RequireUserToken(Scope.ChannelManageModerators);
+        session.RequireUserOrAppToken(Scope.ChannelManageModerators);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
