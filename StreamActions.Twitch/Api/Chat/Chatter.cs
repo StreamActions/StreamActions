@@ -62,6 +62,7 @@ public sealed record Chatter
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Chatter"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="after"/> is not null, but is empty or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorReadChatters"/>.</exception>
     /// <remarks>
     /// <para>
@@ -113,7 +114,7 @@ public sealed record Chatter
 
         first = Math.Clamp(first, 1, 1000);
 
-        session.RequireUserToken(Scope.ModeratorReadChatters);
+        session.RequireUserOrAppToken(Scope.ModeratorReadChatters);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },

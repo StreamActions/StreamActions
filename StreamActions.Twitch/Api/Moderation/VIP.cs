@@ -64,6 +64,7 @@ public sealed record VIP
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="after"/> is not null, but is empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadVips"/> or <see cref="Scope.ChannelManageVideos"/>.</exception>
     /// <remarks>
     /// <para>
@@ -108,7 +109,7 @@ public sealed record VIP
 
         first = Math.Clamp(first, 1, 100);
 
-        session.RequireUserToken(Scope.ChannelReadVips, Scope.ChannelManageVips);
+        session.RequireUserOrAppToken(Scope.ChannelReadVips, Scope.ChannelManageVips);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
@@ -139,6 +140,7 @@ public sealed record VIP
     /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVips"/>.</exception>
     /// <remarks>
     /// <para>
@@ -200,7 +202,7 @@ public sealed record VIP
         }
 
 
-        session.RequireUserToken(Scope.ChannelManageVips);
+        session.RequireUserOrAppToken(Scope.ChannelManageVips);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
@@ -221,6 +223,7 @@ public sealed record VIP
     /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVips"/>.</exception>
     /// <remarks>
     /// <para>
@@ -283,7 +286,7 @@ public sealed record VIP
         }
 
 
-        session.RequireUserToken(Scope.ChannelManageVips);
+        session.RequireUserOrAppToken(Scope.ChannelManageVips);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },

@@ -80,6 +80,7 @@ public sealed record ShieldMode
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ShieldMode"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorReadShieldMode"/> or <see cref="Scope.ModeratorManageShieldMode"/>.</exception>
     /// <remarks>
     /// <para>
@@ -121,7 +122,7 @@ public sealed record ShieldMode
             throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ModeratorReadShieldMode, Scope.ModeratorManageShieldMode);
+        session.RequireUserOrAppToken(Scope.ModeratorReadShieldMode, Scope.ModeratorManageShieldMode);
 
         Uri uri = Util.BuildUri(new("/moderation/shield_mode"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
@@ -137,6 +138,7 @@ public sealed record ShieldMode
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ShieldMode"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="parameters"/> or <see cref="ShieldModeUpdateParameters.IsActive"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorManageShieldMode"/>.</exception>
     /// <remarks>
     /// <para>
@@ -189,7 +191,7 @@ public sealed record ShieldMode
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ModeratorManageShieldMode);
+        session.RequireUserOrAppToken(Scope.ModeratorManageShieldMode);
 
         Uri uri = Util.BuildUri(new("/moderation/shield_mode"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);

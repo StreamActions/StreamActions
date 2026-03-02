@@ -42,6 +42,7 @@ public sealed record Shoutout
     /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="fromBroadcasterId"/>, <paramref name="toBroadcasterId"/>, or <see cref="moderatorId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorManageShoutouts"/>.</exception>
     /// <remarks>
     /// <para>
@@ -89,7 +90,7 @@ public sealed record Shoutout
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ModeratorManageShoutouts);
+        session.RequireUserOrAppToken(Scope.ModeratorManageShoutouts);
 
         if (string.IsNullOrWhiteSpace(fromBroadcasterId))
         {
