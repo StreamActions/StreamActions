@@ -153,7 +153,7 @@ public sealed record Subscription
     /// Gets a list of users that subscribe to the specified broadcaster.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The broadcaster's ID. This ID must match the user ID in the access token.</param>
+    /// <param name="broadcasterId">The broadcaster's ID.</param>
     /// <param name="userId">Filters the list to include only the specified subscribers. You may specify a maximum of 100 subscribers.</param>
     /// <param name="first">The maximum number of items to return per page in the response. Maximum: 100. Default: 20.</param>
     /// <param name="before">The cursor used to get the previous page of results.</param>
@@ -163,8 +163,12 @@ public sealed record Subscription
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> is defined and has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException">More than one of <paramref name="userId"/>, <paramref name="after"/>, <paramref name="before"/> were defined.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadSubscriptions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">
@@ -261,12 +265,16 @@ public sealed record Subscription
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of a partner or affiliate broadcaster.</param>
-    /// <param name="userId">The ID of the user that you're checking to see whether they subscribe to the broadcaster in <paramref name="broadcasterId"/>. This ID must match the user ID in the access Token.</param>
+    /// <param name="userId">The ID of the user that you're checking to see whether they subscribe to the broadcaster in <paramref name="broadcasterId"/>.</param>
     /// <returns>A <see cref="SubscriptionResponse"/> with elements of type <see cref="Subscription"/> containing the response. The response contains a <see cref="JsonApiResponse.Status"/> of <see cref="System.Net.HttpStatusCode.NotFound"/> if the <paramref name="userId"/> is not subscribed to <paramref name="broadcasterId"/>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.UserReadSubscriptions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">

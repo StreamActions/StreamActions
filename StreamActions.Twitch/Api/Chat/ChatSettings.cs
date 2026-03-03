@@ -111,8 +111,11 @@ public sealed record ChatSettings
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChatSettings"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; or <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; or the token is not valid.</exception>
-    /// <exception cref="TwitchScopeMissingException">The user or app token is missing the required <see cref="Scope.ModeratorReadChatSettings"/> or <see cref="Scope.ModeratorManageChatSettings"/> scope.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorReadChatSettings"/> or <see cref="Scope.ModeratorManageChatSettings"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="moderatorId"/> which includes the <see cref="Scope.ModeratorReadChatSettings"/> or <see cref="Scope.ModeratorManageChatSettings"/> scope.
+    /// </para>
     /// <para>
     /// HTTP Response Status Codes:
     /// <list type="table">
@@ -165,8 +168,15 @@ public sealed record ChatSettings
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChatSettings"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; or <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace; or <paramref name="settings"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; or the token is not valid.</exception>
-    /// <exception cref="TwitchScopeMissingException">The user token is missing the required <see cref="Scope.ModeratorManageChatSettings"/> scope.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorManageChatSettings"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires:
+    /// <list type="bullet">
+    /// <item>The app to have an authorization from <paramref name="moderatorId"/> which includes the <see cref="Scope.ModeratorManageChatSettings"/> scope.</item>
+    /// <item><paramref name="moderatorId"/> to have moderator status from <paramref name="broadcasterId"/>.</item>
+    /// </list>
+    /// </para>
     /// <para>
     /// HTTP Response Status Codes:
     /// <list type="table">
@@ -217,7 +227,7 @@ public sealed record ChatSettings
             throw new ArgumentNullException(nameof(settings)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ModeratorManageChatSettings);
+        session.RequireUserOrAppToken(Scope.ModeratorManageChatSettings);
 
         System.Collections.Specialized.NameValueCollection query = new()
         {

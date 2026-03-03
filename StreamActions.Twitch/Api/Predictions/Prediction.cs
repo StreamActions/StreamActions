@@ -161,7 +161,7 @@ public sealed record Prediction
     /// Gets a list of predictions that the broadcaster created.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster that created the predictions. This ID must match the user ID in the user access token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster that created the predictions.</param>
     /// <param name="id">A list of IDs that identify the predictions to return. Specify this parameter only if you want to filter the list that the request returns. The endpoint ignores duplicate IDs and those not owned by this broadcaster. Maximum: 25</param>
     /// <param name="first">The maximum number of items to return per page in the response. Maximum: 25. Default: 20.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
@@ -169,8 +169,12 @@ public sealed record Prediction
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not <see langword="null"/> and has more than 25 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadPredictions"/> or <see cref="Scope.ChannelManagePredictions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Predictions are available for 90 days after they're created.
     /// </para>
@@ -254,8 +258,12 @@ public sealed record Prediction
     /// <exception cref="ArgumentNullException"><see cref="PredictionCreationParameters.PredictionWindowSeconds"/> is <see langword="null"/>; <see cref="PredictionCreationParameters.Outcomes"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="PredictionCreationParameters.Title"/> has more than 45 characters; <see cref="PredictionCreationParameters.Outcomes"/> has less than 2 or more than 10 elements; a <see cref="PredictionCreationOutcome.Title"/> has more than 25 characters.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManagePredictions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">
@@ -356,8 +364,12 @@ public sealed record Prediction
     /// <exception cref="ArgumentOutOfRangeException"><see cref="PredictionEndParameters.Status"/> is not a valid value.</exception>
     /// <exception cref="ArgumentNullException"><see cref="PredictionEndParameters.WinningOutcomeId"/> is <see langword="null"/> when <see cref="PredictionEndParameters.Status"/> is <see cref="PredictionStatus.Resolved"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManagePredictions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">

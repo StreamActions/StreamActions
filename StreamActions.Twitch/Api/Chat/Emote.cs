@@ -286,6 +286,9 @@ public sealed record Emote
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
+    /// This endpoint supports both <see cref="TwitchToken.TokenType.App"/> and <see cref="TwitchToken.TokenType.User"/> tokens.
+    /// </para>
+    /// <para>
     /// Response Codes:
     /// <list type="table">
     /// <item>
@@ -331,6 +334,9 @@ public sealed record Emote
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
+    /// This endpoint supports both <see cref="TwitchToken.TokenType.App"/> and <see cref="TwitchToken.TokenType.User"/> tokens.
+    /// </para>
+    /// <para>
     /// Response Codes:
     /// <list type="table">
     /// <item>
@@ -368,6 +374,9 @@ public sealed record Emote
     /// <exception cref="ArgumentOutOfRangeException">Too many emote set ids were specified.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
+    /// <para>
+    /// This endpoint supports both <see cref="TwitchToken.TokenType.App"/> and <see cref="TwitchToken.TokenType.User"/> tokens.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">
@@ -420,14 +429,18 @@ public sealed record Emote
     /// Retrieves emotes available to the user across all channels.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="userId">The ID of the user. This ID must match the user ID in the user access token.</param>
+    /// <param name="userId">The ID of the user.</param>
     /// <param name="broadcasterId">The User ID of a broadcaster you wish to get follower emotes of.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Emote"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TwitchScopeMissingException">The user token is missing the required 'user:read:emotes' scope.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.UserReadEmotes"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// If the user specified in <paramref name="userId"/> is subscribed to the broadcaster specified in <paramref name="broadcasterId"/>, their follower emotes will appear in the response body regardless if this query parameter is used.
     /// </para>

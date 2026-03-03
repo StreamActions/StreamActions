@@ -133,6 +133,9 @@ public sealed record ChatColor
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
+    /// This endpoint supports both <see cref="TwitchToken.TokenType.App"/> and <see cref="TwitchToken.TokenType.User"/> tokens.
+    /// </para>
+    /// <para>
     /// Response Codes:
     /// <list type="table">
     /// <item>
@@ -178,15 +181,19 @@ public sealed record ChatColor
     /// Updates the color used for the user's name in chat.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="userId">The ID of the user whose chat color you want to update. This ID must match the user ID in the access token.</param>
+    /// <param name="userId">The ID of the user whose chat color you want to update.</param>
     /// <param name="color">The color to use for the user's name in chat.</param>
     /// <param name="hex">The hex color code to use for the user's name in chat. Used only if <paramref name="color"/> is set to <see cref="NamedColor.Custom"/>.</param>
     /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="color"/> is not a valid value; <paramref name="color"/> is <see cref="NamedColor.Custom"/> and <paramref name="hex"/> is null, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="hex"/> is not a valid rgb hex string <c>#rrggbb</c>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.UserManageChatColor"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">

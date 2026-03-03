@@ -56,7 +56,7 @@ public sealed record VIP
     /// Gets a list of the broadcaster's VIPs.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster whose list of VIPs you want to get. This ID must match the user ID in the access token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster whose list of VIPs you want to get.</param>
     /// <param name="userId">Filters the list for specific VIPs. Limit: 100.</param>
     /// <param name="first">The maximum number of items to return per page in the response. Minimum: 1. Maximum: 100.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
@@ -64,8 +64,12 @@ public sealed record VIP
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="after"/> is not null, but is empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadVips"/> or <see cref="Scope.ChannelManageVideos"/>.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadVips"/> or <see cref="Scope.ChannelManageVips"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">
@@ -134,13 +138,17 @@ public sealed record VIP
     /// Adds the specified user as a VIP in the broadcaster's channel.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster that's adding the user as a VIP. This ID must match the user ID in the access token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster that's adding the user as a VIP.</param>
     /// <param name="userId">The ID of the user to give VIP status to.</param>
     /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVips"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// <strong>Rate Limits</strong>: The broadcaster may add a maximum of 10 VIPs within a 10-second window.
     /// </para>
@@ -221,11 +229,11 @@ public sealed record VIP
     /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageVips"/>.</exception>
     /// <remarks>
     /// <para>
-    /// If the broadcaster is removing the user's VIP status, the ID in the <paramref name="broadcasterId"/> parameter must match the user ID in the access token;
-    /// otherwise, if the user is removing their VIP status themselves, the ID in the <paramref name="userId"/> parameter must match the user ID in the access token.
+    /// This ID must match the user ID in the access token.
     /// </para>
     /// <para>
     /// <strong>Rate Limits</strong>: The broadcaster may remove a maximum of 10 VIPs within a 10-second window.

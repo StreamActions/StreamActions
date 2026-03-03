@@ -155,6 +155,9 @@ public sealed record Clip
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
+    /// This endpoint supports both <see cref="TwitchToken.TokenType.App"/> and <see cref="TwitchToken.TokenType.User"/> tokens.
+    /// </para>
+    /// <para>
     /// The <paramref name="id"/>, <paramref name="gameId"/>, and <paramref name="broadcasterId"/> parameters are mutually exclusive.
     /// </para>
     /// <para>

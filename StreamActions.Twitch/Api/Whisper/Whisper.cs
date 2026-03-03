@@ -51,14 +51,18 @@ public sealed record Whisper
     /// Sends a whisper message to the specified user.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="fromUserId">The ID of the user sending the whisper. This ID must match the user ID in the user access token.</param>
+    /// <param name="fromUserId">The ID of the user sending the whisper.</param>
     /// <param name="toUserId">The ID of the user to receive the whisper.</param>
     /// <param name="message">A <see cref="Whisper"/> containing the message to send.</param>
     /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="message"/> is <see langword="null"/>; <paramref name="fromUserId"/>, <paramref name="toUserId"/>, or <see cref="Message"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.UserManageWhispers"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// <paramref name="fromUserId"/> must have a verified phone number (see the <strong>Phone Number</strong> setting in your Security and Privacy settings).
     /// </para>

@@ -85,13 +85,15 @@ public sealed record AdSchedule
     /// This endpoint returns ad schedule related information, including snooze, when the last ad was run, when the next ad is scheduled, and if the channel is currently in pre-roll free time. Note that a new ad cannot be run until 8 minutes after running a previous ad.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster whose ad schedule is being retrieved. This ID must match the user ID in the user access token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster whose ad schedule is being retrieved.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="AdSchedule"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadAds"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="broadcasterId"/> which includes the <see cref="Scope.ChannelReadAds"/> scope.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">
@@ -118,7 +120,7 @@ public sealed record AdSchedule
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ChannelReadAds);
+        session.RequireUserOrAppToken(Scope.ChannelReadAds);
 
         Uri uri = Util.BuildUri(new("/channels/ads"), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
@@ -129,13 +131,15 @@ public sealed record AdSchedule
     /// If available, pushes back the timestamp of the upcoming automatic mid-roll ad by 5 minutes. This endpoint duplicates the snooze functionality in the creator dashboard's Ads Manager.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster whose ads are being snoozed. This ID must match the user ID in the user access token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster whose ads are being snoozed.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="AdSchedule"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageAds"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="broadcasterId"/> which includes the <see cref="Scope.ChannelManageAds"/> scope.
+    /// </para>
     /// <para>
     /// When this endpoint returns, only <see cref="SnoozeCount"/>, <see cref="SnoozeRefreshAt"/>, and <see cref="NextAdAt"/> will be populated.
     /// </para>
@@ -169,7 +173,7 @@ public sealed record AdSchedule
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ChannelManageAds);
+        session.RequireUserOrAppToken(Scope.ChannelManageAds);
 
         Uri uri = Util.BuildUri(new("/channels/ads/schedule/snooze"), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
