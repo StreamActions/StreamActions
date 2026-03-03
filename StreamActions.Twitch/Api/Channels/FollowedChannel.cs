@@ -63,16 +63,19 @@ public sealed record FollowedChannel
     /// Gets a list of broadcasters that the specified user follows. You can also use this endpoint to see whether a user follows a specific broadcaster.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="userId">A user's ID. Returns the list of broadcasters that this user follows. This ID must match the user ID in <see cref="TwitchSession.Token"/>.</param>
+    /// <param name="userId">A user's ID. Returns the list of broadcasters that this user follows.</param>
     /// <param name="broadcasterId">A broadcaster's ID. Use this parameter to see whether the user follows this broadcaster. If <see langword="null"/>, the response contains all broadcasters that the user follows.</param>
     /// <param name="first">The maximum number of items to return per page in the response. Minimum: 1. Maximum: 100.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="FollowedChannel"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="userId"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="after"/> is not <see langword="null"/>, but is empty or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.UserReadFollows"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// If <paramref name="broadcasterId"/> is specified, the response will contain a single element
     /// in <see cref="ResponseData{TDataType}.Data"/> if <paramref name="userId"/> follows <paramref name="broadcasterId"/>,

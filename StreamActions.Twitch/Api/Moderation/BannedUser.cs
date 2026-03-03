@@ -91,7 +91,7 @@ public sealed record BannedUser
     /// Gets all users that the broadcaster banned or put in a timeout.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster whose list of banned users you want to get. This ID must match the user ID in the access token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster whose list of banned users you want to get.</param>
     /// <param name="userIds">A list of user IDs used to filter the results. Maximum of 100 IDs.</param>
     /// <param name="first">The maximum number of items to return per page in the response. Minimum: 1. Maximum: 100. Default: 20.</param>
     /// <param name="after">The cursor that identifies the page of results to retrieve.</param>
@@ -100,7 +100,12 @@ public sealed record BannedUser
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="broadcasterId"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException"><paramref name="broadcasterId"/> is empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userIds"/> contains more than 100 elements.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModerationRead"/> or <see cref="Scope.ModeratorManageBannedUsers"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="broadcasterId"/> which includes the <see cref="Scope.ModerationRead"/> or <see cref="Scope.ModeratorManageBannedUsers"/> scope.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">
@@ -142,7 +147,7 @@ public sealed record BannedUser
             throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(OAuth.Scope.ModerationRead, OAuth.Scope.ModeratorManageBannedUsers);
+        session.RequireUserOrAppToken(Scope.ModerationRead, Scope.ModeratorManageBannedUsers);
 
         NameValueCollection queryParameters = [];
         queryParameters.Add("broadcaster_id", broadcasterId);

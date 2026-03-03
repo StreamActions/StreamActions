@@ -84,13 +84,17 @@ public sealed record Announcement
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster that owns the chat room to send the announcement to.</param>
-    /// <param name="moderatorId">The ID of a user who has permission to moderate the broadcaster's chat room, or the broadcaster's ID if they're sending the announcement. This ID must match the user ID in the user access token..</param>
+    /// <param name="moderatorId">The ID of a user who has permission to moderate the broadcaster's chat room, or the broadcaster's ID if they're sending the announcement.</param>
     /// <param name="message">An <see cref="Announcement"/> containing the message to send and the color to use.</param>
     /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="message"/> is <see langword="null"/>; <paramref name="broadcasterId"/>, <paramref name="moderatorId"/>, or <see cref="Message"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorManageAnnouncements"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">

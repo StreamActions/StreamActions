@@ -56,7 +56,7 @@ public sealed record Chatter
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster whose list of chatters you want to get.</param>
-    /// <param name="moderatorId">The ID of the broadcaster or one of the broadcaster's moderators. This ID must match the user ID in the user access token.</param>
+    /// <param name="moderatorId">The ID of the broadcaster or one of the broadcaster's moderators.</param>
     /// <param name="first">The maximum number of items to return per page in the response. Minimum: 1. Maximum: 1,000.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Chatter"/> containing the response.</returns>
@@ -64,6 +64,9 @@ public sealed record Chatter
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorReadChatters"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="moderatorId"/> which includes the <see cref="Scope.ModeratorReadChatters"/> scope.
+    /// </para>
     /// <para>
     /// There is a delay between when users join and leave a chat and when the list is updated accordingly.
     /// </para>
@@ -113,7 +116,7 @@ public sealed record Chatter
 
         first = Math.Clamp(first, 1, 1000);
 
-        session.RequireUserToken(Scope.ModeratorReadChatters);
+        session.RequireUserOrAppToken(Scope.ModeratorReadChatters);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
