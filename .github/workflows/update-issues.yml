@@ -199,9 +199,9 @@ jobs:
                             core.debug('Diffing');
                             let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'));
                             let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'));
-                            if (Object.keys(diff).length === 0 && (context.eventName !== 'workflow_dispatch' || !context.payload.inputs.forceIssue)) {
+                            if (Object.keys(diff).length === 0 && (context.eventName !== 'workflow_dispatch' || context.payload.inputs.forceIssue.toLowerCase() === 'false')) {
                                 core.info('No diff found, skipping issue update...');
-                            } else if (Object.keys(newData).length === 0 && (context.eventName !== 'workflow_dispatch' || !context.payload.inputs.forceIssue)) {
+                            } else if (Object.keys(newData).length === 0 && (context.eventName !== 'workflow_dispatch' || context.payload.inputs.forceIssue.toLowerCase() === 'false')) {
                                 core.info('No data found, skipping issue update...');
                             } else {
                                 core.info('Downloading issue ' + etag.issue + '...');
@@ -356,7 +356,7 @@ jobs:
                                         }
                                     }
                                 }
-                                if (context.eventName === 'workflow_dispatch' && context.payload.inputs.forceIssue) {
+                                if (context.eventName === 'workflow_dispatch' && context.payload.inputs.forceIssue.toLowerCase() === 'true') {
                                     core.debug('Slug update');
                                     for (let category of Object.keys(body.data[section])) {
                                         core.debug('--Check category ' + category);
