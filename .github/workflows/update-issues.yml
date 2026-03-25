@@ -131,7 +131,7 @@ jobs:
                 core.info('My Line: ' + __line + ' (' + (__line + 94 - 2) + ')'); // Line - `script: |` line - 2
 
                 const fs = require('fs');
-                const issuePattern = /(\[(?<Check>[ x])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?( \*&nbsp;\* \[\?\]\((?<WORKFLOW>[^\(\)]*)\))?/;
+                const issuePattern = /(\[(?<Check>[ x])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?( \*&nbsp;\*)?( \[\?\]\((?<WORKFLOW>[^\(\)]*)\))?/;
 
                 const repoInfo = context.repo.owner + '/' + context.repo.repo;
                 const runUrl = context.serverUrl + '/' + repoInfo + '/actions/runs/' + context.runId;
