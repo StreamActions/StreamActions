@@ -308,7 +308,10 @@ jobs:
                                     core.debug('--Add section');
                                     body.data[section] = {'__header': [], '__url': etag.url, '__etag': '', '__date': ''};
                                 }
-                                let diffKeys = Object.keys(diff['endpoints']);
+                                let diffKeys = [];
+                                if (diff.hasOwnProperty('endpoints')) {
+                                  diffKeys = Object.keys(diff['endpoints']);
+                                }
                                 core.debug('Check diffKeys');
                                 if (diffKeys.length > 0) {
                                     core.debug('Found ' + diffKeys.length + ' keys');
@@ -346,6 +349,21 @@ jobs:
                                                         body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
                                                     }
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                                if (context.eventName === 'workflow_dispatch' && context.payload.inputs.forceIssue) {
+                                  core.debug('Slug update');
+                                  for (let category of Object.keys(body.data[section])) {
+                                    core.debug('--Check category ' + category);
+                                    for (let endpoint of Object.keys(body.data[section][category])) {
+                                        core.debug('----Check Endpoint ' + endpoint);
+                                        if (Object.keys(newData.endpoints).includes(endpoint)) {
+                                            core.debug('----Found in newData');
+                                            if (newData.endpoints[endpoint].slug !== undefined && newData.endpoints[endpoint].slug !== null) {
+                                                core.debug('------Has slug');
+                                                body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
                                             }
                                         }
                                     }
