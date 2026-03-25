@@ -4,29 +4,27 @@ on:
     - cron: '11 4 * * 0,2,4'
   workflow_dispatch:
     inputs:
-        import:
-            description: Import an existing JSON output from a parser
+        mode:
+            description: Action execution mode
             required: true
-            default: false
-            type: boolean
+            default: 'diff'
+            type: choice
+            options:
+              - diff
+              - import
         importUrl:
-            description: The URL to import from
+            description: Import mode - The URL to import from
             required: false
             default: ''
             type: string
         importName:
-            description: Friendly name from ETagAttribute for the imported JSON
+            description: Import mode - Friendly name from ETagAttribute for the imported JSON
             required: false
             default: ''
             type: string
-        diff:
-            description: Diff the cache with the available ETags and update issues
-            required: true
-            default: true
-            type: boolean
         forceIssue:
-            description: Force update issue even if diff returns no changes
-            required: true
+            description: Diff mode - Force update issue even if diff returns no changes
+            required: false
             default: false
             type: boolean
 
@@ -38,7 +36,7 @@ permissions:
 jobs:
   importjsonfile:
     name: Import JSON File
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.import }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'import' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -75,7 +73,7 @@ jobs:
             wget -O ".cache/$NAME.json" "$URL"
   diff:
     name: Diff cache with available ETags and update issues
-    if: ${{ github.repository == 'StreamActions/StreamActions' && (github.event_name != 'workflow_dispatch' || inputs.diff) && github.ref_name == 'main' }}
+    if: ${{ github.repository == 'StreamActions/StreamActions' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'diff') && github.ref_name == 'main' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
