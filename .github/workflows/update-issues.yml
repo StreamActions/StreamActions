@@ -108,30 +108,30 @@ jobs:
             script: |
                 core.info('Preparing...');
                 Object.defineProperty(global, '__stack', {
-                    get: function() {
-                            var orig = Error.prepareStackTrace;
-                            Error.prepareStackTrace = function(_, stack) {
-                                return stack;
-                            };
-                            var err = new Error;
-                            Error.captureStackTrace(err, arguments.callee);
-                            var stack = err.stack;
-                            Error.prepareStackTrace = orig;
+                    get: function () {
+                        var orig = Error.prepareStackTrace;
+                        Error.prepareStackTrace = function (_, stack) {
                             return stack;
-                        }
-                    });
+                        };
+                        var err = new Error;
+                        Error.captureStackTrace(err, arguments.callee);
+                        var stack = err.stack;
+                        Error.prepareStackTrace = orig;
+                        return stack;
+                    }
+                });
 
                 Object.defineProperty(global, '__line', {
-                        get: function() {
-                            return __stack[1].getLineNumber();
-                        }
-                    });
+                    get: function () {
+                        return __stack[1].getLineNumber();
+                    }
+                });
 
-                 Object.defineProperty(global, '__function', {
-                        get: function() {
-                            return __stack[1].getFunctionName();
-                        }
-                    });
+                Object.defineProperty(global, '__function', {
+                    get: function () {
+                        return __stack[1].getFunctionName();
+                    }
+                });
 
                 core.info('My Line: ' + __line + ' (' + (__line + 94 - 2) + ')'); // Line - `script: |` line - 2
 
@@ -178,7 +178,7 @@ jobs:
                         parameters = parameters.concat(etag.parameters);
 
                         core.info('Running parser ' + etag.parser + '...');
-                        let {exitCode, stderr} = await exec.getExecOutput('uv', parameters);
+                        let { exitCode, stderr } = await exec.getExecOutput('uv', parameters);
 
                         if (exitCode !== 0) {
                             core.error('Encountered error running parser, skipping...');
@@ -188,7 +188,7 @@ jobs:
                             continue;
                         }
 
-                        let {stdout} = await exec.getExecOutput('sha256sum', ['./.output/' + name + '.json']);
+                        let { stdout } = await exec.getExecOutput('sha256sum', ['./.output/' + name + '.json']);
                         let sha = stdout.split(' ')[0].trim().toUpperCase();
                         let date = new Date().toISOString();
                         date = date.substring(0, date.lastIndexOf(':')) + date.substring(date.length - 1);
@@ -205,7 +205,7 @@ jobs:
                                 core.info('No data found, skipping issue update...');
                             } else {
                                 core.info('Downloading issue ' + etag.issue + '...');
-                                let {status: issueStatus, data: issue} = await github.rest.issues.get({
+                                let { status: issueStatus, data: issue } = await github.rest.issues.get({
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
                                     issue_number: etag.issue
@@ -242,7 +242,7 @@ jobs:
                                         core.debug('--Section: ' + section + ' <> URL: ' + url);
                                         if (!body.data.hasOwnProperty(section)) {
                                             core.debug('--Add section');
-                                            body.data[section] = {'__header': [], '__url': url, '__etag': '', '__date': ''};
+                                            body.data[section] = { '__header': [], '__url': url, '__etag': '', '__date': '' };
                                         }
                                         category = '__header';
                                     } else if (line.startsWith('ETag: ') && section !== '__HEADER' && category === '__header') {
@@ -292,7 +292,7 @@ jobs:
                                         }
                                     } else {
                                         if (line.trim().length > 0) {
-                                            core.warning('Found random line, skipping...' );
+                                            core.warning('Found random line, skipping...');
                                             core.debug(line);
                                         }
                                         continue;
@@ -306,11 +306,11 @@ jobs:
                                 core.debug('Section ' + section);
                                 if (!body.data.hasOwnProperty(section)) {
                                     core.debug('--Add section');
-                                    body.data[section] = {'__header': [], '__url': etag.url, '__etag': '', '__date': ''};
+                                    body.data[section] = { '__header': [], '__url': etag.url, '__etag': '', '__date': '' };
                                 }
                                 let diffKeys = [];
                                 if (diff.hasOwnProperty('endpoints')) {
-                                  diffKeys = Object.keys(diff['endpoints']);
+                                    diffKeys = Object.keys(diff['endpoints']);
                                 }
                                 core.debug('Check diffKeys');
                                 if (diffKeys.length > 0) {
@@ -328,7 +328,7 @@ jobs:
                                             core.debug('Endpoint ' + endpoint.endpoint);
                                             if (!body.data[section][category].hasOwnProperty(endpoint.endpoint)) {
                                                 core.debug('--Add endpoint');
-                                                body.data[section][category][endpoint.endpoint] = {'checked': false, 'url': '', 'workflow': runUrl};
+                                                body.data[section][category][endpoint.endpoint] = { 'checked': false, 'url': '', 'workflow': runUrl };
                                             }
                                         }
                                     }
@@ -354,16 +354,17 @@ jobs:
                                     }
                                 }
                                 if (context.eventName === 'workflow_dispatch' && context.payload.inputs.forceIssue) {
-                                  core.debug('Slug update');
-                                  for (let category of Object.keys(body.data[section])) {
-                                    core.debug('--Check category ' + category);
-                                    for (let endpoint of Object.keys(body.data[section][category])) {
-                                        core.debug('----Check Endpoint ' + endpoint);
-                                        if (Object.keys(newData.endpoints).includes(endpoint)) {
-                                            core.debug('----Found in newData');
-                                            if (newData.endpoints[endpoint].slug !== undefined && newData.endpoints[endpoint].slug !== null) {
-                                                core.debug('------Has slug');
-                                                body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
+                                    core.debug('Slug update');
+                                    for (let category of Object.keys(body.data[section])) {
+                                        core.debug('--Check category ' + category);
+                                        for (let endpoint of Object.keys(body.data[section][category])) {
+                                            core.debug('----Check Endpoint ' + endpoint);
+                                            if (Object.keys(newData.endpoints).includes(endpoint)) {
+                                                core.debug('----Found in newData');
+                                                if (newData.endpoints[endpoint].slug !== undefined && newData.endpoints[endpoint].slug !== null) {
+                                                    core.debug('------Has slug');
+                                                    body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
+                                                }
                                             }
                                         }
                                     }
@@ -417,7 +418,7 @@ jobs:
                                     }
                                 }
                                 core.info('Updating issue...');
-                                let {status: updateStatus} = await github.rest.issues.update({
+                                let { status: updateStatus } = await github.rest.issues.update({
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
                                     issue_number: etag.issue,
@@ -445,7 +446,7 @@ jobs:
                 }
 
                 core.info('Cleaning up old caches...');
-                let {status: cacheStatus, data: caches} = await github.rest.actions.getActionsCacheList({
+                let { status: cacheStatus, data: caches } = await github.rest.actions.getActionsCacheList({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     key: 'etag',
@@ -464,7 +465,7 @@ jobs:
                             core.info('Keeping cache ' + cache.key + ' (' + cache.id + ')');
                             first = false;
                         } else {
-                            let {status: deleteStatus} = await github.rest.actions.deleteActionsCacheById({
+                            let { status: deleteStatus } = await github.rest.actions.deleteActionsCacheById({
                                 owner: context.repo.owner,
                                 repo: context.repo.repo,
                                 cache_id: cache.id
