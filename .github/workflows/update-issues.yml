@@ -136,7 +136,7 @@ jobs:
                 core.info('My Line: ' + __line + ' (' + (__line + 94 - 2) + ')'); // Line - `script: |` line - 2
 
                 const fs = require('fs');
-                const issuePattern = /(\[(?<Check>[ x])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?( \*&nbsp;\*)?( \[\?\]\((?<WORKFLOW>[^\(\)]*)\))?/;
+                const issuePattern = /(\[(?<Check>[ x])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?( \*&nbsp;\* )?(\[\?\]\((?<WORKFLOW>[^\(\)]*)\))?/;
 
                 const repoInfo = context.repo.owner + '/' + context.repo.repo;
                 const runUrl = context.serverUrl + '/' + repoInfo + '/actions/runs/' + context.runId;
@@ -272,6 +272,9 @@ jobs:
                                         let name = match.groups.Name;
                                         let url = match.groups.URL;
                                         let workflow = match.groups.WORKFLOW;
+                                        if (name.trimEnd().endsWith('*&nbsp;*')) {
+                                            name = name.trimEnd().substring(0, name.trimEnd().length - 9).trimEnd();
+                                        }
                                         core.debug('------Checked: ' + check + ' <> Name: ' + name + ' <> URL: ' + url + ' <> WORKFLOW: ' + workflow);
                                         if (!body.data[section][category].hasOwnProperty(name)) {
                                             core.debug('------Add item');
