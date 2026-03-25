@@ -71,9 +71,11 @@ public sealed record Commercial
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentNullException"><see cref="StartCommercialParameters.BroadcasterId"/> is <see langword="null"/>, empty, or whitespace; <see cref="StartCommercialParameters.Length"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelEditCommercial"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <see cref="StartCommercialParameters.BroadcasterId"/> which includes the <see cref="Scope.ChannelEditCommercial"/> scope.
+    /// </para>
     /// <para>
     /// Only partners and affiliates may run commercials and they must be streaming live at the time.
     /// </para>
@@ -126,7 +128,7 @@ public sealed record Commercial
             throw new ArgumentNullException(nameof(parameters.Length)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ChannelEditCommercial);
+        session.RequireUserOrAppToken(Scope.ChannelEditCommercial);
 
         if (Math.Clamp(parameters.Length.Value, 1, 180) != parameters.Length.Value)
         {

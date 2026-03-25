@@ -72,7 +72,6 @@ public sealed record SharedChatSession
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="SharedChatSession"/> containing the response. Returns an empty array if the broadcaster_id in the request isn’t in a shared chat session.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <remarks>
     /// <para>
     /// Response Codes:

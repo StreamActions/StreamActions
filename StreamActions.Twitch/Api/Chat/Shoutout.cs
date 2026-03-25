@@ -38,12 +38,19 @@ public sealed record Shoutout
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="fromBroadcasterId">The ID of the broadcaster that's sending the Shoutout.</param>
     /// <param name="toBroadcasterId">The ID of the broadcaster that's receiving the Shoutout.</param>
-    /// <param name="moderatorId">The ID of the broadcaster or a user that is one of the broadcaster's moderators. This ID must match the user ID in the access token.</param>
+    /// <param name="moderatorId">The ID of the broadcaster or a user that is one of the broadcaster's moderators.</param>
     /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="fromBroadcasterId"/>, <paramref name="toBroadcasterId"/>, or <see cref="moderatorId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorManageShoutouts"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires:
+    /// <list type="bullet">
+    /// <item>The app to have an authorization from <paramref name="fromBroadcasterId"/> which includes the <see cref="Scope.ChannelBot"/> scope.</item>
+    /// <item>The app to have an authorization from <paramref name="moderatorId"/> which includes the <see cref="Scope.ModeratorManageShoutouts"/> and <see cref="Scope.UserBot"/> scopes.</item>
+    /// </list>
+    /// </para>
     /// <para>
     /// <paramref name="fromBroadcasterId"/> must be live and have 1 or more viewers according to Twitch, otherwise, the shoutout fails with <strong>400 Bad Request</strong>.
     /// </para>
@@ -89,7 +96,7 @@ public sealed record Shoutout
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ModeratorManageShoutouts);
+        session.RequireUserOrAppToken(Scope.ModeratorManageShoutouts);
 
         if (string.IsNullOrWhiteSpace(fromBroadcasterId))
         {

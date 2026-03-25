@@ -169,15 +169,19 @@ public sealed record ChannelPointsReward
     /// Returns a list of Custom Reward objects for the Custom Rewards on a channel.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster whose custom rewards you want to get. This ID must match the user ID found in the OAuth token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster whose custom rewards you want to get.</param>
     /// <param name="id">A list of IDs to filter the rewards by. You may specify a maximum of 50 IDs.</param>
     /// <param name="onlyManageableRewards">A Boolean value that determines whether the response contains only the custom rewards that the app may manage (the app is identified by the ID in the Client-Id header). Set to <see langword="true"/> to get only the custom rewards that the app may manage. The default is <see langword="false"/>.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is defined and has more than 50 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadRedemptions"/> or <see cref="Scope.ChannelManageRedemptions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// There is a limit of 50 Custom Rewards on a channel at a time. This includes both enabled and disabled Custom Rewards.
     /// </para>
@@ -251,7 +255,7 @@ public sealed record ChannelPointsReward
     /// Creates a Custom Reward in the broadcaster's channel.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster to add the custom reward to. This ID must match the user ID found in the OAuth token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster to add the custom reward to.</param>
     /// <param name="parameters">The custom reward to create.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/>, <paramref name="parameters"/>, or <see cref="ChannelPointsRewardCreationParameters.Cost"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <see cref="ChannelPointsRewardCreationParameters.Title"/> is <see langword="null"/>, empty, or whitespace.</exception>
@@ -260,8 +264,12 @@ public sealed record ChannelPointsReward
     /// <exception cref="InvalidOperationException"><see cref="ChannelPointsRewardCreationParameters.BackgroundColor"/> is not a valid hex triplet in the form <c>#RRGGBB</c>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is enabled and < 1.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRedemptions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// There is a limit of 50 Custom Rewards on a channel at a time. This includes both enabled and disabled Custom Rewards.
     /// </para>
@@ -388,7 +396,7 @@ public sealed record ChannelPointsReward
     /// Updates a custom reward.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster to add the custom reward to. This ID must match the user ID found in the OAuth token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster to add the custom reward to.</param>
     /// <param name="parameters">The custom reward to create.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>; <paramref name="id"/> is <see cref="Guid.Empty"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <see cref="ChannelPointsRewardCreationParameters.Title"/> is not <see langword="null"/> and is empty or whitespace.</exception>
@@ -397,8 +405,12 @@ public sealed record ChannelPointsReward
     /// <exception cref="InvalidOperationException">No parameters were set in <paramref name="parameters"/>; <see cref="ChannelPointsRewardCreationParameters.BackgroundColor"/> is not a valid hex triplet in the form <c>#RRGGBB</c>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is < 1.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRedemptions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// The app used to create the reward is the only app that may update the reward.
     /// </para>
@@ -538,13 +550,17 @@ public sealed record ChannelPointsReward
     /// Deletes a custom reward that the broadcaster created.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster that created the custom reward. This ID must match the user ID found in the OAuth token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster that created the custom reward.</param>
     /// <param name="id">The ID of the custom reward to delete.</param>
     /// <returns>A <see cref="JsonApiResponse"/> containing the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="id"/> is <see cref="Guid.Empty"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRedemptions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// The app used to create the reward is the only app that may delete it.
     /// </para>

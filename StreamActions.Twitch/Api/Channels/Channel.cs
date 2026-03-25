@@ -121,8 +121,10 @@ public sealed partial record Channel
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/> or has 0 elements.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="broadcasterId"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.App"/> or <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This endpoint supports both <see cref="TwitchToken.TokenType.App"/> and <see cref="TwitchToken.TokenType.User"/> tokens.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">
@@ -169,16 +171,19 @@ public sealed partial record Channel
     /// Modifies channel information for users.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster whose channel you want to update. This ID must match the user ID in the user access token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster whose channel you want to update.</param>
     /// <param name="parameters">The <see cref="ModifyChannelParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentNullException"><see cref="ModifyChannelParameters.Title"/> is empty or whitespace; an element in <see cref="ModifyChannelParameters.Tags"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="ModifyChannelParameters.Tags"/> has more than 10 elements; an element in <see cref="ModifyChannelParameters.Tags"/> has more than 25 characters, a whitespace character, or a special character.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageBroadcast"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">

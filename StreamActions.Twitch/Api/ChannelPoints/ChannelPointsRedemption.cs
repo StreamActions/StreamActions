@@ -160,7 +160,7 @@ public sealed record ChannelPointsRedemption
     /// Gets a list of redemptions for the specified custom reward.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster that owns the custom reward. This ID must match the user ID found in the user OAuth token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster that owns the custom reward.</param>
     /// <param name="rewardId">The ID that identifies the custom reward whose redemptions you want to get.</param>
     /// <param name="status">The status of the redemptions to return.</param>
     /// <param name="id">A list of IDs to filter the redemptions by. You may specify a maximum of 50 IDs.</param>
@@ -171,8 +171,12 @@ public sealed record ChannelPointsRedemption
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="rewardId"/> is <see cref="Guid.Empty"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is defined and has more than 50 elements; <paramref name="status"/> or <paramref name="sort"/> are not valid values of their respective enums.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadRedemptions"/> or <see cref="Scope.ChannelManageRedemptions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// The app used to create the reward is the only app that may get the redemptions.
     /// </para>
@@ -270,15 +274,19 @@ public sealed record ChannelPointsRedemption
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="id">A list of IDs that identify the redemptions to update. You may specify a maximum of 50 IDs.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster that's updating the redemption. This ID must match the user ID in the user access token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster that's updating the redemption.</param>
     /// <param name="rewardId">The ID that identifies the reward that's been redeemed.</param>
     /// <param name="parameters">The parameters describing the new state of the redemptions.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="rewardId"/> is <see cref="Guid.Empty"/>; <paramref name="id"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> has more than 50 elements; <see cref="ChannelPointsRedemptionUpdateParameters.Status"/> is not <see cref="RedemptionStatus.Fulfilled"/> or <see cref="RedemptionStatus.Canceled"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadRedemptions"/> or <see cref="Scope.ChannelManageRedemptions"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// The app used to create the reward is the only app that may update the redemption.
     /// </para>

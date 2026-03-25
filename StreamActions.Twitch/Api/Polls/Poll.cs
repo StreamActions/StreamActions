@@ -149,7 +149,7 @@ public sealed record Poll
     /// Gets a list of polls that the broadcaster created.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster that created the polls. This ID must match the user ID in the user access token.</param>
+    /// <param name="broadcasterId">The ID of the broadcaster that created the polls.</param>
     /// <param name="id">A list of IDs that identify the polls to return. Specify this parameter only if you want to filter the list that the request returns. The endpoint ignores duplicate IDs and those not owned by this broadcaster. Maximum: 20</param>
     /// <param name="first">The maximum number of items to return per page in the response. Maximum: 20. Default: 20.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
@@ -157,8 +157,12 @@ public sealed record Poll
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is not <see langword="null"/> and has more than 20 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadPolls"/> or <see cref="Scope.ChannelManagePolls"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Polls are available for 90 days after they're created.
     /// </para>
@@ -252,8 +256,12 @@ public sealed record Poll
     /// <exception cref="ArgumentNullException"><see cref="PollCreationParameters.Duration"/> is <see langword="null"/>; <see cref="PollCreationParameters.Choices"/> is <see langword="null"/> or empty; <see cref="PollCreationParameters.ChannelPointsPerVote"/> is <see langword="null"/> when <see cref="PollCreationParameters.ChannelPointsVotingEnabled"/> is <see langword="true"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="PollCreationParameters.Title"/> has more than 60 characters; <see cref="PollCreationParameters.Choices"/> has less than 2 or more than 5 elements; a <see cref="PollCreationChoice.Title"/> has more than 25 characters.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManagePolls"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// The poll begins as soon as it's created. You may run only one poll at a time.
     /// </para>
@@ -362,8 +370,12 @@ public sealed record Poll
     /// <exception cref="ArgumentNullException"><see cref="PollEndParameters.BroadcasterId"/>, <see cref="PollEndParameters.Id"/>, or <see cref="PollEndParameters.Status"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="PollEndParameters.Status"/> is not a valid value.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManagePolls"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">

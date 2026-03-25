@@ -26,7 +26,7 @@ namespace StreamActions.Twitch.Api.Ads;
 public sealed record StartCommercialParameters
 {
     /// <summary>
-    /// The ID of the partner or affiliate broadcaster that wants to run the commercial. This ID must match the user ID found in the OAuth token.
+    /// The ID of the partner or affiliate broadcaster that wants to run the commercial.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
     public string? BroadcasterId { get; init; }
