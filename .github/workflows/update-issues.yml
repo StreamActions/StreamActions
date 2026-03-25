@@ -24,6 +24,11 @@ on:
             required: true
             default: true
             type: boolean
+        forceIssue:
+            description: Force update issue even if diff returns no changes
+            required: true
+            default: false
+            type: boolean
 
 permissions:
   actions: write
@@ -194,9 +199,9 @@ jobs:
                             core.debug('Diffing');
                             let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'));
                             let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'));
-                            if (Object.keys(diff).length === 0) {
+                            if (Object.keys(diff).length === 0 && (context.eventName !== 'workflow_dispatch' || !context.payload.inputs.forceIssue)) {
                                 core.info('No diff found, skipping issue update...');
-                            } else if (Object.keys(newData).length === 0) {
+                            } else if (Object.keys(newData).length === 0 && (context.eventName !== 'workflow_dispatch' || !context.payload.inputs.forceIssue)) {
                                 core.info('No data found, skipping issue update...');
                             } else {
                                 core.info('Downloading issue ' + etag.issue + '...');
