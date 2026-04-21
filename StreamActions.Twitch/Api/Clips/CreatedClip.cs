@@ -22,6 +22,7 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -54,9 +55,12 @@ public sealed record CreatedClip
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster whose stream you want to create a clip from.</param>
-    /// <param name="hasDelay">A Boolean value that determines whether the API captures the clip at the moment the viewer requests it or after a delay. If <see langword="false"/> (default), Twitch captures the clip at the moment the viewer requests it (this is the same clip experience as the Twitch UX). If <see langword="true"/>, Twitch adds a delay before capturing the clip (this basically shifts the capture window to the right slightly).</param>
+    /// <param name="title">The title of the clip.</param>
+    /// <param name="duration">The length of the clip in seconds. Possible values range from 5 to 60 inclusively with a precision of 0.1. The default is 30.</param>
+    /// <param name="hasDelay">A Boolean value that determines whether the API captures the clip at the moment the viewer requests it or after a delay.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="CreatedClip"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="duration"/> is specified and is not between 5 and 60.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ClipsEdit"/>.</exception>
     /// <remarks>
@@ -99,7 +103,8 @@ public sealed record CreatedClip
     /// </para>
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
-    public static async Task<ResponseData<CreatedClip>?> CreateClip(TwitchSession session, string broadcasterId, bool hasDelay = false)
+    public static async Task<ResponseData<CreatedClip>?> CreateClip(TwitchSession session, string broadcasterId, string? title = null, float? duration = null,
+        bool hasDelay = false)
     {
         if (session is null)
         {
@@ -111,9 +116,30 @@ public sealed record CreatedClip
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
+        if (duration.HasValue && (duration.Value < 5 || duration.Value > 60))
+        {
+            throw new ArgumentOutOfRangeException(nameof(duration), duration.Value, "must be between 5 and 60").Log(TwitchApi.GetLogger());
+        }
+
         session.RequireUserToken(Scope.ClipsEdit);
 
-        Uri uri = Util.BuildUri(new("/clips"), new() { { "broadcaster_id", broadcasterId }, { "has_delay", hasDelay.ToString(CultureInfo.InvariantCulture).ToLowerInvariant() } });
+        NameValueCollection queryParams = new() { { "broadcaster_id", broadcasterId } };
+
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            queryParams.Add("title", title);
+        }
+
+        if (duration.HasValue)
+        {
+            queryParams.Add("duration", duration.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        queryParams.Add("has_delay", hasDelay.ToString(CultureInfo.InvariantCulture).ToLowerInvariant());
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        Uri uri = Util.BuildUri(new Uri("/clips", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

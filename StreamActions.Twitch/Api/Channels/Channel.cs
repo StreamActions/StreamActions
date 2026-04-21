@@ -51,7 +51,7 @@ public sealed partial record Channel
     /// The broadcaster's display name.
     /// </summary>
     [JsonPropertyName("broadcaster_name")]
-    public string? BroadasterName { get; init; }
+    public string? BroadcasterName { get; init; }
 
     /// <summary>
     /// The name of the game that the broadcaster is playing or last played. The value is an empty string if the broadcaster has never played a game.

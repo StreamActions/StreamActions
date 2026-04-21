@@ -74,6 +74,9 @@ public sealed record Commercial
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelEditCommercial"/>.</exception>
     /// <remarks>
     /// <para>
+    /// If <paramref name="session"/> is a <see cref="TwitchToken.TokenType.User"/> token, the user ID associated with the token must match <see cref="StartCommercialParameters.BroadcasterId"/>.
+    /// </para>
+    /// <para>
     /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <see cref="StartCommercialParameters.BroadcasterId"/> which includes the <see cref="Scope.ChannelEditCommercial"/> scope.
     /// </para>
     /// <para>

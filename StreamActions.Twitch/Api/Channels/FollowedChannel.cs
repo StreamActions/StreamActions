@@ -51,7 +51,7 @@ public sealed record FollowedChannel
     /// The broadcaster's display name.
     /// </summary>
     [JsonPropertyName("broadcaster_name")]
-    public string? BroadasterName { get; init; }
+    public string? BroadcasterName { get; init; }
 
     /// <summary>
     /// The UTC timestamp when the user started following the broadcaster.
