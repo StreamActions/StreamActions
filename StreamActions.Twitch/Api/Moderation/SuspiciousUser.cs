@@ -212,7 +212,7 @@ public sealed record SuspiciousUser
     /// <param name="broadcasterId">The user ID of the broadcaster, indicating the channel where the status is being removed.</param>
     /// <param name="moderatorId">The user ID of the moderator who is removing the status.</param>
     /// <param name="userId">The ID of the user having the suspicious status removed.</param>
-    /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="SuspiciousUser"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/>, <paramref name="moderatorId"/>, or <paramref name="userId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorManageSuspiciousUsers"/>.</exception>
@@ -242,7 +242,7 @@ public sealed record SuspiciousUser
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<JsonApiResponse?> RemoveSuspiciousStatus(TwitchSession session, string broadcasterId, string moderatorId, string userId)
+    public static async Task<ResponseData<SuspiciousUser>?> RemoveSuspiciousStatus(TwitchSession session, string broadcasterId, string moderatorId, string userId)
     {
         if (session is null)
         {
@@ -268,6 +268,6 @@ public sealed record SuspiciousUser
 
         Uri uri = Util.BuildUri(new("/moderation/suspicious_users"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId }, { "user_id", userId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<SuspiciousUser>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
