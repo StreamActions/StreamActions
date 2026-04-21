@@ -17,3 +17,9 @@ This file contains instructions for Generative AI Agents when creating or editin
 - If a method has a parameter named `first`, do not throw an exception if it is out of range, instead use `Math.Clamp`
 - Add remarks to the XMLDoc of methods to document the HTTP return codes, in a similar style to `GetGames` in `StreamActions.Twitch/Api/Games/Game.cs`
 - Use the descriptions specified for `GetGames` in `StreamActions.Twitch/Api/Games/Game.cs` for HTTP 400 and 401 when writing XMLDoc
+- When a Twitch API endpoint supports both app and user tokens, use `session.RequireUserOrAppToken`. In this case, remove the `<exception cref="TokenTypeException">` tag from the XML documentation and document App token specific scope or moderator requirements in the `<remarks>` section.
+- For Twitch API methods that strictly require a User access token, the XML documentation must include an `<exception cref="TokenTypeException">` tag and a remark stating: `This ID must match the user ID in the access token.` (if the endpoint requires input IDs like `broadcaster_id` or `moderator_id` to match the token subject).
+- Always include `<exception cref="TwitchScopeMissingException">` in the XML documentation for any API method that validates authorization scopes using `session.RequireUserToken` or `session.RequireUserOrAppToken`.
+- Token scope validation methods in `TwitchSession` (such as `RequireUserToken` and `RequireUserOrAppToken`) use OR logic, meaning they throw an exception only if none of the provided scopes are present in the token.
+- C# records in `StreamActions.Twitch/Api` and its sub-folders should be sealed, except for the `ResponseData` record and any records that are abstract or serve as a base for inheritance.
+- All thrown exceptions must be logged using the `.Log(TwitchApi.GetLogger())` extension method.

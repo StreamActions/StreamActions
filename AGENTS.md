@@ -48,3 +48,24 @@ This file contains instructions for Generative AI Agents, including, but not lim
 - For `ArgumentOutOfRangeException`, use the style in `GetGames` of `StreamActions.Twitch/Api/Games/Game.cs`, including using the `actualValue` argument
 - The `paramName` argument is always required for exceptions which have it, and should always use `nameof` to insert the parameter name
 - For the `paramName` argument of exceptions, use the same style as the `ArgumentNullException` of `GetGames` in `StreamActions.Twitch/Api/Games/Game.cs` if the exception is being thrown based on the combined check of multiple parameters
+- Use `[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]` on properties in a data model that are used for identification in GET requests (e.g., as route or query parameters) but should not be included in the body of POST or PATCH/PUT update requests.
+- For enums representing values that are not PascalCase (e.g., snake_case or specific string constants), use `JsonCustomEnumConverter` from `StreamActions.Common.Json.Serialization` to ensure correct serialization and deserialization.
+- When a API field represents a duration in seconds, map it to a `long` property suffixed with `Seconds` and provide a secondary `TimeSpan` property that parses the seconds value for easier programmatic use.
+- The `StreamActions.Common.Extensions` namespace contains an extension method for `NameValueCollection` that supports adding `IEnumerable<string>` values.
+- For properties in an API model that represent a GUID, use the `Guid?` type instead of `string?`.
+- Properties in data model records should be nullable and should not use the required modifier to handle potentially missing fields in API responses.
+- Nested record types that model complex objects from an API response should be defined in their own separate files.
+- Data model records should not use the partial modifier.
+- Use the `[JsonPropertyName("json_name")]` attribute on record properties to map from the snake_case JSON field names used by the API to PascalCase C# property names.
+- Always use curly braces for flow control statements (e.g., 'if', 'else'), even for single-line blocks.
+- In XML documentation, the opening and closing `<para>` tags should be on separate lines from their content for readability.
+- In XML documentation, all content within a `<remarks>` tag must be wrapped in `<para>` tags, even if it is a single sentence.
+- Use a plural noun for C# record names when they group multiple related items, such as the `EmoteImages` record which contains several image URLs.
+- Methods that return a collection of items should have a plural name (e.g., `GetChannelEmotes` instead of `GetChannelEmote`).
+- Name C# enums with a plural noun (e.g., `EmoteTypes`) to avoid naming conflicts with properties using that enum type (e.g., `EmoteType`).
+- XML documentation for properties that are conditionally present should explain the condition in the `<summary>` tag, referencing other properties or enums with `<see cref="..."/>`.
+- In C# files, enums should be defined after properties but before methods.
+- Create C# enums for API properties that have a fixed, documented list of valid values.
+- All C# source files should end with a final newline character.
+- XML documentation for methods making HTTP requests should include a `<remarks>` section detailing possible HTTP status codes.
+- If a data model property is not available in all API contexts, document this limitation in a `<remarks>` tag directly on the property.
