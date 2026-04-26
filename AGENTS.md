@@ -69,3 +69,5 @@ This file contains instructions for Generative AI Agents, including, but not lim
 - All C# source files should end with a final newline character.
 - XML documentation for methods making HTTP requests should include a `<remarks>` section detailing possible HTTP status codes.
 - If a data model property is not available in all API contexts, document this limitation in a `<remarks>` tag directly on the property.
+- In XML documentation, use the `<paramref name="parameterName"/>` tag when referring to method parameters within `<remarks>`, `<summary>`, or `<exception>` blocks.
+- The `[Obsolete]` attribute cannot be applied to method parameters; deprecation of parameters should be documented in the method's XML documentation.

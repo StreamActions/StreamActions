@@ -23,3 +23,4 @@ This file contains instructions for Generative AI Agents when creating or editin
 - Token scope validation methods in `TwitchSession` (such as `RequireUserToken` and `RequireUserOrAppToken`) use OR logic, meaning they throw an exception only if none of the provided scopes are present in the token.
 - C# records in `StreamActions.Twitch/Api` and its sub-folders should be sealed, except for the `ResponseData` record and any records that are abstract or serve as a base for inheritance.
 - All thrown exceptions must be logged using the `.Log(TwitchApi.GetLogger())` extension method.
+- For Twitch API endpoints requiring a JSON body for parameters, create a separate record named `[Action]Parameters` (e.g., `AddSuspiciousStatusParameters`) in its own file within the same category folder to model the request body.
