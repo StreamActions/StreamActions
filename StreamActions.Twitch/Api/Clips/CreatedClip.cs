@@ -57,7 +57,6 @@ public sealed record CreatedClip
     /// <param name="broadcasterId">The ID of the broadcaster whose stream you want to create a clip from.</param>
     /// <param name="title">The title of the clip.</param>
     /// <param name="duration">The length of the clip in seconds. Possible values range from 5 to 60 inclusively with a precision of 0.1. The default is 30.</param>
-    /// <param name="hasDelay">A Boolean value that determines whether the API captures the clip at the moment the viewer requests it or after a delay.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="CreatedClip"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="duration"/> is specified and is not between 5 and 60.</exception>
@@ -103,8 +102,7 @@ public sealed record CreatedClip
     /// </para>
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
-    public static async Task<ResponseData<CreatedClip>?> CreateClip(TwitchSession session, string broadcasterId, string? title = null, float? duration = null,
-        bool hasDelay = false)
+    public static async Task<ResponseData<CreatedClip>?> CreateClip(TwitchSession session, string broadcasterId, string? title = null, float? duration = null)
     {
         if (session is null)
         {
@@ -135,11 +133,105 @@ public sealed record CreatedClip
             queryParams.Add("duration", duration.Value.ToString(CultureInfo.InvariantCulture));
         }
 
-#pragma warning disable CS0618 // Type or member is obsolete
-        queryParams.Add("has_delay", hasDelay.ToString(CultureInfo.InvariantCulture).ToLowerInvariant());
-#pragma warning restore CS0618 // Type or member is obsolete
-
         Uri uri = Util.BuildUri(new Uri("/clips", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a clip from a broadcaster's VOD on behalf of the broadcaster or an editor of the channel.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
+    /// <param name="broadcasterId">The user ID for the channel you want to create a clip for.</param>
+    /// <param name="editorId">The user ID of the editor for the channel you want to create a clip for. If using the broadcaster's auth token, this is the same as <paramref name="broadcasterId"/>.</param>
+    /// <param name="vodId">ID of the VOD the user wants to clip.</param>
+    /// <param name="vodOffset">Offset in the VOD to create the clip, in seconds.</param>
+    /// <param name="title">The title of the clip.</param>
+    /// <param name="duration">The length of the clip, in seconds. Precision is 0.1. Defaults to 30. Min: 5 seconds, Max: 60 seconds.</param>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="CreatedClip"/> containing the response.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/>, <paramref name="editorId"/>, <paramref name="vodId"/>, or <paramref name="title"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="duration"/> is specified and is not between 5 and 60.</exception>
+    /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageClips"/> or <see cref="Scope.EditorManageClips"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// If <paramref name="session"/> is a <see cref="TwitchToken.TokenType.User"/> token, <paramref name="editorId"/> must match the user ID in the access token.
+    /// </para>
+    /// <para>
+    /// Response Codes:
+    /// <list type="table">
+    /// <item>
+    /// <term>202 Accepted</term>
+    /// <description>Successfully started the clip process.</description>
+    /// </item>
+    /// <item>
+    /// <term>400 Bad Request</term>
+    /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+    /// </item>
+    /// <item>
+    /// <term>403 Forbidden</term>
+    /// <description>The specified broadcaster has disabled or restricted the ability to capture clips, or the editor is not authorized.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The VOD, broadcaster, or editor was not found.</description>
+    /// </item>
+    /// </list>
+    /// </para>
+    /// </remarks>
+    public static async Task<ResponseData<CreatedClip>?> CreateClipFromVod(TwitchSession session, string broadcasterId, string editorId, string vodId, int vodOffset, string title, float? duration = null)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(editorId))
+        {
+            throw new ArgumentNullException(nameof(editorId)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(vodId))
+        {
+            throw new ArgumentNullException(nameof(vodId)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new ArgumentNullException(nameof(title)).Log(TwitchApi.GetLogger());
+        }
+
+        if (duration.HasValue && (duration.Value < 5 || duration.Value > 60))
+        {
+            throw new ArgumentOutOfRangeException(nameof(duration), duration.Value, "must be between 5 and 60").Log(TwitchApi.GetLogger());
+        }
+
+        session.RequireUserOrAppToken(Scope.ChannelManageClips, Scope.EditorManageClips);
+
+        NameValueCollection queryParams = new()
+        {
+            { "broadcaster_id", broadcasterId },
+            { "editor_id", editorId },
+            { "vod_id", vodId },
+            { "vod_offset", vodOffset.ToString(CultureInfo.InvariantCulture) },
+            { "title", title }
+        };
+
+        if (duration.HasValue)
+        {
+            queryParams.Add("duration", duration.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        Uri uri = Util.BuildUri(new Uri("/videos/clips", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

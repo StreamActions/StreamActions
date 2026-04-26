@@ -62,11 +62,11 @@ public sealed record Warning
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the channel in which the warning will take effect.</param>
     /// <param name="moderatorId">The ID of the twitch user who requested the warning.</param>
-    /// <param name="userId">The ID of the twitch user to be warned.</param>
-    /// <param name="reason">A custom reason for the warning. Max 500 chars.</param>
+    /// <param name="parameters">The <see cref="WarnChatUserParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Warning"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/>, <paramref name="moderatorId"/>, <paramref name="userId"/>, or <paramref name="reason"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="reason"/> contains more than 500 characters.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><see cref="WarnChatUserData.UserId"/> or <see cref="WarnChatUserData.Reason"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="WarnChatUserData.Reason"/> contains more than 500 characters.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorManageWarnings"/>.</exception>
     /// <remarks>
@@ -93,7 +93,7 @@ public sealed record Warning
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
-    /// <description>The user in moderator_id is not one of the broadcaster's moderators.</description>
+    /// <description>The user in <paramref name="moderatorId"/> is not one of the broadcaster's moderators.</description>
     /// </item>
     /// <item>
     /// <term>409 Conflict</term>
@@ -102,7 +102,8 @@ public sealed record Warning
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ResponseData<Warning>?> WarnChatUser(TwitchSession session, string broadcasterId, string moderatorId, string userId, string reason)
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
+    public static async Task<ResponseData<Warning>?> WarnChatUser(TwitchSession session, string broadcasterId, string moderatorId, WarnChatUserParameters parameters)
     {
         if (session is null)
         {
@@ -119,34 +120,35 @@ public sealed record Warning
             throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
         }
 
-        if (string.IsNullOrWhiteSpace(userId))
+        if (parameters is null)
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        if (string.IsNullOrWhiteSpace(reason))
+        if (parameters.Data is null)
         {
-            throw new ArgumentNullException(nameof(reason)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(WarnChatUserParameters.Data)).Log(TwitchApi.GetLogger());
         }
 
-        if (reason.Length > 500)
+        if (string.IsNullOrWhiteSpace(parameters.Data.UserId))
         {
-            throw new ArgumentOutOfRangeException(nameof(reason), reason.Length, "length must be <= 500").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(WarnChatUserData.UserId)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(parameters.Data.Reason))
+        {
+            throw new ArgumentNullException(nameof(WarnChatUserData.Reason)).Log(TwitchApi.GetLogger());
+        }
+
+        if (parameters.Data.Reason.Length > 500)
+        {
+            throw new ArgumentOutOfRangeException(nameof(WarnChatUserData.Reason), parameters.Data.Reason.Length, "length must be <= 500").Log(TwitchApi.GetLogger());
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageWarnings);
 
-        var body = new
-        {
-            data = new
-            {
-                user_id = userId,
-                reason = reason
-            }
-        };
-
         Uri uri = Util.BuildUri(new("/moderation/warnings"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
-        using JsonContent jsonContent = JsonContent.Create(body, options: TwitchApi.SerializerOptions);
+        using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Warning>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

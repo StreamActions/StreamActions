@@ -63,7 +63,7 @@ public sealed record Announcement
     public bool? ForSourceOnly { get; init; }
 
     /// <summary>
-    /// The announcement to make in the broadcaster's chat room.
+    /// The color used to highlight the announcement.
     /// </summary>
     [JsonConverter(typeof(JsonLowerCaseEnumConverter<AnnouncementColor>))]
     public enum AnnouncementColor
