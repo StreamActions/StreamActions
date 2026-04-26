@@ -137,6 +137,12 @@ public sealed record Clip
     public int? VodOffset { get; init; }
 
     /// <summary>
+    /// A Boolean value that indicates if the clip is featured or not.
+    /// </summary>
+    [JsonPropertyName("is_featured")]
+    public bool? IsFeatured { get; init; }
+
+    /// <summary>
     /// Gets one or more video clips that were captured from streams.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
@@ -148,6 +154,7 @@ public sealed record Clip
     /// <param name="first">The maximum number of clips to return per page in the response. Maximum: 100. Default: 20.</param>
     /// <param name="before">The cursor used to get the previous page of results.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
+    /// <param name="isFeatured">A Boolean value that determines whether the response includes featured clips. If <see langword="true"/>, returns only clips that are featured. If <see langword="false"/>, returns only clips that aren't featured. All clips are returned if this parameter is not present.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Clip"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; did not specify a valid value for one of <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="startedAt"/> is <see langword="null"/> while <paramref name="endedAt"/> is defined.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Specified more than one of the mutually exclusive parameters <paramref name="id"/>, <paramref name="broadcasterId"/>, or <paramref name="gameId"/>; <paramref name="id"/> is defined and has more than 100 elements.</exception>
@@ -185,8 +192,9 @@ public sealed record Clip
     /// </list>
     /// </para>
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<Clip>?> GetClips(TwitchSession session, string? broadcasterId = null, string? gameId = null, IEnumerable<string>? id = null, DateTime? startedAt = null,
-        DateTime? endedAt = null, int first = 20, string? before = null, string? after = null)
+        DateTime? endedAt = null, int first = 20, string? before = null, string? after = null, bool? isFeatured = null)
     {
         if (session is null)
         {
@@ -280,6 +288,11 @@ public sealed record Clip
             {
                 queryParams.Add("before", before);
             }
+        }
+
+        if (isFeatured.HasValue)
+        {
+            queryParams.Add("is_featured", isFeatured.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant());
         }
 
         Uri uri = Util.BuildUri(new("/clips"), queryParams);

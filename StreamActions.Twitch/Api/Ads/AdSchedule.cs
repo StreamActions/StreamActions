@@ -92,6 +92,9 @@ public sealed record AdSchedule
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadAds"/>.</exception>
     /// <remarks>
     /// <para>
+    /// If <paramref name="session"/> is a <see cref="TwitchToken.TokenType.User"/> token, the user ID associated with the token must match <paramref name="broadcasterId"/>.
+    /// </para>
+    /// <para>
     /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="broadcasterId"/> which includes the <see cref="Scope.ChannelReadAds"/> scope.
     /// </para>
     /// <para>
@@ -137,6 +140,9 @@ public sealed record AdSchedule
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageAds"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// If <paramref name="session"/> is a <see cref="TwitchToken.TokenType.User"/> token, the user ID associated with the token must match <paramref name="broadcasterId"/>.
+    /// </para>
     /// <para>
     /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="broadcasterId"/> which includes the <see cref="Scope.ChannelManageAds"/> scope.
     /// </para>

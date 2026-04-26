@@ -87,6 +87,12 @@ public sealed partial record Scope
     public static readonly Scope ModeratorManageShoutouts = new("moderator:manage:shoutouts", "Manage a broadcaster's shoutouts.");
 
     /// <summary>
+    /// Manage suspicious users in channels where you have the moderator role.
+    /// </summary>
+    /// <value>moderator:manage:suspicious_users</value>
+    public static readonly Scope ModeratorManageSuspiciousUsers = new("moderator:manage:suspicious_users", "Manage suspicious users in channels where you have the moderator role.");
+
+    /// <summary>
     /// Manage a broadcaster's unban requests.
     /// </summary>
     /// <value>moderator:manage:unban_requests</value>
