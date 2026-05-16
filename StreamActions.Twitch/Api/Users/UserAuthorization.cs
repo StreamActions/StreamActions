@@ -60,10 +60,10 @@ public sealed record UserAuthorization
     /// Gets the authorization scopes that the specified user(s) have granted the application.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="userId">The ID of the user(s) you want to check authorization for. You may specify a maximum of 10 IDs.</param>
+    /// <param name="userIds">The ID of the user(s) you want to check authorization for. You may specify a maximum of 10 IDs.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="UserAuthorization"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="userId"/> is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> has more than 10 elements.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="userIds"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="userIds"/> has more than 10 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
@@ -87,30 +87,29 @@ public sealed record UserAuthorization
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ResponseData<UserAuthorization>?> GetAuthorizationByUser(TwitchSession session, IEnumerable<string> userId)
+    public static async Task<ResponseData<UserAuthorization>?> GetAuthorizationByUser(TwitchSession session, IEnumerable<string> userIds)
     {
         if (session is null)
         {
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        if (userId is null || !userId.Any())
+        if (userIds is null || !userIds.Any())
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userIds)).Log(TwitchApi.GetLogger());
         }
 
-        if (userId.Count() > 10)
+        if (userIds.Count() > 10)
         {
-            throw new ArgumentOutOfRangeException(nameof(userId), userId.Count(), "must have a count <= 10").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(userIds), userIds.Count(), "must have a count <= 10").Log(TwitchApi.GetLogger());
         }
 
         session.RequireAppToken();
 
         NameValueCollection queryParams = [];
-        queryParams.Add("user_id", userId);
+        queryParams.Add("user_id", userIds);
 
-        Uri uri = Util.BuildUri(new("/authorization/users"), queryParams);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/authorization/users"), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UserAuthorization>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
