@@ -33,34 +33,6 @@ namespace StreamActions.Twitch.Api.Users;
 public sealed record UserExtension
 {
     /// <summary>
-    /// The extension types that you can activate for this extension.
-    /// </summary>
-    [JsonConverter(typeof(JsonCustomEnumConverter<UserExtensionTypes>))]
-    public enum UserExtensionTypes
-    {
-        /// <summary>
-        /// Component extension.
-        /// </summary>
-        [JsonCustomEnum("component")]
-        Component,
-        /// <summary>
-        /// Mobile extension.
-        /// </summary>
-        [JsonCustomEnum("mobile")]
-        Mobile,
-        /// <summary>
-        /// Overlay extension.
-        /// </summary>
-        [JsonCustomEnum("overlay")]
-        Overlay,
-        /// <summary>
-        /// Panel extension.
-        /// </summary>
-        [JsonCustomEnum("panel")]
-        Panel
-    }
-
-    /// <summary>
     /// An ID that identifies the extension.
     /// </summary>
     [JsonPropertyName("id")]
@@ -89,6 +61,34 @@ public sealed record UserExtension
     /// </summary>
     [JsonPropertyName("type")]
     public IReadOnlyList<UserExtensionTypes>? Type { get; init; }
+
+    /// <summary>
+    /// The extension types that you can activate for this extension.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<UserExtensionTypes>))]
+    public enum UserExtensionTypes
+    {
+        /// <summary>
+        /// Component extension.
+        /// </summary>
+        [JsonCustomEnum("component")]
+        Component,
+        /// <summary>
+        /// Mobile extension.
+        /// </summary>
+        [JsonCustomEnum("mobile")]
+        Mobile,
+        /// <summary>
+        /// Overlay extension.
+        /// </summary>
+        [JsonCustomEnum("overlay")]
+        Overlay,
+        /// <summary>
+        /// Panel extension.
+        /// </summary>
+        [JsonCustomEnum("panel")]
+        Panel
+    }
 
     /// <summary>
     /// Gets a list of all extensions (both active and inactive) that the broadcaster has installed.

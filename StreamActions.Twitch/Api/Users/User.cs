@@ -227,7 +227,7 @@ namespace StreamActions.Twitch.Api.Users
         /// Updates the specified user's information.
         /// </summary>
         /// <param name="session">The Twitch session.</param>
-        /// <param name="description">The string to update the channel's description to. The description is limited to a maximum of 300 characters.</param>
+        /// <param name="description">The string to update the channel's description to. The description is limited to a maximum of 300 characters. To remove the description, specify an empty string.</param>
         /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="User"/> containing the response, or <see langword="null"/> if the request fails.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="description"/> exceeds 300 characters.</exception>

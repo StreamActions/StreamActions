@@ -20,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -35,6 +36,24 @@ namespace StreamActions.Twitch.Api.Users;
 /// </summary>
 public sealed record BlockedUser
 {
+    /// <summary>
+    /// An ID that identifies the blocked user.
+    /// </summary>
+    [JsonPropertyName("user_id")]
+    public string? UserId { get; init; }
+
+    /// <summary>
+    /// The blocked user's login name.
+    /// </summary>
+    [JsonPropertyName("user_login")]
+    public string? UserLogin { get; init; }
+
+    /// <summary>
+    /// The blocked user's display name.
+    /// </summary>
+    [JsonPropertyName("display_name")]
+    public string? DisplayName { get; init; }
+
     /// <summary>
     /// The reason that the broadcaster is blocking the user.
     /// </summary>
@@ -75,24 +94,6 @@ public sealed record BlockedUser
         [JsonCustomEnum("whisper")]
         Whisper
     }
-
-    /// <summary>
-    /// An ID that identifies the blocked user.
-    /// </summary>
-    [JsonPropertyName("user_id")]
-    public string? UserId { get; init; }
-
-    /// <summary>
-    /// The blocked user's login name.
-    /// </summary>
-    [JsonPropertyName("user_login")]
-    public string? UserLogin { get; init; }
-
-    /// <summary>
-    /// The blocked user's display name.
-    /// </summary>
-    [JsonPropertyName("display_name")]
-    public string? DisplayName { get; init; }
 
     /// <summary>
     /// Gets the list of users that the broadcaster has blocked.
@@ -164,7 +165,7 @@ public sealed record BlockedUser
     /// <param name="targetUserId">The ID of the user to block.</param>
     /// <param name="sourceContext">The location where the harassment took place that is causing the broadcaster to block the user.</param>
     /// <param name="reason">The reason that the broadcaster is blocking the user.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="targetUserId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
@@ -191,7 +192,7 @@ public sealed record BlockedUser
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task BlockUser(TwitchSession session, string targetUserId, BlockSourceContext? sourceContext = null, BlockReason? reason = null)
+    public static async Task<JsonApiResponse?> BlockUser(TwitchSession session, string targetUserId, BlockSourceContext? sourceContext = null, BlockReason? reason = null)
     {
         if (session is null)
         {
@@ -218,7 +219,8 @@ public sealed record BlockedUser
             queryParams.Add("reason", reason.Value.JsonValue());
         }
 
-        _ = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/users/blocks"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/users/blocks"), queryParams), session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -226,7 +228,7 @@ public sealed record BlockedUser
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="targetUserId">The ID of the user to remove from the broadcaster's list of blocked users.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="targetUserId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
@@ -253,7 +255,7 @@ public sealed record BlockedUser
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task UnblockUser(TwitchSession session, string targetUserId)
+    public static async Task<JsonApiResponse?> UnblockUser(TwitchSession session, string targetUserId)
     {
         if (session is null)
         {
@@ -270,6 +272,7 @@ public sealed record BlockedUser
         NameValueCollection queryParams = [];
         queryParams.Add("target_user_id", targetUserId);
 
-        _ = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/users/blocks"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/users/blocks"), queryParams), session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
