@@ -21,6 +21,8 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
+using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -138,6 +140,17 @@ namespace StreamActions.Twitch.Api.Users
         public DateTime? CreatedAt { get; init; }
 
         /// <summary>
+        /// The user's verified email address.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This field is only available if the user access token includes the <see cref="Scope.UserReadEmail"/> scope.
+        /// </para>
+        /// </remarks>
+        [JsonPropertyName("email")]
+        public string? Email { get; init; }
+
+        /// <summary>
         /// Gets information about one or more specified Twitch users.
         /// </summary>
         /// <param name="session">The Twitch session.</param>
@@ -154,7 +167,7 @@ namespace StreamActions.Twitch.Api.Users
         /// <list type="table">
         /// <item>
         /// <term>200 OK</term>
-        /// <description>Successfully retrieved the specified users' information..</description>
+        /// <description>Successfully retrieved the specified users' information.</description>
         /// </item>
         /// <item>
         /// <term>400 Bad Request</term>
@@ -164,8 +177,6 @@ namespace StreamActions.Twitch.Api.Users
         /// <term>401 Unauthorized</term>
         /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
         /// </item>
-        /// </list>
-        /// </para>
         /// </list>
         /// </remarks>
         public static async Task<ResponseData<User>?> GetUsers(TwitchSession session, IEnumerable<string>? ids = null, IEnumerable<string>? logins = null)
@@ -209,6 +220,66 @@ namespace StreamActions.Twitch.Api.Users
             }
 
             HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/users"), queryParameters), session).ConfigureAwait(false);
+            return await response.ReadFromJsonAsync<ResponseData<User>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Updates the specified user's information.
+        /// </summary>
+        /// <param name="session">The Twitch session.</param>
+        /// <param name="description">The string to update the channel's description to. The description is limited to a maximum of 300 characters. To remove the description, specify an empty string.</param>
+        /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="User"/> containing the response, or <see langword="null"/> if the request fails.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="description"/> exceeds 300 characters.</exception>
+        /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> or <see cref="TwitchToken.OAuth"/> is <see langword="null"/> or whitespace.</exception>
+        /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
+        /// <exception cref="TwitchScopeMissingException">Thrown if the <see cref="Scope.UserEdit"/> scope is missing.</exception>
+        /// <remarks>
+        /// <para>
+        /// The user ID in the access token identifies the user whose information you want to update.
+        /// </para>
+        /// <para>
+        /// To include the user's verified email address in the response, the user access token must also include the user:read:email scope.
+        /// </para>
+        /// <para>
+        /// HTTP Response Codes:
+        /// <list type="table">
+        /// <item>
+        /// <term>200 OK</term>
+        /// <description>Successfully updated the specified user's information.</description>
+        /// </item>
+        /// <item>
+        /// <term>400 Bad Request</term>
+        /// <description>The described parameter was missing or invalid.</description>
+        /// </item>
+        /// <item>
+        /// <term>401 Unauthorized</term>
+        /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
+        /// </item>
+        /// </list>
+        /// </para>
+        /// </remarks>
+        public static async Task<ResponseData<User>?> UpdateUser(TwitchSession session, string? description = null)
+        {
+            if (session is null)
+            {
+                throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+            }
+
+            if (description?.Length > 300)
+            {
+                throw new ArgumentOutOfRangeException(nameof(description), description.Length, "The description cannot exceed 300 characters.").Log(TwitchApi.GetLogger());
+            }
+
+            session.RequireUserToken(Scope.UserEdit);
+
+            NameValueCollection queryParameters = [];
+            if (description is not null)
+            {
+                queryParameters.Add("description", description);
+            }
+
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/users"), queryParameters), session).ConfigureAwait(false);
             return await response.ReadFromJsonAsync<ResponseData<User>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
