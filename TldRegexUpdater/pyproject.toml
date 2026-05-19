@@ -5,6 +5,6 @@ description = "Generates the TLD portion of the link detection RegEx to be used 
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.13"
 dependencies = [
-    "idna>=3.4",
+    "idna>=3.15",
     "requests>=2.30.0",
 ]
