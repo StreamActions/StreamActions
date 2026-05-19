@@ -101,10 +101,10 @@ public sealed record BannedUser
     /// <exception cref="ArgumentException"><paramref name="broadcasterId"/> is empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userIds"/> contains more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModerationRead"/> or <see cref="Scope.ModeratorManageBannedUsers"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModerationRead"/>, <see cref="Scope.ModeratorManageBannedUsers"/>, or <see cref="Scope.ModeratorReadBannedUsers"/>.</exception>
     /// <remarks>
     /// <para>
-    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="broadcasterId"/> which includes the <see cref="Scope.ModerationRead"/> or <see cref="Scope.ModeratorManageBannedUsers"/> scope.
+    /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="broadcasterId"/> which includes the <see cref="Scope.ModerationRead"/>, <see cref="Scope.ModeratorManageBannedUsers"/>, or <see cref="Scope.ModeratorReadBannedUsers"/> scope.
     /// </para>
     /// <para>
     /// Response Codes:
@@ -147,7 +147,7 @@ public sealed record BannedUser
             throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserOrAppToken(Scope.ModerationRead, Scope.ModeratorManageBannedUsers);
+        session.RequireUserOrAppToken(Scope.ModerationRead, Scope.ModeratorManageBannedUsers, Scope.ModeratorReadBannedUsers);
 
         NameValueCollection queryParameters = [];
         queryParameters.Add("broadcaster_id", broadcasterId);
@@ -157,8 +157,7 @@ public sealed record BannedUser
             queryParameters.Add("user_id", userIdList);
         }
 
-        first = Math.Clamp(first, 1, 100);
-        queryParameters.Add("first", first.ToString(CultureInfo.InvariantCulture));
+        queryParameters.Add("first", Math.Clamp(first, 1, 100).ToString(CultureInfo.InvariantCulture));
 
         if (!string.IsNullOrWhiteSpace(after))
         {
@@ -170,7 +169,7 @@ public sealed record BannedUser
             queryParameters.Add("before", before);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/banned"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/banned", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<BannedUser>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
