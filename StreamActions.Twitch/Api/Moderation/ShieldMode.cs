@@ -126,7 +126,7 @@ public sealed record ShieldMode
 
         session.RequireUserOrAppToken(Scope.ModeratorReadShieldMode, Scope.ModeratorManageShieldMode);
 
-        Uri uri = Util.BuildUri(new("/moderation/shield_mode"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
+        Uri uri = Util.BuildUri(new("/moderation/shield_mode", UriKind.Relative), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ShieldMode>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -137,6 +137,7 @@ public sealed record ShieldMode
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster whose Shield Mode activation status you want to activate or deactivate.</param>
     /// <param name="moderatorId">The ID of the broadcaster or one of the broadcaster's moderators.</param>
+    /// <param name="parameters">The <see cref="ShieldModeUpdateParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ShieldMode"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="parameters"/> or <see cref="ShieldModeUpdateParameters.IsActive"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
@@ -197,7 +198,7 @@ public sealed record ShieldMode
 
         session.RequireUserOrAppToken(Scope.ModeratorManageShieldMode);
 
-        Uri uri = Util.BuildUri(new("/moderation/shield_mode"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
+        Uri uri = Util.BuildUri(new("/moderation/shield_mode", UriKind.Relative), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ShieldMode>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

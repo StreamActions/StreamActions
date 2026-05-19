@@ -138,6 +138,9 @@ public sealed record SuspiciousUser
     /// If <paramref name="session"/> is a <see cref="TwitchToken.TokenType.User"/> token, <paramref name="moderatorId"/> must match the user ID in the access token.
     /// </para>
     /// <para>
+    /// App token specific scope or moderator requirements: the app must have an authorization from <paramref name="moderatorId"/> which includes the <see cref="Scope.ModeratorManageSuspiciousUsers"/> scope.
+    /// </para>
+    /// <para>
     /// Response Codes:
     /// <list type="table">
     /// <item>
@@ -219,6 +222,9 @@ public sealed record SuspiciousUser
     /// <remarks>
     /// <para>
     /// If <paramref name="session"/> is a <see cref="TwitchToken.TokenType.User"/> token, <paramref name="moderatorId"/> must match the user ID in the access token.
+    /// </para>
+    /// <para>
+    /// App token specific scope or moderator requirements: the app must have an authorization from <paramref name="moderatorId"/> which includes the <see cref="Scope.ModeratorManageSuspiciousUsers"/> scope.
     /// </para>
     /// <para>
     /// Response Codes:
