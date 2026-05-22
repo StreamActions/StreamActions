@@ -131,7 +131,7 @@ public sealed record Moderator
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/moderation/moderators", UriKind.Relative), queryParams);
+        Uri uri = Util.BuildUri(new("/moderation/moderators"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Moderator>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -205,7 +205,7 @@ public sealed record Moderator
             { "user_id", userId }
         };
 
-        Uri uri = Util.BuildUri(new("/moderation/moderators", UriKind.Relative), queryParams);
+        Uri uri = Util.BuildUri(new("/moderation/moderators"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -275,7 +275,7 @@ public sealed record Moderator
             { "user_id", userId }
         };
 
-        Uri uri = Util.BuildUri(new("/moderation/moderators", UriKind.Relative), queryParams);
+        Uri uri = Util.BuildUri(new("/moderation/moderators"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

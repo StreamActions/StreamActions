@@ -133,7 +133,7 @@ public sealed record CreatedClip
             queryParams.Add("duration", duration.Value.ToString(CultureInfo.InvariantCulture));
         }
 
-        Uri uri = Util.BuildUri(new Uri("/clips", UriKind.Relative), queryParams);
+        Uri uri = Util.BuildUri(new("/clips"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -231,7 +231,7 @@ public sealed record CreatedClip
             queryParams.Add("duration", duration.Value.ToString(CultureInfo.InvariantCulture));
         }
 
-        Uri uri = Util.BuildUri(new Uri("/videos/clips", UriKind.Relative), queryParams);
+        Uri uri = Util.BuildUri(new("/videos/clips"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<CreatedClip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

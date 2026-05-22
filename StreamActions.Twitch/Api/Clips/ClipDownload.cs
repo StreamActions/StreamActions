@@ -126,7 +126,7 @@ public sealed record ClipDownload
         };
         queryParams.Add("clip_id", clipId);
 
-        Uri uri = Util.BuildUri(new Uri("/clips/downloads", UriKind.Relative), queryParams);
+        Uri uri = Util.BuildUri(new("/clips/downloads"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ClipDownload>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

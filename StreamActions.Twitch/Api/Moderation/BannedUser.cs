@@ -169,7 +169,7 @@ public sealed record BannedUser
             queryParameters.Add("before", before);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/banned", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/banned"), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<BannedUser>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

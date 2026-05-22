@@ -126,7 +126,7 @@ public sealed record ShieldMode
 
         session.RequireUserOrAppToken(Scope.ModeratorReadShieldMode, Scope.ModeratorManageShieldMode);
 
-        Uri uri = Util.BuildUri(new("/moderation/shield_mode", UriKind.Relative), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
+        Uri uri = Util.BuildUri(new("/moderation/shield_mode"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ShieldMode>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -198,7 +198,7 @@ public sealed record ShieldMode
 
         session.RequireUserOrAppToken(Scope.ModeratorManageShieldMode);
 
-        Uri uri = Util.BuildUri(new("/moderation/shield_mode", UriKind.Relative), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
+        Uri uri = Util.BuildUri(new("/moderation/shield_mode"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ShieldMode>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

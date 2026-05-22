@@ -131,7 +131,7 @@ public sealed record VIP
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/channels/vips", UriKind.Relative), queryParams);
+        Uri uri = Util.BuildUri(new("/channels/vips"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<VIP>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -217,7 +217,7 @@ public sealed record VIP
             { "user_id", userId }
         };
 
-        Uri uri = Util.BuildUri(new("/channels/vips", UriKind.Relative), queryParams);
+        Uri uri = Util.BuildUri(new("/channels/vips"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -300,7 +300,7 @@ public sealed record VIP
             { "user_id", userId }
         };
 
-        Uri uri = Util.BuildUri(new("/channels/vips", UriKind.Relative), queryParams);
+        Uri uri = Util.BuildUri(new("/channels/vips"), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

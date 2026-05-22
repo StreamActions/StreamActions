@@ -302,7 +302,7 @@ public sealed record UnbanRequest
 
         if (parameters.ResolutionText is not null && parameters.ResolutionText.Length > 500)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.ResolutionText), parameters.ResolutionText.Length, "resolution_text must be 500 characters or less.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.ResolutionText.Length, "resolution_text must be 500 characters or less.").Log(TwitchApi.GetLogger());
         }
 
         session.RequireUserToken(Scope.ModeratorManageUnbanRequests);
@@ -314,7 +314,7 @@ public sealed record UnbanRequest
             { "unban_request_id", unbanRequestId }
         };
 
-        Uri uri = Util.BuildUri(new("/moderation/unban_requests", UriKind.Relative), queryParameters);
+        Uri uri = Util.BuildUri(new("/moderation/unban_requests"), queryParameters);
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UnbanRequest>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
