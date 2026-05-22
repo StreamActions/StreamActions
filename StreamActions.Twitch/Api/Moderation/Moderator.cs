@@ -65,10 +65,13 @@ public sealed record Moderator
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="userId"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
-    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModerationRead"/> or <see cref="Scope.ChannelManageModerators"/>.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModerationRead"/>, <see cref="Scope.ChannelManageModerators"/>, or <see cref="Scope.ModeratorReadModerators"/>.</exception>
     /// <remarks>
     /// <para>
     /// This ID must match the user ID in the access token.
+    /// </para>
+    /// <para>
+    /// App token specific scope or moderator requirements: the app must have an authorization from <paramref name="broadcasterId"/> which includes the <see cref="Scope.ModerationRead"/>, <see cref="Scope.ChannelManageModerators"/>, or <see cref="Scope.ModeratorReadModerators"/> scope.
     /// </para>
     /// <para>
     /// Response Codes:
@@ -100,9 +103,10 @@ public sealed record Moderator
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (userId is not null && userId.Count() > 100)
+        List<string> userIdList = userId?.ToList() ?? [];
+        if (userIdList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(userId), userId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(userId), userIdList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
         if (after is not null && string.IsNullOrWhiteSpace(after))
@@ -110,18 +114,16 @@ public sealed record Moderator
             throw new ArgumentNullException(nameof(after)).Log(TwitchApi.GetLogger());
         }
 
-        first = Math.Clamp(first, 1, 100);
-
-        session.RequireUserToken(Scope.ModerationRead, Scope.ChannelManageModerators);
+        session.RequireUserOrAppToken(Scope.ModerationRead, Scope.ChannelManageModerators, Scope.ModeratorReadModerators);
 
         NameValueCollection queryParams = new() {
             { "broadcaster_id", broadcasterId },
-            { "first", first.ToString(CultureInfo.InvariantCulture) }
+            { "first", Math.Clamp(first, 1, 100).ToString(CultureInfo.InvariantCulture) }
         };
 
-        if (userId is not null && userId.Any())
+        if (userIdList.Count > 0)
         {
-            queryParams.Add("user_id", userId);
+            queryParams.Add("user_id", userIdList);
         }
 
         if (after is not null)

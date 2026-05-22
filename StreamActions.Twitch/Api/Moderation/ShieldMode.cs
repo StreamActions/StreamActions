@@ -137,6 +137,7 @@ public sealed record ShieldMode
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster whose Shield Mode activation status you want to activate or deactivate.</param>
     /// <param name="moderatorId">The ID of the broadcaster or one of the broadcaster's moderators.</param>
+    /// <param name="parameters">The <see cref="ShieldModeUpdateParameters"/> with the request parameters.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ShieldMode"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="parameters"/> or <see cref="ShieldModeUpdateParameters.IsActive"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
