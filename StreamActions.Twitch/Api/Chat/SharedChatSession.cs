@@ -17,15 +17,15 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
-using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Exceptions;
-using StreamActions.Twitch.OAuth;
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace StreamActions.Twitch.Api.Chat;
 
@@ -105,7 +105,7 @@ public sealed record SharedChatSession
 
         session.RequireUserOrAppToken();
 
-        Uri uri = Util.BuildUri(new("/chat/shared_chat/session"), new() { { "broadcaster_id", broadcasterId } });
+        Uri uri = Util.BuildUri(new("/shared_chat/session"), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<SharedChatSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

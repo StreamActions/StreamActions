@@ -22,9 +22,13 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
+using System;
 using System.Collections.Specialized;
 using System.Globalization;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace StreamActions.Twitch.Api.Chat;
 
@@ -66,6 +70,9 @@ public sealed record Chatter
     /// <remarks>
     /// <para>
     /// If the <see cref="TwitchToken.OAuth"/> in <paramref name="session"/> is an <see cref="TwitchToken.TokenType.App"/> token, this endpoint additionally requires the app to have an authorization from <paramref name="moderatorId"/> which includes the <see cref="Scope.ModeratorReadChatters"/> scope.
+    /// </para>
+    /// <para>
+    /// If <paramref name="session"/> is a <see cref="TwitchToken.TokenType.User"/> token, <paramref name="moderatorId"/> must match the user ID in the access token.
     /// </para>
     /// <para>
     /// There is a delay between when users join and leave a chat and when the list is updated accordingly.
