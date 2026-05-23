@@ -21,8 +21,11 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
+using System;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
 namespace StreamActions.Twitch.Api.Chat;
 
@@ -35,7 +38,7 @@ public sealed record SendChat
     /// The message id for the message that was sent.
     /// </summary>
     [JsonPropertyName("message_id")]
-    public Guid? MessageId { get; init; }
+    public string? MessageId { get; init; }
 
     /// <summary>
     /// If the message passed all checks and was sent.
@@ -57,7 +60,6 @@ public sealed record SendChat
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="SendChat"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentNullException"><see cref="SendChatParameters.BroadcasterId"/>, <see cref="SendChatParameters.SenderId"/>, or <see cref="SendChatParameters.Message"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="ArgumentNullException"><see cref="SendChatParameters.ReplyParentMessageId"/> is specified and is equal to <see cref="Guid.Empty"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="SendChatParameters.Message"/> contains more than 500 characters.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><see cref="SendChatParameters.ForSourceOnly"/> is not <see langword="null"/> and <paramref name="session"/> is a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
@@ -130,7 +132,7 @@ public sealed record SendChat
             throw new ArgumentNullException(nameof(parameters.Message)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.ReplyParentMessageId.HasValue && parameters.ReplyParentMessageId.Value == Guid.Empty)
+        if (parameters.ReplyParentMessageId is not null && string.IsNullOrWhiteSpace(parameters.ReplyParentMessageId))
         {
             throw new ArgumentNullException(nameof(parameters.ReplyParentMessageId)).Log(TwitchApi.GetLogger());
         }
@@ -145,7 +147,14 @@ public sealed record SendChat
             throw new ArgumentOutOfRangeException(nameof(parameters.ForSourceOnly), "must be null when using a user token").Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserOrAppToken(Scope.UserWriteChat);
+        if (parameters.Pin == true)
+        {
+            session.RequireUserOrAppToken(Scope.UserWriteChat, Scope.ModeratorManageChatMessages);
+        }
+        else
+        {
+            session.RequireUserOrAppToken(Scope.UserWriteChat);
+        }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/chat/messages"), session, content).ConfigureAwait(false);

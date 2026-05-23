@@ -50,7 +50,7 @@ public sealed record SendChatParameters
     /// </summary>
     [JsonPropertyName("reply_parent_message_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Guid? ReplyParentMessageId { get; init; }
+    public string? ReplyParentMessageId { get; init; }
 
     /// <summary>
     /// Determines if the chat message is sent only to the source channel (defined by <see cref="BroadcasterId"/>) during a shared chat session.
@@ -62,6 +62,24 @@ public sealed record SendChatParameters
     [JsonPropertyName("for_source_only")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? ForSourceOnly { get; init; }
+
+    /// <summary>
+    /// If true, the message will be sent and immediately pinned. Default: false.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Cannot be combined with <see cref="ReplyParentMessageId"/> or <see cref="ForSourceOnly"/>.
+    /// </para>
+    /// <para>
+    /// When <see cref="Pin"/> is true, additionally requires the <see cref="OAuth.Scope.ModeratorManageChatMessages"/> scope and the sender must be the broadcaster or a moderator.
+    /// </para>
+    /// <para>
+    /// Messages pinned via this endpoint are always pinned for 20 minutes. If the pin fails, the message is not sent.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("pin")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Pin { get; init; }
 
     /// <summary>
     /// Converts a given message into a <c>/me</c> message.
@@ -77,7 +95,7 @@ public sealed record SendChatParameters
 
         if (message.StartsWith("/me "))
         {
-            message = message.Substring(2);
+            message = message.Substring(4);
         }
 
         return char.ConvertFromUtf32(1) + "ACTION " + message + char.ConvertFromUtf32(1);

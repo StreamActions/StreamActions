@@ -23,7 +23,10 @@ using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
+using System;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.Threading.Tasks;
 
 namespace StreamActions.Twitch.Api.Chat;
 
@@ -96,8 +99,6 @@ public sealed record Shoutout
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserOrAppToken(Scope.ModeratorManageShoutouts);
-
         if (string.IsNullOrWhiteSpace(fromBroadcasterId))
         {
             throw new ArgumentNullException(nameof(fromBroadcasterId)).Log(TwitchApi.GetLogger());
@@ -113,7 +114,9 @@ public sealed record Shoutout
             throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/chat/shoutouts"), new() { { "from_user_id", fromBroadcasterId }, { "to_user_id", toBroadcasterId }, { "moderator_id", moderatorId } });
+        session.RequireUserOrAppToken(Scope.ModeratorManageShoutouts);
+
+        Uri uri = Util.BuildUri(new("/chat/shoutouts"), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId }, { "moderator_id", moderatorId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
