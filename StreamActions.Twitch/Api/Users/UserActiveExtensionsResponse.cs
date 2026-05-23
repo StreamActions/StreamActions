@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Users;

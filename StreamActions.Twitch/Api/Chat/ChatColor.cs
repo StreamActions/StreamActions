@@ -24,14 +24,9 @@ using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
-using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace StreamActions.Twitch.Api.Chat;
 

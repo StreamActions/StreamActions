@@ -23,7 +23,6 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Chat;

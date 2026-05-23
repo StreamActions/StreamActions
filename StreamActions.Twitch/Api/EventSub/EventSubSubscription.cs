@@ -256,7 +256,8 @@ public sealed record EventSubSubscription
             if (!string.IsNullOrWhiteSpace(userId))
             {
                 throw new InvalidOperationException(nameof(type) + " can not be used at the same time as " + nameof(userId)).Log(TwitchApi.GetLogger());
-            } else if (subscriptionId.HasValue)
+            }
+            else if (subscriptionId.HasValue)
             {
                 throw new InvalidOperationException(nameof(type) + " can not be used at the same time as " + nameof(subscriptionId)).Log(TwitchApi.GetLogger());
             }

@@ -31,17 +31,4 @@
     <ProjectReference Include="..\StreamActions.Common\StreamActions.Common.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Api\Entitlements\" />
-    <Folder Include="Api\Extensions\" />
-    <Folder Include="Api\Games\" />
-    <Folder Include="Api\HypeTrain\" />
-    <Folder Include="Api\Users\" />
-    <Folder Include="Api\Teams\" />
-    <Folder Include="Api\Streams\" />
-    <Folder Include="Api\Search\" />
-    <Folder Include="Api\Schedule\" />
-    <Folder Include="Api\Predictions\" />
-  </ItemGroup>
-
 </Project>
