@@ -48,7 +48,7 @@ public sealed record ExtensionTransaction
     /// <summary>
     /// The ID of the broadcaster that owns the channel where the transaction occurred.
     /// </summary>
-    [JsonPropertyName("bradcaster_id")]
+    [JsonPropertyName("broadcaster_id")]
     public string? BroadcasterId { get; init; }
 
     /// <summary>

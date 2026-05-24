@@ -21,19 +21,25 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.Bits;
 
 /// <summary>
-/// Represents an image set in <see cref="CheermoteImageThemes"/>.
+/// The settings used to determine whether to apply a cooldown period between redemptions and the length of the cooldown.
 /// </summary>
-public sealed record CheermoteImageSet
+public sealed record CustomPowerUpGlobalCooldownSetting
 {
     /// <summary>
-    /// The <see cref="CheermoteImageUris"/> for the animated version of the cheermote.
+    /// A Boolean value that determines whether to apply a cooldown period. Is true if a cooldown period is enabled.
     /// </summary>
-    [JsonPropertyName("animated")]
-    public CheermoteImageUris? Animated { get; init; }
+    [JsonPropertyName("is_enabled")]
+    public bool? IsEnabled { get; init; }
 
     /// <summary>
-    /// The <see cref="CheermoteImageUris"/> for the static version of the cheermote.
+    /// The cooldown period, in seconds.
     /// </summary>
-    [JsonPropertyName("static")]
-    public CheermoteImageUris? Static { get; init; }
+    [JsonPropertyName("global_cooldown_seconds")]
+    public long? GlobalCooldownSeconds { get; init; }
+
+    /// <summary>
+    /// The cooldown period.
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan? GlobalCooldown => this.GlobalCooldownSeconds.HasValue ? TimeSpan.FromSeconds(this.GlobalCooldownSeconds.Value) : null;
 }

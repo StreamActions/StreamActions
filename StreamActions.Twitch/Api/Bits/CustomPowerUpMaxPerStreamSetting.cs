@@ -21,19 +21,19 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.Api.Bits;
 
 /// <summary>
-/// Represents an image set in <see cref="CheermoteImageThemes"/>.
+/// The settings used to determine whether to apply a maximum to the number of redemptions allowed per live stream.
 /// </summary>
-public sealed record CheermoteImageSet
+public sealed record CustomPowerUpMaxPerStreamSetting
 {
     /// <summary>
-    /// The <see cref="CheermoteImageUris"/> for the animated version of the cheermote.
+    /// A Boolean value that determines whether the custom Power-up applies a limit on the number of redemptions allowed per live stream. Is true if the custom Power-up applies a limit.
     /// </summary>
-    [JsonPropertyName("animated")]
-    public CheermoteImageUris? Animated { get; init; }
+    [JsonPropertyName("is_enabled")]
+    public bool? IsEnabled { get; init; }
 
     /// <summary>
-    /// The <see cref="CheermoteImageUris"/> for the static version of the cheermote.
+    /// The maximum number of redemptions allowed per live stream.
     /// </summary>
-    [JsonPropertyName("static")]
-    public CheermoteImageUris? Static { get; init; }
+    [JsonPropertyName("max_per_stream")]
+    public long? MaxPerStream { get; init; }
 }
