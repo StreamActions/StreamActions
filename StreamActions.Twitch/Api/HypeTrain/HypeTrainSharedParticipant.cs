@@ -18,22 +18,28 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Bits;
+namespace StreamActions.Twitch.Api.HypeTrain;
 
 /// <summary>
-/// Represents an image set in <see cref="CheermoteImageThemes"/>.
+/// Represents a participant in a shared Hype Train.
 /// </summary>
-public sealed record CheermoteImageSet
+public sealed record HypeTrainSharedParticipant
 {
     /// <summary>
-    /// The <see cref="CheermoteImageUris"/> for the animated version of the cheermote.
+    /// The broadcaster ID.
     /// </summary>
-    [JsonPropertyName("animated")]
-    public CheermoteImageUris? Animated { get; init; }
+    [JsonPropertyName("broadcaster_id")]
+    public string? BroadcasterId { get; init; }
 
     /// <summary>
-    /// The <see cref="CheermoteImageUris"/> for the static version of the cheermote.
+    /// The broadcaster login.
     /// </summary>
-    [JsonPropertyName("static")]
-    public CheermoteImageUris? Static { get; init; }
+    [JsonPropertyName("broadcaster_login")]
+    public string? BroadcasterLogin { get; init; }
+
+    /// <summary>
+    /// The broadcaster display name.
+    /// </summary>
+    [JsonPropertyName("broadcaster_name")]
+    public string? BroadcasterName { get; init; }
 }
