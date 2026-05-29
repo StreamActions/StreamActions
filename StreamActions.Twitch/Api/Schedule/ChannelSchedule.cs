@@ -19,6 +19,7 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -225,7 +226,7 @@ public sealed record ChannelSchedule
     /// <param name="vacationStartTime">The UTC date and time of when the broadcaster's vacation starts.</param>
     /// <param name="vacationEndTime">The UTC date and time of when the broadcaster's vacation ends.</param>
     /// <param name="timezone">The time zone that the broadcaster broadcasts from.</param>
-    /// <returns>An <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <returns>A <see cref="JsonApiResponse"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException">
     /// <para>
     /// <paramref name="session"/> is <see langword="null"/>.
@@ -246,6 +247,9 @@ public sealed record ChannelSchedule
     /// </para>
     /// </exception>
     /// <remarks>
+    /// <para>
+    /// The <paramref name="timezone"/> must be specified using IANA time zone database format.
+    /// </para>
     /// <para>
     /// This ID must match the user ID in the access token.
     /// </para>
@@ -271,7 +275,7 @@ public sealed record ChannelSchedule
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task UpdateChannelStreamSchedule(TwitchSession session, string broadcasterId, bool? isVacationEnabled = null, DateTime? vacationStartTime = null, DateTime? vacationEndTime = null, string? timezone = null)
+    public static async Task<JsonApiResponse?> UpdateChannelStreamSchedule(TwitchSession session, string broadcasterId, bool? isVacationEnabled = null, DateTime? vacationStartTime = null, DateTime? vacationEndTime = null, string? timezone = null)
     {
         if (session is null)
         {
@@ -308,7 +312,8 @@ public sealed record ChannelSchedule
             queryParameters.Add("timezone", timezone);
         }
 
-        _ = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/schedule/settings"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/schedule/settings"), queryParameters), session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -494,7 +499,7 @@ public sealed record ChannelSchedule
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster that owns the streaming schedule. This ID must match the user ID in the user access token.</param>
     /// <param name="segmentId">The ID of the broadcast segment to remove.</param>
-    /// <returns>An <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <returns>A <see cref="JsonApiResponse"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException">
     /// <para>
     /// <paramref name="session"/> is <see langword="null"/>.
@@ -540,7 +545,7 @@ public sealed record ChannelSchedule
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task DeleteChannelStreamScheduleSegment(TwitchSession session, string broadcasterId, string segmentId)
+    public static async Task<JsonApiResponse?> DeleteChannelStreamScheduleSegment(TwitchSession session, string broadcasterId, string segmentId)
     {
         if (session is null)
         {
@@ -563,6 +568,7 @@ public sealed record ChannelSchedule
         queryParameters.Add("broadcaster_id", broadcasterId);
         queryParameters.Add("id", segmentId);
 
-        _ = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/schedule/segment"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/schedule/segment"), queryParameters), session).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
