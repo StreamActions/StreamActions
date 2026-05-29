@@ -144,6 +144,11 @@ public sealed record SendChat
             throw new ArgumentOutOfRangeException(nameof(parameters.ForSourceOnly), "must be null when using a user token").Log(TwitchApi.GetLogger());
         }
 
+        if (parameters.Pin == true && (!string.IsNullOrWhiteSpace(parameters.ReplyParentMessageId) || parameters.ForSourceOnly.HasValue))
+        {
+            throw new ArgumentOutOfRangeException(nameof(parameters.Pin), parameters.Pin, "cannot be combined with ReplyParentMessageId or ForSourceOnly").Log(TwitchApi.GetLogger());
+        }
+
         if (parameters.Pin == true)
         {
             session.RequireUserOrAppToken(Scope.UserWriteChat, Scope.ModeratorManageChatMessages);

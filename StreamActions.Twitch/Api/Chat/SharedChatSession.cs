@@ -101,8 +101,7 @@ public sealed record SharedChatSession
 
         session.RequireUserOrAppToken();
 
-        Uri uri = Util.BuildUri(new("/shared_chat/session"), new() { { "broadcaster_id", broadcasterId } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/shared_chat/session"), new() { { "broadcaster_id", broadcasterId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<SharedChatSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

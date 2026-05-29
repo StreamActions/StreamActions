@@ -57,12 +57,6 @@ public sealed record ChatSettings
     [JsonPropertyName("follower_mode_duration")]
     public int? FollowerModeDuration { get; init; }
 
-    /// <summary>
-    /// The moderator's ID.
-    /// </summary>
-    [JsonPropertyName("moderator_id")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ModeratorId { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether the broadcaster adds a short delay before chat messages appear in the chat room.
@@ -99,6 +93,16 @@ public sealed record ChatSettings
     /// </summary>
     [JsonPropertyName("unique_chat_mode")]
     public bool? UniqueChatMode { get; init; }
+
+    /// <summary>
+    /// The moderator's ID.
+    /// </summary>
+    /// <remarks>
+    /// The response includes this field only if the request specifies a user access token that includes the <see cref="Scope.ModeratorReadChatSettings"/> scope.
+    /// </remarks>
+    [JsonPropertyName("moderator_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ModeratorId { get; init; }
 
     /// <summary>
     /// Gets the broadcaster's chat settings.
@@ -151,8 +155,7 @@ public sealed record ChatSettings
             query.Add("moderator_id", moderatorId);
         }
 
-        Uri uri = Util.BuildUri(new("/chat/settings"), query);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/settings"), query), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -234,8 +237,7 @@ public sealed record ChatSettings
         };
 
         using HttpContent content = JsonContent.Create(settings, options: TwitchApi.SerializerOptions);
-        Uri uri = Util.BuildUri(new("/chat/settings"), query);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/chat/settings"), query), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

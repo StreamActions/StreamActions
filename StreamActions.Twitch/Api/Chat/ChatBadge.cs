@@ -83,8 +83,7 @@ public sealed record ChatBadge
 
         session.RequireUserOrAppToken();
 
-        Uri uri = Util.BuildUri(new("/chat/badges"), new() { { "broadcaster_id", broadcasterId } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/badges"), new() { { "broadcaster_id", broadcasterId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatBadge>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -119,8 +118,7 @@ public sealed record ChatBadge
 
         session.RequireUserOrAppToken();
 
-        Uri uri = Util.BuildUri(new("/chat/badges/global"));
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/badges/global")), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatBadge>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

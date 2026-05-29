@@ -142,7 +142,7 @@ public sealed record PinnedChatMessage
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ResponseData<PinnedChatMessage>?> GetPinnedChatMessage(TwitchSession session, string broadcasterId, string moderatorId)
+    public static async Task<ResponseData<PinnedChatMessage>?> GetPinnedChatMessages(TwitchSession session, string broadcasterId, string moderatorId)
     {
         if (session is null)
         {
@@ -165,9 +165,7 @@ public sealed record PinnedChatMessage
         queryParameters.Add("broadcaster_id", broadcasterId);
         queryParameters.Add("moderator_id", moderatorId);
 
-        Uri requestUri = Util.BuildUri(new("/chat/pins"), queryParameters);
-
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/pins"), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<PinnedChatMessage>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -212,7 +210,7 @@ public sealed record PinnedChatMessage
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<JsonApiResponse?> PinChatMessage(TwitchSession session, string broadcasterId, string moderatorId, string messageId, int? durationSeconds = null)
+    public static async Task<JsonApiResponse?> PinChatMessage(TwitchSession session, string broadcasterId, string moderatorId, string messageId, int durationSeconds = 30)
     {
         if (session is null)
         {
@@ -241,14 +239,9 @@ public sealed record PinnedChatMessage
         queryParameters.Add("moderator_id", moderatorId);
         queryParameters.Add("message_id", messageId);
 
-        if (durationSeconds.HasValue)
-        {
-            queryParameters.Add("duration_seconds", durationSeconds.Value.ToString(CultureInfo.InvariantCulture));
-        }
+        queryParameters.Add("duration_seconds", Math.Clamp(durationSeconds, 30, 1800).ToString(CultureInfo.InvariantCulture));
 
-        Uri requestUri = Util.BuildUri(new("/chat/pins"), queryParameters);
-
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, requestUri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/chat/pins"), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -293,7 +286,7 @@ public sealed record PinnedChatMessage
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<JsonApiResponse?> UpdatePinnedChatMessage(TwitchSession session, string broadcasterId, string moderatorId, string messageId, int? durationSeconds = null)
+    public static async Task<JsonApiResponse?> UpdatePinnedChatMessage(TwitchSession session, string broadcasterId, string moderatorId, string messageId, int durationSeconds = 30)
     {
         if (session is null)
         {
@@ -322,14 +315,9 @@ public sealed record PinnedChatMessage
         queryParameters.Add("moderator_id", moderatorId);
         queryParameters.Add("message_id", messageId);
 
-        if (durationSeconds.HasValue)
-        {
-            queryParameters.Add("duration_seconds", durationSeconds.Value.ToString(CultureInfo.InvariantCulture));
-        }
+        queryParameters.Add("duration_seconds", Math.Clamp(durationSeconds, 30, 1800).ToString(CultureInfo.InvariantCulture));
 
-        Uri requestUri = Util.BuildUri(new("/chat/pins"), queryParameters);
-
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, requestUri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/chat/pins"), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -402,9 +390,7 @@ public sealed record PinnedChatMessage
         queryParameters.Add("moderator_id", moderatorId);
         queryParameters.Add("message_id", messageId);
 
-        Uri requestUri = Util.BuildUri(new("/chat/pins"), queryParameters);
-
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, requestUri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/chat/pins"), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
