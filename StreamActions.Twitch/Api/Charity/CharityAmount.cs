@@ -30,7 +30,7 @@ public sealed record CharityAmount
     /// For example, the minor units for USD is cents, so if the amount is $5.50 USD, value is set to 550.
     /// </summary>
     [JsonPropertyName("value")]
-    public int? Value { get; init; }
+    public long? Value { get; init; }
 
     /// <summary>
     /// The number of decimal places used by the currency. For example, USD uses two decimal places.

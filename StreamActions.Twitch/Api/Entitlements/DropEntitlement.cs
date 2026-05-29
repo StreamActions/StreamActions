@@ -23,6 +23,7 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -142,11 +143,12 @@ public sealed record DropEntitlement
 
         if (ids is not null)
         {
-            if (ids.Count() > 100)
+            List<string> idsList = ids.ToList();
+            if (idsList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(ids), ids.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(ids), idsList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
             }
-            queryParameters.Add("id", ids);
+            queryParameters.Add("id", idsList);
         }
 
         if (!string.IsNullOrWhiteSpace(userId))
@@ -182,7 +184,7 @@ public sealed record DropEntitlement
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="parameters">The <see cref="UpdateDropsEntitlementsParameters"/> with the request parameters.</param>
-    /// <returns>A <see cref="UpdateDropsEntitlementsResponse"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="UpdateDropsEntitlementsStatus"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; or the token is not valid.</exception>
     /// <remarks>
@@ -204,7 +206,7 @@ public sealed record DropEntitlement
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<UpdateDropsEntitlementsResponse?> UpdateDropsEntitlements(TwitchSession session, UpdateDropsEntitlementsParameters parameters)
+    public static async Task<ResponseData<UpdateDropsEntitlementsStatus>?> UpdateDropsEntitlements(TwitchSession session, UpdateDropsEntitlementsParameters parameters)
     {
         if (session is null)
         {
@@ -219,7 +221,7 @@ public sealed record DropEntitlement
         session.RequireUserOrAppToken();
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/entitlements/drops"), session, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<UpdateDropsEntitlementsResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/entitlements/drops")), session, content).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<UpdateDropsEntitlementsStatus>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
