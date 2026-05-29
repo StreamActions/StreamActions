@@ -16,19 +16,19 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.Api.Common;
+using StreamActions.Common.Net;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Chat;
+namespace StreamActions.Twitch.Api.Entitlements;
 
 /// <summary>
-/// A response for an emote request.
+/// Represents the response for an update Drops entitlements request.
 /// </summary>
-public sealed record EmoteResponse : ResponseData<Emote>
+public sealed record UpdateDropsEntitlementsResponse : JsonApiResponse
 {
     /// <summary>
-    /// A templated URL. Use the values from the id, format, scale, and theme_mode fields to replace the like-named placeholder strings in the templated URL to create a CDN (content delivery network) URL that you use to fetch the emote.
+    /// A list that indicates which entitlements were successfully updated and those that weren't.
     /// </summary>
-    [JsonPropertyName("template")]
-    public string? Template { get; init; }
+    [JsonPropertyName("data")]
+    public IReadOnlyList<UpdateDropsEntitlementsStatus>? Data { get; init; }
 }

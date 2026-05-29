@@ -58,10 +58,10 @@ public sealed record Chatter
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster whose list of chatters you want to get.</param>
     /// <param name="moderatorId">The ID of the broadcaster or one of the broadcaster's moderators.</param>
-    /// <param name="first">The maximum number of items to return per page in the response. Minimum: 1. Maximum: 1,000.</param>
+    /// <param name="first">The maximum number of items to return per page in the response. Minimum: 1. Maximum: 1,000. Default: 100.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Chatter"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="after"/> is not null, but is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorReadChatters"/>.</exception>
     /// <remarks>
@@ -113,11 +113,6 @@ public sealed record Chatter
             throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
         }
 
-        if (after is not null && string.IsNullOrWhiteSpace(after))
-        {
-            throw new ArgumentNullException(nameof(after)).Log(TwitchApi.GetLogger());
-        }
-
         first = Math.Clamp(first, 1, 1000);
 
         session.RequireUserOrAppToken(Scope.ModeratorReadChatters);
@@ -128,13 +123,12 @@ public sealed record Chatter
             { "first", first.ToString(CultureInfo.InvariantCulture) }
         };
 
-        if (after is not null)
+        if (!string.IsNullOrWhiteSpace(after))
         {
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/chat/chatters"), queryParams);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/chatters"), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Chatter>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

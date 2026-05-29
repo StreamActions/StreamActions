@@ -47,7 +47,8 @@ public sealed record Announcement
     /// The color used to highlight the announcement.
     /// </summary>
     [JsonPropertyName("color")]
-    public AnnouncementColor Color { get; init; } = AnnouncementColor.Primary;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AnnouncementColor? Color { get; init; }
 
     /// <summary>
     /// Determines if the chat announcement is sent only to the source channel (defined by broadcaster_id) during a shared chat session.
@@ -56,6 +57,9 @@ public sealed record Announcement
     /// <remarks>
     /// <para>
     /// This parameter can only be set when utilizing an <see cref="TwitchToken.TokenType.App"/> Access Token. It cannot be specified when a <see cref="TwitchToken.TokenType.User"/> Access Token is used.
+    /// </para>
+    /// <para>
+    /// The default value when using an App Access Token is <see langword="true"/>. If you prefer to send an announcement to all channels in a shared chat session, set this parameter to <see langword="false"/>.
     /// </para>
     /// </remarks>
     [JsonPropertyName("for_source_only")]

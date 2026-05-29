@@ -57,7 +57,12 @@ public sealed record SendChatParameters
     /// This has no effect if the message is not sent during a shared chat session.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// This parameter is only usable when using an <see cref="TwitchToken.TokenType.App"/> token, it MUST be set to <see langword="null"/> when using a <see cref="TwitchToken.TokenType.User"/> token.
+    /// </para>
+    /// <para>
+    /// If this parameter is not set, the default value when using an App Access Token is <see langword="false"/>. On May 19, 2025 the default value for this parameter will be updated to <see langword="true"/>, and chat messages sent using an App Access Token will only be shared with the source channel by default.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("for_source_only")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

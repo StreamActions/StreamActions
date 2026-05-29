@@ -40,6 +40,15 @@ public sealed record Raid
     public DateTime? CreatedAt { get; init; }
 
     /// <summary>
+    /// A Boolean value that indicates whether the channel being raided contains mature content.
+    /// </summary>
+    /// <remarks>
+    /// This field is deprecated and returns only <see langword="false"/>.
+    /// </remarks>
+    [JsonPropertyName("is_mature")]
+    public bool? IsMature { get; init; }
+
+    /// <summary>
     /// Raid another channel by sending the broadcaster's viewers to the targeted channel.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
@@ -121,8 +130,7 @@ public sealed record Raid
             throw new ArgumentNullException(nameof(toBroadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/raids"), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/raids"), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Raid>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -186,8 +194,7 @@ public sealed record Raid
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/raids"), new() { { "broadcaster_id", broadcasterId } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/raids"), new() { { "broadcaster_id", broadcasterId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

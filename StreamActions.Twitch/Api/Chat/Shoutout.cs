@@ -113,8 +113,7 @@ public sealed record Shoutout
 
         session.RequireUserOrAppToken(Scope.ModeratorManageShoutouts);
 
-        Uri uri = Util.BuildUri(new("/chat/shoutouts"), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId }, { "moderator_id", moderatorId } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/chat/shoutouts"), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId }, { "moderator_id", moderatorId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

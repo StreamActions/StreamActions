@@ -23,6 +23,7 @@ using StreamActions.Common.Logger;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
+using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Chat;
@@ -307,8 +308,7 @@ public sealed record Emote
 
         session.RequireUserOrAppToken();
 
-        Uri uri = Util.BuildUri(new("/chat/emotes"), new() { { "broadcaster_id", broadcasterId } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/emotes"), new() { { "broadcaster_id", broadcasterId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<EmoteResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -346,8 +346,7 @@ public sealed record Emote
 
         session.RequireUserOrAppToken();
 
-        Uri uri = Util.BuildUri(new("/chat/emotes/global"));
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/emotes/global")), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<EmoteResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -407,8 +406,7 @@ public sealed record Emote
             query.Add("emote_set_id", emoteSetId);
         }
 
-        Uri uri = Util.BuildUri(new("/chat/emotes/set"), query);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/emotes/set"), query), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<EmoteResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -475,8 +473,7 @@ public sealed record Emote
             query.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/chat/emotes/user"), query);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/emotes/user"), query), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<EmoteResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
