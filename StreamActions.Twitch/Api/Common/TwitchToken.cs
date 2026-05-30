@@ -56,7 +56,12 @@ public sealed record TwitchToken
         /// <summary>
         /// An App token.
         /// </summary>
-        App
+        App,
+
+        /// <summary>
+        /// A JWT token.
+        /// </summary>
+        Jwt
     }
 
     #endregion Public Enums

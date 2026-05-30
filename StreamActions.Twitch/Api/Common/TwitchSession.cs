@@ -65,6 +65,29 @@ public sealed record TwitchSession : IDisposable
     public void Dispose() => this._refreshLock.Close();
 
     /// <summary>
+    /// Checks if a JWT token is present.
+    /// </summary>
+    /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.Jwt"/>.</exception>
+    public void RequireJwtToken()
+    {
+        if (this.Token is null)
+        {
+            throw new InvalidOperationException(nameof(this.Token) + " is null.").Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(this.Token.OAuth))
+        {
+            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.").Log(TwitchApi.GetLogger());
+        }
+
+        if (this.Token.Type is not TwitchToken.TokenType.Jwt)
+        {
+            throw new TokenTypeException(Enum.GetName(TwitchToken.TokenType.Jwt), Enum.GetName(this.Token.Type ?? TwitchToken.TokenType.Unknown)).Log(TwitchApi.GetLogger());
+        }
+    }
+
+    /// <summary>
     /// Checks if an app token is present.
     /// </summary>
     /// <exception cref="InvalidOperationException"><see cref="Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>

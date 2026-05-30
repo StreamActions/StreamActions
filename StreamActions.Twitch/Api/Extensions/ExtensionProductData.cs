@@ -18,7 +18,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Bits;
+namespace StreamActions.Twitch.Api.Extensions;
 
 /// <summary>
 /// Contains details about the digital product in a <see cref="ExtensionTransaction"/>.
