@@ -39,53 +39,47 @@ public class UtilTests
     [InlineData(-1, false)]
     public void IsNullOrDefault_WithInt_ReturnsCorrectBoolean(int argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
 
-    [Fact]
+    [Theory]
     [Trait("Member", "IsNullOrDefault")]
-    public void IsNullOrDefault_WithClass_ReturnsCorrectBoolean()
-    {
-        object? obj1 = null;
-        object obj2 = new();
+    [MemberData(nameof(ClassTestData))]
+    public void IsNullOrDefault_WithClass_ReturnsCorrectBoolean(object? argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
 
-        Util.IsNullOrDefault(obj1).Should().BeTrue();
-        Util.IsNullOrDefault(obj2).Should().BeFalse();
-    }
+    public static IEnumerable<object?[]> ClassTestData =>
+    [
+        [null, true],
+        [new object(), false]
+    ];
 
-    [Fact]
+    [Theory]
     [Trait("Member", "IsNullOrDefault")]
-    public void IsNullOrDefault_WithStruct_ReturnsCorrectBoolean()
-    {
-        Guid defaultGuid = default;
-        Guid newGuid = Guid.NewGuid();
+    [MemberData(nameof(StructTestData))]
+    public void IsNullOrDefault_WithStruct_ReturnsCorrectBoolean(Guid argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
 
-        Util.IsNullOrDefault(defaultGuid).Should().BeTrue();
-        Util.IsNullOrDefault(newGuid).Should().BeFalse();
-    }
+    public static IEnumerable<object[]> StructTestData =>
+    [
+        [default(Guid), true],
+        [Guid.NewGuid(), false]
+    ];
 
-    [Fact]
+    [Theory]
     [Trait("Member", "IsNullOrDefault")]
-    public void IsNullOrDefault_WithNullableValueType_ReturnsCorrectBoolean()
-    {
-        int? nullInt = null;
-        int? zeroInt = 0;
-        int? oneInt = 1;
+    [InlineData(null, true)]
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    public void IsNullOrDefault_WithNullableValueType_ReturnsCorrectBoolean(int? argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
 
-        Util.IsNullOrDefault(nullInt).Should().BeTrue();
-        Util.IsNullOrDefault(zeroInt).Should().BeFalse();
-        Util.IsNullOrDefault(oneInt).Should().BeFalse();
-    }
-
-    [Fact]
+    [Theory]
     [Trait("Member", "IsNullOrDefault")]
-    public void IsNullOrDefault_WithObjectBoxingValueType_ReturnsCorrectBoolean()
-    {
-        object defaultInt = 0;
-        object nonDefaultInt = 1;
+    [MemberData(nameof(ObjectBoxingTestData))]
+    public void IsNullOrDefault_WithObjectBoxingValueType_ReturnsCorrectBoolean(object argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
 
+    public static IEnumerable<object[]> ObjectBoxingTestData =>
+    [
         // IsNullOrDefault has special logic for boxed value types
         // It checks the underlying runtime type and compares to its default instance
-        Util.IsNullOrDefault(defaultInt).Should().BeTrue();
-        Util.IsNullOrDefault(nonDefaultInt).Should().BeFalse();
-    }
+        [0, true],
+        [1, false]
+    ];
 
     [Theory]
     [Trait("Member", "IsValidHexColor")]
