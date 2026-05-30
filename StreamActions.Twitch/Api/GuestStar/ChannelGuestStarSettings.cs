@@ -121,7 +121,7 @@ public sealed record ChannelGuestStarSettings
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing broadcaster_id or moderator_id.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
@@ -132,7 +132,10 @@ public sealed record ChannelGuestStarSettings
     /// </remarks>
     public static async Task<ResponseData<ChannelGuestStarSettings>?> GetChannelGuestStarSettings(TwitchSession session, string broadcasterId, string moderatorId)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -154,7 +157,7 @@ public sealed record ChannelGuestStarSettings
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/channel_settings"), queryParams), session).ConfigureAwait(false);
 
-            return await response.Content.ReadFromJsonAsync<ResponseData<ChannelGuestStarSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<ChannelGuestStarSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -180,15 +183,21 @@ public sealed record ChannelGuestStarSettings
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing broadcaster_id, invalid slot_count, or invalid group_layout.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// </list>
     /// </para>
     /// </remarks>
     public static async Task<JsonApiResponse?> UpdateChannelGuestStarSettings(TwitchSession session, string broadcasterId, ChannelGuestStarSettingsUpdateParameters parameters)
     {
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentNullException.ThrowIfNull(parameters);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
+        if (parameters is null)
+        {
+            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -204,6 +213,6 @@ public sealed record ChannelGuestStarSettings
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/guest_star/channel_settings"), queryParams), session, content).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

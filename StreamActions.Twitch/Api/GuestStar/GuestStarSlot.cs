@@ -60,11 +60,11 @@ public sealed record GuestStarSlot
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing required parameters or invalid session_id or slot_id.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
-    /// <description>moderator_id is not a guest star moderator.</description>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
@@ -75,7 +75,10 @@ public sealed record GuestStarSlot
     /// </remarks>
     public static async Task<JsonApiResponse?> AssignGuestStarSlot(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string guestId, string slotId)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -114,7 +117,7 @@ public sealed record GuestStarSlot
         };
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/slot"), queryParams), session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -143,14 +146,17 @@ public sealed record GuestStarSlot
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing broadcaster_id, session_id, or slot_id.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// </list>
     /// </para>
     /// </remarks>
     public static async Task<JsonApiResponse?> UpdateGuestStarSlot(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string sourceSlotId, string? destinationSlotId = null)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -188,7 +194,7 @@ public sealed record GuestStarSlot
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/guest_star/slot"), queryParams), session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -219,7 +225,7 @@ public sealed record GuestStarSlot
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing required parameters or invalid session_id or slot_id.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
@@ -234,7 +240,10 @@ public sealed record GuestStarSlot
     /// </remarks>
     public static async Task<JsonApiResponse?> DeleteGuestStarSlot(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string guestId, string slotId, bool? shouldReinviteGuest = null)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -278,7 +287,7 @@ public sealed record GuestStarSlot
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/slot"), queryParams), session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -310,7 +319,7 @@ public sealed record GuestStarSlot
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing required parameters or invalid session_id or slot_id.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
@@ -321,7 +330,10 @@ public sealed record GuestStarSlot
     /// </remarks>
     public static async Task<JsonApiResponse?> UpdateGuestStarSlotSettings(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string slotId, bool? isAudioEnabled = null, bool? isVideoEnabled = null, bool? isLive = null, int? volume = null)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -374,6 +386,6 @@ public sealed record GuestStarSlot
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/guest_star/slot_settings"), queryParams), session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

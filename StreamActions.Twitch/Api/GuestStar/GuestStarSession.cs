@@ -70,18 +70,21 @@ public sealed record GuestStarSession
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing broadcaster_id or moderator_id.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
-    /// <description>moderator_id and user token do not match.</description>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// </list>
     /// </para>
     /// </remarks>
     public static async Task<ResponseData<GuestStarSession>?> GetGuestStarSession(TwitchSession session, string broadcasterId, string moderatorId)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -103,7 +106,7 @@ public sealed record GuestStarSession
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/session"), queryParams), session).ConfigureAwait(false);
 
-            return await response.Content.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -129,11 +132,11 @@ public sealed record GuestStarSession
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing broadcaster_id or session limit reached (1 active call).</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>401 Unauthorized</term>
-    /// <description>Phone verification missing.</description>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
@@ -144,7 +147,10 @@ public sealed record GuestStarSession
     /// </remarks>
     public static async Task<ResponseData<GuestStarSession>?> CreateGuestStarSession(TwitchSession session, string broadcasterId)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -160,7 +166,7 @@ public sealed record GuestStarSession
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/session"), queryParams), session).ConfigureAwait(false);
 
-            return await response.Content.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -187,7 +193,7 @@ public sealed record GuestStarSession
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing or invalid broadcaster_id, missing or invalid session_id, or session has already been ended.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
@@ -198,7 +204,10 @@ public sealed record GuestStarSession
     /// </remarks>
     public static async Task<ResponseData<GuestStarSession>?> EndGuestStarSession(TwitchSession session, string broadcasterId, string sessionId)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -220,6 +229,6 @@ public sealed record GuestStarSession
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/session"), queryParams), session).ConfigureAwait(false);
 
-            return await response.Content.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

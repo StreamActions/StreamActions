@@ -128,14 +128,17 @@ public sealed record GuestStarInvite
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing broadcaster_id or session_id.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// </list>
     /// </para>
     /// </remarks>
     public static async Task<ResponseData<GuestStarInvite>?> GetGuestStarInvites(TwitchSession session, string broadcasterId, string moderatorId, string sessionId)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -163,7 +166,7 @@ public sealed record GuestStarInvite
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/invites"), queryParams), session).ConfigureAwait(false);
 
-            return await response.Content.ReadFromJsonAsync<ResponseData<GuestStarInvite>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<GuestStarInvite>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -191,7 +194,7 @@ public sealed record GuestStarInvite
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing required parameters or invalid session_id.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
@@ -202,7 +205,10 @@ public sealed record GuestStarInvite
     /// </remarks>
     public static async Task<JsonApiResponse?> SendGuestStarInvite(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string guestId)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -235,7 +241,7 @@ public sealed record GuestStarInvite
         };
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/invites"), queryParams), session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -263,7 +269,7 @@ public sealed record GuestStarInvite
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
-    /// <description>Missing required parameters or invalid session_id.</description>
+    /// <description>The described parameter was missing or invalid.</description>
     /// </item>
     /// <item>
     /// <term>404 Not Found</term>
@@ -274,7 +280,10 @@ public sealed record GuestStarInvite
     /// </remarks>
     public static async Task<JsonApiResponse?> DeleteGuestStarInvite(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string guestId)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+        }
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
@@ -307,6 +316,6 @@ public sealed record GuestStarInvite
         };
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/invites"), queryParams), session).ConfigureAwait(false);
-        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
