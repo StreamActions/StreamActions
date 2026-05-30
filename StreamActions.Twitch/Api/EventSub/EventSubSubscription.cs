@@ -189,10 +189,11 @@ public sealed record EventSubSubscription
     /// <param name="type">Filter subscriptions by subscription type.</param>
     /// <param name="userId">Filter subscriptions by a user ID in the condition.</param>
     /// <param name="subscriptionId">Filter to the specified subscription ID, or blank if it does not exist.</param>
+    /// <param name="conduitId">Filter subscriptions by conduit ID.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="EventSubSubscription"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">More than one of <paramref name="status"/>, <paramref name="type"/>, <paramref name="userId"/>, <paramref name="subscriptionId"/> were defined.</exception>
+    /// <exception cref="InvalidOperationException">More than one of <paramref name="status"/>, <paramref name="type"/>, <paramref name="userId"/>, <paramref name="subscriptionId"/>, <paramref name="conduitId"/> were defined.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
@@ -222,7 +223,7 @@ public sealed record EventSubSubscription
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ResponseData<EventSubSubscription>?> GetEventSubSubscriptions(TwitchSession session, SubscriptionStatus? status = null, string? type = null, string? userId = null, Guid? subscriptionId = null, string? after = null)
+    public static async Task<ResponseData<EventSubSubscription>?> GetEventSubSubscriptions(TwitchSession session, SubscriptionStatus? status = null, string? type = null, string? userId = null, Guid? subscriptionId = null, Guid? conduitId = null, string? after = null)
     {
         if (session is null)
         {
@@ -233,51 +234,56 @@ public sealed record EventSubSubscription
 
         NameValueCollection queryParams = [];
 
+        int filterCount = 0;
         if (status.HasValue)
         {
-            if (!string.IsNullOrWhiteSpace(type))
-            {
-                throw new InvalidOperationException(nameof(status) + " can not be used at the same time as " + nameof(type)).Log(TwitchApi.GetLogger());
-            }
-            else if (!string.IsNullOrWhiteSpace(userId))
-            {
-                throw new InvalidOperationException(nameof(status) + " can not be used at the same time as " + nameof(userId)).Log(TwitchApi.GetLogger());
-            }
-            else if (subscriptionId.HasValue)
-            {
-                throw new InvalidOperationException(nameof(status) + " can not be used at the same time as " + nameof(subscriptionId)).Log(TwitchApi.GetLogger());
-            }
+            filterCount++;
+        }
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            filterCount++;
+        }
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            filterCount++;
+        }
+        if (subscriptionId.HasValue)
+        {
+            filterCount++;
+        }
+        if (conduitId.HasValue)
+        {
+            filterCount++;
+        }
 
+        if (filterCount > 1)
+        {
+            throw new InvalidOperationException("Only one of status, type, userId, subscriptionId, or conduitId can be defined at the same time.").Log(TwitchApi.GetLogger());
+        }
+
+        if (status.HasValue)
+        {
             queryParams.Add("status", status.Value.JsonValue());
         }
 
         if (!string.IsNullOrWhiteSpace(type))
         {
-            if (!string.IsNullOrWhiteSpace(userId))
-            {
-                throw new InvalidOperationException(nameof(type) + " can not be used at the same time as " + nameof(userId)).Log(TwitchApi.GetLogger());
-            }
-            else if (subscriptionId.HasValue)
-            {
-                throw new InvalidOperationException(nameof(type) + " can not be used at the same time as " + nameof(subscriptionId)).Log(TwitchApi.GetLogger());
-            }
-
             queryParams.Add("type", type);
         }
 
         if (!string.IsNullOrWhiteSpace(userId))
         {
-            if (subscriptionId.HasValue)
-            {
-                throw new InvalidOperationException(nameof(userId) + " can not be used at the same time as " + nameof(subscriptionId)).Log(TwitchApi.GetLogger());
-            }
-
             queryParams.Add("user_id", userId);
         }
 
         if (subscriptionId.HasValue)
         {
             queryParams.Add("subscription_id", subscriptionId.Value.ToString());
+        }
+
+        if (conduitId.HasValue)
+        {
+            queryParams.Add("conduit_id", conduitId.Value.ToString());
         }
 
         if (!string.IsNullOrWhiteSpace(after))

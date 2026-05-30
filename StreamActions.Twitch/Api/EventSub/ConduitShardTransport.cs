@@ -19,7 +19,7 @@
 using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Conduits;
+namespace StreamActions.Twitch.Api.EventSub;
 
 /// <summary>
 /// Represents the transport details for a conduit shard.
