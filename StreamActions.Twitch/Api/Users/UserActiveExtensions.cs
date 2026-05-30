@@ -71,7 +71,7 @@ public sealed record UserActiveExtensions
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="userId">The ID of the broadcaster whose active extensions you want to get.</param>
-    /// <returns>A <see cref="UserActiveExtensionsResponse"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseDataObject{TDataType}"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> or <see cref="TwitchToken.TokenType.App"/> token.</exception>
@@ -100,7 +100,7 @@ public sealed record UserActiveExtensions
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<UserActiveExtensionsResponse?> GetUserActiveExtensions(TwitchSession session, string? userId = null)
+    public static async Task<ResponseDataObject<UserActiveExtensions>?> GetUserActiveExtensions(TwitchSession session, string? userId = null)
     {
         if (session is null)
         {
@@ -116,7 +116,7 @@ public sealed record UserActiveExtensions
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/users/extensions"), queryParams), session).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<UserActiveExtensionsResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseDataObject<UserActiveExtensions>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -124,7 +124,7 @@ public sealed record UserActiveExtensions
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="parameters">The extensions to update.</param>
-    /// <returns>A <see cref="UserActiveExtensionsResponse"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseDataObject{TDataType}"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="parameters"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
@@ -155,7 +155,7 @@ public sealed record UserActiveExtensions
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<UserActiveExtensionsResponse?> UpdateUserExtensions(TwitchSession session, UpdateUserExtensionsParameters parameters)
+    public static async Task<ResponseDataObject<UserActiveExtensions>?> UpdateUserExtensions(TwitchSession session, UpdateUserExtensionsParameters parameters)
     {
         if (session is null)
         {
@@ -171,6 +171,6 @@ public sealed record UserActiveExtensions
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, new("/users/extensions"), session, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<UserActiveExtensionsResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseDataObject<UserActiveExtensions>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

@@ -74,7 +74,7 @@ public sealed record ChannelSchedule
     /// <param name="startTime">The UTC date and time that identifies when in the broadcaster's schedule to start returning segments.</param>
     /// <param name="first">The maximum number of items to return per page in the response. Minimum: 1. Maximum: 25. Default: 20.</param>
     /// <param name="after">The cursor that identifies the page of results to retrieve.</param>
-    /// <returns>A <see cref="ChannelScheduleResponse"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseDataObject{TDataType}"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException">
     /// <para>
     /// <paramref name="session"/> is <see langword="null"/>.
@@ -116,7 +116,7 @@ public sealed record ChannelSchedule
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ChannelScheduleResponse?> GetChannelStreamSchedule(TwitchSession session, string broadcasterId, IEnumerable<string>? segmentIds = null, DateTime? startTime = null, int first = 20, string? after = null)
+    public static async Task<ResponseDataObject<ChannelSchedule>?> GetChannelStreamSchedule(TwitchSession session, string broadcasterId, IEnumerable<string>? segmentIds = null, DateTime? startTime = null, int first = 20, string? after = null)
     {
         if (session is null)
         {
@@ -158,7 +158,7 @@ public sealed record ChannelSchedule
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/schedule"), queryParameters), session).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<ChannelScheduleResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseDataObject<ChannelSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -322,7 +322,7 @@ public sealed record ChannelSchedule
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster that owns the schedule to add the broadcast segment to. This ID must match the user ID in the user access token.</param>
     /// <param name="parameters">The parameters for the new segment.</param>
-    /// <returns>A <see cref="ChannelScheduleResponse"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseDataObject{TDataType}"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException">
     /// <para>
     /// <paramref name="session"/> is <see langword="null"/>.
@@ -372,7 +372,7 @@ public sealed record ChannelSchedule
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ChannelScheduleResponse?> CreateChannelStreamScheduleSegment(TwitchSession session, string broadcasterId, CreateChannelStreamScheduleSegmentParameters parameters)
+    public static async Task<ResponseDataObject<ChannelSchedule>?> CreateChannelStreamScheduleSegment(TwitchSession session, string broadcasterId, CreateChannelStreamScheduleSegmentParameters parameters)
     {
         if (session is null)
         {
@@ -396,7 +396,7 @@ public sealed record ChannelSchedule
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/schedule/segment"), queryParameters), session, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<ChannelScheduleResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseDataObject<ChannelSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -406,7 +406,7 @@ public sealed record ChannelSchedule
     /// <param name="broadcasterId">The ID of the broadcaster who owns the broadcast segment to update. This ID must match the user ID in the user access token.</param>
     /// <param name="segmentId">The ID of the broadcast segment to update.</param>
     /// <param name="parameters">The parameters to update.</param>
-    /// <returns>A <see cref="ChannelScheduleResponse"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseDataObject{TDataType}"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException">
     /// <para>
     /// <paramref name="session"/> is <see langword="null"/>.
@@ -460,7 +460,7 @@ public sealed record ChannelSchedule
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ChannelScheduleResponse?> UpdateChannelStreamScheduleSegment(TwitchSession session, string broadcasterId, string segmentId, UpdateChannelStreamScheduleSegmentParameters parameters)
+    public static async Task<ResponseDataObject<ChannelSchedule>?> UpdateChannelStreamScheduleSegment(TwitchSession session, string broadcasterId, string segmentId, UpdateChannelStreamScheduleSegmentParameters parameters)
     {
         if (session is null)
         {
@@ -490,7 +490,7 @@ public sealed record ChannelSchedule
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/schedule/segment"), queryParameters), session, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<ChannelScheduleResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseDataObject<ChannelSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
