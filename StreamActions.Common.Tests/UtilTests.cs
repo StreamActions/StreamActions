@@ -88,6 +88,53 @@ public class UtilTests
     }
 
     [Fact]
+    [Trait("Member", "HexColorToColor")]
+    public void HexColorToColor_WithNull_ThrowsArgumentNullException()
+    {
+        // Act
+#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
+        Action act = () => Util.HexColorToColor(null);
+#pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
+
+        // Assert
+        _ = act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Theory]
+    [Trait("Member", "HexColorToColor")]
+    [InlineData("#000000", 0, 0, 0)]
+    [InlineData("#123456", 18, 52, 86)]
+    [InlineData("#ABCDEF", 171, 205, 239)]
+    [InlineData("#FF5733", 255, 87, 51)]
+    [InlineData("#FFFFFF", 255, 255, 255)]
+    [InlineData("#aBcDeF", 171, 205, 239)]
+    public void HexColorToColor_ValidHexColor_ReturnsCorrectColor(string hexColor, int r, int g, int b)
+    {
+        System.Drawing.Color expected = System.Drawing.Color.FromArgb(r, g, b);
+        Util.HexColorToColor(hexColor).Should().Be(expected);
+    }
+
+    [Theory]
+    [Trait("Member", "HexColorToColor")]
+    [InlineData("")]
+    [InlineData("#FF573")]
+    [InlineData("#FF57333")]
+    [InlineData("#F")]
+    [InlineData("#FF")]
+    [InlineData("#FFF")]
+    [InlineData("#FFFF")]
+    [InlineData("#FFFFF")]
+    [InlineData("#GGGGGG")]
+    [InlineData("FF5733")]
+    [InlineData("The hex color is #FF5733 in the middle of this line.")]
+    [InlineData("#FF5733 is at the beginning of this line.")]
+    [InlineData("This line ends with #FF5733.")]
+    public void HexColorToColor_InvalidHexColor_ReturnsEmptyColor(string hexColor)
+    {
+        Util.HexColorToColor(hexColor).Should().Be(System.Drawing.Color.Empty);
+    }
+
+    [Fact]
     [Trait("Member", "BuildUri")]
     public void BuildUri_WithNullBaseUri_ThrowsArgumentNullException()
     {
