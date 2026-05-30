@@ -71,3 +71,12 @@ This file contains instructions for Generative AI Agents, including, but not lim
 - If a data model property is not available in all API contexts, document this limitation in a `<remarks>` tag directly on the property.
 - In XML documentation, use the `<paramref name="parameterName"/>` tag when referring to method parameters within `<remarks>`, `<summary>`, or `<exception>` blocks.
 - The `[Obsolete]` attribute cannot be applied to method parameters; deprecation of parameters should be documented in the method's XML documentation.
+
+## Common rules for `.cs` files when writing tests
+- Use the `Xunit` testing framework for all tests
+- Use the `FluentAssertions` library for all assertions in tests
+- Tag test methods with ` [Trait("Member", "MethodName")]` to indicate which method is being tested, where `MethodName` is the name of the method being tested
+- Use descriptive names for test methods, which should include the name of the method being tested, the scenario being tested, and the expected outcome, separated by underscores (e.g., `GetChannelEmotes_WhenCalledWithValidParameters_ReturnsEmotes`)
+- Prefer using `Theory` and `InlineData` or `MemberData` for tests with multiple scenarios, and use `Fact` for tests with a single scenario
+- Organize tests into regions based on the method being tested, with a region for each method (e.g., `#region GetChannelEmotes`), and place tests for that method within that region
+- When testing for exceptions, use the `FluentAssertions` syntax of `action.Should().Throw<ExceptionType>()` instead of `Assert.Throws<ExceptionType>()`
