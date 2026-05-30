@@ -37,13 +37,11 @@ public static class ListExtensions
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        ArgumentOutOfRangeException.ThrowIfNegative(index);
-
         try
         {
             return source[index];
         }
-        catch (IndexOutOfRangeException)
+        catch (ArgumentOutOfRangeException)
         {
             return defVal;
         }
@@ -64,7 +62,7 @@ public static class ListExtensions
         {
             return string.IsNullOrEmpty(source[index]);
         }
-        catch (IndexOutOfRangeException)
+        catch (ArgumentOutOfRangeException)
         {
             return true;
         }
@@ -85,7 +83,7 @@ public static class ListExtensions
         {
             return string.IsNullOrWhiteSpace(source[index]);
         }
-        catch (IndexOutOfRangeException)
+        catch (ArgumentOutOfRangeException)
         {
             return true;
         }
