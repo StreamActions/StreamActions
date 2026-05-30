@@ -26,7 +26,7 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Bits;
+namespace StreamActions.Twitch.Api.Extensions;
 
 /// <summary>
 /// Sends and represents the response for a request for extension transactions.

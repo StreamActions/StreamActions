@@ -16,37 +16,30 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Bits;
+namespace StreamActions.Twitch.Api.Extensions;
 
 /// <summary>
-/// Contains details about the digital product's cost in a <see cref="ExtensionProductData"/>.
+/// Contains extension secret data.
 /// </summary>
-public sealed record ExtensionProductCost
+public sealed record ExtensionSecretData
 {
     /// <summary>
-    /// The amount exchanged for the digital product.
+    /// The raw secret that you use with JWT encoding.
     /// </summary>
-    [JsonPropertyName("amount")]
-    public int? Amount { get; init; }
+    [JsonPropertyName("content")]
+    public string? Content { get; init; }
 
     /// <summary>
-    /// The type of currency exchanged.
+    /// The UTC date and time that you may begin using this secret to sign a JWT.
     /// </summary>
-    [JsonPropertyName("type")]
-    public ExtensionProductCostType? Type { get; init; }
+    [JsonPropertyName("active_at")]
+    public DateTime? ActiveAt { get; init; }
 
     /// <summary>
-    /// The type of currency exchanged.
+    /// The UTC date and time that you must stop using this secret to decode a JWT.
     /// </summary>
-    [JsonConverter(typeof(JsonLowerCaseEnumConverter<ExtensionProductCostType>))]
-    public enum ExtensionProductCostType
-    {
-        /// <summary>
-        /// Purchase via bits.
-        /// </summary>
-        Bits
-    }
+    [JsonPropertyName("expires_at")]
+    public DateTime? ExpiresAt { get; init; }
 }
