@@ -25,6 +25,68 @@ namespace StreamActions.Common.Tests;
 /// </summary>
 public class UtilTests
 {
+    #region IsNullOrDefault
+
+    [Theory]
+    [Trait("Member", "IsNullOrDefault")]
+    [InlineData(null, true)]
+    [InlineData("", false)]
+    [InlineData("hello", false)]
+    public void IsNullOrDefault_WithString_ReturnsCorrectBoolean(string? argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
+
+    [Theory]
+    [Trait("Member", "IsNullOrDefault")]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    [InlineData(-1, false)]
+    public void IsNullOrDefault_WithInt_ReturnsCorrectBoolean(int argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
+
+    [Theory]
+    [Trait("Member", "IsNullOrDefault")]
+    [MemberData(nameof(ClassTestData))]
+    public void IsNullOrDefault_WithClass_ReturnsCorrectBoolean(object? argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
+
+    public static IEnumerable<object?[]> ClassTestData =>
+    [
+        [null, true],
+        [new object(), false]
+    ];
+
+    [Theory]
+    [Trait("Member", "IsNullOrDefault")]
+    [MemberData(nameof(StructTestData))]
+    public void IsNullOrDefault_WithStruct_ReturnsCorrectBoolean(Guid argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
+
+    public static IEnumerable<object[]> StructTestData =>
+    [
+        [default(Guid), true],
+        [Guid.NewGuid(), false]
+    ];
+
+    [Theory]
+    [Trait("Member", "IsNullOrDefault")]
+    [InlineData(null, true)]
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    public void IsNullOrDefault_WithNullableValueType_ReturnsCorrectBoolean(int? argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
+
+    [Theory]
+    [Trait("Member", "IsNullOrDefault")]
+    [MemberData(nameof(ObjectBoxingTestData))]
+    public void IsNullOrDefault_WithObjectBoxingValueType_ReturnsCorrectBoolean(object argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
+
+    public static IEnumerable<object[]> ObjectBoxingTestData =>
+    [
+        // IsNullOrDefault has special logic for boxed value types
+        // It checks the underlying runtime type and compares to its default instance
+        [0, true],
+        [1, false]
+    ];
+
+    #endregion IsNullOrDefault
+
+    #region IsValidHexColor
+
     [Theory]
     [Trait("Member", "IsValidHexColor")]
     [InlineData("#000000", true)]
@@ -48,6 +110,10 @@ public class UtilTests
     [InlineData("This line ends with #FF5733.", false)]
     [InlineData(null, false)]
     public void IsValidHexColor_ReturnsCorrectBoolean(string? hexColor, bool expected) => Util.IsValidHexColor(hexColor).Should().Be(expected);
+
+    #endregion IsValidHexColor
+
+    #region DurationStringToTimeSpan
 
     [Theory]
     [Trait("Member", "DurationStringToTimeSpan")]
@@ -86,6 +152,10 @@ public class UtilTests
         _ = act.Should().Throw<ArgumentOutOfRangeException>()
             .And.ParamName.Should().Be("duration");
     }
+
+    #endregion DurationStringToTimeSpan
+
+    #region HexColorToColor
 
     [Fact]
     [Trait("Member", "HexColorToColor")]
@@ -133,6 +203,10 @@ public class UtilTests
     {
         Util.HexColorToColor(hexColor).Should().Be(System.Drawing.Color.Empty);
     }
+
+    #endregion HexColorToColor
+
+    #region BuildUri
 
     [Fact]
     [Trait("Member", "BuildUri")]
@@ -360,6 +434,10 @@ public class UtilTests
         _ = result.Fragment.Should().Be("#key1=value1&key1=value2");
     }
 
+    #endregion BuildUri
+
+    #region GetDefault
+
     [Fact]
     [Trait("Member", "GetDefault")]
     public void GetDefault_WithNullArgument_ReturnsNull()
@@ -438,4 +516,6 @@ public class UtilTests
         _ = result.Should().BeOfType<TestStruct>();
         _ = ((TestStruct)result!).Value.Should().Be(0);
     }
+
+    #endregion GetDefault
 }
