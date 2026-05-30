@@ -176,8 +176,18 @@ public static partial class Util
         TimeSpan t = new(0);
         Match m = DurationRegex().Match(duration);
 
+        if (!m.Success || string.IsNullOrEmpty(m.Value))
+        {
+            throw new ArgumentOutOfRangeException(nameof(duration), "The specified duration is not a valid duration string.");
+        }
+
         foreach (Group g in m.Groups.Cast<Group>())
         {
+            if (!g.Success || string.IsNullOrEmpty(g.Value))
+            {
+                continue;
+            }
+
             t = g.Name switch
             {
                 "weeks" => t.Add(TimeSpan.FromDays(7 * int.Parse(g.Value, CultureInfo.InvariantCulture))),
@@ -185,7 +195,7 @@ public static partial class Util
                 "hours" => t.Add(TimeSpan.FromHours(int.Parse(g.Value, CultureInfo.InvariantCulture))),
                 "minutes" => t.Add(TimeSpan.FromMinutes(int.Parse(g.Value, CultureInfo.InvariantCulture))),
                 "seconds" => t.Add(TimeSpan.FromSeconds(int.Parse(g.Value, CultureInfo.InvariantCulture))),
-                _ => throw new ArgumentOutOfRangeException(nameof(duration)),
+                _ => t, // ignore '0' group representing the whole match and '1', '2', etc if any
             };
         }
 
@@ -310,13 +320,13 @@ public static partial class Util
     /// <summary>
     /// The <see cref="Regex"/> capturing time segments for <see cref="DurationStringToTimeSpan(string)"/>.
     /// </summary>
-    [GeneratedRegex("((?<weeks>[0-9]*)w)?((?<days>[0-9]*)d)?((?<hours>[0-9]*)h)?((?<minutes>[0-9]*)m)?((?<seconds>[0-9]*)s)?")]
+    [GeneratedRegex("^((?<weeks>[0-9]*)w)?((?<days>[0-9]*)d)?((?<hours>[0-9]*)h)?((?<minutes>[0-9]*)m)?((?<seconds>[0-9]*)s)?$")]
     private static partial Regex DurationRegex();
 
     /// <summary>
     /// The <see cref="Regex"/> validating hex colors.
     /// </summary>
-    [GeneratedRegex("^#((?<r>[0-9A-Fa-f]{2})(?<g>[0-9A-Fa-f]{2})(?<strong>[0-9A-Fa-f]{2}))$")]
+    [GeneratedRegex("^#((?<r>[0-9A-Fa-f]{2})(?<g>[0-9A-Fa-f]{2})(?<b>[0-9A-Fa-f]{2}))$")]
     private static partial Regex HexColorRegex();
 
     #endregion Private Methods
