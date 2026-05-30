@@ -26,6 +26,68 @@ namespace StreamActions.Common.Tests;
 public class UtilTests
 {
     [Theory]
+    [Trait("Member", "IsNullOrDefault")]
+    [InlineData(null, true)]
+    [InlineData("", false)]
+    [InlineData("hello", false)]
+    public void IsNullOrDefault_WithString_ReturnsCorrectBoolean(string? argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
+
+    [Theory]
+    [Trait("Member", "IsNullOrDefault")]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
+    [InlineData(-1, false)]
+    public void IsNullOrDefault_WithInt_ReturnsCorrectBoolean(int argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
+
+    [Fact]
+    [Trait("Member", "IsNullOrDefault")]
+    public void IsNullOrDefault_WithClass_ReturnsCorrectBoolean()
+    {
+        object? obj1 = null;
+        object obj2 = new();
+
+        Util.IsNullOrDefault(obj1).Should().BeTrue();
+        Util.IsNullOrDefault(obj2).Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Member", "IsNullOrDefault")]
+    public void IsNullOrDefault_WithStruct_ReturnsCorrectBoolean()
+    {
+        Guid defaultGuid = default;
+        Guid newGuid = Guid.NewGuid();
+
+        Util.IsNullOrDefault(defaultGuid).Should().BeTrue();
+        Util.IsNullOrDefault(newGuid).Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Member", "IsNullOrDefault")]
+    public void IsNullOrDefault_WithNullableValueType_ReturnsCorrectBoolean()
+    {
+        int? nullInt = null;
+        int? zeroInt = 0;
+        int? oneInt = 1;
+
+        Util.IsNullOrDefault(nullInt).Should().BeTrue();
+        Util.IsNullOrDefault(zeroInt).Should().BeFalse();
+        Util.IsNullOrDefault(oneInt).Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Member", "IsNullOrDefault")]
+    public void IsNullOrDefault_WithObjectBoxingValueType_ReturnsCorrectBoolean()
+    {
+        object defaultInt = 0;
+        object nonDefaultInt = 1;
+
+        // IsNullOrDefault has special logic for boxed value types
+        // It checks the underlying runtime type and compares to its default instance
+        Util.IsNullOrDefault(defaultInt).Should().BeTrue();
+        Util.IsNullOrDefault(nonDefaultInt).Should().BeFalse();
+    }
+
+    [Theory]
     [Trait("Member", "IsValidHexColor")]
     [InlineData("#000000", true)]
     [InlineData("#123456", true)]
