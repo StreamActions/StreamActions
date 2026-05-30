@@ -47,7 +47,7 @@ public sealed record ChannelGuestStarSettingsUpdateParameters
     /// This setting determines how the guests within a session should be laid out within the browser source.
     /// </summary>
     [JsonPropertyName("group_layout")]
-    public GuestStarGroupLayout? GroupLayout { get; init; }
+    public ChannelGuestStarSettings.GuestStarGroupLayout? GroupLayout { get; init; }
 
     /// <summary>
     /// Flag determining if Guest Star should regenerate the auth token associated with the channel’s browser sources.

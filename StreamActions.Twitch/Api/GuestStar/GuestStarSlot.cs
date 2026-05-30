@@ -114,16 +114,7 @@ public sealed record GuestStarSlot
         };
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/slot"), queryParams), session).ConfigureAwait(false);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return new JsonApiResponse { Status = response.StatusCode };
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to assign guest star slot: {response.StatusCode} {error?.Message}");
-
-        return error ?? new JsonApiResponse { Status = response.StatusCode, Message = "Unknown error" };
+        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -197,16 +188,7 @@ public sealed record GuestStarSlot
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/guest_star/slot"), queryParams), session).ConfigureAwait(false);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return new JsonApiResponse { Status = response.StatusCode };
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to update guest star slot: {response.StatusCode} {error?.Message}");
-
-        return error ?? new JsonApiResponse { Status = response.StatusCode, Message = "Unknown error" };
+        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -296,16 +278,7 @@ public sealed record GuestStarSlot
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/slot"), queryParams), session).ConfigureAwait(false);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return new JsonApiResponse { Status = response.StatusCode };
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to delete guest star slot: {response.StatusCode} {error?.Message}");
-
-        return error ?? new JsonApiResponse { Status = response.StatusCode, Message = "Unknown error" };
+        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -401,15 +374,6 @@ public sealed record GuestStarSlot
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/guest_star/slot_settings"), queryParams), session).ConfigureAwait(false);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return new JsonApiResponse { Status = response.StatusCode };
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to update guest star slot settings: {response.StatusCode} {error?.Message}");
-
-        return error ?? new JsonApiResponse { Status = response.StatusCode, Message = "Unknown error" };
+        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

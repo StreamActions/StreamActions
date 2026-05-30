@@ -30,30 +30,7 @@ using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.GuestStar;
 
-/// <summary>
-/// Status representing the invited user's join state.
-/// </summary>
-[JsonConverter(typeof(JsonCustomEnumConverter<GuestStarInviteStatus>))]
-public enum GuestStarInviteStatus
-{
-    /// <summary>
-    /// The user has been invited to the session but has not acknowledged it.
-    /// </summary>
-    [JsonCustomEnum("INVITED")]
-    Invited,
 
-    /// <summary>
-    /// The invited user has acknowledged the invite and joined the waiting room, but may still be setting up their media devices or otherwise preparing to join the call.
-    /// </summary>
-    [JsonCustomEnum("ACCEPTED")]
-    Accepted,
-
-    /// <summary>
-    /// The invited user has signaled they are ready to join the call from the waiting room.
-    /// </summary>
-    [JsonCustomEnum("READY")]
-    Ready
-}
 
 /// <summary>
 /// Represents a pending invite to a Guest Star session, including the invitee's ready status while joining the waiting room.
@@ -102,7 +79,32 @@ public sealed record GuestStarInvite
     [JsonPropertyName("is_audio_available")]
     public bool? IsAudioAvailable { get; init; }
 
-    /// <summary>
+        /// <summary>
+    /// Status representing the invited user's join state.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<GuestStarInviteStatus>))]
+    public enum GuestStarInviteStatus
+    {
+        /// <summary>
+        /// The user has been invited to the session but has not acknowledged it.
+        /// </summary>
+        [JsonCustomEnum("INVITED")]
+        Invited,
+
+        /// <summary>
+        /// The invited user has acknowledged the invite and joined the waiting room, but may still be setting up their media devices or otherwise preparing to join the call.
+        /// </summary>
+        [JsonCustomEnum("ACCEPTED")]
+        Accepted,
+
+        /// <summary>
+        /// The invited user has signaled they are ready to join the call from the waiting room.
+        /// </summary>
+        [JsonCustomEnum("READY")]
+        Ready
+    }
+
+/// <summary>
     /// Provides the caller with a list of pending invites to a Guest Star session.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
@@ -161,15 +163,7 @@ public sealed record GuestStarInvite
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/invites"), queryParams), session).ConfigureAwait(false);
 
-        if (response.IsSuccessStatusCode)
-        {
             return await response.Content.ReadFromJsonAsync<ResponseData<GuestStarInvite>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to get guest star invites: {response.StatusCode} {error?.Message}");
-
-        return null;
     }
 
     /// <summary>
@@ -241,16 +235,7 @@ public sealed record GuestStarInvite
         };
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/invites"), queryParams), session).ConfigureAwait(false);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return new JsonApiResponse { Status = response.StatusCode };
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to send guest star invite: {response.StatusCode} {error?.Message}");
-
-        return error ?? new JsonApiResponse { Status = response.StatusCode, Message = "Unknown error" };
+        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -322,15 +307,6 @@ public sealed record GuestStarInvite
         };
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/invites"), queryParams), session).ConfigureAwait(false);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return new JsonApiResponse { Status = response.StatusCode };
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to delete guest star invite: {response.StatusCode} {error?.Message}");
-
-        return error ?? new JsonApiResponse { Status = response.StatusCode, Message = "Unknown error" };
+        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

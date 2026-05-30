@@ -30,36 +30,7 @@ using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.GuestStar;
 
-/// <summary>
-/// The layout of guests within a session in the browser source.
-/// </summary>
-[JsonConverter(typeof(JsonCustomEnumConverter<GuestStarGroupLayout>))]
-public enum GuestStarGroupLayout
-{
-    /// <summary>
-    /// All live guests are tiled within the browser source with the same size.
-    /// </summary>
-    [JsonCustomEnum("TILED_LAYOUT")]
-    TiledLayout,
 
-    /// <summary>
-    /// All live guests are tiled within the browser source with the same size. If there is an active screen share, it is sized larger than the other guests.
-    /// </summary>
-    [JsonCustomEnum("SCREENSHARE_LAYOUT")]
-    ScreenshareLayout,
-
-    /// <summary>
-    /// All live guests are arranged in a horizontal bar within the browser source
-    /// </summary>
-    [JsonCustomEnum("HORIZONTAL_LAYOUT")]
-    HorizontalLayout,
-
-    /// <summary>
-    /// All live guests are arranged in a vertical bar within the browser source
-    /// </summary>
-    [JsonCustomEnum("VERTICAL_LAYOUT")]
-    VerticalLayout
-}
 
 /// <summary>
 /// Represents the channel settings for configuration of the Guest Star feature for a particular host.
@@ -96,7 +67,38 @@ public sealed record ChannelGuestStarSettings
     [JsonPropertyName("browser_source_token")]
     public string? BrowserSourceToken { get; init; }
 
-    /// <summary>
+        /// <summary>
+    /// The layout of guests within a session in the browser source.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<GuestStarGroupLayout>))]
+    public enum GuestStarGroupLayout
+    {
+        /// <summary>
+        /// All live guests are tiled within the browser source with the same size.
+        /// </summary>
+        [JsonCustomEnum("TILED_LAYOUT")]
+        TiledLayout,
+
+        /// <summary>
+        /// All live guests are tiled within the browser source with the same size. If there is an active screen share, it is sized larger than the other guests.
+        /// </summary>
+        [JsonCustomEnum("SCREENSHARE_LAYOUT")]
+        ScreenshareLayout,
+
+        /// <summary>
+        /// All live guests are arranged in a horizontal bar within the browser source
+        /// </summary>
+        [JsonCustomEnum("HORIZONTAL_LAYOUT")]
+        HorizontalLayout,
+
+        /// <summary>
+        /// All live guests are arranged in a vertical bar within the browser source
+        /// </summary>
+        [JsonCustomEnum("VERTICAL_LAYOUT")]
+        VerticalLayout
+    }
+
+/// <summary>
     /// Gets the channel settings for configuration of the Guest Star feature for a particular host.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
@@ -152,15 +154,7 @@ public sealed record ChannelGuestStarSettings
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/channel_settings"), queryParams), session).ConfigureAwait(false);
 
-        if (response.IsSuccessStatusCode)
-        {
             return await response.Content.ReadFromJsonAsync<ResponseData<ChannelGuestStarSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to get channel guest star settings: {response.StatusCode} {error?.Message}");
-
-        return null;
     }
 
     /// <summary>
@@ -210,15 +204,6 @@ public sealed record ChannelGuestStarSettings
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/guest_star/channel_settings"), queryParams), session, content).ConfigureAwait(false);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return new JsonApiResponse { Status = response.StatusCode };
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to update channel guest star settings: {response.StatusCode} {error?.Message}");
-
-        return error ?? new JsonApiResponse { Status = response.StatusCode, Message = "Unknown error" };
+        return await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

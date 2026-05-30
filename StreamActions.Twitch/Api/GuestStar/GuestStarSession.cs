@@ -103,15 +103,7 @@ public sealed record GuestStarSession
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/session"), queryParams), session).ConfigureAwait(false);
 
-        if (response.IsSuccessStatusCode)
-        {
             return await response.Content.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to get guest star session: {response.StatusCode} {error?.Message}");
-
-        return null;
     }
 
     /// <summary>
@@ -168,15 +160,7 @@ public sealed record GuestStarSession
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/session"), queryParams), session).ConfigureAwait(false);
 
-        if (response.IsSuccessStatusCode)
-        {
             return await response.Content.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to create guest star session: {response.StatusCode} {error?.Message}");
-
-        return null;
     }
 
     /// <summary>
@@ -236,14 +220,6 @@ public sealed record GuestStarSession
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/session"), queryParams), session).ConfigureAwait(false);
 
-        if (response.IsSuccessStatusCode)
-        {
             return await response.Content.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        }
-
-        JsonApiResponse? error = await response.Content.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
-        TwitchApi.GetLogger().Warning($"Failed to end guest star session: {response.StatusCode} {error?.Message}");
-
-        return null;
     }
 }
