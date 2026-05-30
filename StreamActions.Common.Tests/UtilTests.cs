@@ -359,4 +359,83 @@ public class UtilTests
         // Assert
         _ = result.Fragment.Should().Be("#key1=value1&key1=value2");
     }
+
+    [Fact]
+    [Trait("Member", "GetDefault")]
+    public void GetDefault_WithNullArgument_ReturnsNull()
+    {
+        // Act
+        object? result = Util.GetDefault<string>(null!);
+
+        // Assert
+        _ = result.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "GetDefault")]
+    public void GetDefault_WithReferenceType_ReturnsNull()
+    {
+        // Act
+        object? result = Util.GetDefault("test");
+
+        // Assert
+        _ = result.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "GetDefault")]
+    public void GetDefault_WithValueTypeSameMethodType_ReturnsDefault()
+    {
+        // Act
+        object? result = Util.GetDefault(5);
+
+        // Assert
+        _ = result.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "GetDefault")]
+    public void GetDefault_WithValueTypeDifferentMethodType_ReturnsDefaultOfArgumentType()
+    {
+        // Act
+        object? result = Util.GetDefault<object>(5);
+
+        // Assert
+        _ = result.Should().Be(0);
+        _ = result.Should().BeOfType<int>();
+    }
+
+    private struct TestStruct
+    {
+        public int Value;
+    }
+
+    [Fact]
+    [Trait("Member", "GetDefault")]
+    public void GetDefault_WithCustomStruct_ReturnsDefaultStruct()
+    {
+        // Arrange
+        TestStruct testStruct = new() { Value = 5 };
+
+        // Act
+        object? result = Util.GetDefault(testStruct);
+
+        // Assert
+        _ = result.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "GetDefault")]
+    public void GetDefault_WithCustomStructDifferentMethodType_ReturnsDefaultStruct()
+    {
+        // Arrange
+        TestStruct testStruct = new() { Value = 5 };
+
+        // Act
+        object? result = Util.GetDefault<object>(testStruct);
+
+        // Assert
+        _ = result.Should().BeOfType<TestStruct>();
+        _ = ((TestStruct)result!).Value.Should().Be(0);
+    }
 }
