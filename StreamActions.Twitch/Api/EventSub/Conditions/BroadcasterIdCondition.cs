@@ -18,22 +18,16 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Conduits;
+namespace StreamActions.Twitch.Api.EventSub.Conditions;
 
 /// <summary>
-/// The parameters for <see cref="ConduitShard.UpdateConduitShards(Common.TwitchSession, ConduitShardUpdateParameters)"/>.
+/// An <see cref="EventSubCondition"/> containing the <c>broadcaster_id</c> field.
 /// </summary>
-public record ConduitShardUpdateParameters
+public sealed record BroadcasterIdCondition : EventSubCondition
 {
     /// <summary>
-    /// Conduit ID.
+    /// The ID of the broadcaster to receive notifications for.
     /// </summary>
-    [JsonPropertyName("conduit_id")]
-    public Guid? ConduitId { get; init; }
-
-    /// <summary>
-    /// List of shards to update.
-    /// </summary>
-    [JsonPropertyName("shards")]
-    public IEnumerable<ConduitShardUpdateShardParameters>? Shards { get; init; }
+    [JsonPropertyName("broadcaster_id")]
+    public string? BroadcasterId { get; init; }
 }

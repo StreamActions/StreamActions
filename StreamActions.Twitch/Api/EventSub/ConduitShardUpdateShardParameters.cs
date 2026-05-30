@@ -18,16 +18,22 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Conduits;
+namespace StreamActions.Twitch.Api.EventSub;
 
 /// <summary>
-/// The parameters for <see cref="Conduit.CreateConduits(Common.TwitchSession, ConduitCreationParameters)"/>.
+/// Represents the update parameters for a single shard in a conduit.
 /// </summary>
-public record ConduitCreationParameters
+public record ConduitShardUpdateShardParameters
 {
     /// <summary>
-    /// The number of shards to associate with this conduit.
+    /// Shard ID.
     /// </summary>
-    [JsonPropertyName("shard_count")]
-    public int? ShardCount { get; init; }
+    [JsonPropertyName("id")]
+    public string? Id { get; init; }
+
+    /// <summary>
+    /// The transport details for the shard.
+    /// </summary>
+    [JsonPropertyName("transport")]
+    public ConduitShardTransport? Transport { get; init; }
 }

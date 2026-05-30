@@ -18,28 +18,22 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Conduits;
+namespace StreamActions.Twitch.Api.EventSub;
 
 /// <summary>
-/// Represents an error occurred during a conduit shard update.
+/// The parameters for <see cref="ConduitShard.UpdateConduitShards(Common.TwitchSession, ConduitShardUpdateParameters)"/>.
 /// </summary>
-public sealed record ConduitShardUpdateError
+public record ConduitShardUpdateParameters
 {
     /// <summary>
-    /// The ID of the shard that failed to update.
+    /// Conduit ID.
     /// </summary>
-    [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    [JsonPropertyName("conduit_id")]
+    public Guid? ConduitId { get; init; }
 
     /// <summary>
-    /// The error message.
+    /// List of shards to update.
     /// </summary>
-    [JsonPropertyName("message")]
-    public string? Message { get; init; }
-
-    /// <summary>
-    /// The error code.
-    /// </summary>
-    [JsonPropertyName("code")]
-    public string? Code { get; init; }
+    [JsonPropertyName("shards")]
+    public IEnumerable<ConduitShardUpdateShardParameters>? Shards { get; init; }
 }

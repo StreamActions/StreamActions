@@ -26,7 +26,7 @@ using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Conduits;
+namespace StreamActions.Twitch.Api.EventSub;
 
 /// <summary>
 /// Represents a shard in a conduit.

@@ -16,19 +16,24 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.Api.Conduits;
+namespace StreamActions.Twitch.Api.EventSub;
 
 /// <summary>
-/// Represents the response for a conduit shard update request.
+/// The parameters for <see cref="Conduit.UpdateConduits(Common.TwitchSession, ConduitUpdateParameters)"/>.
 /// </summary>
-public sealed record ConduitShardUpdateResponse : ResponseData<ConduitShard>
+public record ConduitUpdateParameters
 {
     /// <summary>
-    /// A list of errors that occurred during the update.
+    /// The ID of the conduit to update.
     /// </summary>
-    [JsonPropertyName("errors")]
-    public IReadOnlyList<ConduitShardUpdateError>? Errors { get; init; }
+    [JsonPropertyName("id")]
+    public Guid? Id { get; init; }
+
+    /// <summary>
+    /// The number of shards to associate with this conduit.
+    /// </summary>
+    [JsonPropertyName("shard_count")]
+    public int? ShardCount { get; init; }
 }
