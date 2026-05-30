@@ -276,6 +276,8 @@ public sealed partial class TwitchApi : IApi
                             }
                         }
                         break;
+                    case TwitchToken.TokenType.Jwt:
+                        break;
                     case TwitchToken.TokenType.Unknown:
                     default:
                         _logger.Warning("Unknown or uninitialized Twitch token: " + Enum.GetName(session.Token.Type.GetValueOrDefault()));
