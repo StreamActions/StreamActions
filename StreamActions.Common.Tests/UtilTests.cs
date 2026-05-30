@@ -25,6 +25,8 @@ namespace StreamActions.Common.Tests;
 /// </summary>
 public class UtilTests
 {
+    #region IsNullOrDefault
+
     [Theory]
     [Trait("Member", "IsNullOrDefault")]
     [InlineData(null, true)]
@@ -81,6 +83,10 @@ public class UtilTests
         [1, false]
     ];
 
+    #endregion IsNullOrDefault
+
+    #region IsValidHexColor
+
     [Theory]
     [Trait("Member", "IsValidHexColor")]
     [InlineData("#000000", true)]
@@ -104,6 +110,10 @@ public class UtilTests
     [InlineData("This line ends with #FF5733.", false)]
     [InlineData(null, false)]
     public void IsValidHexColor_ReturnsCorrectBoolean(string? hexColor, bool expected) => Util.IsValidHexColor(hexColor).Should().Be(expected);
+
+    #endregion IsValidHexColor
+
+    #region BuildUri
 
     [Fact]
     [Trait("Member", "BuildUri")]
@@ -330,4 +340,6 @@ public class UtilTests
         // Assert
         _ = result.Fragment.Should().Be("#key1=value1&key1=value2");
     }
+
+    #endregion BuildUri
 }
