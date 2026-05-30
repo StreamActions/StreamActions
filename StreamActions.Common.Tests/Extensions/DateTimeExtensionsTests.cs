@@ -77,7 +77,7 @@ public class DateTimeExtensionsTests
     public void ToRfc3339_WithMinValue_ReturnsCorrectString()
     {
         // Arrange
-        DateTime dt = DateTime.MinValue.ToUniversalTime();
+        DateTime dt = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
 
         // Act
         string result = dt.ToRfc3339();
@@ -93,7 +93,7 @@ public class DateTimeExtensionsTests
     public void ToRfc3339_WithMaxValue_ReturnsCorrectString()
     {
         // Arrange
-        DateTime dt = DateTime.MaxValue.ToUniversalTime();
+        DateTime dt = DateTime.SpecifyKind(DateTime.MaxValue, DateTimeKind.Utc);
 
         // Act
         string result = dt.ToRfc3339();
