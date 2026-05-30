@@ -49,6 +49,44 @@ public class UtilTests
     [InlineData(null, false)]
     public void IsValidHexColor_ReturnsCorrectBoolean(string? hexColor, bool expected) => Util.IsValidHexColor(hexColor).Should().Be(expected);
 
+    [Theory]
+    [Trait("Member", "DurationStringToTimeSpan")]
+    [InlineData("1w2d3h4m5s", "9.03:04:05")]
+    [InlineData("1w", "7.00:00:00")]
+    [InlineData("2d", "2.00:00:00")]
+    [InlineData("3h", "03:00:00")]
+    [InlineData("30m", "00:30:00")]
+    [InlineData("100s", "00:01:40")]
+    [InlineData("0m", "00:00:00")]
+    [InlineData("1d1h1m1s", "1.01:01:01")]
+    public void DurationStringToTimeSpan_ReturnsExpectedResult(string duration, string expectedTimeSpanString)
+    {
+        // Arrange
+        TimeSpan expected = TimeSpan.Parse(expectedTimeSpanString, System.Globalization.CultureInfo.InvariantCulture);
+
+        // Act
+        TimeSpan result = Util.DurationStringToTimeSpan(duration);
+
+        // Assert
+        _ = result.Should().Be(expected);
+    }
+
+    [Theory]
+    [Trait("Member", "DurationStringToTimeSpan")]
+    [InlineData("1k")]
+    [InlineData("hello")]
+    [InlineData("1234")]
+    [InlineData("")]
+    public void DurationStringToTimeSpan_WithInvalidString_ThrowsArgumentOutOfRangeException(string duration)
+    {
+        // Act
+        Action act = () => Util.DurationStringToTimeSpan(duration);
+
+        // Assert
+        _ = act.Should().Throw<ArgumentOutOfRangeException>()
+            .And.ParamName.Should().Be("duration");
+    }
+
     [Fact]
     [Trait("Member", "BuildUri")]
     public void BuildUri_WithNullBaseUri_ThrowsArgumentNullException()
