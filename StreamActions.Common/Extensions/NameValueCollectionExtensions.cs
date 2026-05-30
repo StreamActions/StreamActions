@@ -35,7 +35,6 @@ public static class NameValueCollectionExtensions
     public static void Add(this NameValueCollection collection, string? name, IEnumerable<string?> values)
     {
         ArgumentNullException.ThrowIfNull(collection);
-
         ArgumentNullException.ThrowIfNull(values);
 
         foreach (string? value in values)
