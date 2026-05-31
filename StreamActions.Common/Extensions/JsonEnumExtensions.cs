@@ -44,15 +44,15 @@ public static class JsonEnumExtensions
 
             if (type is not null)
             {
-                if (type is JsonUpperCaseEnumConverter<T>)
+                if (type == typeof(JsonUpperCaseEnumConverter<T>))
                 {
                     return Enum.GetName(value)?.ToUpperInvariant();
                 }
-                else if (type is JsonLowerCaseEnumConverter<T>)
+                else if (type == typeof(JsonLowerCaseEnumConverter<T>))
                 {
                     return Enum.GetName(value)?.ToLowerInvariant();
                 }
-                else if (type is JsonCustomEnumConverter<T>)
+                else if (type == typeof(JsonCustomEnumConverter<T>))
                 {
                     MemberInfo? memberInfo = typeof(T).GetMember(Enum.GetName(value) ?? "__").FirstOrDefault();
                     if (memberInfo is not null)
