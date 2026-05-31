@@ -539,7 +539,12 @@ public sealed class TokenBucketRateLimiter : IDisposable
         {
             try
             {
-                return TimeSpan.FromTicks((long)Math.Ceiling((this._nextReset - this._period) / (float)this._limit));
+                long elapsed = DateTime.UtcNow.Ticks - (this._nextReset - this._period);
+                float percent = elapsed / (float)this._period;
+                int addedTokens = (int)Math.Floor(percent * this._limit);
+                long nextTokenElapsed = (long)Math.Ceiling((addedTokens + 1) * (double)this._period / this._limit);
+                long ticksUntilNextToken = nextTokenElapsed - elapsed;
+                return ticksUntilNextToken > 0 ? TimeSpan.FromTicks(ticksUntilNextToken) : TimeSpan.Zero;
             }
             finally
             {
