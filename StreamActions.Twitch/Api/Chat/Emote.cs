@@ -393,7 +393,7 @@ public sealed record Emote
             throw new ArgumentNullException(nameof(emoteSetIds)).Log(TwitchApi.GetLogger());
         }
 
-        var emoteSetIdList = emoteSetIds as IReadOnlyList<string> ?? emoteSetIds.ToArray();
+        IReadOnlyList<string> emoteSetIdList = emoteSetIds as IReadOnlyList<string> ?? emoteSetIds.ToArray();
 
         if (emoteSetIdList.Count == 0)
         {
