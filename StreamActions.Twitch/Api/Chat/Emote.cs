@@ -388,20 +388,27 @@ public sealed record Emote
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        if (emoteSetIds is null || !emoteSetIds.Any())
+        if (emoteSetIds is null)
         {
             throw new ArgumentNullException(nameof(emoteSetIds)).Log(TwitchApi.GetLogger());
         }
 
-        if (emoteSetIds.Count() > 25)
+        IReadOnlyList<string> emoteSetIdList = emoteSetIds as IReadOnlyList<string> ?? emoteSetIds.ToArray();
+
+        if (emoteSetIdList.Count == 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(emoteSetIds), emoteSetIds.Count(), "A maximum of 25 emote set ids can be specified.").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(emoteSetIds)).Log(TwitchApi.GetLogger());
+        }
+
+        if (emoteSetIdList.Count > 25)
+        {
+            throw new ArgumentOutOfRangeException(nameof(emoteSetIds), emoteSetIdList.Count, "A maximum of 25 emote set ids can be specified.").Log(TwitchApi.GetLogger());
         }
 
         session.RequireUserOrAppToken();
 
         System.Collections.Specialized.NameValueCollection query = new();
-        foreach (string emoteSetId in emoteSetIds)
+        foreach (string emoteSetId in emoteSetIdList)
         {
             query.Add("emote_set_id", emoteSetId);
         }
