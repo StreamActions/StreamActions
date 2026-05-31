@@ -77,12 +77,6 @@ public sealed record Token : JsonApiResponse
     public string? IdToken { get; init; }
 
     /// <summary>
-    /// The OIDC JWT token, if authorizing with the <see cref="Scope.OpenID"/> scope.
-    /// </summary>
-    [JsonIgnore]
-    public JsonWebToken? JwtToken => this.GetJsonWebTokenAsync();
-
-    /// <summary>
     /// The type of token that <see cref="AccessToken"/> represents.
     /// </summary>
     [JsonPropertyName("token_type")]
@@ -193,21 +187,20 @@ public sealed record Token : JsonApiResponse
     /// Validates and converts <see cref="IdToken"/>, if present, to a <see cref="JsonWebToken"/>.
     /// </summary>
     /// <returns>A <see cref="JsonWebToken"/> if <see cref="IdToken"/> is a valid JWT, else <see langword="null"/>.</returns>
-    private JsonWebToken? GetJsonWebTokenAsync()
+    public async Task<JsonWebToken?> GetJwtTokenAsync()
     {
         if (this.IdToken is not null)
         {
-            Task<TokenValidationResult> t = new JsonWebTokenHandler().ValidateTokenAsync(this.IdToken, new()
+            TokenValidationResult result = await new JsonWebTokenHandler().ValidateTokenAsync(this.IdToken, new()
             {
                 IssuerSigningKeys = _openIdConnectConfiguration.Value.JsonWebKeySet.Keys,
                 ValidAudience = TwitchApi.ClientId,
                 ValidIssuer = _openIdConnectConfiguration.Value.Issuer
-            });
-            t.Wait();
+            }).ConfigureAwait(false);
 
-            if (t.Result.IsValid)
+            if (result.IsValid)
             {
-                return (JsonWebToken?)t.Result.SecurityToken;
+                return (JsonWebToken?)result.SecurityToken;
             }
         }
 
