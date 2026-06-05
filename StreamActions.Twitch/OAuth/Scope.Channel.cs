@@ -114,6 +114,12 @@ public sealed partial record Scope
     public static readonly Scope ChannelManageVips = new("channel:manage:vips", "Add or remove the VIP role from users in your channel.");
 
     /// <summary>
+    /// Perform moderation actions in a channel.
+    /// </summary>
+    /// <value>channel:moderate</value>
+    public static readonly Scope ChannelModerate = new("channel:moderate", "Perform moderation actions in a channel.");
+
+    /// <summary>
     /// Read the ads schedule and details on your channel.
     /// </summary>
     /// <value>channel:read:ads</value>

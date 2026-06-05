@@ -15,12 +15,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
-using StreamActions.Common.Net;
-
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -67,7 +66,7 @@ public sealed record ChannelGuestStarSettings
     [JsonPropertyName("browser_source_token")]
     public string? BrowserSourceToken { get; init; }
 
-        /// <summary>
+    /// <summary>
     /// The layout of guests within a session in the browser source.
     /// </summary>
     [JsonConverter(typeof(JsonCustomEnumConverter<GuestStarGroupLayout>))]
@@ -98,7 +97,7 @@ public sealed record ChannelGuestStarSettings
         VerticalLayout
     }
 
-/// <summary>
+    /// <summary>
     /// Gets the channel settings for configuration of the Guest Star feature for a particular host.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>

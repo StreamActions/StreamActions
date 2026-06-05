@@ -53,7 +53,7 @@ public sealed record StreamMarker
     /// The relative offset of the marker from the beginning of the stream.
     /// </summary>
     [JsonIgnore]
-    public TimeSpan? Position => PositionSeconds.HasValue ? TimeSpan.FromSeconds(PositionSeconds.Value) : null;
+    public TimeSpan? Position => this.PositionSeconds.HasValue ? TimeSpan.FromSeconds(this.PositionSeconds.Value) : null;
 
     /// <summary>
     /// A description that the user gave the marker to help them remember why they marked the location.

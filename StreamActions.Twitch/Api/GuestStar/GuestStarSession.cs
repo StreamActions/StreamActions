@@ -15,11 +15,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
-using StreamActions.Common.Net;
-
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
