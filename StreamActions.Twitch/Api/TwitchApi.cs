@@ -331,7 +331,7 @@ public sealed partial class TwitchApi : IApi
 
     #region Private Methods
 
-    [GeneratedRegex("\\s*{.*}\\s*")]
+    [GeneratedRegex(@"^\s*[\{\[].*[\}\]]\s*$", RegexOptions.Singleline)]
     private static partial Regex JSONRegex();
 
     #endregion Private Methods

@@ -15,12 +15,11 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
-using StreamActions.Common.Net;
-
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logger;
+using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -79,7 +78,7 @@ public sealed record GuestStarInvite
     [JsonPropertyName("is_audio_available")]
     public bool? IsAudioAvailable { get; init; }
 
-        /// <summary>
+    /// <summary>
     /// Status representing the invited user's join state.
     /// </summary>
     [JsonConverter(typeof(JsonCustomEnumConverter<GuestStarInviteStatus>))]
@@ -104,7 +103,7 @@ public sealed record GuestStarInvite
         Ready
     }
 
-/// <summary>
+    /// <summary>
     /// Provides the caller with a list of pending invites to a Guest Star session.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>

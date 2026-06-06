@@ -19,8 +19,8 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Common.Logger;
+using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Net.Http.Json;
 
