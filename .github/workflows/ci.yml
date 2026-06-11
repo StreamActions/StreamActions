@@ -29,7 +29,7 @@ jobs:
                 cp $x ./CollectedTestResults/`basename $(dirname $(dirname $(dirname ${x})))`.coverage.cobertura.xml
             done
       - name: Generate code coverage report
-        uses: danielpalme/ReportGenerator-GitHub-Action@f927998465a9ea0bf31902b7f8e89389b14ceb77
+        uses: danielpalme/ReportGenerator-GitHub-Action@049f7ec958c672fd31d5cc1cb01622dc8d2e23ab
         with:
           reports: ./CollectedTestResults/*.coverage.cobertura.xml
           targetdir: coveragereport
