@@ -204,6 +204,21 @@ public class UtilTests
         Util.HexColorToColor(hexColor).Should().Be(System.Drawing.Color.Empty);
     }
 
+    [Fact]
+    [Trait("Member", "HexColorToColor")]
+    public void HexColorToColor_WithNonHexCharacters_DoesNotThrowFormatException()
+    {
+        // Arrange
+        string invalidHexColor = "#XXYYZZ";
+
+        // Act
+        Action act = () => Util.HexColorToColor(invalidHexColor);
+
+        // Assert
+        _ = act.Should().NotThrow<FormatException>();
+        Util.HexColorToColor(invalidHexColor).Should().Be(System.Drawing.Color.Empty);
+    }
+
     #endregion HexColorToColor
 
     #region BuildUri
