@@ -30,28 +30,28 @@ namespace StreamActions.Common.Tests.Extensions;
 /// </summary>
 public class JsonEnumExtensionsTests
 {
-    public enum NoAttributeEnum
+    public enum NoAttr
     {
         FirstValue,
         SecondValue
     }
 
-    [JsonConverter(typeof(JsonUpperCaseEnumConverter<UpperCaseEnum>))]
-    public enum UpperCaseEnum
+    [JsonConverter(typeof(JsonUpperCaseEnumConverter<UpperCase>))]
+    public enum UpperCase
     {
         FirstValue,
         SecondValue
     }
 
-    [JsonConverter(typeof(JsonLowerCaseEnumConverter<LowerCaseEnum>))]
-    public enum LowerCaseEnum
+    [JsonConverter(typeof(JsonLowerCaseEnumConverter<LowerCase>))]
+    public enum LowerCase
     {
         FirstValue,
         SecondValue
     }
 
-    [JsonConverter(typeof(JsonCustomEnumConverter<CustomEnum>))]
-    public enum CustomEnum
+    [JsonConverter(typeof(JsonCustomEnumConverter<Custom>))]
+    public enum Custom
     {
         [JsonCustomEnum("custom-first")]
         FirstValue,
@@ -62,6 +62,32 @@ public class JsonEnumExtensionsTests
         MissingAttributeValue
     }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum OtherConverter
+    {
+        FirstValue
+    }
+
+    [JsonConverter(typeof(JsonCustomEnumConverter<CustomInvalid>))]
+    public enum CustomInvalid
+    {
+        // Missing JsonCustomEnum
+        FirstValue,
+    }
+
+    [JsonConverter(typeof(JsonCustomEnumConverter<CustomInvalid5>))]
+    public enum CustomInvalid5
+    {
+        [JsonCustomEnum(null!)]
+        FirstValue
+    }
+
+    [JsonConverter(typeof(JsonConverterAttribute))]
+    public enum CustomInvalid4
+    {
+        FirstValue
+    }
+
     #region JsonValue
 
     [Fact]
@@ -69,7 +95,7 @@ public class JsonEnumExtensionsTests
     public void JsonValue_WithNoAttribute_ReturnsDefaultName()
     {
         // Arrange
-        NoAttributeEnum val = NoAttributeEnum.FirstValue;
+        NoAttr val = NoAttr.FirstValue;
 
         // Act
         string? result = val.JsonValue();
@@ -83,7 +109,7 @@ public class JsonEnumExtensionsTests
     public void JsonValue_WithUpperCaseAttribute_ReturnsUpperCaseString()
     {
         // Arrange
-        UpperCaseEnum val = UpperCaseEnum.FirstValue;
+        UpperCase val = UpperCase.FirstValue;
 
         // Act
         string? result = val.JsonValue();
@@ -97,7 +123,7 @@ public class JsonEnumExtensionsTests
     public void JsonValue_WithLowerCaseAttribute_ReturnsLowerCaseString()
     {
         // Arrange
-        LowerCaseEnum val = LowerCaseEnum.FirstValue;
+        LowerCase val = LowerCase.FirstValue;
 
         // Act
         string? result = val.JsonValue();
@@ -111,7 +137,7 @@ public class JsonEnumExtensionsTests
     public void JsonValue_WithCustomAttribute_ReturnsCustomString()
     {
         // Arrange
-        CustomEnum val = CustomEnum.FirstValue;
+        Custom val = Custom.FirstValue;
 
         // Act
         string? result = val.JsonValue();
@@ -125,13 +151,125 @@ public class JsonEnumExtensionsTests
     public void JsonValue_WithCustomAttributeMissingOnValue_ReturnsDefaultName()
     {
         // Arrange
-        CustomEnum val = CustomEnum.MissingAttributeValue;
+        Custom val = Custom.MissingAttributeValue;
 
         // Act
         string? result = val.JsonValue();
 
         // Assert
         result.Should().Be("MissingAttributeValue");
+    }
+
+    [Fact]
+    [Trait("Member", "JsonValue")]
+    public void JsonValue_WithOtherConverterAttribute_ReturnsDefaultName()
+    {
+        // Arrange
+        OtherConverter val = OtherConverter.FirstValue;
+
+        // Act
+        string? result = val.JsonValue();
+
+        // Assert
+        result.Should().Be("FirstValue");
+    }
+
+    [Fact]
+    [Trait("Member", "JsonValue")]
+    public void JsonValue_WithUpperCaseAttributeAndInvalidValue_ReturnsNull()
+    {
+        // Arrange
+        UpperCase val = (UpperCase)999;
+
+        // Act
+        string? result = val.JsonValue();
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "JsonValue")]
+    public void JsonValue_WithLowerCaseAttributeAndInvalidValue_ReturnsNull()
+    {
+        // Arrange
+        LowerCase val = (LowerCase)999;
+
+        // Act
+        string? result = val.JsonValue();
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "JsonValue")]
+    public void JsonValue_WithCustomAttributeAndInvalidValue_ReturnsNull()
+    {
+        // Arrange
+        Custom val = (Custom)999;
+
+        // Act
+        string? result = val.JsonValue();
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "JsonValue")]
+    public void JsonValue_WithCustomAttributeMissingOnEnumMember_ReturnsDefaultName()
+    {
+        // Arrange
+        CustomInvalid val = CustomInvalid.FirstValue;
+
+        // Act
+        string? result = val.JsonValue();
+
+        // Assert
+        result.Should().Be("FirstValue");
+    }
+
+    [Fact]
+    [Trait("Member", "JsonValue")]
+    public void JsonValue_WithCustomAttributeNullValue_ReturnsNull()
+    {
+        // Arrange
+        CustomInvalid5 val = CustomInvalid5.FirstValue;
+
+        // Act
+        string? result = val.JsonValue();
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "JsonValue")]
+    public void JsonValue_WithConverterTypeNull_ReturnsDefaultName()
+    {
+        // Arrange
+        CustomInvalid4 val = CustomInvalid4.FirstValue;
+
+        // Act
+        string? result = val.JsonValue();
+
+        // Assert
+        result.Should().Be("FirstValue");
+    }
+
+    [Fact]
+    [Trait("Member", "JsonValue")]
+    public void JsonValue_WithInvalidValue_ReturnsNull()
+    {
+        // Arrange
+        NoAttr val = (NoAttr)999;
+
+        // Act
+        string? result = val.JsonValue();
+
+        // Assert
+        result.Should().BeNull();
     }
 
     #endregion JsonValue
