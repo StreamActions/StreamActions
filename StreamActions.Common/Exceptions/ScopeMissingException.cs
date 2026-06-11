@@ -34,14 +34,14 @@ public class ScopeMissingException : InvalidOperationException
     /// Constructor.
     /// </summary>
     /// <param name="scope">The scope that is missing from the OAuth token.</param>
-    public ScopeMissingException(string? scope) : base("Missing scope " + scope ?? "Unknown" + ".") => this.Scope = scope;
+    public ScopeMissingException(string? scope) : base("Missing scope " + (scope ?? "Unknown") + ".") => this.Scope = scope;
 
     /// <summary>
     /// Constructor.
     /// </summary>
     /// <param name="scope">The scope that is missing from the OAuth token.</param>
     /// <param name="innerException">The inner exception that caused the current exception.</param>
-    public ScopeMissingException(string? scope, Exception? innerException) : base("Missing scope " + scope ?? "Unknown" + ".", innerException) => this.Scope = scope;
+    public ScopeMissingException(string? scope, Exception? innerException) : base("Missing scope " + (scope ?? "Unknown") + ".", innerException) => this.Scope = scope;
 
     /// <summary>
     /// Constructor.
