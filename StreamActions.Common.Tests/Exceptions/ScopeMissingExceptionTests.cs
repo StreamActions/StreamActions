@@ -78,7 +78,7 @@ public class ScopeMissingExceptionTests
     {
         // Arrange
         var scope = "user:read:email";
-        var innerException = new Exception("Inner exception message");
+        var innerException = new InvalidOperationException("Inner exception message");
 
         // Act
         var exception = new ScopeMissingException(scope, innerException);
@@ -95,7 +95,7 @@ public class ScopeMissingExceptionTests
     {
         // Arrange
         string? scope = null;
-        var innerException = new Exception("Inner exception message");
+        var innerException = new InvalidOperationException("Inner exception message");
 
         // Act
         var exception = new ScopeMissingException(scope, innerException);
@@ -146,7 +146,7 @@ public class ScopeMissingExceptionTests
         string?[]? scopes = null;
 
         // Act
-        var exception = new ScopeMissingException(scopes);
+        var exception = new ScopeMissingException(scopes!);
 
         // Assert
         exception.Message.Should().Be("Missing scopes Unknown.");
@@ -160,7 +160,7 @@ public class ScopeMissingExceptionTests
     {
         // Arrange
         var scopes = new[] { "user:read:email", "channel:read:subscriptions" };
-        var innerException = new Exception("Inner exception message");
+        var innerException = new InvalidOperationException("Inner exception message");
 
         // Act
         var exception = new ScopeMissingException(scopes, innerException);
@@ -177,10 +177,10 @@ public class ScopeMissingExceptionTests
     {
         // Arrange
         string?[]? scopes = null;
-        var innerException = new Exception("Inner exception message");
+        var innerException = new InvalidOperationException("Inner exception message");
 
         // Act
-        var exception = new ScopeMissingException(scopes, innerException);
+        var exception = new ScopeMissingException(scopes!, innerException);
 
         // Assert
         exception.Message.Should().Be("Missing scopes Unknown.");
