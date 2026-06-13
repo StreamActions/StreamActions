@@ -77,7 +77,7 @@ public class ETagAttributeTests
         string[] parameters = ["param1", "param2"];
 
         // Act
-        Action act = () => new ETagAttribute(
+        Action act = () => _ = new ETagAttribute(
             friendlyName,
             issueId,
             uri,
