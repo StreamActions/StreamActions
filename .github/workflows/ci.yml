@@ -45,6 +45,7 @@ jobs:
     name: Run tests with alternate conditions on ubuntu-latest
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         timezone: ['UTC', 'America/New_York', 'Europe/London', 'Asia/Tokyo']
     steps:
