@@ -280,7 +280,7 @@ public class InvalidOperationLoggerTests
     [Trait("Member", "Log")]
     public void Log_TokenTypeException_LogsAndReturnsException()
     {
-        var exception = new TokenTypeException("expectedType", "actualType", new Exception("inner exception"));
+        var exception = new TokenTypeException("expectedType", "actualType", new InvalidOperationException("inner exception"));
         var result = InvalidOperationLogger.Log(exception, _logger);
 
         result.Should().Be(exception);
