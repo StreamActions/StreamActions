@@ -423,6 +423,8 @@ jobs:
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
                                     issue_number: etag.issue,
+                                    state: 'open',
+                                    state_reason: 'reopened',
                                     body: newBody.join('\n')
                                 });
 
