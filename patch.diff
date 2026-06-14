@@ -1,0 +1,33 @@
+<<<<<<< SEARCH
+        var lockTask = Task.Run(async () =>
+        {
+            var rwl = backoff.GetRwl();
+
+            rwl.EnterWriteLock();
+            try
+            {
+                lockTakenEvent.Release();
+                await releaseLockEvent.WaitAsync().ConfigureAwait(true);
+            }
+            finally
+            {
+                rwl.ExitWriteLock();
+            }
+        });
+=======
+        var lockTask = Task.Run(() =>
+        {
+            var rwl = backoff.GetRwl();
+
+            rwl.EnterWriteLock();
+            try
+            {
+                lockTakenEvent.Release();
+                releaseLockEvent.Wait(); // synchronous wait to maintain thread affinity for RWLS
+            }
+            finally
+            {
+                rwl.ExitWriteLock();
+            }
+        });
+>>>>>>> REPLACE

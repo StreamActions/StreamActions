@@ -198,7 +198,7 @@ public sealed class BackoffBaseTests
         using var releaseLockEvent = new SemaphoreSlim(0, 1);
 
         // Lock in a background thread
-        var lockTask = Task.Run(async () =>
+        var lockTask = Task.Run(() =>
         {
             var rwl = backoff.GetRwl();
 
@@ -206,7 +206,7 @@ public sealed class BackoffBaseTests
             try
             {
                 lockTakenEvent.Release();
-                await releaseLockEvent.WaitAsync().ConfigureAwait(true);
+                releaseLockEvent.Wait();
             }
             finally
             {
