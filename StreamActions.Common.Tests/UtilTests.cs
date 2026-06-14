@@ -153,6 +153,34 @@ public class UtilTests
             .And.ParamName.Should().Be("duration");
     }
 
+    [Fact]
+    [Trait("Member", "DurationStringToTimeSpan")]
+    public void DurationStringToTimeSpan_WithUnknownCaptureGroup_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        System.Text.RegularExpressions.Regex regex = new("(?<unknown>1)");
+        System.Text.RegularExpressions.Match match = regex.Match("1");
+        System.Reflection.MethodInfo? method = typeof(Util).GetMethod("ParseDurationMatch", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        method.Should().NotBeNull();
+
+        // Act
+        Action act = () =>
+        {
+            try
+            {
+                _ = method!.Invoke(null, [match, "1"]);
+            }
+            catch (System.Reflection.TargetInvocationException ex)
+            {
+                throw ex.InnerException!;
+            }
+        };
+
+        // Assert
+        _ = act.Should().Throw<ArgumentOutOfRangeException>()
+            .And.ParamName.Should().Be("duration");
+    }
+
     #endregion DurationStringToTimeSpan
 
     #region HexColorToColor
