@@ -178,20 +178,57 @@ class BaseParser:
             return {"_operation": "none"}
         elif isinstance(lhs, list) and isinstance(rhs, list):
             ret = []
-            for lk,lv in enumerate(lhs):
-                if lv not in rhs:
-                    if isinstance(lv, str):
-                        lv = {"string": lv}
-                    res = lv
-                    res["_operation"] = "remove"
-                    ret.append(res)
-            for rk,rv in enumerate(rhs):
-                if rv not in lhs:
-                    if isinstance(rv, str):
-                        rv = {"string": rv}
-                    res = rv
-                    res["_operation"] = "add"
-                    ret.append(res)
+            lhs_strs = [json.dumps(x, sort_keys=True) for x in lhs]
+            rhs_strs = [json.dumps(x, sort_keys=True) for x in rhs]
+            seqm = SequenceMatcher(None, lhs_strs, rhs_strs)
+            for opcode, a0, a1, b0, b1 in seqm.get_opcodes():
+                if opcode == "equal":
+                    pass
+                elif opcode == "insert":
+                    for i in range(b0, b1):
+                        rv = dict(rhs[i]) if isinstance(rhs[i], dict) else rhs[i]
+                        if isinstance(rv, str):
+                            rv = {"string": rv}
+                        elif isinstance(rv, dict):
+                            rv = rv.copy()
+                        rv["_operation"] = "add"
+                        ret.append(rv)
+                elif opcode == "delete":
+                    for i in range(a0, a1):
+                        lv = dict(lhs[i]) if isinstance(lhs[i], dict) else lhs[i]
+                        if isinstance(lv, str):
+                            lv = {"string": lv}
+                        elif isinstance(lv, dict):
+                            lv = lv.copy()
+                        lv["_operation"] = "remove"
+                        ret.append(lv)
+                elif opcode == "replace":
+                    n = min(a1 - a0, b1 - b0)
+                    for i in range(n):
+                        res = self.diffobj(lhs[a0+i], rhs[b0+i])
+                        if res and isinstance(res, dict) and "_operation" not in res:
+                            for k, v in lhs[a0+i].items():
+                                if k not in res:
+                                    res[k] = v
+                        ret.append(res)
+                    if a1 - a0 > n:
+                        for i in range(a0 + n, a1):
+                            lv = dict(lhs[i]) if isinstance(lhs[i], dict) else lhs[i]
+                            if isinstance(lv, str):
+                                lv = {"string": lv}
+                            elif isinstance(lv, dict):
+                                lv = lv.copy()
+                            lv["_operation"] = "remove"
+                            ret.append(lv)
+                    if b1 - b0 > n:
+                        for i in range(b0 + n, b1):
+                            rv = dict(rhs[i]) if isinstance(rhs[i], dict) else rhs[i]
+                            if isinstance(rv, str):
+                                rv = {"string": rv}
+                            elif isinstance(rv, dict):
+                                rv = rv.copy()
+                            rv["_operation"] = "add"
+                            ret.append(rv)
             return ret
         elif isinstance(lhs, dict) and isinstance(rhs, dict):
             ret = {}
