@@ -191,6 +191,8 @@ class BaseParser:
                             rv = {"string": rv}
                         elif isinstance(rv, dict):
                             rv = rv.copy()
+                            if "_operation" in rv:
+                                del rv["_operation"]
                         rv["_operation"] = "add"
                         ret.append(rv)
                 elif opcode == "delete":
@@ -200,16 +202,26 @@ class BaseParser:
                             lv = {"string": lv}
                         elif isinstance(lv, dict):
                             lv = lv.copy()
+                            if "_operation" in lv:
+                                del lv["_operation"]
                         lv["_operation"] = "remove"
                         ret.append(lv)
                 elif opcode == "replace":
                     n = min(a1 - a0, b1 - b0)
                     for i in range(n):
                         res = self.diffobj(lhs[a0+i], rhs[b0+i])
-                        if res and isinstance(res, dict) and "_operation" not in res:
-                            for k, v in lhs[a0+i].items():
-                                if k not in res:
-                                    res[k] = v
+                        if res and isinstance(res, dict) and isinstance(lhs[a0+i], dict):
+                            # The instructions say: "The unchanged values should not be marked in any way"
+                            # We only want to add context keys if the item actually has a diff operation (meaning something changed inside)
+                            # Or if the item itself was fully replaced, but here we are in a replace block so there is some change
+                            has_inner_diff = res.get("_operation") not in ["none", "add", "remove"] or any(isinstance(v, dict) and "_operation" in v for v in res.values())
+
+                            if has_inner_diff:
+                                for k, v in lhs[a0+i].items():
+                                    if k == "_operation":
+                                        continue
+                                    if k not in res:
+                                        res[k] = v
                         ret.append(res)
                     if a1 - a0 > n:
                         for i in range(a0 + n, a1):
@@ -218,6 +230,8 @@ class BaseParser:
                                 lv = {"string": lv}
                             elif isinstance(lv, dict):
                                 lv = lv.copy()
+                                if "_operation" in lv:
+                                    del lv["_operation"]
                             lv["_operation"] = "remove"
                             ret.append(lv)
                     if b1 - b0 > n:
@@ -227,6 +241,8 @@ class BaseParser:
                                 rv = {"string": rv}
                             elif isinstance(rv, dict):
                                 rv = rv.copy()
+                                if "_operation" in rv:
+                                    del rv["_operation"]
                             rv["_operation"] = "add"
                             ret.append(rv)
             return ret
@@ -234,23 +250,32 @@ class BaseParser:
             ret = {}
             foundk = []
             hasOp = False
-            for lk,lv in lhs.items():
-                if lk in rhs:
+
+            # Since lhs/rhs could contain "_operation" if modified earlier or already in data,
+            # we must only look at the actual data keys, avoiding "_operation".
+            lhs_keys = [k for k in lhs.keys() if k != "_operation"]
+            rhs_keys = [k for k in rhs.keys() if k != "_operation"]
+
+            for lk in lhs_keys:
+                lv = lhs[lk]
+                if lk in rhs_keys:
                     foundk.append(lk)
                     res = self.diffobj(lv, rhs[lk])
                     hasOp = True
                 else:
                     res = {"_operation": "remove"}
                     hasOp = True
-                if res["_operation"] != "none":
+                if (isinstance(res, dict) and res.get("_operation") != "none") or (not isinstance(res, dict) and res is not None):
                     ret[lk] = res
                     hasOp = True
-            for rk in rhs:
+            for rk in rhs_keys:
                 if rk not in foundk:
                     ret[rk] = {"_operation": "add"}
                     hasOp = True
+
             if hasOp == False:
                 ret["_operation"] = "none"
+
             return ret
         elif isinstance(lhs, str) and isinstance(rhs, str):
             seqm = SequenceMatcher(None, lhs, rhs)
@@ -321,7 +346,8 @@ class BaseParser:
 
         If a specific value has changed, but not the entire object, it will be defined in a sub-object defining the operation
 
-        To limit code complexity of the parser, changes of a sub-object inside of a list are represented as a "remove" and "add"
+        Changes within sub-objects of a list will be paired when possible to provide deep "replace", "insert", or "delete" operations,
+        and unchanged context keys from the object will be retained to help identify the object in the list. Unchanged elements are omitted.
 
         For example:
         {
@@ -335,16 +361,13 @@ class BaseParser:
                     },
                     "requestBody": [
                         {
-                            "field": "broadcaster_id",
-                            "type": "Integer",
-                            "description": "The ID of the partner or affiliate broadcaster that wants to run the commercial. This ID must match the user ID found in the OAuth token.",
-                            "_operation": "remove"
-                        },
-                        {
-                            "field": "broadcaster_id",
-                            "type": "String",
-                            "description": "The ID of the partner or affiliate broadcaster that wants to run the commercial. This ID must match the user ID found in the OAuth token.",
-                            "_operation": "add"
+                            "type": {
+                                "_operation": "replace",
+                                "lhs": "<del>Integer</del>",
+                                "rhs": "<ins>String</ins>",
+                                "combined": "<del>Integer</del><ins>String</ins>"
+                            },
+                            "field": "broadcaster_id"
                         }
                     ]
                 }
@@ -352,7 +375,7 @@ class BaseParser:
         }
 
         This dict indicates that in "rateLimits", a "/" was replaced with " and ". It also indicates that the "type" for the field "broadcaster_id" in the "requestBody" was
-        changed from "Integer" to "String"
+        changed from "Integer" to "String", while retaining the "field" key for context.
 
         As shown above, "replace" operations will output a string showing just the LHS with <del></del> tags surrounding the removed text, a string showing just the RHS
         with <ins></ins> tags surrounding the added text, and a combined string showing both sets of tags
