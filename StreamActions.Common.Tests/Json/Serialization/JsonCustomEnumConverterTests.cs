@@ -16,10 +16,10 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Text.Json.Serialization;
-using System.Text.Json;
 using FluentAssertions;
 using StreamActions.Common.Json.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Xunit;
 
 namespace StreamActions.Common.Tests.Json.Serialization;
@@ -53,7 +53,7 @@ public class JsonCustomEnumConverterTests
 
     public JsonCustomEnumConverterTests()
     {
-        _converter = new JsonCustomEnumConverter<TestCustomAttr>();
+        this._converter = new JsonCustomEnumConverter<TestCustomAttr>();
     }
 
     #region HandleNull
@@ -62,7 +62,7 @@ public class JsonCustomEnumConverterTests
     [Trait("Member", "HandleNull")]
     public void HandleNull_ReturnsTrue()
     {
-        _converter.HandleNull.Should().BeTrue();
+        this._converter.HandleNull.Should().BeTrue();
     }
 
     #endregion HandleNull
@@ -79,7 +79,7 @@ public class JsonCustomEnumConverterTests
     [InlineData("INVALID_VALUE", default(TestCustomAttr))] // completely unmatched
     public void Convert_StringToEnum_ReturnsExpectedValue(string input, TestCustomAttr expected)
     {
-        _converter.Convert(input).Should().Be(expected);
+        this._converter.Convert(input).Should().Be(expected);
     }
 
     #endregion Convert(string)
@@ -93,7 +93,7 @@ public class JsonCustomEnumConverterTests
     [InlineData(TestCustomAttr.NoAttributeValue, "NoAttributeValue")]
     public void Convert_EnumToString_ReturnsExpectedValue(TestCustomAttr input, string expected)
     {
-        _converter.Convert(input).Should().Be(expected);
+        this._converter.Convert(input).Should().Be(expected);
     }
 
     #endregion Convert(T)
