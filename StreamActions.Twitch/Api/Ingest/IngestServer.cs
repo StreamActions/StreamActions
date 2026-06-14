@@ -27,8 +27,8 @@ namespace StreamActions.Twitch.Api.Ingest;
 /// Sends and represents a response element for a request for ingest servers.
 /// </summary>
 [ETag("Ingest", 72,
-    "https://dev.twitch.tv/docs/video-broadcast/reference/", "8D3047C5357A923A37E9C9B7CD356E57237A85A117BEF7D56328DB4E89737CAC",
-    "2024-11-06T05:24Z", "TwitchReferenceParser", [])]
+    "https://dev.twitch.tv/docs/video-broadcast/reference/", "D926292F049C11FA71628831542CC09B9BA6FA9509050A8C17163C6AAA0EAC1B",
+    "2024-06-14T00:00Z", "TwitchReferenceParser", [])]
 public sealed record IngestServer
 {
     /// <summary>
@@ -56,7 +56,7 @@ public sealed record IngestServer
     public string? Name { get; init; }
 
     /// <summary>
-    /// RTMP URL template for ingest server. Replace <c>{stream_key}</c> with the stream key.
+    /// RTMP URL template for ingest server.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "API Definition")]
     [JsonPropertyName("url_template")]

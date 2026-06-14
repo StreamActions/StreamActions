@@ -36,4 +36,9 @@ public sealed record SubscriptionResponse : ResponseData<Subscription>
     /// </remarks>
     [JsonPropertyName("points")]
     public int? Points { get; init; }
+    /// <summary>
+    /// The total number of users that subscribe to this broadcaster.
+    /// </summary>
+    [JsonPropertyName("total")]
+    public int? Total { get; init; }
 }
