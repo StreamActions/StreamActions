@@ -16,9 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Attributes;
 using System;
 using System.Globalization;
-using StreamActions.Common.Attributes;
 
 namespace StreamActions.Common.Tests.Attributes;
 

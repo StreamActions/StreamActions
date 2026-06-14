@@ -16,10 +16,10 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
-using System.Reflection;
 using FluentAssertions;
 using StreamActions.Common.Limiters;
+using System;
+using System.Reflection;
 using Xunit;
 
 namespace StreamActions.Common.Tests.Limiters;

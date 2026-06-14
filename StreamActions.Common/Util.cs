@@ -173,8 +173,20 @@ public static partial class Util
     /// <exception cref="ArgumentOutOfRangeException">An unknown capture group was returned by <see cref="DurationRegex"/>.</exception>
     public static TimeSpan DurationStringToTimeSpan(string duration)
     {
-        TimeSpan t = new(0);
         Match m = DurationRegex().Match(duration);
+        return ParseDurationMatch(m, duration);
+    }
+
+    /// <summary>
+    /// Parses a duration match into a <see cref="TimeSpan"/>.
+    /// </summary>
+    /// <param name="m">The match to parse.</param>
+    /// <param name="duration">The original duration string, for exception messages.</param>
+    /// <returns>A <see cref="TimeSpan"/> representing the matched duration.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">An unknown capture group was returned by the match.</exception>
+    internal static TimeSpan ParseDurationMatch(Match m, string duration)
+    {
+        TimeSpan t = new(0);
 
         if (!m.Success || string.IsNullOrEmpty(m.Value))
         {
@@ -195,7 +207,7 @@ public static partial class Util
                 "hours" => t.Add(TimeSpan.FromHours(int.Parse(g.Value, CultureInfo.InvariantCulture))),
                 "minutes" => t.Add(TimeSpan.FromMinutes(int.Parse(g.Value, CultureInfo.InvariantCulture))),
                 "seconds" => t.Add(TimeSpan.FromSeconds(int.Parse(g.Value, CultureInfo.InvariantCulture))),
-                _ => t, // ignore '0' group representing the whole match and '1', '2', etc if any
+                _ => int.TryParse(g.Name, out _) ? t : throw new ArgumentOutOfRangeException(nameof(duration), "An unknown capture group was returned by DurationRegex."),
             };
         }
 
