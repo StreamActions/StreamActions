@@ -16,10 +16,10 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using FluentAssertions;
 using StreamActions.Common.Json.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Xunit;
 
 namespace StreamActions.Common.Tests.Json.Serialization;

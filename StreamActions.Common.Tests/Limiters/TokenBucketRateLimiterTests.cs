@@ -16,12 +16,12 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using FluentAssertions;
+using StreamActions.Common.Limiters;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using StreamActions.Common.Limiters;
 using Xunit;
-using FluentAssertions;
 
 namespace StreamActions.Common.Tests.Limiters;
 
@@ -35,7 +35,7 @@ public sealed class TokenBucketRateLimiterTests
     {
         using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromSeconds(10));
 
-        await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1));
+        await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
 
         // Wait should complete successfully, consuming the token
         limiter.Remaining.Should().Be(0);
@@ -52,7 +52,7 @@ public sealed class TokenBucketRateLimiterTests
 
         Func<Task> act = async () => await limiter.WaitForRateLimit(TimeSpan.FromMilliseconds(50)).ConfigureAwait(false);
 
-        await act.Should().ThrowAsync<TimeoutException>().WithMessage("Timed out waiting for the rate limit.");
+        await act.Should().ThrowAsync<TimeoutException>().WithMessage("Timed out waiting for the rate limit.").ConfigureAwait(false);
     }
 
     [Fact]
@@ -65,11 +65,11 @@ public sealed class TokenBucketRateLimiterTests
         limiter.UpdateNextReset(DateTime.UtcNow.Ticks + TimeSpan.FromSeconds(5).Ticks);
 
         using CancellationTokenSource cts = new();
-        await cts.CancelAsync();
+        await cts.CancelAsync().ConfigureAwait(false);
 
         Func<Task> act = async () => await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(false);
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        await act.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(false);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class TokenBucketRateLimiterTests
         limiter.UpdateRemaining(0);
         limiter.UpdateNextReset(DateTime.UtcNow.Ticks + TimeSpan.FromMilliseconds(50).Ticks);
 
-        await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1));
+        await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
 
         limiter.Remaining.Should().Be(0);
     }
