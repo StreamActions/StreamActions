@@ -269,7 +269,7 @@ class TwitchReferenceParser(BaseParser):
                             elif state == 2:
                                 exampleRequestCurl = (" ".join(data)).strip()
                             elif state == 3:
-                                exampleResponse = (" ".join(data)).replace("\u00e2\u0080\u008b", "").strip()
+                                exampleResponse = (" ".join(data)).strip()
                             data = []
                             state = newState
                     if state == 1:
@@ -277,7 +277,7 @@ class TwitchReferenceParser(BaseParser):
                     elif state == 2:
                         exampleRequestCurl = (" ".join(data)).strip()
                     elif state == 3:
-                        exampleResponse = (" ".join(data)).strip().replace("\u00e2\u0080\u008b", "").strip()
+                        exampleResponse = (" ".join(data)).strip().strip()
                 if endpoint != None:
                     ret["endpoints"][endpoint] = {
                         "description": description,

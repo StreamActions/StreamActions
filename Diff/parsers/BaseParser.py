@@ -21,10 +21,15 @@ import argparse
 from difflib import SequenceMatcher
 import json
 import requests
+import string
 
 class BaseParser:
     """
     Base class for a parser which converts a page into a JSON format that can be diffed
+    """
+    printable = string.printable.replace('\x0b','').replace('\x0c','')
+    """
+    A string of all printable characters, except for vertical tab and form feed, which are not commonly used and can cause issues with parsing. This is used to filter out non-printable characters from the input HTML, which can cause issues with parsing and diffing
     """
     def parseFromFile(self, path:str) -> dict:
         """
@@ -39,7 +44,7 @@ class BaseParser:
             dict: A dict containing the parsed data (see parse(str))
         """
         with open(path, "r", encoding="utf8") as html_file:
-            return self.parse(html_file.read())
+            return self.parse("".join(c for c in html_file.read() if c in self.printable))
 
     def parseFromUrl(self, url:str) -> dict:
         """
@@ -58,7 +63,7 @@ class BaseParser:
         resp = requests.get(url, headers = { "User-Agent": "streamactions.diff.parser/1" })
         if resp.status_code != 200:
             exit(1)
-        return self.parse(resp.text.encode('ascii', 'ignore'))
+        return self.parse("".join(c for c in resp.text if c in self.printable))
 
     def parse(self, html:str) -> dict:
         """
