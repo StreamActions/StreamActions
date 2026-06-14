@@ -177,6 +177,13 @@ public static partial class Util
         return ParseDurationMatch(m, duration);
     }
 
+    /// <summary>
+    /// Parses a duration match into a <see cref="TimeSpan"/>.
+    /// </summary>
+    /// <param name="m">The match to parse.</param>
+    /// <param name="duration">The original duration string, for exception messages.</param>
+    /// <returns>A <see cref="TimeSpan"/> representing the matched duration.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">An unknown capture group was returned by the match.</exception>
     internal static TimeSpan ParseDurationMatch(Match m, string duration)
     {
         TimeSpan t = new(0);
