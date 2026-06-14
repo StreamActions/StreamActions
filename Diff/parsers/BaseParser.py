@@ -446,12 +446,6 @@ class BaseParser:
             retp = self.parseFromFile(args.file)
         elif args.url != None:
             retp = self.parseFromUrl(args.url)
-        if args.lhs != None and args.rhs != None:
-            retd = self.diffWithFiles(args.lhs, args.rhs)
-        elif args.lhs != None and retp != None:
-            retd = self.diffWithFileL(args.lhs, retp)
-        elif args.rhs != None and retp != None:
-            retd = self.diffWithFileR(retp, args.rhs)
         if retp != None:
             if args.out == None:
                 print(json.dumps(retp, indent=4))
@@ -462,6 +456,15 @@ class BaseParser:
                     indent=None
                 with open(args.out, "w", encoding="utf8") as pout_file:
                     json.dump(retp, pout_file, indent=indent)
+                if args.lhs != None or args.rhs != None:
+                    with open(args.out, "r", encoding="utf8") as json_file:
+                        retp = json.load(json_file)
+        if args.lhs != None and args.rhs != None:
+            retd = self.diffWithFiles(args.lhs, args.rhs)
+        elif args.lhs != None and retp != None:
+            retd = self.diffWithFileL(args.lhs, retp)
+        elif args.rhs != None and retp != None:
+            retd = self.diffWithFileR(retp, args.rhs)
         if retd != None:
             if retp != None and args.out == None:
                 print("")
