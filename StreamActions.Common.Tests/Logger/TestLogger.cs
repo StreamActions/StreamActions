@@ -16,9 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.ObjectModel;
-using Microsoft.Extensions.Logging;
 
 namespace StreamActions.Common.Tests.Logger;
 
@@ -31,10 +31,10 @@ public class LogEntry
 
     public LogEntry(LogLevel logLevel, EventId eventId, Exception? exception, string message)
     {
-        LogLevel = logLevel;
-        EventId = eventId;
-        Exception = exception;
-        Message = message;
+        this.LogLevel = logLevel;
+        this.EventId = eventId;
+        this.Exception = exception;
+        this.Message = message;
     }
 }
 
@@ -49,6 +49,6 @@ public class TestLogger : ILogger
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         ArgumentNullException.ThrowIfNull(formatter);
-        Logs.Add(new LogEntry(logLevel, eventId, exception, formatter(state, exception)));
+        this.Logs.Add(new LogEntry(logLevel, eventId, exception, formatter(state, exception)));
     }
 }

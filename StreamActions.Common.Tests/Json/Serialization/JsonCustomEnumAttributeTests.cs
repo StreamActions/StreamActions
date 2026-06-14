@@ -16,9 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using FluentAssertions;
 using StreamActions.Common.Json.Serialization;
+using System;
 using Xunit;
 
 namespace StreamActions.Common.Tests.Json.Serialization;

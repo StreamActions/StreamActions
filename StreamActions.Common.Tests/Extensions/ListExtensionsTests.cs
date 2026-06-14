@@ -16,9 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Extensions;
 using System;
 using System.Collections.Generic;
-using StreamActions.Common.Extensions;
 
 namespace StreamActions.Common.Tests.Extensions;
 

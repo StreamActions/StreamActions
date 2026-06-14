@@ -16,11 +16,11 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using FluentAssertions;
+using StreamActions.Common.Extensions;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
-using StreamActions.Common.Extensions;
 using Xunit;
 
 namespace StreamActions.Common.Tests.Extensions;
@@ -38,14 +38,14 @@ public class CancellationTokenExtensionsTests
     {
         // Arrange
         using CancellationTokenSource cts = new();
-        await cts.CancelAsync();
+        await cts.CancelAsync().ConfigureAwait(false);
 
         // Act
         Task waitTask = cts.Token.WaitAsync();
 
         // Wait a short time to allow the background task to complete if it hasn't already.
         // WaitAsync spawns a background thread (Task.Run), so it might take a moment.
-        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(1000));
+        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(1000)).ConfigureAwait(false);
 
         // Assert
         completedTask.Should().Be(waitTask, "the task should complete immediately since the token was already canceled");
@@ -69,7 +69,7 @@ public class CancellationTokenExtensionsTests
         cts.CancelAfter(50);
 
         // Wait for it to complete or timeout
-        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(2000));
+        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(2000)).ConfigureAwait(false);
 
         // Assert
         completedTask.Should().Be(waitTask, "the task should complete after the token is canceled");
@@ -87,7 +87,7 @@ public class CancellationTokenExtensionsTests
         Task waitTask = cts.Token.WaitAsync();
 
         // Wait a short amount of time
-        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(100));
+        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(100)).ConfigureAwait(false);
 
         // Assert
         completedTask.Should().NotBe(waitTask, "the task should not complete if the token is not canceled");
