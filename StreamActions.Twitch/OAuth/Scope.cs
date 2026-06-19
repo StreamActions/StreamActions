@@ -25,8 +25,8 @@ namespace StreamActions.Twitch.OAuth;
 /// A Twitch OAuth scope.
 /// </summary>
 [ETag("Twitch API Scopes", 82,
-    "https://dev.twitch.tv/docs/authentication/scopes", "C5C47EB0D3003023F71C158B871FA4769E7C12CF551F4062467977336462F271",
-    "2024-12-07T22:24Z", "TwitchScopesParser", [])]
+    "https://dev.twitch.tv/docs/authentication/scopes", "A201DAE1CBAD8FD41EDC60A3C037DE4BF6090096D305AC4B99AFC022C8132CAF",
+    "2026-05-17T06:50Z", "TwitchScopesParser", [])]
 [JsonConverter(typeof(ScopeJsonConverter))]
 public sealed partial record Scope
 {
