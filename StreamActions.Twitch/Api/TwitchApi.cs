@@ -27,6 +27,7 @@ using StreamActions.Twitch.OAuth;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 
 namespace StreamActions.Twitch.Api;
@@ -311,7 +312,10 @@ public sealed partial class TwitchApi : IApi
     /// <summary>
     /// The <see cref="HttpClient"/> that is used for all requests.
     /// </summary>
-    private static readonly HttpClient _httpClient = new();
+    private static readonly HttpClient _httpClient = new(new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+    });
 
     /// <summary>
     /// The <see cref="ILogger"/> for logging.
