@@ -105,11 +105,14 @@ public abstract class BackoffBase
     /// <exception cref="OperationCanceledException">A cancellation was requested via <paramref name="cancellationToken"/> before a rate limit token could be acquired.</exception>
     public async Task Wait(TimeSpan timeout, CancellationToken? cancellationToken = null)
     {
+        TimeSpan delayDuration;
+
         if (this.Rwl.TryEnterUpgradeableReadLock(timeout))
         {
             try
             {
-                await Task.Delay(this._nextDuration, cancellationToken.GetValueOrDefault()).ConfigureAwait(false);
+                delayDuration = this._nextDuration;
+
                 if (this._nextDuration.CompareTo(this._maxDuration) < 0)
                 {
                     long ticks = this.CalcNextDurationTicks();
@@ -145,6 +148,8 @@ public abstract class BackoffBase
         {
             throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
         }
+
+        await Task.Delay(delayDuration, cancellationToken.GetValueOrDefault()).ConfigureAwait(false);
     }
 
     #endregion Public Methods

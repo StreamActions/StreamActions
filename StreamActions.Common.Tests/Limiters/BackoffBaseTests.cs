@@ -232,7 +232,7 @@ public sealed class BackoffBaseTests
 
     #region Wait
 
-    [Fact(Skip = "Known bug: SynchronizationLockException in Wait() due to ReaderWriterLockSlim across await")]
+    [Fact]
     [Trait("Member", "Wait")]
     public async Task Wait_WaitsForNextDurationAndCalculatesNewNextDuration()
     {
