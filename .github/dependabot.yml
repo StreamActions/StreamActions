@@ -7,7 +7,7 @@ updates:
       interval: "weekly"
   - package-ecosystem: "nuget"
     directories:
-      - "/StreamActions*"
+      - "/"
     schedule:
       interval: "weekly"
   - package-ecosystem: "uv"
