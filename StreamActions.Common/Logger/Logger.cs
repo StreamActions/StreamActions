@@ -38,32 +38,41 @@ public static class Logger
     /// <returns>The combined message.</returns>
     public static string ConstructLogMessage(IDictionary<string, object?> paramList, string? message)
     {
-        string msg = "";
+        System.Text.StringBuilder msg = new();
+        bool hasContent = false;
 
         if (message is not null)
         {
-            msg += message;
-        }
-
-        foreach (KeyValuePair<string, object?> param in paramList ?? new Dictionary<string, object?>())
-        {
-            if (param.Value is not null && (!message?.Contains(param.Value.ToString() ?? "", StringComparison.InvariantCultureIgnoreCase) ?? true))
+            msg.Append(message);
+            if (!string.IsNullOrWhiteSpace(message))
             {
-                if (!string.IsNullOrWhiteSpace(msg))
-                {
-                    msg += " ";
-                }
-
-                msg += "(" + param.Key + " was `" + param.Value + "`)";
+                hasContent = true;
             }
         }
 
-        if (string.IsNullOrWhiteSpace(msg))
+        if (paramList is not null)
         {
-            msg += nameof(msg) + " was null";
+            foreach (KeyValuePair<string, object?> param in paramList)
+            {
+                if (param.Value is not null && (!message?.Contains(param.Value.ToString() ?? "", StringComparison.InvariantCultureIgnoreCase) ?? true))
+                {
+                    if (hasContent)
+                    {
+                        msg.Append(' ');
+                    }
+
+                    msg.Append('(').Append(param.Key).Append(" was `").Append(param.Value).Append("`)");
+                    hasContent = true;
+                }
+            }
         }
 
-        return msg;
+        if (!hasContent)
+        {
+            msg.Append(nameof(msg) + " was null");
+        }
+
+        return msg.ToString();
     }
 
     /// <summary>
