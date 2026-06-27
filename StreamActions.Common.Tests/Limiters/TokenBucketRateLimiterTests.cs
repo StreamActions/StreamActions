@@ -28,6 +28,113 @@ namespace StreamActions.Common.Tests.Limiters;
 
 public sealed class TokenBucketRateLimiterTests
 {
+    #region ReturnToken
+
+    [Fact]
+    [Trait("Member", "ReturnToken")]
+    public void ReturnToken_IncrementsRemainingTokenCount()
+    {
+        using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
+        var returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        long initial = limiter.Remaining;
+        returnTokenMethod!.Invoke(limiter, new object[] { TimeSpan.FromSeconds(1) });
+
+        limiter.Remaining.Should().Be((int)(initial + 1));
+    }
+
+    [Fact]
+    [Trait("Member", "ReturnToken")]
+    public async Task ReturnToken_ThrowsTimeoutException_WhenUpgradeableReadLockFails()
+    {
+        using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
+        var returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var rwlField = typeof(TokenBucketRateLimiter).GetField("_rwl", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var rwl = (ReaderWriterLockSlim)rwlField!.GetValue(limiter)!;
+
+        var tcs = new TaskCompletionSource();
+        var tcs2 = new TaskCompletionSource();
+
+        var t = Task.Run(() =>
+        {
+            rwl.EnterWriteLock();
+            tcs.SetResult();
+            tcs2.Task.Wait();
+            rwl.ExitWriteLock();
+        });
+
+        await tcs.Task.ConfigureAwait(true);
+
+        try
+        {
+            Action act = () =>
+            {
+                try
+                {
+                    returnTokenMethod!.Invoke(limiter, new object[] { TimeSpan.FromMilliseconds(10) });
+                }
+                catch (System.Reflection.TargetInvocationException ex)
+                {
+                    throw ex.InnerException!;
+                }
+            };
+
+            act.Should().Throw<TimeoutException>().WithMessage("Timed out attempting to acquire upgradeable read lock.");
+        }
+        finally
+        {
+            tcs2.SetResult();
+            await t.ConfigureAwait(true);
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "ReturnToken")]
+    public async Task ReturnToken_ThrowsTimeoutException_WhenWriteLockFails()
+    {
+        using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
+        var returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var rwlField = typeof(TokenBucketRateLimiter).GetField("_rwl", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        var rwl = (ReaderWriterLockSlim)rwlField!.GetValue(limiter)!;
+
+        var tcs = new TaskCompletionSource();
+        var tcs2 = new TaskCompletionSource();
+
+        var t = Task.Run(() =>
+        {
+            rwl.EnterReadLock();
+            tcs.SetResult();
+            tcs2.Task.Wait();
+            rwl.ExitReadLock();
+        });
+
+        await tcs.Task.ConfigureAwait(true);
+
+        try
+        {
+            Action act = () =>
+            {
+                try
+                {
+                    returnTokenMethod!.Invoke(limiter, new object[] { TimeSpan.FromMilliseconds(100) });
+                }
+                catch (System.Reflection.TargetInvocationException ex)
+                {
+                    throw ex.InnerException!;
+                }
+            };
+
+            act.Should().Throw<TimeoutException>().WithMessage("Timed out attempting to acquire write lock.");
+        }
+        finally
+        {
+            tcs2.SetResult();
+            await t.ConfigureAwait(true);
+        }
+    }
+
+    #endregion ReturnToken
+
     #region UpdateLimit
 
     [Fact]
