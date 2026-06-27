@@ -46,7 +46,7 @@ jobs:
         uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e
         with:
           languages: ${{ matrix.language }}
-          autobuild: ${{ matrix.autobuild }}
+          build-mode: ${{ matrix.autobuild }}
 
       - name: Build with dotnet
         if: matrix.language == 'csharp'
