@@ -155,6 +155,14 @@ public class ListExtensionsTests
     }
 
     [Fact]
+    public void IsNullWhiteSpaceOrOutOfRange_ReturnsTrue_WhenIndexIsEqualToCount()
+    {
+        List<string?> source = ["test"];
+        var result = source.IsNullWhiteSpaceOrOutOfRange(1);
+        result.Should().BeTrue();
+    }
+
+    [Fact]
     public void IsNullWhiteSpaceOrOutOfRange_ReturnsTrue_WhenElementIsNull()
     {
         List<string?> source = [null];
