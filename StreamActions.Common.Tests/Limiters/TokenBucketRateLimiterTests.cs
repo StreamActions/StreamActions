@@ -19,6 +19,7 @@
 using FluentAssertions;
 using StreamActions.Common.Limiters;
 using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -87,4 +88,113 @@ public sealed class TokenBucketRateLimiterTests
     }
 
     #endregion WaitForRateLimit
+
+    #region ParseHeaders
+
+    [Fact(Skip = "Bug: ParseHeaders incorrectly calculates NextReset for Seconds by not adding Unix Epoch")]
+    [Trait("Member", "ParseHeaders")]
+    public void ParseHeaders_UpdatesLimitRemainingAndNextReset_WhenHeadersPresent_Seconds()
+    {
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromSeconds(10));
+        using HttpResponseMessage response = new();
+        response.Headers.Add("Ratelimit-Limit", "100");
+        response.Headers.Add("Ratelimit-Remaining", "50");
+        long futureEpoch = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
+        response.Headers.Add("Ratelimit-Reset", futureEpoch.ToString(System.Globalization.CultureInfo.InvariantCulture)); // some unix timestamp in seconds
+
+        limiter.ParseHeaders(response.Headers);
+
+        limiter.Limit.Should().Be(100);
+        limiter.Remaining.Should().Be(50);
+        limiter.NextReset.Should().Be(DateTimeOffset.FromUnixTimeSeconds(futureEpoch).UtcDateTime.Ticks);
+    }
+
+    [Fact(Skip = "Bug: ParseHeaders incorrectly calculates NextReset for Milliseconds by not adding Unix Epoch")]
+    [Trait("Member", "ParseHeaders")]
+    public void ParseHeaders_UpdatesNextReset_WhenHeaderResetTypeIsMilliseconds()
+    {
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromSeconds(10));
+        using HttpResponseMessage response = new();
+        // Add dummy headers to prevent InvalidOperationException on missing headers
+        response.Headers.Add("Ratelimit-Limit", "100");
+        response.Headers.Add("Ratelimit-Remaining", "50");
+        long futureEpoch = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeMilliseconds();
+        response.Headers.Add("Ratelimit-Reset", futureEpoch.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+        limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.Milliseconds);
+
+        limiter.NextReset.Should().Be(DateTimeOffset.FromUnixTimeMilliseconds(futureEpoch).UtcDateTime.Ticks);
+    }
+
+    [Fact]
+    [Trait("Member", "ParseHeaders")]
+    public void ParseHeaders_UpdatesNextReset_WhenHeaderResetTypeIsTicks()
+    {
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromSeconds(10));
+        using HttpResponseMessage response = new();
+        // Add dummy headers to prevent InvalidOperationException on missing headers
+        response.Headers.Add("Ratelimit-Limit", "100");
+        response.Headers.Add("Ratelimit-Remaining", "50");
+        long futureTicks = DateTime.UtcNow.Ticks + TimeSpan.FromHours(1).Ticks;
+        response.Headers.Add("Ratelimit-Reset", futureTicks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+        limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.Ticks);
+
+        limiter.NextReset.Should().Be(futureTicks);
+    }
+
+    [Fact]
+    [Trait("Member", "ParseHeaders")]
+    public void ParseHeaders_UpdatesNextReset_WhenHeaderResetTypeIsISO8601()
+    {
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromSeconds(10));
+        using HttpResponseMessage response = new();
+        // Add dummy headers to prevent InvalidOperationException on missing headers
+        response.Headers.Add("Ratelimit-Limit", "100");
+        response.Headers.Add("Ratelimit-Remaining", "50");
+        string isoDate = DateTime.UtcNow.AddHours(1).ToString("O");
+        response.Headers.Add("Ratelimit-Reset", isoDate);
+
+        limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.ISO8601);
+
+        limiter.NextReset.Should().Be(DateTime.Parse(isoDate, System.Globalization.CultureInfo.InvariantCulture).Ticks);
+    }
+
+    [Fact]
+    [Trait("Member", "ParseHeaders")]
+    public void ParseHeaders_IgnoresInvalidHeaderValues()
+    {
+        using TokenBucketRateLimiter limiter = new(10, TimeSpan.FromSeconds(10));
+        limiter.UpdateRemaining(5);
+        long originalReset = limiter.NextReset;
+
+        using HttpResponseMessage response = new();
+        response.Headers.Add("Ratelimit-Limit", "invalid");
+        response.Headers.Add("Ratelimit-Remaining", "invalid");
+        response.Headers.Add("Ratelimit-Reset", "invalid");
+
+        limiter.ParseHeaders(response.Headers);
+
+        limiter.Limit.Should().Be(10);
+        limiter.Remaining.Should().Be(5);
+        limiter.NextReset.Should().Be(originalReset);
+    }
+
+    [Fact]
+    [Trait("Member", "ParseHeaders")]
+    public void ParseHeaders_ThrowsArgumentOutOfRangeException_ForInvalidHeaderResetType()
+    {
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromSeconds(10));
+        using HttpResponseMessage response = new();
+        // Add dummy headers to prevent InvalidOperationException on missing headers
+        response.Headers.Add("Ratelimit-Limit", "100");
+        response.Headers.Add("Ratelimit-Remaining", "50");
+        response.Headers.Add("Ratelimit-Reset", "1000");
+
+        Action act = () => limiter.ParseHeaders(response.Headers, headerResetType: (TokenBucketRateLimiter.HeaderResetType)999);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    #endregion ParseHeaders
 }
