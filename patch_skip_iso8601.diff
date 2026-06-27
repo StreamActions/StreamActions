@@ -1,9 +1,0 @@
-<<<<<<< SEARCH
-    [Fact]
-    [Trait("Member", "ParseHeaders")]
-    public void ParseHeaders_UpdatesNextReset_WhenHeaderResetTypeIsISO8601()
-=======
-    [Fact(Skip = "Bug: ParseHeaders parses ISO8601 to Local time, causing its Ticks to be rejected by UpdateNextReset in negative timezones")]
-    [Trait("Member", "ParseHeaders")]
-    public void ParseHeaders_UpdatesNextReset_WhenHeaderResetTypeIsISO8601()
->>>>>>> REPLACE

@@ -160,7 +160,7 @@ public sealed class TokenBucketRateLimiter : IDisposable
             long nextReset = -1;
             if (headerResetType == HeaderResetType.ISO8601)
             {
-                DateTime? dt = DateTime.Parse(resetS, CultureInfo.InvariantCulture);
+                DateTime? dt = DateTime.Parse(resetS, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
                 if (dt.HasValue)
                 {
                     nextReset = dt.Value.Ticks;
@@ -170,8 +170,8 @@ public sealed class TokenBucketRateLimiter : IDisposable
             {
                 nextReset = headerResetType switch
                 {
-                    HeaderResetType.Seconds => TimeSpan.FromSeconds(reset).Ticks,
-                    HeaderResetType.Milliseconds => TimeSpan.FromMilliseconds(reset).Ticks,
+                    HeaderResetType.Seconds => DateTimeOffset.FromUnixTimeSeconds(reset).UtcDateTime.Ticks,
+                    HeaderResetType.Milliseconds => DateTimeOffset.FromUnixTimeMilliseconds(reset).UtcDateTime.Ticks,
                     HeaderResetType.Ticks => reset,
                     HeaderResetType.ISO8601 => throw new InvalidOperationException(),
                     _ => throw new ArgumentOutOfRangeException(nameof(headerResetType)),
