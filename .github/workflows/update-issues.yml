@@ -101,7 +101,7 @@ jobs:
             name: cache-start
             path: .cache
       - name: Run diffs
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
             script: |
                 core.info('Preparing...');
