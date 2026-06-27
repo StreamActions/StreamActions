@@ -48,121 +48,71 @@ public static partial class Util
 
         StringBuilder paramStringBuilder = new();
 
-        if (queryParams is not null && queryParams.HasKeys())
-        {
-            if (!string.IsNullOrEmpty(uriBuilder.Query))
-            {
-                _ = paramStringBuilder.Append('&');
-            }
-
-            bool first = true;
-            foreach (string? name in queryParams.AllKeys)
-            {
-                if (name is not null)
-                {
-                    if (!first)
-                    {
-                        _ = paramStringBuilder.Append('&');
-                    }
-                    else
-                    {
-                        first = false;
-                    }
-
-                    bool innerFirst = true;
-                    bool hasValue = false;
-                    string[]? values = queryParams.GetValues(name);
-                    if (values is not null)
-                    {
-                        foreach (string? value in values)
-                        {
-                            if (value is not null)
-                            {
-                                hasValue = true;
-
-                                if (!innerFirst)
-                                {
-                                    _ = paramStringBuilder.Append('&');
-                                }
-                                else
-                                {
-                                    innerFirst = false;
-                                }
-
-                                _ = paramStringBuilder.Append(Uri.EscapeDataString(name)).Append('=').Append(Uri.EscapeDataString(value));
-                            }
-                        }
-                    }
-
-                    if (!hasValue)
-                    {
-                        _ = paramStringBuilder.Append(Uri.EscapeDataString(name));
-                    }
-                }
-            }
-        }
-
+        AppendNameValueCollection(queryParams, uriBuilder.Query, paramStringBuilder);
         uriBuilder.Query += paramStringBuilder.ToString();
-
         _ = paramStringBuilder.Clear();
 
-        if (fragmentParams is not null && fragmentParams.HasKeys())
-        {
-            if (!string.IsNullOrEmpty(uriBuilder.Fragment))
-            {
-                _ = paramStringBuilder.Append('&');
-            }
-
-            bool first = true;
-            foreach (string? name in fragmentParams.AllKeys)
-            {
-                if (name is not null)
-                {
-                    if (!first)
-                    {
-                        _ = paramStringBuilder.Append('&');
-                    }
-                    else
-                    {
-                        first = false;
-                    }
-
-                    bool innerFirst = true;
-                    bool hasValue = false;
-                    string[]? values = fragmentParams.GetValues(name);
-                    if (values is not null)
-                    {
-                        foreach (string? value in values)
-                        {
-                            if (value is not null)
-                            {
-                                hasValue = true;
-
-                                if (!innerFirst)
-                                {
-                                    _ = paramStringBuilder.Append('&');
-                                }
-                                else
-                                {
-                                    innerFirst = false;
-                                }
-
-                                _ = paramStringBuilder.Append(Uri.EscapeDataString(name)).Append('=').Append(Uri.EscapeDataString(value));
-                            }
-                        }
-                    }
-
-                    if (!hasValue)
-                    {
-                        _ = paramStringBuilder.Append(Uri.EscapeDataString(name));
-                    }
-                }
-            }
-        }
-
+        AppendNameValueCollection(fragmentParams, uriBuilder.Fragment, paramStringBuilder);
         uriBuilder.Fragment += paramStringBuilder.ToString();
 
         return uriBuilder.Uri;
+    }
+
+    private static void AppendNameValueCollection(NameValueCollection? parameters, string existingPart, StringBuilder paramStringBuilder)
+    {
+        if (parameters is not null && parameters.HasKeys())
+        {
+            if (!string.IsNullOrEmpty(existingPart))
+            {
+                _ = paramStringBuilder.Append('&');
+            }
+
+            bool first = true;
+            foreach (string? name in parameters.AllKeys)
+            {
+                if (name is not null)
+                {
+                    if (!first)
+                    {
+                        _ = paramStringBuilder.Append('&');
+                    }
+                    else
+                    {
+                        first = false;
+                    }
+
+                    bool innerFirst = true;
+                    bool hasValue = false;
+                    string[]? values = parameters.GetValues(name);
+                    if (values is not null)
+                    {
+                        foreach (string? value in values)
+                        {
+                            if (value is not null)
+                            {
+                                hasValue = true;
+
+                                if (!innerFirst)
+                                {
+                                    _ = paramStringBuilder.Append('&');
+                                }
+                                else
+                                {
+                                    innerFirst = false;
+                                }
+
+                                _ = paramStringBuilder.Append(Uri.EscapeDataString(name)).Append('=').Append(Uri.EscapeDataString(value));
+                            }
+                        }
+                    }
+
+                    if (!hasValue)
+                    {
+                        _ = paramStringBuilder.Append(Uri.EscapeDataString(name));
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
