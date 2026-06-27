@@ -5,6 +5,6 @@ description = "Performs diff operations on documentation in support of GitHub Ac
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.13"
 dependencies = [
-    "beautifulsoup4>=4.12.2",
+    "beautifulsoup4>=4.15.0",
     "requests>=2.34.2",
 ]
