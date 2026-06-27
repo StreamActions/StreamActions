@@ -1,0 +1,17 @@
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "nuget"
+    directory: "/StreamActions*"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "uv"
+    directories:
+      - "/Diff"
+      - "/TldRegexUpdater"
+    schedule:
+      interval: "weekly"
