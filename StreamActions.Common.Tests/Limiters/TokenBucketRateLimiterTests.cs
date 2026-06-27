@@ -27,6 +27,64 @@ namespace StreamActions.Common.Tests.Limiters;
 
 public sealed class TokenBucketRateLimiterTests
 {
+    #region UpdateLimit
+
+    [Fact]
+    [Trait("Member", "UpdateLimit")]
+    public void UpdateLimit_UpdatesLimitAndRemainingWhenLower()
+    {
+        using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
+
+        limiter.UpdateLimit(3);
+
+        limiter.Limit.Should().Be(3);
+        limiter.Remaining.Should().Be(3);
+    }
+
+    [Fact]
+    [Trait("Member", "UpdateLimit")]
+    public void UpdateLimit_UpdatesLimitOnlyWhenHigher()
+    {
+        using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
+        limiter.UpdateRemaining(2);
+
+        limiter.UpdateLimit(10);
+
+        limiter.Limit.Should().Be(10);
+        limiter.Remaining.Should().Be(2);
+    }
+
+    [Fact]
+    [Trait("Member", "UpdateLimit")]
+    public void UpdateLimit_FailsSilentlyWhenLessThanOne()
+    {
+        using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
+
+        limiter.UpdateLimit(0);
+
+        limiter.Limit.Should().Be(5);
+        limiter.Remaining.Should().Be(5);
+
+        limiter.UpdateLimit(-1);
+
+        limiter.Limit.Should().Be(5);
+        limiter.Remaining.Should().Be(5);
+    }
+
+    [Fact]
+    [Trait("Member", "UpdateLimit")]
+    public void UpdateLimit_DoesNothingWhenSame()
+    {
+        using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
+
+        limiter.UpdateLimit(5);
+
+        limiter.Limit.Should().Be(5);
+        limiter.Remaining.Should().Be(5);
+    }
+
+    #endregion UpdateLimit
+
     #region WaitForRateLimit
 
     [Fact]
