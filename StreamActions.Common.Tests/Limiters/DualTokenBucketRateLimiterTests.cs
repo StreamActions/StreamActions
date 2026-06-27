@@ -181,6 +181,30 @@ public sealed class DualTokenBucketRateLimiterTests
 
     [Fact]
     [Trait("Member", "WaitForRateLimit")]
+    public async Task WaitForRateLimit_ReturnsFalseAndReturnsToken_WhenLocalCanceled()
+    {
+        using TokenBucketRateLimiter localBucket = new(1, TimeSpan.FromSeconds(10));
+        using TokenBucketRateLimiter globalBucket = new(1, TimeSpan.FromSeconds(10));
+
+        // global will be acquired immediately
+        // local will wait, but we will cancel it
+        localBucket.UpdateRemaining(0);
+        localBucket.UpdateNextReset(DateTime.UtcNow.Ticks + TimeSpan.FromSeconds(5).Ticks);
+
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync().ConfigureAwait(true);
+
+        DualTokenBucketRateLimiter limiter = new(localBucket, globalBucket);
+
+        // Even though it's canceled, the method catches OperationCanceledException and returns false
+        bool result = await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(true);
+
+        result.Should().BeFalse();
+        globalBucket.Remaining.Should().Be(1); // Token should be returned
+    }
+
+    [Fact]
+    [Trait("Member", "WaitForRateLimit")]
     public async Task WaitForRateLimit_ReturnsFalse_WhenBothTimeOut()
     {
         using TokenBucketRateLimiter localBucket = new(1, TimeSpan.FromSeconds(10));
