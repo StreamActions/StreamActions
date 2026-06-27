@@ -87,4 +87,70 @@ public sealed class TokenBucketRateLimiterTests
     }
 
     #endregion WaitForRateLimit
+
+    #region UpdatePeriod
+
+    [Fact]
+    [Trait("Member", "UpdatePeriod")]
+    public async Task UpdatePeriod_UpdatesPeriodTicks_Successfully()
+    {
+        // 100ms
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromMilliseconds(100));
+
+        limiter.UpdateRemaining(0);
+        limiter.UpdateNextReset(DateTime.UtcNow.Ticks + TimeSpan.FromMilliseconds(50).Ticks);
+
+        // Update period to 50ms
+        limiter.UpdatePeriod(TimeSpan.FromMilliseconds(50).Ticks);
+
+        limiter.Period.Should().Be(TimeSpan.FromMilliseconds(50).Ticks);
+
+        // Consume the token, the next one should be available in 50ms instead of 100ms
+        await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
+        limiter.Remaining.Should().Be(0);
+
+        long expectedNextReset = DateTime.UtcNow.Ticks + TimeSpan.FromMilliseconds(50).Ticks;
+        // Check if next reset is around 50ms from now (allow a small margin for execution time)
+        Math.Abs(limiter.NextResetDateTime.Ticks - expectedNextReset).Should().BeLessThan(TimeSpan.FromMilliseconds(500).Ticks);
+    }
+
+    [Fact]
+    [Trait("Member", "UpdatePeriod")]
+    public async Task UpdatePeriod_UpdatesPeriodTimeSpan_Successfully()
+    {
+        // 100ms
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromMilliseconds(100));
+
+        limiter.UpdateRemaining(0);
+        limiter.UpdateNextReset(DateTime.UtcNow.Ticks + TimeSpan.FromMilliseconds(50).Ticks);
+
+        // Update period to 50ms
+        limiter.UpdatePeriod(TimeSpan.FromMilliseconds(50));
+
+        limiter.PeriodTimeSpan.Should().Be(TimeSpan.FromMilliseconds(50));
+
+        // Consume the token, the next one should be available in 50ms instead of 100ms
+        await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
+        limiter.Remaining.Should().Be(0);
+
+        long expectedNextReset = DateTime.UtcNow.Ticks + TimeSpan.FromMilliseconds(50).Ticks;
+        // Check if next reset is around 50ms from now (allow a small margin for execution time)
+        Math.Abs(limiter.NextResetDateTime.Ticks - expectedNextReset).Should().BeLessThan(TimeSpan.FromMilliseconds(500).Ticks);
+    }
+
+    [Theory]
+    [Trait("Member", "UpdatePeriod")]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-1000)]
+    public void UpdatePeriod_FailsSilentlyIfPeriodIsLessThanOne(long invalidPeriodTicks)
+    {
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromMilliseconds(100));
+
+        limiter.UpdatePeriod(invalidPeriodTicks);
+
+        limiter.Period.Should().Be(TimeSpan.FromMilliseconds(100).Ticks);
+    }
+
+    #endregion UpdatePeriod
 }
