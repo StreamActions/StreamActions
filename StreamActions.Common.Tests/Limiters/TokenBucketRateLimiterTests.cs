@@ -157,7 +157,7 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.ISO8601);
 
-        limiter.NextReset.Should().Be(DateTime.Parse(isoDate, System.Globalization.CultureInfo.InvariantCulture).Ticks);
+        limiter.NextReset.Should().Be(DateTime.Parse(isoDate, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal).Ticks);
     }
 
     [Fact]
