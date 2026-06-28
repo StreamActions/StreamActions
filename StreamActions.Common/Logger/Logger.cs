@@ -101,41 +101,38 @@ public static class Logger
             return "null";
         }
 
-        string s = "";
-
+        string s;
         if (f.HasMethod())
         {
             MethodBase? m = f.GetMethod();
 
             if (m is null)
             {
-                s += "null";
+                s = "null";
             }
             else
             {
                 if (addNamespace)
                 {
-                    s += m.ReflectedType?.Namespace ?? "null";
-                    s += ".";
+                    s = $"{m.ReflectedType?.Namespace ?? "null"}.{m.ReflectedType?.Name ?? "null"}.{m.Name}";
                 }
-                s += m.ReflectedType?.Name ?? "null";
-                s += ".";
-                s += m.Name;
+                else
+                {
+                    s = $"{m.ReflectedType?.Name ?? "null"}.{m.Name}";
+                }
             }
         }
         else
         {
-            s += "none";
+            s = "none";
         }
 
         if (atLocation.HasValue)
         {
-            s += "@";
-
             f = st.GetFrame(atLocation.Value - selfLocation);
             if (f is null)
             {
-                s += "null";
+                s += "@null";
             }
             else
             {
@@ -145,23 +142,23 @@ public static class Logger
 
                     if (m is null)
                     {
-                        s += "null";
+                        s += "@null";
                     }
                     else
                     {
                         if (addNamespace)
                         {
-                            s += m.ReflectedType?.Namespace ?? "null";
-                            s += ".";
+                            s += $"@{m.ReflectedType?.Namespace ?? "null"}.{m.ReflectedType?.Name ?? "null"}.{m.Name}";
                         }
-                        s += m.ReflectedType?.Name ?? "null";
-                        s += ".";
-                        s += m.Name;
+                        else
+                        {
+                            s += $"@{m.ReflectedType?.Name ?? "null"}.{m.Name}";
+                        }
                     }
                 }
                 else
                 {
-                    s += "none";
+                    s += "@none";
                 }
             }
         }
