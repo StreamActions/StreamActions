@@ -97,9 +97,9 @@ public sealed record Game
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        List<string> gameIdList = gameIds?.ToList() ?? [];
-        List<string> gameNameList = gameNames?.ToList() ?? [];
-        List<string> igdbIdList = igdbIds?.ToList() ?? [];
+        IReadOnlyList<string> gameIdList = gameIds as IReadOnlyList<string> ?? gameIds?.ToArray() ?? [];
+        IReadOnlyList<string> gameNameList = gameNames as IReadOnlyList<string> ?? gameNames?.ToArray() ?? [];
+        IReadOnlyList<string> igdbIdList = igdbIds as IReadOnlyList<string> ?? igdbIds?.ToArray() ?? [];
 
         int totalIds = gameIdList.Count + gameNameList.Count + igdbIdList.Count;
 
