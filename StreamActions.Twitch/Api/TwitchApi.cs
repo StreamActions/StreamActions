@@ -27,7 +27,6 @@ using StreamActions.Twitch.OAuth;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Net.Http;
 using System.Text.RegularExpressions;
 
 namespace StreamActions.Twitch.Api;
@@ -50,11 +49,6 @@ public sealed partial class TwitchApi : IApi
     #endregion Public Events
 
     #region Public Properties
-
-    /// <summary>
-    /// <inheritdoc cref="IApi.ApiDate"/>
-    /// </summary>
-    public static DateTime? ApiDate => new(2022, 05, 09);
 
     /// <summary>
     /// <inheritdoc cref="IComponent.Author"/>

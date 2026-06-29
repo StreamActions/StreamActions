@@ -23,17 +23,4 @@ namespace StreamActions.Common.Interfaces;
 /// </summary>
 public interface IApi : IComponent
 {
-    #region Public Properties
-
-    /// <summary>
-    /// Defines the timestamp of the latest API update that is included in the type.
-    /// </summary>
-    public static DateTime? ApiDate { get; }
-
-    /// <summary>
-    /// The API version.
-    /// </summary>
-    public static string? ApiVersion { get; }
-
-    #endregion Public Properties
 }
