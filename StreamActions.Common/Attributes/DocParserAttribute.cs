@@ -16,37 +16,27 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Globalization;
-
 namespace StreamActions.Common.Attributes;
 
 /// <summary>
-/// Indicates the URI and ETag associated with a <see cref="Interfaces.IComponent"/>, allowing a diff parser to automatically detect when the source documentation has changed.
+/// Indicates the URI, issue, and diff parser associated with a <see cref="Interfaces.IComponent"/>, allowing a GitHub Actions job to automatically detect when the source documentation has changed.
 /// </summary>
 /// <param name="friendlyName">The friendly name of the documentation, to be used when updating issues programmatically.</param>
 /// <param name="issueId">The GitHub issue number for tracking the API.</param>
 /// <param name="uri">The URI of the source documentation for this component.</param>
-/// <param name="eTag">The ETag of the latest version of the documentation that this component conforms to. This is usually a hash of the output from <paramref name="parser"/>.</param>
-/// <param name="timestamp">The timestamp when the <paramref name="eTag"/> was updated.</param>
 /// <param name="parser">The parser to use. See <c>Diff/parsers</c>.</param>
-/// <param name="parameters">Additional parameters for <paramref name="parser"/>.</param>
+///
+///
+///
 /// <remarks>
 /// <para>
-/// RegEx (Python3): <c><![CDATA[r"(?s)\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\"\s*,\s*(?P<issue>[0-9]+)\s*,\s*\"(?P<url>[^\"]+)\"\s*,\s*\"(?P<hash>[^\"]+)\"\s*,\s*\"(?P<date>[^\"]+)\"\s*,\s*\"(?P<parser>[^\"]+)\"\s*,\s*[{\[](?P<parameters>.*?)[}\]]\s*\)\]"]]></c>
-/// </para>
-/// <para>
-/// <paramref name="parameters"/> RegEx (Python3): <c><![CDATA[r"(?s)(\"(?P<param>([^\"]|\\\")+)\"(,|$))"]]></c>
+/// RegEx (Python3): <c><![CDATA[r"(?s)\[DocParser\(\s*\"(?P<friendlyname>[^\"]+)\"\s*,\s*(?P<issue>[0-9]+)\s*,\s*\"(?P<url>[^\"]+)\"\s*,\s*\"(?P<parser>[^\"]+)\"\s*\)\]"]]></c>
 /// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-public sealed class ETagAttribute(string friendlyName, int issueId, string uri, string eTag, string timestamp, string parser, string[] parameters) : Attribute
+public sealed class DocParserAttribute(string friendlyName, int issueId, string uri, string parser) : Attribute
 {
     #region Public Properties
-
-    /// <summary>
-    /// The ETag of the latest version of the documentation that this component conforms to.
-    /// </summary>
-    public string ETag { get; init; } = eTag;
 
     /// <summary>
     /// The friendly name of the documentation, to be used when updating issues programmatically.
@@ -59,19 +49,9 @@ public sealed class ETagAttribute(string friendlyName, int issueId, string uri, 
     public int IssueId { get; init; } = issueId;
 
     /// <summary>
-    /// Additional parameters for <see cref="Parser"/>.
-    /// </summary>
-    public string[] Parameters { get; init; } = parameters;
-
-    /// <summary>
     /// The parser module to use
     /// </summary>
     public string Parser { get; init; } = parser;
-
-    /// <summary>
-    /// The timestamp when the <see cref="ETag"/> was updated.
-    /// </summary>
-    public DateTime Timestamp { get; init; } = DateTime.Parse(timestamp, CultureInfo.InvariantCulture);
 
     /// <summary>
     /// The URI of the source documentation for this component.

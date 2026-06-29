@@ -24,12 +24,8 @@ namespace StreamActions.Twitch.EventSub;
 /// <summary>
 /// Handles processing of messages for EventSub, including creating websocket connections.
 /// </summary>
-[ETag("EventSub Subscription Types", 57,
-    "https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/", "0", "2024-06-02T20:12Z",
-    "TwitchEventSubSubscriptionTypesParser", [])]
-[ETag("EventSub Fields", 57,
-    "https://dev.twitch.tv/docs/eventsub/eventsub-reference/", "0", "2024-06-02T20:12Z",
-    "TwitchEventSubReferenceParser", [])]
+[DocParser("EventSub Subscription Types", 57, "https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/", "TwitchEventSubSubscriptionTypesParser")]
+[DocParser("EventSub Fields", 57, "https://dev.twitch.tv/docs/eventsub/eventsub-reference/", "TwitchEventSubReferenceParser")]
 public sealed class EventSub
 {
     /// <summary>

@@ -17,13 +17,11 @@
  */
 
 using StreamActions.Common.Attributes;
-using System;
-using System.Globalization;
 
 namespace StreamActions.Common.Tests.Attributes;
 
 /// <summary>
-/// Performs unit testing on methods in <see cref="ETagAttribute"/>.
+/// Performs unit testing on methods in <see cref="DocParserAttribute"/>.
 /// </summary>
 public class ETagAttributeTests
 {
@@ -37,57 +35,20 @@ public class ETagAttributeTests
         string expectedFriendlyName = "FriendlyName";
         int expectedIssueId = 123;
         string expectedUri = "https://example.com/api";
-        string expectedETag = "abcdef123456";
-        string expectedTimestampString = "2023-10-25T14:30:00Z";
-        DateTime expectedTimestamp = DateTime.Parse(expectedTimestampString, CultureInfo.InvariantCulture);
         string expectedParser = "MyParser";
-        string[] expectedParameters = ["param1", "param2"];
 
         // Act
-        ETagAttribute attribute = new(
+        DocParserAttribute attribute = new(
             expectedFriendlyName,
             expectedIssueId,
             expectedUri,
-            expectedETag,
-            expectedTimestampString,
-            expectedParser,
-            expectedParameters);
+            expectedParser);
 
         // Assert
         _ = attribute.FriendlyName.Should().Be(expectedFriendlyName);
         _ = attribute.IssueId.Should().Be(expectedIssueId);
         _ = attribute.Uri.Should().Be(expectedUri);
-        _ = attribute.ETag.Should().Be(expectedETag);
-        _ = attribute.Timestamp.Should().Be(expectedTimestamp);
         _ = attribute.Parser.Should().Be(expectedParser);
-        _ = attribute.Parameters.Should().BeEquivalentTo(expectedParameters);
-    }
-
-    [Fact]
-    [Trait("Member", "Constructor")]
-    public void Constructor_WithInvalidTimestampFormat_ThrowsFormatException()
-    {
-        // Arrange
-        string friendlyName = "FriendlyName";
-        int issueId = 123;
-        string uri = "https://example.com/api";
-        string eTag = "abcdef123456";
-        string invalidTimestamp = "invalid-date";
-        string parser = "MyParser";
-        string[] parameters = ["param1", "param2"];
-
-        // Act
-        Action act = () => _ = new ETagAttribute(
-            friendlyName,
-            issueId,
-            uri,
-            eTag,
-            invalidTimestamp,
-            parser,
-            parameters);
-
-        // Assert
-        _ = act.Should().Throw<FormatException>();
     }
 
     #endregion Constructor

@@ -18,7 +18,7 @@
 #
 
 """
-Find ETag attributes in a folder structure and return their parameters
+Find DocParser attributes in a folder structure and return their parameters
 """
 
 import argparse
@@ -27,19 +27,18 @@ import os
 from pathlib import Path
 import re
 
-etagpattern = re.compile(r"(?s)\[ETag\(\s*\"(?P<friendlyname>[^\"]+)\"\s*,\s*(?P<issue>[0-9]+)\s*,\s*\"(?P<url>[^\"]+)\"\s*,\s*\"(?P<hash>[^\"]+)\"\s*,\s*\"(?P<date>[^\"]+)\"\s*,\s*\"(?P<parser>[^\"]+)\"\s*,\s*[{\[](?P<parameters>.*?)[}\]]\s*\)\]")
-parampattern = re.compile(r"(?s)(\"(?P<param>([^\"]|\\\")+)\"(,|$))")
+docparserpattern = re.compile(r"(?s)\[DocParser\(\s*\"(?P<friendlyname>[^\"]+)\"\s*,\s*(?P<issue>[0-9]+)\s*,\s*\"(?P<url>[^\"]+)\"\s*,\s*\"(?P<parser>[^\"]+)\"\s*\)\]")
 
 def testfolder(folder: str | Path, glob: str = "*.cs") -> dict:
     """
-    Tests if any files in the folder, or sub-folders, matching the glob contain an ETag attribute and returns the results
+    Tests if any files in the folder, or sub-folders, matching the glob contain an DocParser attribute and returns the results
 
     Args:
         folder (str | Path): The folder to check
         glob (str): The glob to use for picking files to check. Default: ".cs"
 
     Returns:
-        dict: A dict of files where at least 1 ETag attribute was found. The key is the file path relative to ETagFinder.py, the value is the output of testfile(filePath)
+        dict: A dict of files where at least 1 DocParser attribute was found. The key is the file path relative to DocParserFinder.py, the value is the output of testfile(filePath)
     """
     ret = {}
     execpath = os.path.dirname(os.path.realpath(__file__))
@@ -51,7 +50,7 @@ def testfolder(folder: str | Path, glob: str = "*.cs") -> dict:
 
 def testfile(filePath: str | Path) -> list | None:
     """
-    Tests if the file contains an ETag attribute and returns the result
+    Tests if the file contains an DocParser attribute and returns the result
 
     Args:
         filePath (str | Path): The file to check
@@ -59,44 +58,32 @@ def testfile(filePath: str | Path) -> list | None:
     Returns:
         list | None: None if no matches are found; otherwise a list containing dicts as described below
 
-    For a description of the values in the output dicts, see StreamActions.Common.Attributes.ETagAttribute
+    For a description of the values in the output dicts, see StreamActions.Common.Attributes.DocParserAttribute
     [
         {
             "friendlyname": "friendlyName",
             "issue": issueId,
             "url": "uri",
-            "hash": "eTag",
-            "date": "timestamp",
-            "parser": "parser",
-            "parameters": [
-                "parameter",
-                ...
-            ]
+            "parser": "parser"
         },
         ...
     ]
     """
     with open(filePath, "r", encoding="utf8", errors="ignore") as file:
         lines = file.read()
-    m = etagpattern.search(lines)
+    m = docparserpattern.search(lines)
     if m is None:
         return None
     matches = []
     while m is not None:
         groups = m.groupdict()
-        m2 = parampattern.search(groups["parameters"])
-        parameters = []
-        while m2 is not None:
-            parameters.append(m2["param"])
-            m2 = parampattern.search(groups["parameters"], m2.end())
-        groups["parameters"] = parameters
         groups["issue"] = int(groups["issue"])
         matches.append(groups)
-        m = etagpattern.search(lines, m.end())
+        m = docparserpattern.search(lines, m.end())
     return matches
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Find ETag attributes in a folder structure and return their parameters")
+    parser = argparse.ArgumentParser(description="Find DocParser attributes in a folder structure and return their parameters")
     parser.add_argument("--folder", action="store", help="The folder to search", required=True)
     parser.add_argument("--out", action="store", help="Output to the specified file instead of STDOUT")
     args = parser.parse_args()

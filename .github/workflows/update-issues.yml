@@ -1,4 +1,4 @@
-name: Update ETag Issues
+name: Update DocParser Issues
 on:
   schedule:
     - cron: '11 4 * * 0,2,4'
@@ -18,7 +18,7 @@ on:
             default: ''
             type: string
         importName:
-            description: Import mode - Friendly name from ETagAttribute for the imported JSON
+            description: Import mode - Friendly name from DocParserAttribute for the imported JSON
             required: false
             default: ''
             type: string
@@ -45,9 +45,9 @@ jobs:
         uses: actions/cache@v6
         with:
             path: .cache
-            key: etag-${{ github.run_id }}-import
+            key: docparser-${{ github.run_id }}-import
             restore-keys: |
-                etag
+                docparser
       - name: Check Inputs
         env:
             URL: ${{ inputs.importUrl }}
@@ -72,7 +72,7 @@ jobs:
             mkdir -p .cache
             wget -O ".cache/$NAME.json" "$URL"
   diff:
-    name: Diff cache with available ETags and update issues
+    name: Diff cache with available DocParsers and update issues
     if: ${{ github.repository == 'StreamActions/StreamActions' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'diff') && github.ref_name == 'main' }}
     runs-on: ubuntu-latest
     steps:
@@ -90,9 +90,9 @@ jobs:
         uses: actions/cache@v6
         with:
             path: .cache
-            key: etag-${{ github.run_id }}
+            key: docparser-${{ github.run_id }}
             restore-keys: |
-                etag
+                docparser
       - name: Upload starting cache artifact
         uses: actions/upload-artifact@v7
         with:
@@ -143,26 +143,26 @@ jobs:
                 fs.mkdirSync('./.diff', { recursive: true });
                 fs.mkdirSync('./.output', { recursive: true });
 
-                core.info('Finding ETags...');
-                await exec.exec('uv', ['run', '--project', './Diff', './Diff/ETagFinder.py', '--folder', '.', '--out', './.output/etags.json']);
+                core.info('Finding DocParsers...');
+                await exec.exec('uv', ['run', '--project', './Diff', './Diff/DocParserFinder.py', '--folder', '.', '--out', './.output/docparsers.json']);
 
-                let etags = JSON.parse(fs.readFileSync('./.output/etags.json', 'utf8'));
+                let docparsers = JSON.parse(fs.readFileSync('./.output/docparsers.json', 'utf8'));
 
-                core.info('Found ' + Object.keys(etags).length + ' ETags');
-                for (let file of Object.keys(etags)) {
-                    for (let etag of etags[file]) {
-                        core.startGroup(etag.friendlyname);
-                        let name = encodeURIComponent(etag.friendlyname);
+                core.info('Found ' + Object.keys(docparsers).length + ' DocParsers');
+                for (let file of Object.keys(docparsers)) {
+                    for (let docparser of docparsers[file]) {
+                        core.startGroup(docparser.friendlyname);
+                        let name = encodeURIComponent(docparser.friendlyname);
                         try {
-                            fs.accessSync('./Diff/parsers/' + etag.parser + '.py');
+                            fs.accessSync('./Diff/parsers/' + docparser.parser + '.py');
                             core.debug('Found parser');
                         } catch (e) {
-                            core.warning('Parser ' + etag.parser + ' not found, skipping...');
+                            core.warning('Parser ' + docparser.parser + ' not found, skipping...');
                             core.endGroup();
                             continue;
                         }
 
-                        let parameters = ['run', '--project', './Diff', './Diff/parsers/' + etag.parser + '.py', '--url', etag.url, '--out', './.output/' + name + '.json'];
+                        let parameters = ['run', '--project', './Diff', './Diff/parsers/' + docparser.parser + '.py', '--url', docparser.url, '--out', './.output/' + name + '.json'];
                         let shouldDiff = false;
                         try {
                             fs.accessSync('./.cache/' + name + '.json');
@@ -173,9 +173,7 @@ jobs:
                             core.warning('Base file not found, will not diff');
                         }
 
-                        parameters = parameters.concat(etag.parameters);
-
-                        core.info('Running parser ' + etag.parser + '...');
+                        core.info('Running parser ' + docparser.parser + '...');
                         let { exitCode, stderr } = await exec.getExecOutput('uv', parameters);
 
                         if (exitCode !== 0) {
@@ -202,15 +200,15 @@ jobs:
                             } else if (Object.keys(newData).length === 0 && (context.eventName !== 'workflow_dispatch' || context.payload.inputs.forceIssue.toLowerCase() === 'false')) {
                                 core.info('No data found, skipping issue update...');
                             } else {
-                                core.info('Downloading issue ' + etag.issue + '...');
+                                core.info('Downloading issue ' + docparser.issue + '...');
                                 let { status: issueStatus, data: issue } = await github.rest.issues.get({
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
-                                    issue_number: etag.issue
+                                    issue_number: docparser.issue
                                 });
 
                                 if (issueStatus !== 200) {
-                                    core.warning('Issue ' + etag.issue + ' not found, skipping...' + issueStatus);
+                                    core.warning('Issue ' + docparser.issue + ' not found, skipping...' + issueStatus);
                                     core.endGroup();
                                     continue;
                                 }
@@ -303,11 +301,11 @@ jobs:
                                 core.debug('diff: ' + JSON.stringify(diff));
                                 core.debug('newData: ' + JSON.stringify(newData));
                                 core.debug('Prep body');
-                                section = etag.friendlyname;
+                                section = docparser.friendlyname;
                                 core.debug('Section ' + section);
                                 if (!body.data.hasOwnProperty(section)) {
                                     core.debug('--Add section');
-                                    body.data[section] = { '__header': [], '__url': etag.url, '__etag': '', '__date': '' };
+                                    body.data[section] = { '__header': [], '__url': docparser.url, '__etag': '', '__date': '' };
                                 }
                                 let diffKeys = [];
                                 if (diff.hasOwnProperty('endpoints')) {
@@ -347,7 +345,7 @@ jobs:
                                                     core.debug('----Found in newData');
                                                     if (newData.endpoints[endpoint].slug !== undefined && newData.endpoints[endpoint].slug !== null) {
                                                         core.debug('------Has slug');
-                                                        body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
+                                                        body.data[section][category][endpoint].url = docparser.url + newData.endpoints[endpoint].slug;
                                                     }
                                                 }
                                             }
@@ -364,7 +362,7 @@ jobs:
                                                 core.debug('----Found in newData');
                                                 if (newData.endpoints[endpoint].slug !== undefined && newData.endpoints[endpoint].slug !== null) {
                                                     core.debug('------Has slug');
-                                                    body.data[section][category][endpoint].url = etag.url + newData.endpoints[endpoint].slug;
+                                                    body.data[section][category][endpoint].url = docparser.url + newData.endpoints[endpoint].slug;
                                                 }
                                             }
                                         }
@@ -422,14 +420,14 @@ jobs:
                                 let { status: updateStatus } = await github.rest.issues.update({
                                     owner: context.repo.owner,
                                     repo: context.repo.repo,
-                                    issue_number: etag.issue,
+                                    issue_number: docparser.issue,
                                     state: 'open',
                                     state_reason: 'reopened',
                                     body: newBody.join('\n')
                                 });
 
                                 if (updateStatus !== 200) {
-                                    core.warning('Failed to update issue ' + etag.issue + ', skipping...' + updateStatus);
+                                    core.warning('Failed to update issue ' + docparser.issue + ', skipping...' + updateStatus);
                                     core.endGroup();
                                     continue;
                                 }
@@ -452,7 +450,7 @@ jobs:
                 let { status: cacheStatus, data: caches } = await github.rest.actions.getActionsCacheList({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    key: 'etag',
+                    key: 'docparser',
                     ref: 'refs/heads/main',
                     sort: 'created_at',
                     direction: 'desc'
