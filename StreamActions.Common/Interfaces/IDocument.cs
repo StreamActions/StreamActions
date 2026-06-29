@@ -28,7 +28,7 @@ public interface IDocument
     /// <summary>
     /// Initializes the Collection for the Document and/or sets up the indexes, if necessary.
     /// </summary>
-    public void Initialize();
+    void Initialize();
 
     #endregion Public Methods
 }

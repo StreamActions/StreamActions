@@ -28,37 +28,37 @@ public interface IComponent
     /// <summary>
     /// The author of the component.
     /// </summary>
-    public static string? Author { get; }
+    static string? Author { get; }
 
     /// <summary>
     /// A collection of <see cref="Guid"/> of other components that this component is dependent on.
     /// </summary>
-    public static IReadOnlyCollection<Guid>? Dependencies => [];
+    static IReadOnlyCollection<Guid>? Dependencies => [];
 
     /// <summary>
     /// A description of the component.
     /// </summary>
-    public static string? Description { get; }
+    static string? Description { get; }
 
     /// <summary>
     /// A <see cref="Guid"/> used to identify the component.
     /// </summary>
-    public static Guid? Id { get; }
+    static Guid? Id { get; }
 
     /// <summary>
     /// The name of the component.
     /// </summary>
-    public static string? Name { get; }
+    static string? Name { get; }
 
     /// <summary>
     /// The Uri of the component.
     /// </summary>
-    public static Uri? Uri { get; }
+    static Uri? Uri { get; }
 
     /// <summary>
     /// The component version. Usage of semver as defined in CONTRIBUTING.md is preferred.
     /// </summary>
-    public static Version? Version { get; }
+    static Version? Version { get; }
 
     #endregion Public Properties
 }

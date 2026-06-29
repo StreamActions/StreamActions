@@ -28,7 +28,7 @@ public interface IPlugin : IComponent
     /// <summary>
     /// Whether the plugin should always be enabled for all channels. This should only be <see langword="true"/> in core plugins and special circumstances.
     /// </summary>
-    public bool AlwaysEnabled { get; }
+    bool AlwaysEnabled { get; }
 
     #endregion Public Properties
 
@@ -37,12 +37,12 @@ public interface IPlugin : IComponent
     /// <summary>
     /// Called when the plugin is disabled either globally, or by all channels. EventHandler delegates must be unsubscribed here.
     /// </summary>
-    public abstract void Disabled();
+    abstract void Disabled();
 
     /// <summary>
     /// Called when the plugin is enabled either globally, or by at least one channel. EventHandler delegates must be subscribed here.
     /// </summary>
-    public abstract void Enabled();
+    abstract void Enabled();
 
     #endregion Public Methods
 }
