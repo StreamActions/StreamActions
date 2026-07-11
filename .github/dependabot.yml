@@ -5,6 +5,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      codeql:
+        applies-to: security-updates
+        patterns:
+          - "github/codeql-action/*"
   - package-ecosystem: "nuget"
     directories:
       - "/"
