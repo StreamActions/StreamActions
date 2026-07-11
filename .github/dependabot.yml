@@ -6,7 +6,12 @@ updates:
     schedule:
       interval: "weekly"
     groups:
-      codeql:
+      codeql-security:
+        applies-to: security-updates
+        patterns:
+          - "github/codeql-action/*"
+      codeql-version:
+        applies-to: version-updates
         patterns:
           - "github/codeql-action/*"
   - package-ecosystem: "nuget"
