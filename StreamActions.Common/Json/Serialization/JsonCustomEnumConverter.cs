@@ -28,6 +28,35 @@ namespace StreamActions.Common.Json.Serialization;
 /// <typeparam name="T">An enum whose values are tagged with <see cref="JsonCustomEnumAttribute"/>.</typeparam>
 public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
+    #region Static Fields
+
+    private static readonly Dictionary<string, T> StringToEnumMap = new(StringComparer.InvariantCultureIgnoreCase);
+    private static readonly Dictionary<T, string> EnumToStringMap = new();
+
+    #endregion Static Fields
+
+    #region Constructors
+
+    static JsonCustomEnumConverter()
+    {
+        foreach (string name in Enum.GetNames<T>())
+        {
+            MemberInfo? memberInfo = typeof(T).GetMember(name).FirstOrDefault();
+            if (memberInfo is not null)
+            {
+                Attribute? attribute = Attribute.GetCustomAttribute(memberInfo, typeof(JsonCustomEnumAttribute));
+                if (attribute is JsonCustomEnumAttribute customAttr && customAttr.Value is not null)
+                {
+                    T eval = Enum.Parse<T>(name);
+                    StringToEnumMap[customAttr.Value] = eval;
+                    EnumToStringMap[eval] = customAttr.Value;
+                }
+            }
+        }
+    }
+
+    #endregion Constructors
+
     #region Public Properties
 
     /// <inheritdoc/>
@@ -47,17 +76,9 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
     /// <returns>The enum value of type <typeparamref name="T"/> that has a matching <see cref="JsonCustomEnumAttribute"/>; <see langword="default"/> if there is no match.</returns>
     public T Convert(string value)
     {
-        foreach (string eval in Enum.GetNames<T>())
+        if (value is not null && StringToEnumMap.TryGetValue(value, out T result))
         {
-            MemberInfo? memberInfo = typeof(T).GetMember(eval).FirstOrDefault();
-            if (memberInfo is not null)
-            {
-                Attribute? attribute = Attribute.GetCustomAttribute(memberInfo, typeof(JsonCustomEnumAttribute));
-                if (attribute is not null && ((attribute as JsonCustomEnumAttribute)?.Value.Equals(value, StringComparison.InvariantCultureIgnoreCase) ?? false))
-                {
-                    return Enum.Parse<T>(eval);
-                }
-            }
+            return result;
         }
 
         return default;
@@ -70,14 +91,9 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
     /// <returns>The string value defined in the <see cref="JsonCustomEnumAttribute"/> applied to the enum value; <see cref="Enum.GetName{TEnum}(TEnum)"/> if the attribute is not present.</returns>
     public string? Convert(T value)
     {
-        MemberInfo? memberInfo = typeof(T).GetMember(Enum.GetName(value) ?? "__").FirstOrDefault();
-        if (memberInfo is not null)
+        if (EnumToStringMap.TryGetValue(value, out string? result))
         {
-            Attribute? attribute = Attribute.GetCustomAttribute(memberInfo, typeof(JsonCustomEnumAttribute));
-            if (attribute is not null)
-            {
-                return (attribute as JsonCustomEnumAttribute)?.Value;
-            }
+            return result;
         }
 
         return Enum.GetName(value);
