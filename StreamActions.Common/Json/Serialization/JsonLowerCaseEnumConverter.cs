@@ -27,6 +27,31 @@ namespace StreamActions.Common.Json.Serialization;
 /// <typeparam name="T">An enum whose values should be converted.</typeparam>
 public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
+    #region Private Fields
+
+    /// <summary>
+    /// A cached array of enum names and their corresponding parsed values, to avoid allocations and reflection during read operations.
+    /// </summary>
+    private static readonly (string Name, T Value)[] s_values = GetValues();
+
+    /// <summary>
+    /// Initializes the cached enum values and names for the generic type <typeparamref name="T"/>.
+    /// </summary>
+    /// <returns>An array containing tuples of the enum string names and their typed values.</returns>
+    private static (string Name, T Value)[] GetValues()
+    {
+        string[] names = Enum.GetNames<T>();
+        var values = new (string, T)[names.Length];
+        for (int i = 0; i < names.Length; i++)
+        {
+            values[i] = (names[i], Enum.Parse<T>(names[i]));
+        }
+
+        return values;
+    }
+
+    #endregion Private Fields
+
     #region Public Properties
 
     /// <inheritdoc/>
@@ -41,11 +66,11 @@ public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : s
     {
         string val = reader.GetString()!;
 
-        foreach (string name in Enum.GetNames<T>())
+        foreach (var item in s_values)
         {
-            if (name.Equals(val, StringComparison.InvariantCultureIgnoreCase))
+            if (item.Name.Equals(val, StringComparison.InvariantCultureIgnoreCase))
             {
-                return Enum.Parse<T>(name);
+                return item.Value;
             }
         }
 
