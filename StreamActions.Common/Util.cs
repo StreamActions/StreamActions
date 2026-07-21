@@ -143,20 +143,21 @@ public static partial class Util
             throw new ArgumentOutOfRangeException(nameof(duration), "The specified duration is not a valid duration string.");
         }
 
-        foreach (Group g in m.Groups.Cast<Group>())
+        for (int i = 0; i < m.Groups.Count; i++)
         {
-            if (!g.Success || string.IsNullOrEmpty(g.Value))
+            Group g = m.Groups[i];
+            if (!g.Success || g.ValueSpan.IsEmpty)
             {
                 continue;
             }
 
             t = g.Name switch
             {
-                "weeks" => t.Add(TimeSpan.FromDays(7 * int.Parse(g.Value, CultureInfo.InvariantCulture))),
-                "days" => t.Add(TimeSpan.FromDays(int.Parse(g.Value, CultureInfo.InvariantCulture))),
-                "hours" => t.Add(TimeSpan.FromHours(int.Parse(g.Value, CultureInfo.InvariantCulture))),
-                "minutes" => t.Add(TimeSpan.FromMinutes(int.Parse(g.Value, CultureInfo.InvariantCulture))),
-                "seconds" => t.Add(TimeSpan.FromSeconds(int.Parse(g.Value, CultureInfo.InvariantCulture))),
+                "weeks" => t.Add(TimeSpan.FromDays(7 * int.Parse(g.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture))),
+                "days" => t.Add(TimeSpan.FromDays(int.Parse(g.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture))),
+                "hours" => t.Add(TimeSpan.FromHours(int.Parse(g.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture))),
+                "minutes" => t.Add(TimeSpan.FromMinutes(int.Parse(g.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture))),
+                "seconds" => t.Add(TimeSpan.FromSeconds(int.Parse(g.ValueSpan, NumberStyles.Integer, CultureInfo.InvariantCulture))),
                 _ => int.TryParse(g.Name, out _) ? t : throw new ArgumentOutOfRangeException(nameof(duration), "An unknown capture group was returned by DurationRegex."),
             };
         }
