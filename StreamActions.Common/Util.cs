@@ -192,32 +192,20 @@ public static partial class Util
         Color c = Color.Empty;
         Match m = HexColorRegex().Match(hexColor);
 
-        string? rs = null;
-        string? gs = null;
-        string? bs = null;
-
-        foreach (Group g in m.Groups.Cast<Group>())
+        if (m.Success)
         {
-            switch (g.Name)
-            {
-                case "r":
-                    rs = g.Value; break;
-                case "g":
-                    gs = g.Value; break;
-                case "b":
-                    bs = g.Value; break;
-                default:
-                    break;
-            }
-        }
+            ReadOnlySpan<char> rs = m.Groups["r"].ValueSpan;
+            ReadOnlySpan<char> gs = m.Groups["g"].ValueSpan;
+            ReadOnlySpan<char> bs = m.Groups["b"].ValueSpan;
 
-        if (!string.IsNullOrWhiteSpace(rs) && !string.IsNullOrWhiteSpace(gs) && !string.IsNullOrWhiteSpace(bs))
-        {
-            try
+            if (!rs.IsEmpty && !gs.IsEmpty && !bs.IsEmpty)
             {
-                c = Color.FromArgb(int.Parse(rs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(gs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(bs, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+                try
+                {
+                    c = Color.FromArgb(int.Parse(rs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(gs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(bs, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+                }
+                catch (FormatException) { }
             }
-            catch (FormatException) { }
         }
 
         return c;
