@@ -27,6 +27,9 @@ namespace StreamActions.Common.Json.Serialization;
 /// <typeparam name="T">An enum whose values should be converted.</typeparam>
 public sealed class JsonUpperCaseEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
+    /// <summary>
+    /// Cached array of the names of the enum values for type <typeparamref name="T"/>.
+    /// </summary>
     private static readonly string[] s_names = Enum.GetNames<T>();
 
     #region Public Properties
