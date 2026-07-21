@@ -19,6 +19,25 @@ updates:
       - "/"
     schedule:
       interval: "weekly"
+    groups:
+      microsoft-identitymodel-security:
+        applies-to: security-updates
+        patterns:
+          - "Microsoft.IdentityModel.*"
+      microsoft-identitymodel-version:
+        applies-to: version-updates
+        patterns:
+          - "Microsoft.IdentityModel.*"
+      microsoft-extensions-logging-security:
+        applies-to: security-updates
+        patterns:
+          - "Microsoft.Extensions.Logging"
+          - "Microsoft.Extensions.Logging.*"
+      microsoft-extensions-logging-version:
+        applies-to: version-updates
+        patterns:
+          - "Microsoft.Extensions.Logging"
+          - "Microsoft.Extensions.Logging.*"
   - package-ecosystem: "uv"
     directories:
       - "/Diff"
