@@ -30,13 +30,24 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
 {
     #region Static Fields
 
+    /// <summary>
+    /// A cache mapping the custom string values defined by <see cref="JsonCustomEnumAttribute"/> to their corresponding enum values.
+    /// </summary>
     private static readonly Dictionary<string, T> StringToEnumMap = new(StringComparer.InvariantCultureIgnoreCase);
+
+    /// <summary>
+    /// A cache mapping enum values to their corresponding custom string values defined by <see cref="JsonCustomEnumAttribute"/>.
+    /// </summary>
     private static readonly Dictionary<T, string> EnumToStringMap = new();
 
     #endregion Static Fields
 
     #region Constructors
 
+    /// <summary>
+    /// Initializes static members of the <see cref="JsonCustomEnumConverter{T}"/> class.
+    /// Precomputes and caches the mapping between enum values and their associated custom string attributes.
+    /// </summary>
     static JsonCustomEnumConverter()
     {
         foreach (string name in Enum.GetNames<T>())
