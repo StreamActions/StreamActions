@@ -54,7 +54,7 @@ def addTLDRecursive(tld_s, tld):
     isend = len(tld) == 1 and eopmark in tld
     return tld, isend
 
-resp = requests.get("http://data.iana.org/TLD/tlds-alpha-by-domain.txt", headers = { "User-Agent": "gmt2001.tldregexupdater/2023" })
+resp = requests.get("https://data.iana.org/TLD/tlds-alpha-by-domain.txt", headers = { "User-Agent": "gmt2001.tldregexupdater/2023" })
 if resp.status_code != 200:
     exit(1)
 tldsresponse = resp.text
