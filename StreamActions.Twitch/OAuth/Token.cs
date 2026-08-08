@@ -191,7 +191,8 @@ public sealed record Token : JsonApiResponse
             {
                 IssuerSigningKeys = _openIdConnectConfiguration.Value.JsonWebKeySet.Keys,
                 ValidAudience = TwitchApi.ClientId,
-                ValidIssuer = _openIdConnectConfiguration.Value.Issuer
+                ValidIssuer = _openIdConnectConfiguration.Value.Issuer,
+                ValidateLifetime = true
             }).ConfigureAwait(false);
 
             if (result.IsValid)
