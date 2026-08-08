@@ -37,5 +37,10 @@ public interface IEventSubType
     /// </summary>
     static abstract string Type { get; }
 
+    /// <summary>
+    /// The <see cref="EventSubSubscription.Version"/>.
+    /// </summary>
+    static abstract string Version { get; }
+
     #endregion Public Properties
 }

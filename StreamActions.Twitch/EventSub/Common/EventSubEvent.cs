@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.Api.EventSub;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Common;
@@ -24,7 +25,7 @@ namespace StreamActions.Twitch.EventSub.Common;
 /// An event received from EventSub.
 /// </summary>
 /// <typeparam name="TEventType">The type representing the event's specific data.</typeparam>
-public sealed record EventSubEvent<TEventType> where TEventType : BaseEventType
+public sealed record EventSubEvent<TEventType> where TEventType : IEventSubType
 {
     /// <summary>
     /// The message metadata.

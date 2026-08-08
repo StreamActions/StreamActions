@@ -25,7 +25,7 @@ namespace StreamActions.Twitch.EventSub.Common;
 /// An EventSub event payload.
 /// </summary>
 /// <typeparam name="TEventType">The type representing the subscription's specific data.</typeparam>
-public sealed record EventPayload<TEventType> where TEventType : BaseEventType
+public sealed record EventPayload<TEventType> where TEventType : IEventSubType
 {
     /// <summary>
     /// The subscription information, containing details about the subscription such as its type, version, status, and cost.
