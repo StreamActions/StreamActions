@@ -129,6 +129,14 @@ public sealed record GuestStarInvite
     /// <term>400 Bad Request</term>
     /// <description>The described parameter was missing or invalid.</description>
     /// </item>
+    /// <item>
+    /// <term>403 Forbidden</term>
+    /// <description>Insufficient authorization for retrieving invites.</description>
+    /// </item>
+    /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The session does not exist.</description>
+    /// </item>
     /// </list>
     /// </para>
     /// </remarks>
@@ -269,6 +277,10 @@ public sealed record GuestStarInvite
     /// <item>
     /// <term>400 Bad Request</term>
     /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>403 Forbidden</term>
+    /// <description>Insufficient authorization for deleting invites.</description>
     /// </item>
     /// <item>
     /// <term>404 Not Found</term>

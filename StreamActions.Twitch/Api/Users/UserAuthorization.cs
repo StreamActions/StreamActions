@@ -57,6 +57,12 @@ public sealed record UserAuthorization
     public IReadOnlyList<Scope>? Scopes { get; init; }
 
     /// <summary>
+    /// A boolean indicating whether or not the specified user has authorized this application.
+    /// </summary>
+    [JsonPropertyName("has_authorized")]
+    public bool? HasAuthorized { get; init; }
+
+    /// <summary>
     /// Gets the authorization scopes that the specified user(s) have granted the application.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>

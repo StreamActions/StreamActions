@@ -180,7 +180,7 @@ public sealed record ConduitShard
     /// <returns>A <see cref="ConduitShardUpdateResponse"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>; <see cref="ConduitShardUpdateParameters.ConduitId"/> or <see cref="ConduitShardUpdateParameters.Shards"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentNullException">Any shard in <see cref="ConduitShardUpdateParameters.Shards"/> is missing an ID or transport.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><see cref="ConduitShardUpdateParameters.Shards"/> has more than 20 elements.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ConduitShardUpdateParameters.Shards"/> has more than 100 elements.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <remarks>
     /// <para>
@@ -227,9 +227,9 @@ public sealed record ConduitShard
             throw new ArgumentNullException(nameof(parameters.Shards)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Shards.Count() > 20)
+        if (parameters.Shards.Count() > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Shards), parameters.Shards.Count(), "must have a count <= 20").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Shards), parameters.Shards.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
         foreach (ConduitShardUpdateShardParameters shard in parameters.Shards)

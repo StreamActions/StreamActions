@@ -87,6 +87,12 @@ public sealed record Goal
     /// <para>
     /// If type is <see cref="GoalType.NewSubscriptionCount"/>, this field is increased by 1 for each new subscription.
     /// </para>
+    /// <para>
+    /// If type is <see cref="GoalType.NewBit"/>, this field is increased by the number of Bits used in a single cheer. For example, if a user cheers 100 Bits, this field is increased by 100.
+    /// </para>
+    /// <para>
+    /// If type is <see cref="GoalType.NewCheerer"/>, this field is increased by 1 for each unique new cheerer.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("current_amount")]
     public int? CurrentAmount { get; init; }
@@ -138,7 +144,17 @@ public sealed record Goal
         /// The goal is to increase subscriptions. This type shows only the net increase in the number of subscriptions (it does not account for users that unsubscribed since the goal started).
         /// </summary>
         [JsonCustomEnum("new_subscription_count")]
-        NewSubscriptionCount
+        NewSubscriptionCount,
+        /// <summary>
+        /// The goal is to increase the amount of Bits used on the channel.
+        /// </summary>
+        [JsonCustomEnum("new_bit")]
+        NewBit,
+        /// <summary>
+        /// The goal is to increase the amount of unique Cheerers on to Cheer on the channel.
+        /// </summary>
+        [JsonCustomEnum("new_cheerer")]
+        NewCheerer
     }
 
     /// <summary>

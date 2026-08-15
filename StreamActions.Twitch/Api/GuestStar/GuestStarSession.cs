@@ -141,6 +141,10 @@ public sealed record GuestStarSession
     /// <term>403 Forbidden</term>
     /// <description>Insufficient authorization for creating session.</description>
     /// </item>
+    /// <item>
+    /// <term>409 Conflict</term>
+    /// <description>Broadcaster is already in a Guest Star session.</description>
+    /// </item>
     /// </list>
     /// </para>
     /// </remarks>

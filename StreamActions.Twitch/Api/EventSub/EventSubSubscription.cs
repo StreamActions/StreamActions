@@ -90,6 +90,11 @@ public sealed record EventSubSubscription
     public enum SubscriptionStatus
     {
         /// <summary>
+        /// The conduit associated with the subscription was deleted.
+        /// </summary>
+        [JsonCustomEnum("conduit_deleted")]
+        ConduitDeleted,
+        /// <summary>
         /// The subscription is enabled.
         /// </summary>
         [JsonCustomEnum("enabled")]
@@ -340,6 +345,10 @@ public sealed record EventSubSubscription
     /// <item>
     /// <term>409 Conflict</term>
     /// <description>An active subscription with the same <see cref="EventSubSubscriptionCreationParameters.Type"/> and <see cref="EventSubSubscriptionCreationParameters.Condition"/> already exists.</description>
+    /// </item>
+    /// <item>
+    /// <term>410 Gone</term>
+    /// <description>The subscription type and version combination has been removed and can no longer be subscribed to.</description>
     /// </item>
     /// <item>
     /// <term>429 Too Many Requests</term>

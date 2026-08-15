@@ -123,10 +123,6 @@ public sealed record Leaderboard
     /// <term>401 Unauthorized</term>
     /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
-    /// <item>
-    /// <term>403 Forbidden</term>
-    /// <description>???</description>
-    /// </item>
     /// </list>
     /// </para>
     /// </remarks>

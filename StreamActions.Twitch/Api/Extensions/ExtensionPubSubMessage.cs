@@ -57,6 +57,10 @@ public sealed record ExtensionPubSubMessage
     /// <description>The JWT token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// <item>
+    /// <term>404 Not Found</term>
+    /// <description>The channel found in the JWT provided is not the same as the channel specfieid in <see cref="SendExtensionPubSubMessageParameters.BroadcasterId"/>.</description>
+    /// </item>
+    /// <item>
     /// <term>422 Unprocessable Entity</term>
     /// <description>The message is too large.</description>
     /// </item>

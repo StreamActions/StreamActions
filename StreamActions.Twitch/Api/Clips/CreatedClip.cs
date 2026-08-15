@@ -145,7 +145,7 @@ public sealed record CreatedClip
     /// <param name="broadcasterId">The user ID for the channel you want to create a clip for.</param>
     /// <param name="editorId">The user ID of the editor for the channel you want to create a clip for. If using the broadcaster's auth token, this is the same as <paramref name="broadcasterId"/>.</param>
     /// <param name="vodId">ID of the VOD the user wants to clip.</param>
-    /// <param name="vodOffset">Offset in the VOD to create the clip, in seconds.</param>
+    /// <param name="vodOffset">The zero-based offset, in seconds, to where the clip should end in the video (VOD).</param>
     /// <param name="title">The title of the clip.</param>
     /// <param name="duration">The length of the clip, in seconds. Precision is 0.1. Defaults to 30. Min: 5 seconds, Max: 60 seconds.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="CreatedClip"/> containing the response.</returns>
