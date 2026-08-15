@@ -586,14 +586,15 @@ public sealed class TokenBucketRateLimiter : IDisposable
         {
             try
             {
-                if (DateTime.UtcNow.Ticks >= this._nextReset)
+                long currentTicks = DateTime.UtcNow.Ticks;
+                if (currentTicks >= this._nextReset)
                 {
                     if (this._rwl.TryEnterWriteLock(timeout))
                     {
                         try
                         {
                             _ = Interlocked.Exchange(ref this._remaining, this._limit);
-                            _ = Interlocked.Exchange(ref this._nextReset, DateTime.UtcNow.Ticks + this._period);
+                            _ = Interlocked.Exchange(ref this._nextReset, currentTicks + this._period);
                         }
                         finally
                         {
@@ -607,7 +608,7 @@ public sealed class TokenBucketRateLimiter : IDisposable
                 }
                 else
                 {
-                    long elapsed = DateTime.UtcNow.Subtract(TimeSpan.FromTicks(this._nextReset).Subtract(TimeSpan.FromTicks(this._period))).Ticks;
+                    long elapsed = currentTicks - (this._nextReset - this._period);
                     float percent = elapsed / (float)this._period;
                     int addedTokens = (int)Math.Floor(percent * this._limit);
                     if (this._rwl.TryEnterWriteLock(timeout))
