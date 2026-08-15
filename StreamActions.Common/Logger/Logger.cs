@@ -132,7 +132,7 @@ public static class Logger
             f = st.GetFrame(atLocation.Value - selfLocation);
             if (f is null)
             {
-                s += "@null";
+                s = $"{s}@null";
             }
             else
             {
@@ -142,23 +142,23 @@ public static class Logger
 
                     if (m is null)
                     {
-                        s += "@null";
+                        s = $"{s}@null";
                     }
                     else
                     {
                         if (addNamespace)
                         {
-                            s += $"@{m.ReflectedType?.Namespace ?? "null"}.{m.ReflectedType?.Name ?? "null"}.{m.Name}";
+                            s = $"{s}@{m.ReflectedType?.Namespace ?? "null"}.{m.ReflectedType?.Name ?? "null"}.{m.Name}";
                         }
                         else
                         {
-                            s += $"@{m.ReflectedType?.Name ?? "null"}.{m.Name}";
+                            s = $"{s}@{m.ReflectedType?.Name ?? "null"}.{m.Name}";
                         }
                     }
                 }
                 else
                 {
-                    s += "@none";
+                    s = $"{s}@none";
                 }
             }
         }
