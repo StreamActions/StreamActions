@@ -143,7 +143,8 @@ public static partial class Util
             throw new ArgumentOutOfRangeException(nameof(duration), "The specified duration is not a valid duration string.");
         }
 
-        for (int i = 0; i < m.Groups.Count; i++)
+        int count = m.Groups.Count;
+        for (int i = 0; i < count; i++)
         {
             Group g = m.Groups[i];
             if (!g.Success || g.ValueSpan.IsEmpty)
