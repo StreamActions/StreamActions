@@ -36,6 +36,7 @@
   <ItemGroup>
     <Compile Include="DocParserFinder.py" />
     <Compile Include="parsers\BaseParser.py" />
+    <Compile Include="parsers\TwitchEventSubWebSocketMessagesParser.py" />
     <Compile Include="parsers\TwitchScopesParser.py" />
     <Compile Include="parsers\TwitchReferenceParser.py" />
   </ItemGroup>
