@@ -34,7 +34,6 @@
     <Compile Include="TldRegexUpdater.py" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include=".python-version" />
     <Content Include="pyproject.toml" />
     <Content Include="tlds-anti-workaround-replacements.txt" />
     <Content Include="tlds-anti-workaround-tlds.txt" />

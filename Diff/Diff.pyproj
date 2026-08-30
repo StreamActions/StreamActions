@@ -47,7 +47,6 @@
     <InterpreterReference Include="Global|Astral|CPython3.13.5" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include=".python-version" />
     <Content Include="pyproject.toml" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
