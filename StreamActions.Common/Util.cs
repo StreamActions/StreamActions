@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Logging;
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using System.Drawing;
@@ -140,7 +141,7 @@ public static partial class Util
 
         if (!m.Success || string.IsNullOrEmpty(m.Value))
         {
-            throw new ArgumentOutOfRangeException(nameof(duration), "The specified duration is not a valid duration string.");
+            throw new ArgumentOutOfRangeException(nameof(duration), duration, "The specified duration is not a valid duration string.");
         }
 
         int count = m.Groups.Count;
@@ -206,7 +207,10 @@ public static partial class Util
                 {
                     c = Color.FromArgb(int.Parse(rs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(gs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(bs, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
                 }
-                catch (FormatException) { }
+                catch (FormatException ex)
+                {
+                    GenericLogger.Error(Logger.GetLogger(typeof(Util)), "HexColorToColor", "Failed to parse hex color components.", ex);
+                }
             }
         }
 
