@@ -17,7 +17,7 @@
  */
 
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logger;
+using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;

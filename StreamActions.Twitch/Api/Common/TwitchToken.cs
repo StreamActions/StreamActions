@@ -16,7 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Logger;
+using StreamActions.Common.Logging;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Immutable;
 

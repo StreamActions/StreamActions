@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging.Console;
 using System.Diagnostics;
 using System.Reflection;
 
-namespace StreamActions.Common.Logger;
+namespace StreamActions.Common.Logging;
 
 /// <summary>
 /// Provides <see cref="ILogger"/> instances.

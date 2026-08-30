@@ -19,7 +19,7 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logger;
+using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Text.Json.Serialization;

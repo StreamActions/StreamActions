@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 using StreamActions.Common.Exceptions;
 using System.Diagnostics;
 
-namespace StreamActions.Common.Logger;
+namespace StreamActions.Common.Logging;
 
 /// <summary>
 /// Provides <see cref="LoggerMessage"/> members for logging invalid arguments and operations.

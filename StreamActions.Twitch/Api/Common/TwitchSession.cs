@@ -18,7 +18,7 @@
 
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Limiters;
-using StreamActions.Common.Logger;
+using StreamActions.Common.Logging;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 

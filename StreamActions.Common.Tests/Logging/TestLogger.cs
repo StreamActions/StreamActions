@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.ObjectModel;
 
-namespace StreamActions.Common.Tests.Logger;
+namespace StreamActions.Common.Tests.Logging;
 
 public class LogEntry
 {

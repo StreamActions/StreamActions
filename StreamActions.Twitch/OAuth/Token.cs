@@ -21,7 +21,7 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using StreamActions.Common.Attributes;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logger;
+using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;

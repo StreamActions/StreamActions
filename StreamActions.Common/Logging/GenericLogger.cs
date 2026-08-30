@@ -19,7 +19,7 @@
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
-namespace StreamActions.Common.Logger;
+namespace StreamActions.Common.Logging;
 
 /// <summary>
 /// Provides <see cref="LoggerMessage"/> members for writing generic log messages.

@@ -19,7 +19,7 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logger;
+using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;

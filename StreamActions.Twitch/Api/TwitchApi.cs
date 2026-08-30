@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 using StreamActions.Common.Attributes;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Interfaces;
-using StreamActions.Common.Logger;
+using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
