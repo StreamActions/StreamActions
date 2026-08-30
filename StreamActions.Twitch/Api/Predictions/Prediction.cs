@@ -207,9 +207,13 @@ public sealed record Prediction
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null && id.Count() > 25)
+        if (id is not null)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 25").Log(TwitchApi.GetLogger());
+            int idCount = id.Count();
+            if (idCount > 25)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 25").Log(TwitchApi.GetLogger());
+            }
         }
 
         session.RequireUserToken(Scope.ChannelReadPredictions, Scope.ChannelManagePredictions);

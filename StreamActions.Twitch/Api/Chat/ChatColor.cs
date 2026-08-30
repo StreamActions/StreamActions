@@ -166,9 +166,12 @@ public sealed record ChatColor
             throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
         }
 
-        if (userId.Count() > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(userId), userId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
+            int userIdCount = userId.Count();
+            if (userIdCount > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(userId), userIdCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+            }
         }
 
         session.RequireUserOrAppToken();

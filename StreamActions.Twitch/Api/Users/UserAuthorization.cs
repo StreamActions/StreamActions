@@ -105,9 +105,12 @@ public sealed record UserAuthorization
             throw new ArgumentNullException(nameof(userIds)).Log(TwitchApi.GetLogger());
         }
 
-        if (userIds.Count() > 10)
         {
-            throw new ArgumentOutOfRangeException(nameof(userIds), userIds.Count(), "must have a count <= 10").Log(TwitchApi.GetLogger());
+            int userIdsCount = userIds.Count();
+            if (userIdsCount > 10)
+            {
+                throw new ArgumentOutOfRangeException(nameof(userIds), userIdsCount, "must have a count <= 10").Log(TwitchApi.GetLogger());
+            }
         }
 
         session.RequireAppToken();

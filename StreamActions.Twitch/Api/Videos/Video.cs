@@ -330,10 +330,13 @@ public sealed record Video
                 throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
             }
 
-            if (id.Count() > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
+            int idCount = id.Count();
+            if (idCount > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
             }
+        }
         }
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
@@ -434,9 +437,12 @@ public sealed record Video
 
         session.RequireUserToken(Scope.ChannelManageVideos);
 
-        if (id.Count() > 5)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 5").Log(TwitchApi.GetLogger());
+            int idCount = id.Count();
+            if (idCount > 5)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 5").Log(TwitchApi.GetLogger());
+            }
         }
 
         Uri uri = Util.BuildUri(new("/videos"), new() { { "id", id } });

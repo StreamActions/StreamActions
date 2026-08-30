@@ -223,9 +223,13 @@ public sealed record ChannelPointsRedemption
             throw new ArgumentNullException(nameof(rewardId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null && id.Count() > 50)
+        if (id is not null)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 50").Log(TwitchApi.GetLogger());
+            int idCount = id.Count();
+            if (idCount > 50)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 50").Log(TwitchApi.GetLogger());
+            }
         }
 
         if (!Enum.IsDefined(status))
@@ -344,9 +348,12 @@ public sealed record ChannelPointsRedemption
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        if (id.Count() > 50)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 50").Log(TwitchApi.GetLogger());
+            int idCount = id.Count();
+            if (idCount > 50)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 50").Log(TwitchApi.GetLogger());
+            }
         }
 
         if (parameters.Status is not RedemptionStatus.Fulfilled or RedemptionStatus.Canceled)

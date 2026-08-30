@@ -224,9 +224,13 @@ public sealed record ChannelPointsReward
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null && id.Count() > 50)
+        if (id is not null)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 50").Log(TwitchApi.GetLogger());
+            int idCount = id.Count();
+            if (idCount > 50)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 50").Log(TwitchApi.GetLogger());
+            }
         }
 
         session.RequireUserToken(Scope.ChannelReadRedemptions, Scope.ChannelManageRedemptions);

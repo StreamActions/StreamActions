@@ -157,9 +157,12 @@ public sealed partial record Channel
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (broadcasterId.Count() > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(broadcasterId), broadcasterId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
+            int broadcasterIdCount = broadcasterId.Count();
+            if (broadcasterIdCount > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(broadcasterId), broadcasterIdCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+            }
         }
 
         Uri uri = Util.BuildUri(new("/channels"), new() { { "broadcaster_id", broadcasterId } });
