@@ -12,13 +12,15 @@ on:
             options:
               - diff
               - import
+              - list-cache
+              - remove
         importUrl:
             description: Import mode - The URL to import from
             required: false
             default: ''
             type: string
         importName:
-            description: Import mode - Friendly name from DocParserAttribute for the imported JSON
+            description: Import/Remove modes - Friendly name from DocParserAttribute for the imported/removed JSON
             required: false
             default: ''
             type: string
@@ -71,6 +73,56 @@ jobs:
             NAME=$(echo $NAME | jq -Rj @uri)
             mkdir -p .cache
             wget -O ".cache/$NAME.json" "$URL"
+  listcache:
+    name: List Cached Files
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'list-cache' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+      - name: Cache
+        uses: actions/cache/restore@v6
+        with:
+            path: .cache
+            key: docparser-${{ github.run_id }}-list
+            restore-keys: |
+                docparser
+      - name: List Cache
+        run: |
+            ls -lah .cache
+  removejsonfile:
+    name: Remove JSON File
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'remove' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+      - name: Cache
+        uses: actions/cache@v6
+        with:
+            path: .cache
+            key: docparser-${{ github.run_id }}-remove
+            restore-keys: |
+                docparser
+      - name: Check Inputs
+        env:
+            NAME: ${{ inputs.importName }}
+        run: |
+            if [ -z "${NAME}" ]; then
+                echo "::error::Missing NAME"
+                exit 1;
+            fi
+      - name: Remove File
+        env:
+            NAME: ${{ inputs.importName }}
+        run: |
+            NAME=$(echo $NAME | jq -Rj @uri)
+            if [ ! -s ".cache/${NAME}.json" ]; then
+                echo "::warning::File ${NAME}.json does not exist, skipping..."
+            else
+                rm -f ".cache/${NAME}.json"
+                echo "::notice::Removed file ${NAME}.json"
+            fi
   diff:
     name: Diff cache with available DocParsers and update issues
     if: ${{ github.repository == 'StreamActions/StreamActions' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'diff') && github.ref_name == 'main' }}
