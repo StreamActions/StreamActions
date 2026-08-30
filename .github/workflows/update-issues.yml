@@ -70,7 +70,7 @@ jobs:
             URL: ${{ inputs.importUrl }}
             NAME: ${{ inputs.importName }}
         run: |
-            NAME=$(echo $NAME | jq -Rj 'def h:ascii_downcase|explode|map(if .>57 then .-87 else .-48 end)|.[0]*16+.[1]; gsub("\\+";" ")|split("%")|.[0]+(.[1:]|map((.[0:2]|h|[.]|implode)+.[2:])|join("")) | @uri' | sed 's/\.json$//;s/^.cache\///')
+            NAME=$(echo $NAME | sed 's/\.json$//;s/^.cache\///' | jq -Rj 'def h:ascii_downcase|explode|map(if .>57 then .-87 else .-48 end)|.[0]*16+.[1]; gsub("\\+";" ")|split("%")|.[0]+(.[1:]|map((.[0:2]|h|[.]|implode)+.[2:])|join("")) | @uri')
             mkdir -p .cache
             wget -O ".cache/$NAME.json" "$URL"
   listcache:
@@ -116,7 +116,7 @@ jobs:
         env:
             NAME: ${{ inputs.importName }}
         run: |
-            NAME=$(echo $NAME | jq -Rj 'def h:ascii_downcase|explode|map(if .>57 then .-87 else .-48 end)|.[0]*16+.[1]; gsub("\\+";" ")|split("%")|.[0]+(.[1:]|map((.[0:2]|h|[.]|implode)+.[2:])|join("")) | @uri' | sed 's/\.json$//;s/^.cache\///')
+            NAME=$(echo $NAME | sed 's/\.json$//;s/^.cache\///' | jq -Rj 'def h:ascii_downcase|explode|map(if .>57 then .-87 else .-48 end)|.[0]*16+.[1]; gsub("\\+";" ")|split("%")|.[0]+(.[1:]|map((.[0:2]|h|[.]|implode)+.[2:])|join("")) | @uri')
             if [ ! -s ".cache/${NAME}.json" ]; then
                 echo "::warning::File ${NAME}.json does not exist, skipping..."
             else
