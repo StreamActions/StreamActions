@@ -5,7 +5,14 @@ on:
   workflow_dispatch:
     inputs:
         mode:
-            description: Action execution mode
+            description: |
+              Action execution mode:
+              - diff: Compare cached DocParsers with available DocParsers and update issues accordingly
+              - import: Import a JSON file into the cache
+              - list-cache: List cached JSON files
+              - remove: Remove a JSON file from the cache
+              - import-archive: Import a tar-compatible archive of JSON files into the cache
+              - export: Export the cache to a zip artifact
             required: true
             default: 'diff'
             type: choice
@@ -14,8 +21,10 @@ on:
               - import
               - list-cache
               - remove
+              - import-archive
+              - export
         importUrl:
-            description: Import mode - The URL to import from
+            description: Import/Import-Archive mode - The URL to import from
             required: false
             default: ''
             type: string
@@ -123,6 +132,57 @@ jobs:
                 rm -f ".cache/${NAME}.json"
                 echo "::notice::Removed file ${NAME}.json"
             fi
+  importarchive:
+    name: Import Archive
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'import-archive' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+      - name: Cache
+        uses: actions/cache@v6
+        with:
+            path: .cache
+            key: docparser-${{ github.run_id }}-import-archive
+            restore-keys: |
+                docparser
+      - name: Check Inputs
+        env:
+            URL: ${{ inputs.importUrl }}
+            NAME: ${{ inputs.importName }}
+        run: |
+            if [ -z "${URL}" ]; then
+                echo "::error::Missing URL"
+                exit 1;
+            fi
+      - name: Download and Extract File
+        env:
+            URL: ${{ inputs.importUrl }}
+        run: |
+            FNAME="$(basename ${URL%%\?*})"
+            mkdir -p .cache
+            wget -O "$FNAME" "$URL"
+            tar -xf "$FNAME" -C .cache
+  exportcache:
+    name: Export Cached Files
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'export' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+      - name: Cache
+        uses: actions/cache/restore@v6
+        with:
+            path: .cache
+            key: docparser-${{ github.run_id }}-export
+            restore-keys: |
+                docparser
+      - name: Export Cache
+        uses: actions/upload-artifact@v7
+        with:
+            compression-level: 9
+            name: docparser-cache
+            path: ./.cache
   diff:
     name: Diff cache with available DocParsers and update issues
     if: ${{ github.repository == 'StreamActions/StreamActions' && (github.event_name != 'workflow_dispatch' || inputs.mode == 'diff') && github.ref_name == 'main' }}
