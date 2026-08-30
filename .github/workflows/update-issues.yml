@@ -6,13 +6,20 @@ on:
     inputs:
         mode:
             description: |
-              Action execution mode:
-              - diff: Compare cached DocParsers with available DocParsers and update issues accordingly
-              - import: Import a JSON file into the cache
-              - list-cache: List cached JSON files
-              - remove: Remove a JSON file from the cache
-              - import-archive: Import a tar-compatible archive of JSON files into the cache
-              - export: Export the cache to a zip artifact
+              Action execution mode: ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+              ⠀⠀diff - Compare cached JSON files with
+              ⠀⠀⠀⠀⠀⠀⠀⠀⠀available DocParsers and update
+              ⠀⠀⠀⠀⠀⠀⠀⠀⠀issues accordingly ⠀⠀⠀⠀⠀⠀⠀⠀⠀
+              ⠀⠀import - Import a JSON file into the
+              ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀cache ⠀ ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+              ⠀⠀list-cache - List cached JSON files ⠀
+              ⠀⠀remove - Remove a JSON file from the
+              ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀cache ⠀ ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+              ⠀⠀import-archive - Import a tar-compatible
+              ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀archive of JSON files ⠀
+              ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀into the cache ⠀⠀
+              ⠀⠀export - Export the cache to a zip
+              ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀artifact
             required: true
             default: 'diff'
             type: choice
