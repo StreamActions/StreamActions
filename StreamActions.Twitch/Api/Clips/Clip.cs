@@ -230,10 +230,13 @@ public sealed record Clip
                 throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
             }
 
-            if (id.Count() > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
+            int idCount = id.Count();
+            if (idCount > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
             }
+        }
         }
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))

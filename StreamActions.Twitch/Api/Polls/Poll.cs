@@ -203,9 +203,13 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null && id.Count() > 20)
+        if (id is not null)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 20").Log(TwitchApi.GetLogger());
+            int idCount = id.Count();
+            if (idCount > 20)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 20").Log(TwitchApi.GetLogger());
+            }
         }
 
         session.RequireUserToken(Scope.ChannelReadPolls, Scope.ChannelManagePolls);

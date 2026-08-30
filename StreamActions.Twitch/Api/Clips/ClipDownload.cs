@@ -111,9 +111,12 @@ public sealed record ClipDownload
             throw new ArgumentNullException(nameof(clipId)).Log(TwitchApi.GetLogger());
         }
 
-        if (clipId.Count() > 10)
         {
-            throw new ArgumentOutOfRangeException(nameof(clipId), clipId.Count(), "must have a count <= 10").Log(TwitchApi.GetLogger());
+            int clipIdCount = clipId.Count();
+            if (clipIdCount > 10)
+            {
+                throw new ArgumentOutOfRangeException(nameof(clipId), clipIdCount, "must have a count <= 10").Log(TwitchApi.GetLogger());
+            }
         }
 
         session.RequireUserOrAppToken(Scope.ChannelManageClips, Scope.EditorManageClips);

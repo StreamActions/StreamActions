@@ -157,9 +157,13 @@ public sealed record ExtensionTransaction
             throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null && id.Count() > 100)
+        if (id is not null)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), id.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
+            int idCount = id.Count();
+            if (idCount > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+            }
         }
 
         first = Math.Clamp(first, 1, 100);

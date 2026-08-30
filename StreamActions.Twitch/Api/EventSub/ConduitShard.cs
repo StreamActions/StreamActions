@@ -227,9 +227,12 @@ public sealed record ConduitShard
             throw new ArgumentNullException(nameof(parameters.Shards)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Shards.Count() > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Shards), parameters.Shards.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
+            int parametersShardsCount = parameters.Shards.Count();
+            if (parametersShardsCount > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(parameters.Shards), parametersShardsCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+            }
         }
 
         foreach (ConduitShardUpdateShardParameters shard in parameters.Shards)

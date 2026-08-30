@@ -199,9 +199,13 @@ public sealed record Subscription
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (userId is not null && userId.Count() > 100)
+        if (userId is not null)
         {
-            throw new ArgumentOutOfRangeException(nameof(userId), userId.Count(), "must have a count <= 100").Log(TwitchApi.GetLogger());
+            int userIdCount = userId.Count();
+            if (userIdCount > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(userId), userIdCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+            }
         }
 
         session.RequireUserToken(Scope.ChannelReadSubscriptions);
