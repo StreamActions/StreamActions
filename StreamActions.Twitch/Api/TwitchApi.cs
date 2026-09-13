@@ -121,6 +121,7 @@ public sealed partial class TwitchApi : IApi
 
         _httpClient.DefaultRequestHeaders.Add("Client-Id", clientId);
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "StreamActions/TwitchAPI/" + typeof(TwitchApi).Assembly.GetName()?.Version?.ToString() ?? "0.0.0.0");
+        // Intentially not validating the baseAddress here, as it is possible to use a custom Helix endpoint for testing.
         _httpClient.BaseAddress = new Uri(baseAddress);
         _httpClient.Timeout = TimeSpan.FromSeconds(30);
     }
