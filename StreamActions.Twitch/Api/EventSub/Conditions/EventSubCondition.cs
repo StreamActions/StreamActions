@@ -23,5 +23,6 @@ namespace StreamActions.Twitch.Api.EventSub.Conditions;
 /// </summary>
 public abstract record EventSubCondition
 {
+    // Intentionally set to private protected to prevent external instantiation while allowing derived classes to call the constructor.
     private protected EventSubCondition() { }
 }

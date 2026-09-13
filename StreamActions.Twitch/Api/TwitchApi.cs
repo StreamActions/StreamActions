@@ -318,9 +318,7 @@ public sealed partial class TwitchApi : IApi
 
     #region Private Constructors
 
-    /// <summary>
-    /// Disabled constructor.
-    /// </summary>
+    // Intentionally private to prevent instantiation and allow the interface inheritance. All methods are static.
     private TwitchApi()
     { }
     #endregion Private Constructors
