@@ -258,6 +258,15 @@ jobs:
                 fs.mkdirSync('./.diff', { recursive: true });
                 fs.mkdirSync('./.output', { recursive: true });
 
+                let latestEtags = {};
+                try {
+                    fs.accessSync('./.cache/latest_etags.json');
+                    core.info('Loading latest etags...');
+                    latestEtags = JSON.parse(fs.readFileSync('./.cache/latest_etags.json', 'utf8'));
+                } catch (e) {
+                    core.info('No existing etags found');
+                }
+
                 core.info('Finding DocParsers...');
                 await exec.exec('uv', ['run', '--project', './Diff', './Diff/DocParserFinder.py', '--folder', '.', '--out', './.output/docparsers.json']);
 
@@ -306,13 +315,21 @@ jobs:
                         core.debug(sha);
                         core.debug(date);
 
+                        if (!latestEtags.hasOwnProperty(docparser.friendlyname)) {
+                            latestEtags[docparser.friendlyname] = {};
+                        }
+                        if (!latestEtags[docparser.friendlyname].hasOwnProperty(docparser.issue)) {
+                            latestEtags[docparser.friendlyname][docparser.issue] = '';
+                        }
+                        let oldEtag = latestEtags[docparser.friendlyname][docparser.issue];
+
                         if (shouldDiff) {
                             core.debug('Diffing');
                             let diff = JSON.parse(fs.readFileSync('./.output/' + name + '.diff.json', 'utf8'));
                             let newData = JSON.parse(fs.readFileSync('./.output/' + name + '.json', 'utf8'));
-                            if (Object.keys(diff).length === 0 && (context.eventName !== 'workflow_dispatch' || context.payload.inputs.forceIssue.toLowerCase() === 'false')) {
+                            if (Object.keys(diff).length === 0 && oldEtag !== '' && (context.eventName !== 'workflow_dispatch' || context.payload.inputs.forceIssue.toLowerCase() === 'false')) {
                                 core.info('No diff found, skipping issue update...');
-                            } else if (Object.keys(newData).length === 0 && (context.eventName !== 'workflow_dispatch' || context.payload.inputs.forceIssue.toLowerCase() === 'false')) {
+                            } else if (Object.keys(newData).length === 0) {
                                 core.info('No data found, skipping issue update...');
                             } else {
                                 core.info('Downloading issue ' + docparser.issue + '...');
@@ -427,8 +444,12 @@ jobs:
                                     diffKeys = Object.keys(diff['endpoints']);
                                 }
                                 core.debug('Check diffKeys');
-                                if (diffKeys.length > 0) {
-                                    core.debug('Found ' + diffKeys.length + ' keys');
+                                if (diffKeys.length > 0 || oldEtag === '') {
+                                    if (diffKeys.length > 0) {
+                                        core.debug('Found ' + diffKeys.length + ' keys');
+                                    } else {
+                                        core.debug('No keys found, but oldEtag is empty');
+                                    }
                                     body.data[section]['__etag'] = sha;
                                     body.data[section]['__date'] = date;
                                     core.debug('Iterate newData');
@@ -560,6 +581,9 @@ jobs:
                         core.endGroup();
                     }
                 }
+
+                core.info('Saving latest etags...');
+                fs.writeFileSync('./.cache/latest_etags.json', JSON.stringify(latestEtags), 'utf8');
 
                 core.info('Cleaning up old caches...');
                 let { status: cacheStatus, data: caches } = await github.rest.actions.getActionsCacheList({
