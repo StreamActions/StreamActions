@@ -273,7 +273,7 @@ jobs:
                 let { exitCode, stderr } = await exec.getExecOutput('uv', ['run', '--project', './Diff', './Diff/DocParserFinder.py', '--folder', '.', '--out', './.output/docparsers.json']);
 
                 if (exitCode !== 0) {
-                    core.error('Encountered error running parser, exiting...');
+                    core.error('Encountered an error running DocParserFinder, exiting...');
                     core.error(parameters);
                     core.error(stderr);
                     exit 1;
@@ -317,14 +317,14 @@ jobs:
                         let { exitCode, stderr } = await exec.getExecOutput('uv', parameters);
 
                         if (exitCode !== 0) {
-                            core.error('Encountered error running parser, skipping...');
+                            core.error('Encountered an error running the parser, skipping...');
                             core.error(parameters);
                             core.error(stderr);
                             try {
                                 fs.accessSync('./.output/' + name + '.json.stderr.txt');
                                 core.error(fs.readFileSync('./.output/' + name + '.json.stderr.txt', 'utf8'));
                             } catch (e) {
-                                core.error('No HTTP error file found');
+                                // Intentionally ignoring, as the parser may not have written a stderr file
                             }
                             core.endGroup();
                             continue;
