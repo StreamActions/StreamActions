@@ -72,7 +72,7 @@ class BaseParser:
                     errorstr += f"\nResponse headers:\n{json.dumps(dict(resp.headers), indent=4)}\n"
                 if resp.text:
                     errorstr += f"\nResponse body:\n{resp.text}\n"
-                with open(fname, "x", encoding="utf8") as err_file:
+                with open(fname, "w", encoding="utf8") as err_file:
                     err_file.write(errorstr)
             # Intentionally broad exception handling here, since we want to ensure that the error is printed to stderr even if part of the error handling fails
             except Exception as e:
