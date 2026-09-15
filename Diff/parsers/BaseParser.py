@@ -22,6 +22,7 @@ from difflib import SequenceMatcher
 import json
 import requests
 import string
+import traceback
 
 class BaseParser:
     """
@@ -46,22 +47,38 @@ class BaseParser:
         with open(path, "r", encoding="utf8") as html_file:
             return self.parse("".join(c for c in html_file.read() if c in self.printable))
 
-    def parseFromUrl(self, url:str) -> dict:
+    def parseFromUrl(self, url:str, out:str=None) -> dict:
         """
         Parse a page from the specified URL and return a dict of parsed data
 
         The user agent is sent as: streamactions.diff.parser/1
 
-        If the HTTP status code is not 200, the script exits with status 1
+        If the HTTP status code is not 200, the script exits with status 1 and writes the error to a file as defined by the `out` argument description. If writing the file fails, the error is printed to stderr, along with the exception encountered while trying to write the file
 
         Args:
             url (str): The URL to a page
+            out (str, optional): The path to a file where the output JSON will be written. If set, non-200 status codes will be written to out + ".stderr.txt" (eg. /path/to/MyAPI.json.stderr.txt). If not set, non-200 status codes will be written to stderr.txt
 
         Returns:
             dict: A dict containing the parsed data (see parse(str))
         """
         resp = requests.get(url, headers = { "User-Agent": "streamactions.diff.parser/1" })
         if resp.status_code != 200:
+            errorstr = "Encountered an error while fetching the URL"
+            try:
+                fname = out + ".stderr.txt" if out else "stderr.txt"
+                errorstr = f"Error: HTTP status code {resp.status_code} for URL {url}\n"
+                if resp.headers:
+                    errorstr += f"\nResponse headers:\n{json.dumps(dict(resp.headers), indent=4)}\n"
+                if resp.text:
+                    errorstr += f"\nResponse body:\n{resp.text}\n"
+                with open(fname, "x", encoding="utf8") as err_file:
+                    err_file.write(errorstr)
+            # Intentionally broad exception handling here, since we want to ensure that the error is printed to stderr even if part of the error handling fails
+            except Exception as e:
+                print(errorstr)
+                print(f"\n\nAdditionally, an exception was encountered while trying to write the error file:\n")
+                traceback.print_exc()
             exit(1)
         return self.parse("".join(c for c in resp.text if c in self.printable))
 
@@ -505,7 +522,7 @@ class BaseParser:
         if args.file != None:
             retp = self.parseFromFile(args.file)
         elif args.url != None:
-            retp = self.parseFromUrl(args.url)
+            retp = self.parseFromUrl(args.url, args.out)
         if retp != None:
             if args.out == None:
                 print(json.dumps(retp, indent=4))
