@@ -246,10 +246,12 @@ jobs:
                     }
                 });
 
-                core.info('My Line: ' + __line + ' (' + (__line + 94 - 2) + ')'); // Line - `script: |` line - 2
+                core.info('My Line: ' + __line + ' (' + (__line + 221 - 2) + ')'); // Line number = __line + (Line that "script:|" starts on - 2)
 
                 const fs = require('fs');
-                const issuePattern = /(\[(?<Check>[ x])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?( \*&nbsp;\* )?(\[\?\]\((?<WORKFLOW>[^\(\)]*)\))?/;
+                const issuePattern = /(\[(?<Check>[ x])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?( \*&nbsp;\* )?(\[\?\]\((?<WORKFLOW>[^\(\)]*)\))?( \*&nbsp;\* )?(\[\R\]\(# "Removed (?<REMOVALDATE>[^\(\)"]*)"\))?/;
+                const removalTimelimit = 1000 * 60 * 60 * 24 * 30; // Keep endpoints marked as removed for 30 days
+                const removalTimeLimitDays = removalTimelimit / (1000 * 60 * 60 * 24);
 
                 const repoInfo = context.repo.owner + '/' + context.repo.repo;
                 const runUrl = context.serverUrl + '/' + repoInfo + '/actions/runs/' + context.runId;
@@ -268,7 +270,21 @@ jobs:
                 }
 
                 core.info('Finding DocParsers...');
-                await exec.exec('uv', ['run', '--project', './Diff', './Diff/DocParserFinder.py', '--folder', '.', '--out', './.output/docparsers.json']);
+                let { exitCode, stderr } = await exec.getExecOutput('uv', ['run', '--project', './Diff', './Diff/DocParserFinder.py', '--folder', '.', '--out', './.output/docparsers.json']);
+
+                if (exitCode !== 0) {
+                    core.error('Encountered error running parser, exiting...');
+                    core.error(parameters);
+                    core.error(stderr);
+                    exit 1;
+                }
+
+                try {
+                    fs.accessSync('./.output/docparsers.json');
+                } catch (e) {
+                    core.error('DocParserFinder failed');
+                    return;
+                }
 
                 let docparsers = JSON.parse(fs.readFileSync('./.output/docparsers.json', 'utf8'));
 
@@ -304,6 +320,12 @@ jobs:
                             core.error('Encountered error running parser, skipping...');
                             core.error(parameters);
                             core.error(stderr);
+                            try {
+                                fs.accessSync('./.output/' + name + '.json.stderr.txt');
+                                core.error(fs.readFileSync('./.output/' + name + '.json.stderr.txt', 'utf8'));
+                            } catch (e) {
+                                core.error('No HTTP error file found');
+                            }
                             core.endGroup();
                             continue;
                         }
@@ -400,10 +422,11 @@ jobs:
                                         let name = match.groups.Name;
                                         let url = match.groups.URL;
                                         let workflow = match.groups.WORKFLOW;
+                                        let removalDate = match.groups.REMOVALDATE;
                                         if (name.trimEnd().endsWith('*&nbsp;*')) {
                                             name = name.trimEnd().substring(0, name.trimEnd().length - 9).trimEnd();
                                         }
-                                        core.debug('------Checked: ' + check + ' <> Name: ' + name + ' <> URL: ' + url + ' <> WORKFLOW: ' + workflow);
+                                        core.debug('------Checked: ' + check + ' <> Name: ' + name + ' <> URL: ' + url + ' <> WORKFLOW: ' + workflow + ' <> Removal Date: ' + removalDate);
                                         if (!body.data[section][category].hasOwnProperty(name)) {
                                             core.debug('------Add item');
                                             body.data[section][category][name] = {};
@@ -411,6 +434,7 @@ jobs:
                                         body.data[section][category][name].checked = check.toLowerCase() === 'x';
                                         body.data[section][category][name].url = url;
                                         body.data[section][category][name].workflow = workflow;
+                                        body.data[section][category][name].removalDate = removalDate;
                                     } else if (section !== '__HEADER' && category === '__header') {
                                         if (line.trim().length > 0) {
                                             core.debug('--Header line');
@@ -463,7 +487,7 @@ jobs:
                                             core.debug('Endpoint ' + endpoint.endpoint);
                                             if (!body.data[section][category].hasOwnProperty(endpoint.endpoint)) {
                                                 core.debug('--Add endpoint');
-                                                body.data[section][category][endpoint.endpoint] = { 'checked': false, 'url': '', 'workflow': runUrl };
+                                                body.data[section][category][endpoint.endpoint] = { 'checked': false, 'url': '', 'workflow': runUrl, 'removalDate': null };
                                             }
                                         }
                                     }
@@ -482,6 +506,15 @@ jobs:
                                                     if (newData.endpoints[endpoint].slug !== undefined && newData.endpoints[endpoint].slug !== null) {
                                                         core.debug('------Has slug');
                                                         body.data[section][category][endpoint].url = docparser.url + newData.endpoints[endpoint].slug;
+                                                    }
+                                                    if (body.data[section][category][endpoint].removalDate !== null) {
+                                                        core.debug('------Was removed, but is now back');
+                                                        body.data[section][category][endpoint].removalDate = null;
+                                                    }
+                                                } else {
+                                                    core.debug('----Was removed');
+                                                    if (body.data[section][category][endpoint].removalDate === null) {
+                                                        body.data[section][category][endpoint].removalDate = new Date().toISOString().slice(0, 10);
                                                     }
                                                 }
                                             }
@@ -544,9 +577,17 @@ jobs:
                                             for (let item of ckeys) {
                                                 core.debug('------Item ' + item);
                                                 let idata = cdata[item];
-                                                core.debug('--------Checked: ' + (idata['checked'] ? 'x' : ' ') + ' <> URL: ' + idata['url']);
+                                                core.debug('--------Checked: ' + (idata['checked'] ? 'x' : ' ') + ' <> URL: ' + idata['url'] + ' <> Removal Date: ' + idata['removalDate']);
+                                                if (idata['removalDate'] !== null) {
+                                                    let removalDate = new Date(idata['removalDate']);
+                                                    let now = new Date();
+                                                    if (now - removalDate > removalTimelimit) {
+                                                        core.debug('--------Item removed more than ' + removalTimeLimitDays + ' days ago, skipping...');
+                                                        continue;
+                                                    }
+                                                }
                                                 let hasNoURL = idata['url'] === undefined || idata['url'] === null || idata['url'].trim().length === 0;
-                                                newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] ' + (!hasNoURL ? '[' : '') + item + (!hasNoURL ? '](' + idata['url'] + ')' : '') + (idata['workflow'] !== undefined && idata['workflow'] !== null ? ' *&nbsp;* [?](' + idata['workflow'] + ')' : ''));
+                                                newBody.push('- [' + (idata['checked'] ? 'x' : ' ') + '] ' + (!hasNoURL ? '[' : '') + item + (!hasNoURL ? '](' + idata['url'] + ')' : '') + (idata['workflow'] !== undefined && idata['workflow'] !== null ? ' *&nbsp;* [?](' + idata['workflow'] + ')' : '') + (idata['removalDate'] !== null ? ' *&nbsp;* [R](# "Removed ' + idata['removalDate'] + '")' : ''));
                                             }
                                             newBody.push('');
                                         }
