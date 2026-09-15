@@ -69,7 +69,7 @@ class TwitchScopesParser(BaseParser):
             "toc": {},
             "endpoints": {}
         }
-        soup = BeautifulSoup(html, "html.parser")
+        soup = BeautifulSoup(html, "html5lib")
         nodes = soup.find(class_="main").find_all(class_="text-content")
         for node in nodes:
             if node.find("h1", id="twitch-access-token-scopes") != None:
