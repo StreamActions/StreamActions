@@ -249,7 +249,7 @@ jobs:
                 core.info('My Line: ' + __line + ' (' + (__line + 221 - 2) + ')'); // Line number = __line + (Line that "script:|" starts on - 2)
 
                 const fs = require('fs');
-                const issuePattern = /(\[(?<Check>[ x])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?( \*&nbsp;\* )?(\[\?\]\((?<WORKFLOW>[^\(\)]*)\))?( \*&nbsp;\* )?(\[\R\]\(# "Removed (?<REMOVALDATE>[^\(\)"]*)"\))?/;
+                const issuePattern = /(\[(?<Check>[ xX])\] )?(\[)?(?<Name>[^\[\]]+)(\])?(\((?<URL>[^\(\)]*)\))?( \*&nbsp;\* )?(\[\?\]\((?<WORKFLOW>[^\(\)]*)\))?( \*&nbsp;\* )?(\[\R\]\(# "Removed (?<REMOVALDATE>[^\(\)"]*)"\))?/;
                 const removalTimelimit = 1000 * 60 * 60 * 24 * 30; // Keep endpoints marked as removed for 30 days
                 const removalTimeLimitDays = removalTimelimit / (1000 * 60 * 60 * 24);
 
