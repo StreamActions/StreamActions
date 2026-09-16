@@ -274,15 +274,16 @@ jobs:
 
                 if (exitCode !== 0) {
                     core.error('Encountered an error running DocParserFinder, exiting...');
-                    core.error(parameters);
                     core.error(stderr);
-                    exit 1;
+                    core.setFailed('DocParserFinder encountered an error');
+                    return;
                 }
 
                 try {
                     fs.accessSync('./.output/docparsers.json');
                 } catch (e) {
                     core.error('DocParserFinder failed');
+                    core.setFailed('DocParserFinder failed');
                     return;
                 }
 
