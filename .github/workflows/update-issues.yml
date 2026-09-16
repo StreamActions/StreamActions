@@ -594,20 +594,23 @@ jobs:
                                         }
                                     }
                                 }
-                                core.info('Updating issue...');
-                                let { status: updateStatus } = await github.rest.issues.update({
-                                    owner: context.repo.owner,
-                                    repo: context.repo.repo,
-                                    issue_number: docparser.issue,
-                                    state: 'open',
-                                    state_reason: 'reopened',
-                                    body: newBody.join('\n')
-                                });
+                                let newBodyS = newBody.join('\n');
+                                if (newBodyS !== issue.body) {
+                                  core.info('Updating issue...');
+                                  let { status: updateStatus } = await github.rest.issues.update({
+                                      owner: context.repo.owner,
+                                      repo: context.repo.repo,
+                                      issue_number: docparser.issue,
+                                      state: 'open',
+                                      state_reason: 'reopened',
+                                      body: newBodyS
+                                  });
 
-                                if (updateStatus !== 200) {
-                                    core.warning('Failed to update issue ' + docparser.issue + ', skipping...' + updateStatus);
-                                    core.endGroup();
-                                    continue;
+                                  if (updateStatus !== 200) {
+                                      core.warning('Failed to update issue ' + docparser.issue + ', skipping...' + updateStatus);
+                                      core.endGroup();
+                                      continue;
+                                  }
                                 }
                             }
                         }
