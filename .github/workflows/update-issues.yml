@@ -435,7 +435,7 @@ jobs:
                                         body.data[section][category][name].checked = check.toLowerCase() === 'x';
                                         body.data[section][category][name].url = url;
                                         body.data[section][category][name].workflow = workflow;
-                                        body.data[section][category][name].removalDate = removalDate;
+                                        body.data[section][category][name].removalDate = removalDate === "undefined" ? null : removalDate;
                                     } else if (section !== '__HEADER' && category === '__header') {
                                         if (line.trim().length > 0) {
                                             core.debug('--Header line');
