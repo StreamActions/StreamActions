@@ -265,6 +265,7 @@ jobs:
                     fs.accessSync('./.cache/latest_etags.json');
                     core.info('Loading latest etags...');
                     latestEtags = JSON.parse(fs.readFileSync('./.cache/latest_etags.json', 'utf8'));
+                    core.debug('latestEtags: ' + JSON.stringify(latestEtags));
                 } catch (e) {
                     core.info('No existing etags found');
                 }
@@ -345,6 +346,7 @@ jobs:
                             latestEtags[docparser.friendlyname][docparser.issue] = '';
                         }
                         let oldEtag = latestEtags[docparser.friendlyname][docparser.issue];
+                        core.debug('Old ETag (' + docparser.friendlyname + '/' + docparser.issue + '): ' + oldEtag);
 
                         if (shouldDiff) {
                             core.debug('Diffing');
@@ -376,6 +378,7 @@ jobs:
                                 core.debug('Start parsing issue');
                                 let section = '__HEADER';
                                 let category = '__header';
+                                let hasChanges = false;
                                 for (let line of issue.body.split('\n')) {
                                     line = line.replace('\r', '');
                                     core.debug('Line: ' + line);
@@ -463,6 +466,7 @@ jobs:
                                 if (!body.data.hasOwnProperty(section)) {
                                     core.debug('--Add section');
                                     body.data[section] = { '__header': [], '__url': docparser.url, '__etag': '', '__date': '' };
+                                    hasChanges = true;
                                 }
                                 let diffKeys = [];
                                 if (diff.hasOwnProperty('endpoints')) {
@@ -470,6 +474,7 @@ jobs:
                                 }
                                 core.debug('Check diffKeys');
                                 if (diffKeys.length > 0 || oldEtag === '') {
+                                    hasChanges = true;
                                     if (diffKeys.length > 0) {
                                         core.debug('Found ' + diffKeys.length + ' keys');
                                     } else {
@@ -523,6 +528,7 @@ jobs:
                                     }
                                 }
                                 if (context.eventName === 'workflow_dispatch' && context.payload.inputs.forceIssue.toLowerCase() === 'true') {
+                                    hasChanges = true;
                                     core.debug('Slug update');
                                     for (let category of Object.keys(body.data[section])) {
                                         core.debug('--Check category ' + category);
@@ -594,9 +600,9 @@ jobs:
                                         }
                                     }
                                 }
-                                let newBodyS = newBody.join('\n');
-                                if (newBodyS !== issue.body) {
+                                if (hasChanges) {
                                   core.info('Updating issue...');
+                                  latestEtags[docparser.friendlyname][docparser.issue] = sha;
                                   let { status: updateStatus } = await github.rest.issues.update({
                                       owner: context.repo.owner,
                                       repo: context.repo.repo,
