@@ -609,7 +609,7 @@ jobs:
                                       issue_number: docparser.issue,
                                       state: 'open',
                                       state_reason: 'reopened',
-                                      body: newBodyS
+                                      body: newBody.join('\n')
                                   });
 
                                   if (updateStatus !== 200) {
