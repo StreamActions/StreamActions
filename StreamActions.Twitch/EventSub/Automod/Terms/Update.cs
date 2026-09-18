@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
@@ -76,7 +77,7 @@ public sealed record Update : IEventSubType
     /// The status change applied to the terms. Possible options are: add_permitted, remove_permitted, add_blocked, remove_blocked.
     /// </summary>
     [JsonPropertyName("action")]
-    public string? Action { get; init; }
+    public TermAction? Action { get; init; }
 
     /// <summary>
     /// Indicates whether this term was added due to an Automod message approve/deny action.
@@ -89,4 +90,35 @@ public sealed record Update : IEventSubType
     /// </summary>
     [JsonPropertyName("terms")]
     public IEnumerable<string>? Terms { get; init; }
+}
+
+/// <summary>
+/// The status change applied to the terms.
+/// </summary>
+[JsonConverter(typeof(JsonCustomEnumConverter<TermAction>))]
+public enum TermAction
+{
+    /// <summary>
+    /// A term was added to the permitted list.
+    /// </summary>
+    [JsonCustomEnum("add_permitted")]
+    AddPermitted,
+
+    /// <summary>
+    /// A term was removed from the permitted list.
+    /// </summary>
+    [JsonCustomEnum("remove_permitted")]
+    RemovePermitted,
+
+    /// <summary>
+    /// A term was added to the blocked list.
+    /// </summary>
+    [JsonCustomEnum("add_blocked")]
+    AddBlocked,
+
+    /// <summary>
+    /// A term was removed from the blocked list.
+    /// </summary>
+    [JsonCustomEnum("remove_blocked")]
+    RemoveBlocked
 }
