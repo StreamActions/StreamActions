@@ -27,10 +27,13 @@ namespace StreamActions.Twitch.EventSub.Channel;
 /// </summary>
 public sealed record Update : IEventSubType
 {
+    /// <inheritdoc/>
     public static Type EventSubConditionType => typeof(BroadcasterUserIdCondition);
 
+    /// <inheritdoc/>
     public static string Type => "channel.update";
 
+    /// <inheritdoc/>
     public static string Version => "2";
 
     /// <summary>

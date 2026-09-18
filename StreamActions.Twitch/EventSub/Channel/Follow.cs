@@ -27,10 +27,13 @@ namespace StreamActions.Twitch.EventSub.Channel;
 /// </summary>
 public sealed record Follow : IEventSubType
 {
+    /// <inheritdoc/>
     public static Type EventSubConditionType => typeof(BroadcasterAndModeratorUserIdCondition);
 
+    /// <inheritdoc/>
     public static string Type => "channel.follow";
 
+    /// <inheritdoc/>
     public static string Version => "2";
 
     /// <summary>
