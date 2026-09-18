@@ -167,19 +167,19 @@ public sealed record Update : IEventSubType
         /// <summary>
         /// The message was approved.
         /// </summary>
-        [JsonCustomEnum("Approved")]
+        [JsonCustomEnum("approved")]
         Approved,
 
         /// <summary>
         /// The message was denied.
         /// </summary>
-        [JsonCustomEnum("Denied")]
+        [JsonCustomEnum("denied")]
         Denied,
 
         /// <summary>
         /// The message status expired.
         /// </summary>
-        [JsonCustomEnum("Expired")]
+        [JsonCustomEnum("expired")]
         Expired
     }
 }
