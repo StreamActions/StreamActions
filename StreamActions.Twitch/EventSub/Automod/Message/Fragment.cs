@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Automod.Message;
@@ -29,7 +30,7 @@ public sealed record Fragment
     /// One of three options: text, emote, cheermote.
     /// </summary>
     [JsonPropertyName("type")]
-    public string? Type { get; init; }
+    public FragmentType? Type { get; init; }
 
     /// <summary>
     /// Message text in a fragment.
@@ -48,4 +49,29 @@ public sealed record Fragment
     /// </summary>
     [JsonPropertyName("cheermote")]
     public Cheermote? Cheermote { get; init; }
+
+    /// <summary>
+    /// The type of the fragment.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<FragmentType>))]
+    public enum FragmentType
+    {
+        /// <summary>
+        /// A text fragment.
+        /// </summary>
+        [JsonCustomEnum("text")]
+        Text,
+
+        /// <summary>
+        /// An emote fragment.
+        /// </summary>
+        [JsonCustomEnum("emote")]
+        Emote,
+
+        /// <summary>
+        /// A cheermote fragment.
+        /// </summary>
+        [JsonCustomEnum("cheermote")]
+        Cheermote
+    }
 }

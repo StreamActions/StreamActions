@@ -107,7 +107,7 @@ public sealed record Update : IEventSubType
     /// The messages status. Possible values are: Approved, Denied, Expired.
     /// </summary>
     [JsonPropertyName("status")]
-    public string? Status { get; init; }
+    public MessageStatus? Status { get; init; }
 
     /// <summary>
     /// The timestamp of when automod saved the message.
@@ -156,5 +156,30 @@ public sealed record Update : IEventSubType
         /// </summary>
         [JsonCustomEnum("blocked_link")]
         BlockedLink
+    }
+
+    /// <summary>
+    /// The status of the message.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<MessageStatus>))]
+    public enum MessageStatus
+    {
+        /// <summary>
+        /// The message was approved.
+        /// </summary>
+        [JsonCustomEnum("Approved")]
+        Approved,
+
+        /// <summary>
+        /// The message was denied.
+        /// </summary>
+        [JsonCustomEnum("Denied")]
+        Denied,
+
+        /// <summary>
+        /// The message status expired.
+        /// </summary>
+        [JsonCustomEnum("Expired")]
+        Expired
     }
 }
