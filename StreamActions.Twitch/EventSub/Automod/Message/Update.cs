@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
@@ -118,7 +119,7 @@ public sealed record Update : IEventSubType
     /// The reason why the message was caught. Possible values are: automod, blocked_term, blocked_link.
     /// </summary>
     [JsonPropertyName("reason")]
-    public string? Reason { get; init; }
+    public UpdateReason? Reason { get; init; }
 
     /// <summary>
     /// Optional. If the message was caught by automod, this will be populated.
@@ -131,4 +132,29 @@ public sealed record Update : IEventSubType
     /// </summary>
     [JsonPropertyName("blocked_term")]
     public BlockedTerm? BlockedTerm { get; init; }
+
+    /// <summary>
+    /// The reason why the message was caught.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<UpdateReason>))]
+    public enum UpdateReason
+    {
+        /// <summary>
+        /// The message was caught by automod.
+        /// </summary>
+        [JsonCustomEnum("automod")]
+        Automod,
+
+        /// <summary>
+        /// The message was caught due to a blocked term.
+        /// </summary>
+        [JsonCustomEnum("blocked_term")]
+        BlockedTerm,
+
+        /// <summary>
+        /// The message was caught due to a blocked link.
+        /// </summary>
+        [JsonCustomEnum("blocked_link")]
+        BlockedLink
+    }
 }

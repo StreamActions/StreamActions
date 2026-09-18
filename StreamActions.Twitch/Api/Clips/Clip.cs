@@ -231,12 +231,12 @@ public sealed record Clip
             }
 
             {
-            int idCount = id.Count();
-            if (idCount > 100)
-            {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                int idCount = id.Count();
+                if (idCount > 100)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                }
             }
-        }
         }
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
