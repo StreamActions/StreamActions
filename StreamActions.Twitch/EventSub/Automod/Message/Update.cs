@@ -104,7 +104,7 @@ public sealed record Update : IEventSubType
     public Message? Message { get; init; }
 
     /// <summary>
-    /// The messages status. Possible values are: Approved, Denied, Expired.
+    /// The messages status.
     /// </summary>
     [JsonPropertyName("status")]
     public MessageStatus? Status { get; init; }
@@ -116,7 +116,7 @@ public sealed record Update : IEventSubType
     public DateTime? HeldAt { get; init; }
 
     /// <summary>
-    /// The reason why the message was caught. Possible values are: automod, blocked_term, blocked_link.
+    /// The reason why the message was caught.
     /// </summary>
     [JsonPropertyName("reason")]
     public UpdateReason? Reason { get; init; }

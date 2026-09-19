@@ -92,7 +92,7 @@ public sealed record Hold : IEventSubType
     public DateTime? HeldAt { get; init; }
 
     /// <summary>
-    /// Possible values are: automod, blocked_term, blocked_link.
+    /// The reason that the message was caught.
     /// </summary>
     [JsonPropertyName("reason")]
     public HoldReason? Reason { get; init; }
