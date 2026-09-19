@@ -18,22 +18,22 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.EventSub.Automod.Message;
+namespace StreamActions.Twitch.EventSub.Common.ChatMessage;
 
 /// <summary>
-/// Metadata pertaining to the emote.
+/// The body of the message.
 /// </summary>
-public sealed record Emote
+public sealed record Message
 {
     /// <summary>
-    /// An ID that uniquely identifies this emote.
+    /// The chat message in plain text.
     /// </summary>
-    [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    [JsonPropertyName("text")]
+    public string? Text { get; init; }
 
     /// <summary>
-    /// An ID that identifies the emote set that the emote belongs to.
+    /// Ordered list of chat message fragments.
     /// </summary>
-    [JsonPropertyName("emote_set_id")]
-    public string? EmoteSetId { get; init; }
+    [JsonPropertyName("fragments")]
+    public IEnumerable<Fragment>? Fragments { get; init; }
 }

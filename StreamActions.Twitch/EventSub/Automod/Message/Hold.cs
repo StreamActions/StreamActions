@@ -83,7 +83,7 @@ public sealed record Hold : IEventSubType
     /// The body of the message.
     /// </summary>
     [JsonPropertyName("message")]
-    public Message? Message { get; init; }
+    public Common.ChatMessage.Message? Message { get; init; }
 
     /// <summary>
     /// The timestamp of when automod saved the message.

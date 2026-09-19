@@ -18,22 +18,29 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.EventSub.Automod.Message;
+namespace StreamActions.Twitch.EventSub.Common.ChatMessage;
 
 /// <summary>
-/// The body of the message.
+/// Metadata pertaining to the mention.
 /// </summary>
-public sealed record Message
+public sealed record Mention
 {
     /// <summary>
-    /// The contents of the message caught by automod.
+    /// The user ID of the mentioned user.
     /// </summary>
-    [JsonPropertyName("text")]
-    public string? Text { get; init; }
+    [JsonPropertyName("user_id")]
+    public string? UserId { get; init; }
 
     /// <summary>
-    /// Metadata surrounding the potential inappropriate fragments of the message.
+    /// The user name of the mentioned user.
     /// </summary>
-    [JsonPropertyName("fragments")]
-    public IEnumerable<Fragment>? Fragments { get; init; }
+    [JsonPropertyName("user_name")]
+    public string? UserName { get; init; }
+
+    /// <summary>
+    /// The user login of the mentioned user.
+    /// </summary>
+    [JsonPropertyName("user_login")]
+    public string? UserLogin { get; init; }
 }
+

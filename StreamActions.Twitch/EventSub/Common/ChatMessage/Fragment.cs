@@ -19,15 +19,15 @@
 using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.EventSub.Automod.Message;
+namespace StreamActions.Twitch.EventSub.Common.ChatMessage;
 
 /// <summary>
-/// Metadata surrounding the potential inappropriate fragments of the message.
+/// A fragment of a chat message.
 /// </summary>
 public sealed record Fragment
 {
     /// <summary>
-    /// One of three options: text, emote, cheermote.
+    /// The type of message fragment.
     /// </summary>
     [JsonPropertyName("type")]
     public FragmentType? Type { get; init; }
@@ -51,6 +51,18 @@ public sealed record Fragment
     public Cheermote? Cheermote { get; init; }
 
     /// <summary>
+    /// Optional. Metadata pertaining to the mention.
+    /// </summary>
+    [JsonPropertyName("mention")]
+    public Mention? Mention { get; init; }
+
+    /// <summary>
+    /// Optional. Metadata pertaining to the GIF.
+    /// </summary>
+    [JsonPropertyName("gif")]
+    public Gif? Gif { get; init; }
+
+    /// <summary>
     /// The type of the fragment.
     /// </summary>
     [JsonConverter(typeof(JsonCustomEnumConverter<FragmentType>))]
@@ -72,6 +84,18 @@ public sealed record Fragment
         /// A cheermote fragment.
         /// </summary>
         [JsonCustomEnum("cheermote")]
-        Cheermote
+        Cheermote,
+
+        /// <summary>
+        /// A mention fragment.
+        /// </summary>
+        [JsonCustomEnum("mention")]
+        Mention,
+
+        /// <summary>
+        /// A gif fragment.
+        /// </summary>
+        [JsonCustomEnum("gif")]
+        Gif
     }
 }

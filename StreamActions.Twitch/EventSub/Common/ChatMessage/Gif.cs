@@ -18,28 +18,23 @@
 
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.EventSub.Automod.Message;
+namespace StreamActions.Twitch.EventSub.Common.ChatMessage;
 
 /// <summary>
-/// Metadata pertaining to the cheermote.
+/// Metadata pertaining to the GIF.
 /// </summary>
-public sealed record Cheermote
+public sealed record Gif
 {
     /// <summary>
-    /// The name portion of the Cheermote string that you use in chat to cheer Bits, converted to lowercase.
+    /// An ID that uniquely identifies this GIF.
     /// </summary>
-    [JsonPropertyName("prefix")]
-    public string? Prefix { get; init; }
+    [JsonPropertyName("id")]
+    public string? Id { get; init; }
 
     /// <summary>
-    /// The amount of Bits cheered.
+    /// The URL of the GIF asset.
     /// </summary>
-    [JsonPropertyName("bits")]
-    public int? Bits { get; init; }
-
-    /// <summary>
-    /// The tier level of the cheermote.
-    /// </summary>
-    [JsonPropertyName("tier")]
-    public int? Tier { get; init; }
+    [JsonPropertyName("url")]
+    public Uri? Url { get; init; }
 }
+

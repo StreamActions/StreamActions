@@ -102,7 +102,7 @@ public sealed record Update : IEventSubType
     /// The body of the message.
     /// </summary>
     [JsonPropertyName("message")]
-    public Message? Message { get; init; }
+    public Common.ChatMessage.Message? Message { get; init; }
 
     /// <summary>
     /// The messages status.
