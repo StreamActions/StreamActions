@@ -86,7 +86,7 @@ class TwitchEventSubReferenceParser(BaseParser):
                         currentHeader = int(child.name[1])
                         headers[child.name] = {
                             "name": child.string.strip() if child.string != None else None,
-                            "slug": child.attrs["id"] if "id" in child.attrs else None
+                            "slug": ("#" + child.attrs["id"]) if "id" in child.attrs else None
                         }
                     elif child.name == "p" and currentHeader > 1:
                         objectDescription = " ".join([str(x) for x in child.stripped_strings])
