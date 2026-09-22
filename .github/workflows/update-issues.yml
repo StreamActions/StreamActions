@@ -593,6 +593,7 @@ jobs:
                                                     let removalDate = new Date(idata['removalDate']);
                                                     let now = new Date();
                                                     if (now - removalDate > removalTimelimit) {
+                                                        hasChanges = true;
                                                         core.debug('--------Item removed more than ' + removalTimeLimitDays + ' days ago, skipping...');
                                                         continue;
                                                     }
