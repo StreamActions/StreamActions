@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.EventSub.Channel.Chat;
 /// <summary>
 /// Information about the sub event.
 /// </summary>
-public sealed record Sub
+public sealed record Subscription
 {
     /// <summary>
     /// The type of subscription plan being used.

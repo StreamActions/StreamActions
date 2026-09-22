@@ -119,7 +119,7 @@ public sealed record Notification : IEventSubType
     /// Information about the sub event. Null if notice_type is not sub.
     /// </summary>
     [JsonPropertyName("sub")]
-    public Sub? Sub { get; init; }
+    public Subscription? Sub { get; init; }
 
     /// <summary>
     /// Information about the resub event. Null if notice_type is not resub.
@@ -239,7 +239,7 @@ public sealed record Notification : IEventSubType
     /// Optional. Information about the shared_chat_sub event.
     /// </summary>
     [JsonPropertyName("shared_chat_sub")]
-    public Sub? SharedChatSub { get; init; }
+    public Subscription? SharedChatSub { get; init; }
 
     /// <summary>
     /// Optional. Information about the shared_chat_resub event.
