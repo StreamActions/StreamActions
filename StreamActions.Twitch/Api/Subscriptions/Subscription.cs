@@ -233,11 +233,11 @@ public sealed record Subscription
             {
                 if (!string.IsNullOrWhiteSpace(after))
                 {
-                    throw new InvalidOperationException(nameof(userId) + " can not be used at the same time as " + nameof(after)).Log(TwitchApi.GetLogger());
+                    throw new InvalidOperationException($"{nameof(userId)} can not be used at the same time as {nameof(after)}").Log(TwitchApi.GetLogger());
                 }
                 else if (!string.IsNullOrWhiteSpace(before))
                 {
-                    throw new InvalidOperationException(nameof(userId) + " can not be used at the same time as " + nameof(before)).Log(TwitchApi.GetLogger());
+                    throw new InvalidOperationException($"{nameof(userId)} can not be used at the same time as {nameof(before)}").Log(TwitchApi.GetLogger());
                 }
 
                 queryParams.Add("user_id", userIds);
@@ -248,7 +248,7 @@ public sealed record Subscription
         {
             if (!string.IsNullOrWhiteSpace(after))
             {
-                throw new InvalidOperationException(nameof(before) + " can not be used at the same time as " + nameof(after)).Log(TwitchApi.GetLogger());
+                throw new InvalidOperationException($"{nameof(before)} can not be used at the same time as {nameof(after)}").Log(TwitchApi.GetLogger());
             }
 
             queryParams.Add("before", before);
