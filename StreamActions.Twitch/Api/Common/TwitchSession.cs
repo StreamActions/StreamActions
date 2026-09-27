@@ -83,7 +83,7 @@ public sealed record TwitchSession : IDisposable
 
         if (this.Token.Type is not TwitchToken.TokenType.Jwt)
         {
-            throw new TokenTypeException(Enum.GetName(TwitchToken.TokenType.Jwt), Enum.GetName(this.Token.Type ?? TwitchToken.TokenType.Unknown)).Log(TwitchApi.GetLogger());
+            throw new TokenTypeException(nameof(TwitchToken.TokenType.Jwt), (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString()).Log(TwitchApi.GetLogger());
         }
     }
 
@@ -106,7 +106,7 @@ public sealed record TwitchSession : IDisposable
 
         if (this.Token.Type is not TwitchToken.TokenType.App)
         {
-            throw new TokenTypeException(Enum.GetName(TwitchToken.TokenType.App), Enum.GetName(this.Token.Type ?? TwitchToken.TokenType.Unknown)).Log(TwitchApi.GetLogger());
+            throw new TokenTypeException(nameof(TwitchToken.TokenType.App), (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString()).Log(TwitchApi.GetLogger());
         }
     }
 
@@ -134,7 +134,7 @@ public sealed record TwitchSession : IDisposable
 
         if (this.Token.Type is not TwitchToken.TokenType.App or TwitchToken.TokenType.User)
         {
-            throw new TokenTypeException(Enum.GetName(TwitchToken.TokenType.App) + " or " + Enum.GetName(TwitchToken.TokenType.User), Enum.GetName(this.Token.Type ?? TwitchToken.TokenType.Unknown)).Log(TwitchApi.GetLogger());
+            throw new TokenTypeException($"{nameof(TwitchToken.TokenType.App)} or {nameof(TwitchToken.TokenType.User)}", (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString()).Log(TwitchApi.GetLogger());
         }
 
         if (this.Token.Type is TwitchToken.TokenType.User)
@@ -172,7 +172,7 @@ public sealed record TwitchSession : IDisposable
 
         if (this.Token.Type is not TwitchToken.TokenType.User)
         {
-            throw new TokenTypeException(Enum.GetName(TwitchToken.TokenType.User), Enum.GetName(this.Token.Type ?? TwitchToken.TokenType.Unknown)).Log(TwitchApi.GetLogger());
+            throw new TokenTypeException(nameof(TwitchToken.TokenType.User), (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString()).Log(TwitchApi.GetLogger());
         }
 
         (Scope?[] Found, Scope?[] Missing) = this.Token.CheckScopes(scopes);
