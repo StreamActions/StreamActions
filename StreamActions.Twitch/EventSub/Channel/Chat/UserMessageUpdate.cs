@@ -20,6 +20,7 @@ using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
+using StreamActions.Twitch.EventSub.Channel.Chat.Objects;
 
 namespace StreamActions.Twitch.EventSub.Channel.Chat;
 

@@ -20,6 +20,7 @@ using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
+using StreamActions.Twitch.EventSub.Channel.Chat.Objects;
 
 namespace StreamActions.Twitch.EventSub.Channel.Chat;
 
@@ -119,7 +120,7 @@ public sealed record Notification : IEventSubType
     /// Information about the sub event. Null if notice_type is not sub.
     /// </summary>
     [JsonPropertyName("sub")]
-    public Subscription? Sub { get; init; }
+    public Objects.Subscription? Sub { get; init; }
 
     /// <summary>
     /// Information about the resub event. Null if notice_type is not resub.
@@ -239,7 +240,7 @@ public sealed record Notification : IEventSubType
     /// Optional. Information about the shared_chat_sub event.
     /// </summary>
     [JsonPropertyName("shared_chat_sub")]
-    public Subscription? SharedChatSub { get; init; }
+    public Objects.Subscription? SharedChatSub { get; init; }
 
     /// <summary>
     /// Optional. Information about the shared_chat_resub event.

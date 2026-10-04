@@ -19,6 +19,7 @@
 using System.Text.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
+using StreamActions.Twitch.EventSub.Conduit.Shard.Objects;
 
 namespace StreamActions.Twitch.EventSub.Conduit.Shard;
 

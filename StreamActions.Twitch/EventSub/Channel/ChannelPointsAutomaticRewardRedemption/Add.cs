@@ -20,6 +20,7 @@ using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Common.ChatMessage;
 using System.Text.Json.Serialization;
+using StreamActions.Twitch.EventSub.Channel.ChannelPointsAutomaticRewardRedemption.Objects;
 
 namespace StreamActions.Twitch.EventSub.Channel.ChannelPointsAutomaticRewardRedemption;
 

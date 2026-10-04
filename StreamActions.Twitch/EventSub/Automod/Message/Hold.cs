@@ -20,6 +20,7 @@ using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
+using StreamActions.Twitch.EventSub.Automod.Message.Objects;
 
 namespace StreamActions.Twitch.EventSub.Automod.Message;
 
@@ -101,7 +102,7 @@ public sealed record Hold : IEventSubType
     /// Optional. If the message was caught by automod, this will be populated.
     /// </summary>
     [JsonPropertyName("automod")]
-    public Automod? Automod { get; init; }
+    public Objects.Automod? Automod { get; init; }
 
     /// <summary>
     /// Optional. If the message was caught due to a blocked term or a blocked link, this will be populated.

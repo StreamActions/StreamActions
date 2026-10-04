@@ -19,6 +19,7 @@
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
+using StreamActions.Twitch.EventSub.Channel.Moderate.Objects;
 
 namespace StreamActions.Twitch.EventSub.Channel.Moderate;
 
@@ -112,7 +113,7 @@ public sealed record Moderate : IEventSubType
     /// Optional. Metadata associated with the vip command.
     /// </summary>
     [JsonPropertyName("vip")]
-    public Vip? Vip { get; init; }
+    public Objects.Vip? Vip { get; init; }
 
     /// <summary>
     /// Optional. Metadata associated with the unvip command.
@@ -148,7 +149,7 @@ public sealed record Moderate : IEventSubType
     /// Optional. Metadata associated with the timeout command.
     /// </summary>
     [JsonPropertyName("timeout")]
-    public Timeout? Timeout { get; init; }
+    public Objects.Timeout? Timeout { get; init; }
 
     /// <summary>
     /// Optional. Metadata associated with the untimeout command.
@@ -184,7 +185,7 @@ public sealed record Moderate : IEventSubType
     /// Optional. Metadata associated with an unban request.
     /// </summary>
     [JsonPropertyName("unban_request")]
-    public UnbanRequest? UnbanRequest { get; init; }
+    public Objects.UnbanRequest? UnbanRequest { get; init; }
 
     /// <summary>
     /// Optional. Metadata associated with the warn command.
