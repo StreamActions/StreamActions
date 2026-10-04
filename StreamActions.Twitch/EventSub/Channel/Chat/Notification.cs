@@ -201,6 +201,12 @@ public sealed record Notification : IEventSubType
     public Modiversary? Modiversary { get; init; }
 
     /// <summary>
+    /// Information about the gifted_drops_summary event.
+    /// </summary>
+    [JsonPropertyName("gifted_drops_summary")]
+    public GiftedDropsSummary? GiftedDropsSummary { get; init; }
+
+    /// <summary>
     /// Optional. The broadcaster user ID of the channel the message was sent from.
     /// </summary>
     [JsonPropertyName("source_broadcaster_user_id")]
@@ -295,6 +301,12 @@ public sealed record Notification : IEventSubType
     /// </summary>
     [JsonPropertyName("shared_chat_modiversary")]
     public Modiversary? SharedChatModiversary { get; init; }
+
+    /// <summary>
+    /// Optional. Information about the shared_chat_gifted_drops_summary event.
+    /// </summary>
+    [JsonPropertyName("shared_chat_gifted_drops_summary")]
+    public GiftedDropsSummary? SharedChatGiftedDropsSummary { get; init; }
 
     /// <summary>
     /// The type of notice.
@@ -445,6 +457,18 @@ public sealed record Notification : IEventSubType
         /// </summary>
         [JsonCustomEnum("shared_chat_modiversary")]
         SharedChatModiversary,
+
+        /// <summary>
+        /// Gifted drops summary.
+        /// </summary>
+        [JsonCustomEnum("gifted_drops_summary")]
+        GiftedDropsSummary,
+
+        /// <summary>
+        /// Shared chat gifted drops summary.
+        /// </summary>
+        [JsonCustomEnum("shared_chat_gifted_drops_summary")]
+        SharedChatGiftedDropsSummary,
 
         /// <summary>
         /// Unknown.
