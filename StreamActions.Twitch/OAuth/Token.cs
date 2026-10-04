@@ -32,6 +32,7 @@ namespace StreamActions.Twitch.OAuth;
 /// <summary>
 /// Record containing response data for the Token endpoint.
 /// </summary>
+[DocParser("Authorize OAuth", 82, "https://dev.twitch.tv/docs/authentication/getting-tokens-oauth", "TwitchOAuthParser")]
 [DocParser("Refresh OAuth", 82, "https://dev.twitch.tv/docs/authentication/refresh-tokens", "TwitchRefreshParser")]
 [DocParser("Revoke OAuth", 82, "https://dev.twitch.tv/docs/authentication/revoke-tokens", "TwitchRevokeParser")]
 public sealed record Token : JsonApiResponse
