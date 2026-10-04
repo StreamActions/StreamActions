@@ -132,7 +132,8 @@ public sealed record StreamMarker
 
         session.RequireUserToken(Scope.ChannelManageBroadcast);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/streams/markers"), session, JsonContent.Create(parameters, options: TwitchApi.SerializerOptions)).ConfigureAwait(false);
+        using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/streams/markers"), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<StreamMarker>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
