@@ -28,7 +28,7 @@ namespace StreamActions.Twitch.EventSub.User;
 public sealed record Update : IEventSubType
 {
     /// <inheritdoc/>
-    public static Type EventSubConditionType => typeof(ClientIdCondition);
+    public static Type EventSubConditionType => typeof(UserIdCondition);
 
     /// <inheritdoc/>
     public static string Type => "user.update";
