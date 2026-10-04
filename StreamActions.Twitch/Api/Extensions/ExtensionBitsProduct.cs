@@ -21,6 +21,7 @@ using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Extensions.Objects;
 using System.Collections.Specialized;
 using System.Net.Http.Json;
 
@@ -126,3 +127,4 @@ public sealed record ExtensionBitsProduct
         return await response.ReadFromJsonAsync<ResponseData<ExtensionProductData>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
+

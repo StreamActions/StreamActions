@@ -114,6 +114,12 @@ public sealed record TwitchStream
     public Uri? ThumbnailUrl { get; init; }
 
     /// <summary>
+    /// A Boolean value that indicates whether the stream is restricted to mature audiences.
+    /// </summary>
+    [JsonPropertyName("is_mature")]
+    public bool? IsMature { get; init; }
+
+    /// <summary>
     /// The list of tags that apply to the stream.
     /// </summary>
     /// <remarks>
@@ -122,16 +128,6 @@ public sealed record TwitchStream
     [JsonPropertyName("tag_ids")]
     [Obsolete("Use Tags instead.")]
     public IEnumerable<Guid>? TagIds { get; init; }
-
-    /// <summary>
-    /// A Boolean value that indicates whether the stream is meant for mature audiences.
-    /// </summary>
-    /// <remarks>
-    /// IMPORTANT: This field is deprecated and returns only false.
-    /// </remarks>
-    [JsonPropertyName("is_mature")]
-    [Obsolete("This field is deprecated and returns only false.")]
-    public bool? IsMature { get; init; }
 
     /// <summary>
     /// Defines the type of stream.

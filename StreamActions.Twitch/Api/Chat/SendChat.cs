@@ -19,6 +19,7 @@
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Chat.Objects;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
@@ -163,3 +164,4 @@ public sealed record SendChat
         return await response.ReadFromJsonAsync<ResponseData<SendChat>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
+

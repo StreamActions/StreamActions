@@ -51,3 +51,4 @@ public sealed record SendExtensionPubSubMessageParameters
     [JsonPropertyName("message")]
     public string? Message { get; init; }
 }
+

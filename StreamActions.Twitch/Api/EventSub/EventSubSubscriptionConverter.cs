@@ -99,3 +99,4 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
 
     #endregion Private Fields
 }
+

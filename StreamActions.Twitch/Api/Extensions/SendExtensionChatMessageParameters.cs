@@ -43,3 +43,4 @@ public sealed record SendExtensionChatMessageParameters
     [JsonPropertyName("extension_version")]
     public string? ExtensionVersion { get; init; }
 }
+

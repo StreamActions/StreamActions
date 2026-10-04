@@ -22,6 +22,7 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Extensions.Objects;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Text.Json.Serialization;
@@ -208,3 +209,4 @@ public sealed record ExtensionTransaction
         return await response.ReadFromJsonAsync<ResponseData<ExtensionTransaction>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
+

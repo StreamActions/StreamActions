@@ -55,3 +55,4 @@ public sealed record ChannelGuestStarSettingsUpdateParameters
     [JsonPropertyName("regenerate_browser_sources")]
     public bool? RegenerateBrowserSources { get; init; }
 }
+

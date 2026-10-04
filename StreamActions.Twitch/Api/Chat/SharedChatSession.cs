@@ -20,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Chat.Objects;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -105,3 +106,4 @@ public sealed record SharedChatSession
         return await response.ReadFromJsonAsync<ResponseData<SharedChatSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
+

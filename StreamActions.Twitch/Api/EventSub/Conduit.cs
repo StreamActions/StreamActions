@@ -21,6 +21,7 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.EventSub.Objects;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Net.Http.Json;
@@ -265,3 +266,4 @@ public sealed record Conduit
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
+

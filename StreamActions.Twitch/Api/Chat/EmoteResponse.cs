@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Chat.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Chat;
@@ -32,3 +33,4 @@ public sealed record EmoteResponse : ResponseData<Emote>
     [JsonPropertyName("template")]
     public string? Template { get; init; }
 }
+

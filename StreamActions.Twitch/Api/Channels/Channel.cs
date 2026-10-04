@@ -1,3 +1,4 @@
+using StreamActions.Twitch.Api.Channels.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)

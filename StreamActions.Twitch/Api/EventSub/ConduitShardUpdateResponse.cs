@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.EventSub.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.EventSub;
@@ -32,3 +33,4 @@ public sealed record ConduitShardUpdateResponse : ResponseData<ConduitShard>
     [JsonPropertyName("errors")]
     public IReadOnlyList<ConduitShardUpdateError>? Errors { get; init; }
 }
+

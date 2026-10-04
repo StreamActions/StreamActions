@@ -43,3 +43,4 @@ public sealed record SetExtensionRequiredConfigurationParameters
     [JsonPropertyName("required_configuration")]
     public string? RequiredConfiguration { get; init; }
 }
+

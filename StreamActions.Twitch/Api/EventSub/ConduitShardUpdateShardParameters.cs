@@ -1,3 +1,4 @@
+using StreamActions.Twitch.Api.EventSub.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -37,3 +38,4 @@ public record ConduitShardUpdateShardParameters
     [JsonPropertyName("transport")]
     public ConduitShardTransport? Transport { get; init; }
 }
+

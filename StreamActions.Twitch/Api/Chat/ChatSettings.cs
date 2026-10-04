@@ -20,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Chat.Objects;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
@@ -241,3 +242,4 @@ public sealed record ChatSettings
         return await response.ReadFromJsonAsync<ResponseData<ChatSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
+

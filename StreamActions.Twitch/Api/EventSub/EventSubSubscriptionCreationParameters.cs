@@ -1,3 +1,4 @@
+using StreamActions.Twitch.Api.EventSub.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -50,3 +51,4 @@ public sealed record EventSubSubscriptionCreationParameters
     [JsonPropertyName("transport")]
     public EventSubTransport? Transport { get; init; }
 }
+

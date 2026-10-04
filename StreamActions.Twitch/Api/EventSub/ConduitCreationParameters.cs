@@ -31,3 +31,4 @@ public record ConduitCreationParameters
     [JsonPropertyName("shard_count")]
     public int? ShardCount { get; init; }
 }
+

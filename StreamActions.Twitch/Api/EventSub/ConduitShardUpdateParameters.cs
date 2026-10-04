@@ -37,3 +37,4 @@ public record ConduitShardUpdateParameters
     [JsonPropertyName("shards")]
     public IEnumerable<ConduitShardUpdateShardParameters>? Shards { get; init; }
 }
+

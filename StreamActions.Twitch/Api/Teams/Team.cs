@@ -20,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Teams.Objects;
 using System.Collections.Specialized;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;

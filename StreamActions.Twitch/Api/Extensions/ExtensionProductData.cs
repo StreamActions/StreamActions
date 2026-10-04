@@ -1,3 +1,4 @@
+using StreamActions.Twitch.Api.Extensions.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -67,3 +68,4 @@ public sealed record ExtensionProductData
     [JsonPropertyName("broadcast")]
     public bool? Broadcast { get; init; }
 }
+

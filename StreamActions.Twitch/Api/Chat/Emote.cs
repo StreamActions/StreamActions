@@ -21,6 +21,7 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Chat.Objects;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
@@ -484,3 +485,4 @@ public sealed record Emote
         return await response.ReadFromJsonAsync<EmoteResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
+

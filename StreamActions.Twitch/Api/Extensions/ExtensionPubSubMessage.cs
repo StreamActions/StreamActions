@@ -22,6 +22,7 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Extensions.Objects;
 using System.Net.Http.Json;
 
 namespace StreamActions.Twitch.Api.Extensions;
@@ -86,3 +87,4 @@ public sealed record ExtensionPubSubMessage
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }
+

@@ -55,3 +55,4 @@ public sealed record SetExtensionConfigurationSegmentParameters
     [JsonPropertyName("version")]
     public string? Version { get; init; }
 }
+
