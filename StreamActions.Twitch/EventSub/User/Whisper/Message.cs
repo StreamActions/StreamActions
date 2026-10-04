@@ -83,16 +83,4 @@ public sealed record Message : IEventSubType
     /// </summary>
     [JsonPropertyName("whisper")]
     public WhisperMessage? Whisper { get; init; }
-
-    /// <summary>
-    /// Represents the content of the whisper message.
-    /// </summary>
-    public sealed record WhisperMessage
-    {
-        /// <summary>
-        /// The body of the whisper message.
-        /// </summary>
-        [JsonPropertyName("text")]
-        public string? Text { get; init; }
-    }
 }
