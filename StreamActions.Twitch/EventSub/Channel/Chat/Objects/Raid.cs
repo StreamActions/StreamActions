@@ -54,5 +54,5 @@ public sealed record Raid
     /// Profile image URL of the broadcaster raiding this channel.
     /// </summary>
     [JsonPropertyName("profile_image_url")]
-    public string? ProfileImageUrl { get; init; }
+    public Uri? ProfileImageUrl { get; init; }
 }

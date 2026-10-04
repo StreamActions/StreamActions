@@ -26,6 +26,7 @@ using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Net.Http.Json;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.Api.GuestStar;
 
@@ -238,6 +239,7 @@ public sealed record GuestStarSlot
     /// </list>
     /// </para>
     /// </remarks>
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentionally lowercasing per API requirement")]
     public static async Task<JsonApiResponse?> DeleteGuestStarSlot(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string guestId, string slotId, bool? shouldReinviteGuest = null)
     {
         if (session is null)
@@ -328,6 +330,7 @@ public sealed record GuestStarSlot
     /// </list>
     /// </para>
     /// </remarks>
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentionally lowercasing per API requirement")]
     public static async Task<JsonApiResponse?> UpdateGuestStarSlotSettings(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string slotId, bool? isAudioEnabled = null, bool? isVideoEnabled = null, bool? isLive = null, int? volume = null)
     {
         if (session is null)

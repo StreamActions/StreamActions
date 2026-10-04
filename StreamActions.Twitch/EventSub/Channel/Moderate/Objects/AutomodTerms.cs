@@ -17,6 +17,7 @@
  */
 
 using System.Text.Json.Serialization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.EventSub.Channel.Moderate.Objects;
 
@@ -41,7 +42,7 @@ public sealed record AutomodTerms
     /// Terms being added or removed.
     /// </summary>
     [JsonPropertyName("terms")]
-    public string[]? Terms { get; init; }
+    public IReadOnlyCollection<string>? Terms { get; init; }
 
     /// <summary>
     /// Whether the terms were added due to an Automod message approve/deny action.

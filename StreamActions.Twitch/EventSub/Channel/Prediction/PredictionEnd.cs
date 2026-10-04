@@ -20,6 +20,7 @@ using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
 using StreamActions.Twitch.EventSub.Channel.Prediction.Objects;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.EventSub.Channel.Prediction;
 
@@ -77,7 +78,7 @@ public sealed record PredictionEnd : IEventSubType
     /// An array of outcomes for the Channel Points Prediction. Includes top_predictors.
     /// </summary>
     [JsonPropertyName("outcomes")]
-    public Outcome[]? Outcomes { get; init; }
+    public IReadOnlyCollection<Outcome>? Outcomes { get; init; }
 
     /// <summary>
     /// The status of the Channel Points Prediction.

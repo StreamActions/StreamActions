@@ -29,7 +29,7 @@ public sealed record ExtensionComponentView
     /// The HTML file that is shown to viewers on the channel page when the extension is activated in a Video - Component slot.
     /// </summary>
     [JsonPropertyName("viewer_url")]
-    public string? ViewerUrl { get; init; }
+    public Uri? ViewerUrl { get; init; }
 
     /// <summary>
     /// The width value of the ratio.

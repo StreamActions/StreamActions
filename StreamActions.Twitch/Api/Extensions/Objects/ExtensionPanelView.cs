@@ -29,7 +29,7 @@ public sealed record ExtensionPanelView
     /// The HTML file that is shown to viewers on the channel page when the extension is activated in a Panel slot.
     /// </summary>
     [JsonPropertyName("viewer_url")]
-    public string? ViewerUrl { get; init; }
+    public Uri? ViewerUrl { get; init; }
 
     /// <summary>
     /// The height, in pixels, of the panel component that the extension is rendered in.

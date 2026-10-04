@@ -17,6 +17,7 @@
  */
 
 using System.Text.Json.Serialization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.EventSub.Channel.Prediction.Objects;
 
@@ -59,5 +60,5 @@ public sealed record Outcome
     /// An array of users who used the most Channel Points on this outcome.
     /// </summary>
     [JsonPropertyName("top_predictors")]
-    public TopPredictor[]? TopPredictors { get; init; }
+    public IReadOnlyCollection<TopPredictor>? TopPredictors { get; init; }
 }

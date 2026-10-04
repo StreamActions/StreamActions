@@ -29,7 +29,7 @@ public sealed record ExtensionConfigView
     /// The HTML file shown to broadcasters while they are configuring your extension within the Extension Manager.
     /// </summary>
     [JsonPropertyName("viewer_url")]
-    public string? ViewerUrl { get; init; }
+    public Uri? ViewerUrl { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether the extension can link to non-Twitch domains.

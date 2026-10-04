@@ -20,6 +20,7 @@ using System.Text.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Drop.Entitlement.Objects;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.EventSub.Drop.Entitlement;
 
@@ -47,5 +48,5 @@ public sealed record Grant : IEventSubType
     /// Entitlement object data.
     /// </summary>
     [JsonPropertyName("data")]
-    public Objects.Entitlement[]? Data { get; init; }
+    public IReadOnlyCollection<Objects.Entitlement>? Data { get; init; }
 }

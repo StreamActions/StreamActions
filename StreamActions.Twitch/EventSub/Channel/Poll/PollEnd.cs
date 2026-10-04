@@ -20,6 +20,7 @@ using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
 using StreamActions.Twitch.EventSub.Channel.Poll.Objects;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.EventSub.Channel.Poll;
 
@@ -71,7 +72,7 @@ public sealed record PollEnd : IEventSubType
     /// An array of choices for the poll. Includes vote counts.
     /// </summary>
     [JsonPropertyName("choices")]
-    public Choice[]? Choices { get; init; }
+    public IReadOnlyCollection<Choice>? Choices { get; init; }
 
     /// <summary>
     /// Not supported.

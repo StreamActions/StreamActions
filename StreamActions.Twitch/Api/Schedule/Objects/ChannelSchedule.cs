@@ -27,6 +27,7 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.Api.Schedule.Objects;
 
@@ -275,6 +276,7 @@ public sealed record ChannelSchedule
     /// </list>
     /// </para>
     /// </remarks>
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentionally lowercasing per API requirement")]
     public static async Task<JsonApiResponse?> UpdateChannelStreamSchedule(TwitchSession session, string broadcasterId, bool? isVacationEnabled = null, DateTime? vacationStartTime = null, DateTime? vacationEndTime = null, string? timezone = null)
     {
         if (session is null)

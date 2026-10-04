@@ -30,17 +30,17 @@ public sealed record Image
     /// URL for the image at 1x size.
     /// </summary>
     [JsonPropertyName("url_1x")]
-    public string? Url1x { get; init; }
+    public Uri? Url1x { get; init; }
 
     /// <summary>
     /// URL for the image at 2x size.
     /// </summary>
     [JsonPropertyName("url_2x")]
-    public string? Url2x { get; init; }
+    public Uri? Url2x { get; init; }
 
     /// <summary>
     /// URL for the image at 4x size.
     /// </summary>
     [JsonPropertyName("url_4x")]
-    public string? Url4x { get; init; }
+    public Uri? Url4x { get; init; }
 }

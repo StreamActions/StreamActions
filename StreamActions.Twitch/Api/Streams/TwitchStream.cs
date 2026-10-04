@@ -27,12 +27,14 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.Api.Streams;
 
 /// <summary>
 /// Represents a Twitch stream.
 /// </summary>
+    [SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Intentionally named to match Twitch API")]
 public sealed record TwitchStream
 {
     /// <summary>

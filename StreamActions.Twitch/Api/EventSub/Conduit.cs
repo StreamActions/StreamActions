@@ -26,6 +26,7 @@ using System.Collections.Specialized;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.Api.EventSub;
 
@@ -114,6 +115,7 @@ public sealed record Conduit
     /// </list>
     /// </para>
     /// </remarks>
+    [SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentionally targeting sub-property")]
     public static async Task<ResponseData<Conduit>?> CreateConduits(TwitchSession session, ConduitCreationParameters parameters)
     {
         if (session is null)
@@ -176,6 +178,7 @@ public sealed record Conduit
     /// </list>
     /// </para>
     /// </remarks>
+    [SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentionally targeting sub-property")]
     public static async Task<ResponseData<Conduit>?> UpdateConduits(TwitchSession session, ConduitUpdateParameters parameters)
     {
         if (session is null)

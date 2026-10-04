@@ -29,6 +29,6 @@ public sealed record ExtensionMobileView
     /// The HTML file that is shown to viewers on mobile devices.
     /// </summary>
     [JsonPropertyName("viewer_url")]
-    public string? ViewerUrl { get; init; }
+    public Uri? ViewerUrl { get; init; }
 }
 

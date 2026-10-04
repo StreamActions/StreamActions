@@ -67,7 +67,7 @@ public sealed record Extension
     /// A URL to the extension's Terms of Service.
     /// </summary>
     [JsonPropertyName("eula_tos_url")]
-    public string? EulaTosUrl { get; init; }
+    public Uri? EulaTosUrl { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether the extension can communicate with the installed channel's chat.
@@ -79,7 +79,7 @@ public sealed record Extension
     /// A URL to the default icon that's displayed in the Extensions directory.
     /// </summary>
     [JsonPropertyName("icon_url")]
-    public string? IconUrl { get; init; }
+    public Uri? IconUrl { get; init; }
 
     /// <summary>
     /// A dictionary that contains URLs to different sizes of the default icon.
@@ -103,7 +103,7 @@ public sealed record Extension
     /// A URL to the extension's privacy policy.
     /// </summary>
     [JsonPropertyName("privacy_policy_url")]
-    public string? PrivacyPolicyUrl { get; init; }
+    public Uri? PrivacyPolicyUrl { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether the extension wants to explicitly ask viewers to link their Twitch identity.

@@ -29,7 +29,7 @@ public sealed record ExtensionVideoOverlayView
     /// The HTML file that is shown to viewers on the channel page when the extension is activated on the Video - Overlay slot.
     /// </summary>
     [JsonPropertyName("viewer_url")]
-    public string? ViewerUrl { get; init; }
+    public Uri? ViewerUrl { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether the extension can link to non-Twitch domains.

@@ -21,6 +21,7 @@ using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Common.ChatMessage;
 using System.Text.Json.Serialization;
 using StreamActions.Twitch.EventSub.Channel.SuspiciousUser.Objects;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.EventSub.Channel.SuspiciousUser;
 
@@ -84,13 +85,13 @@ public sealed record MessageEvent : IEventSubType
     /// A list of channel IDs where the suspicious user is also banned.
     /// </summary>
     [JsonPropertyName("shared_ban_channel_ids")]
-    public string[]? SharedBanChannelIds { get; init; }
+    public IReadOnlyCollection<string>? SharedBanChannelIds { get; init; }
 
     /// <summary>
     /// User types (if any) that apply to the suspicious user, can be manually_added, ban_evader, or banned_in_shared_channel.
     /// </summary>
     [JsonPropertyName("types")]
-    public string[]? Types { get; init; }
+    public IReadOnlyCollection<string>? Types { get; init; }
 
     /// <summary>
     /// A ban evasion likelihood value (if any) that as been applied to the user automatically by Twitch, can be unknown, possible, or likely.

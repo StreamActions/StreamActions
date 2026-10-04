@@ -18,6 +18,7 @@
 
 using System.Text.Json.Serialization;
 using StreamActions.Twitch.EventSub.Channel.Moderate.Objects;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.EventSub.Channel.Moderate.Objects;
 
@@ -54,5 +55,5 @@ public sealed record Warn
     /// Optional. Chat rules cited for the warning.
     /// </summary>
     [JsonPropertyName("chat_rules_cited")]
-    public string[]? ChatRulesCited { get; init; }
+    public IReadOnlyCollection<string>? ChatRulesCited { get; init; }
 }
