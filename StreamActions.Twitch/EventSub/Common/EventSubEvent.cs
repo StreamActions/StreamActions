@@ -25,7 +25,7 @@ namespace StreamActions.Twitch.EventSub.Common;
 /// An event received from EventSub.
 /// </summary>
 /// <typeparam name="TEventType">The type representing the event's specific data.</typeparam>
-public sealed record EventSubEvent<TEventType> where TEventType : IEventSubType
+public sealed record EventSubEvent<TEventType> : IEventSubEvent where TEventType : IEventSubType
 {
     /// <summary>
     /// The message metadata.

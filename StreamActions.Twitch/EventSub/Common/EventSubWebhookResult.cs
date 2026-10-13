@@ -63,11 +63,11 @@ public sealed record EventSubWebhookResult
     /// </summary>
     /// <remarks>
     /// <para>
-    /// For non-verification messages, this contains the boxed <see cref="EventSubEvent{TEventType}"/> where the event type is resolved from the subscription type implementing <see cref="IEventSubType"/>.
+    /// For non-verification messages, this contains the <see cref="IEventSubEvent"/> where the concrete type is an <see cref="EventSubEvent{TEventType}"/> resolved from the subscription type.
     /// </para>
     /// <para>
-    /// This property is <see langword="null"/> if verification failed, if the message was a verification challenge, or if the subscription type is not implemented.
+    /// This property is <see langword="null"/> if verification failed, if the message was a verification challenge, if the message is a duplicate, or if the subscription type is not implemented.
     /// </para>
     /// </remarks>
-    public object? Event { get; init; }
+    public IEventSubEvent? Event { get; init; }
 }

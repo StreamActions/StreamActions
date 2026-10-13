@@ -146,7 +146,7 @@ public sealed class EventSub
     /// <summary>
     /// A cache mapping EventSub subscription types to deserialization factory delegates.
     /// </summary>
-    private static readonly FrozenDictionary<string, Func<byte[], EventMetadata, object>> _subscriptionTypeCache = BuildSubscriptionTypeCache();
+    private static readonly FrozenDictionary<string, Func<byte[], EventMetadata, IEventSubEvent>> _subscriptionTypeCache = BuildSubscriptionTypeCache();
 
     #endregion Private Fields
 
@@ -294,9 +294,9 @@ public sealed class EventSub
             SubscriptionVersion = subscriptionVersion
         };
 
-        object? eventData = null;
+        IEventSubEvent? eventData = null;
         if (!string.IsNullOrWhiteSpace(subscriptionType) &&
-            _subscriptionTypeCache.TryGetValue(subscriptionType, out Func<byte[], EventMetadata, object>? factory))
+            _subscriptionTypeCache.TryGetValue(subscriptionType, out Func<byte[], EventMetadata, IEventSubEvent>? factory))
         {
             eventData = factory(bodyBytes, metadata);
         }
@@ -318,9 +318,9 @@ public sealed class EventSub
     /// Builds the cache mapping subscription type strings to deserialization factory delegates.
     /// </summary>
     /// <returns>A frozen dictionary mapping subscription types to factory delegates.</returns>
-    private static FrozenDictionary<string, Func<byte[], EventMetadata, object>> BuildSubscriptionTypeCache()
+    private static FrozenDictionary<string, Func<byte[], EventMetadata, IEventSubEvent>> BuildSubscriptionTypeCache()
     {
-        Dictionary<string, Func<byte[], EventMetadata, object>> cache = [];
+        Dictionary<string, Func<byte[], EventMetadata, IEventSubEvent>> cache = [];
         MethodInfo deserializeMethod = typeof(EventSub).GetMethod(nameof(DeserializeEventSubEvent), BindingFlags.NonPublic | BindingFlags.Static)!;
 
         foreach (Type type in typeof(EventSub).Assembly.GetTypes())
@@ -331,7 +331,7 @@ public sealed class EventSub
                 if (typeProperty?.GetValue(null) is string subscriptionType && !string.IsNullOrWhiteSpace(subscriptionType))
                 {
                     MethodInfo genericMethod = deserializeMethod.MakeGenericMethod(type);
-                    Func<byte[], EventMetadata, object> handler = genericMethod.CreateDelegate<Func<byte[], EventMetadata, object>>();
+                    Func<byte[], EventMetadata, IEventSubEvent> handler = genericMethod.CreateDelegate<Func<byte[], EventMetadata, IEventSubEvent>>();
                     cache[subscriptionType] = handler;
                 }
             }
@@ -346,7 +346,7 @@ public sealed class EventSub
     /// <typeparam name="TEventType">The event payload type.</typeparam>
     /// <param name="bodyBytes">The raw webhook request body bytes.</param>
     /// <param name="metadata">The metadata extracted from request headers.</param>
-    /// <returns>A boxed <see cref="EventSubEvent{TEventType}"/> instance.</returns>
+    /// <returns>An <see cref="EventSubEvent{TEventType}"/> instance implementing <see cref="IEventSubEvent"/>.</returns>
     private static EventSubEvent<TEventType> DeserializeEventSubEvent<TEventType>(byte[] bodyBytes, EventMetadata metadata) where TEventType : IEventSubType
     {
         EventPayload<TEventType>? payload = bodyBytes.Length > 0
