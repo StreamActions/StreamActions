@@ -62,3 +62,19 @@ jobs:
         run: dotnet test
         env:
           TZ: ${{ matrix.timezone }}
+  alternateostest:
+    name: Run tests on alternate operating systems
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: '9.0.x'
+      - name: Test with dotnet
+        run: dotnet test

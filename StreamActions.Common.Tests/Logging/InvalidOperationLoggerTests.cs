@@ -112,7 +112,7 @@ public class InvalidOperationLoggerTests
         var log = this._logger.Logs.Single();
         log.LogLevel.Should().Be(LogLevel.Debug);
         log.Exception.Should().Be(exception);
-        log.Message.Should().Contain("Exception message (Parameter 'param1')\nActual value was 42.");
+        log.Message.Should().Contain($"Exception message (Parameter 'param1'){Environment.NewLine}Actual value was 42.");
     }
 
     [Fact]
