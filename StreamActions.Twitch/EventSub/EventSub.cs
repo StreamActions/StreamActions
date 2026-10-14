@@ -38,6 +38,8 @@ namespace StreamActions.Twitch.EventSub;
 [DocParser("EventSub Subscription Types", 57, "https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/", "TwitchEventSubSubscriptionTypesParser")]
 [DocParser("EventSub Fields", 57, "https://dev.twitch.tv/docs/eventsub/eventsub-reference/", "TwitchEventSubReferenceParser")]
 [DocParser("EventSub WebSocket Messages", 57, "https://dev.twitch.tv/docs/eventsub/websocket-reference/", "TwitchEventSubWebSocketMessagesParser")]
+[DocParser("EventSub Webhook Handling", 57, "https://dev.twitch.tv/docs/eventsub/handling-webhook-events/", "TwitchGenericDocumentationParser")]
+[DocParser("EventSub Websocket Handling", 57, "https://dev.twitch.tv/docs/eventsub/handling-websocket-events/", "TwitchGenericDocumentationParser")]
 public sealed class EventSub
 {
     /// <summary>
