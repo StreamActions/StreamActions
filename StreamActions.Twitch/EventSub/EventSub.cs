@@ -17,6 +17,7 @@
  */
 
 using Microsoft.AspNetCore.Http;
+using StreamActions.Common;
 using StreamActions.Common.Attributes;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api;
@@ -24,7 +25,10 @@ using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.EventSub.Common;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
+using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net.WebSockets;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -90,6 +94,11 @@ public sealed class EventSub
     }
 
     #region Private Constants
+
+    /// <summary>
+    /// The default WebSocket URI for Twitch EventSub.
+    /// </summary>
+    private const string _defaultWebsocketUri = "wss://eventsub.wss.twitch.tv/ws";
 
     /// <summary>
     /// The header name for the Twitch EventSub message ID.
@@ -308,6 +317,208 @@ public sealed class EventSub
             IsVerified = true,
             IsDuplicate = false,
             StatusCode = StatusCodes.Status202Accepted,
+            Event = eventData
+        };
+    }
+
+    /// <summary>
+    /// Connects to the EventSub WebSocket server.
+    /// </summary>
+    /// <param name="keepaliveTimeoutSeconds">The keepalive timeout in seconds, between 10 and 600 seconds. If specified, sent as a query parameter.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous connection operation.</param>
+    /// <param name="uri">The WebSocket server URI. If <see langword="null"/>, the default Twitch EventSub WebSocket URI is used.</param>
+    /// <returns>A connected <see cref="ClientWebSocket"/> instance.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="keepaliveTimeoutSeconds"/> is less than 10 or greater than 600.</exception>
+    /// <remarks>
+    /// <para>
+    /// Callers are responsible for managing the lifetime of the returned <see cref="ClientWebSocket"/>.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Design", "CA1068:CancellationToken parameters must come last", Justification = "The uri parameter is placed last as it is only intended to be overridden for testing purposes.")]
+    public static async Task<ClientWebSocket> ConnectWebsocketAsync(int? keepaliveTimeoutSeconds = null, CancellationToken cancellationToken = default, Uri? uri = null)
+    {
+        if (keepaliveTimeoutSeconds.HasValue && keepaliveTimeoutSeconds.Value is < 10 or > 600)
+        {
+            throw new ArgumentOutOfRangeException(nameof(keepaliveTimeoutSeconds), keepaliveTimeoutSeconds.Value, "The keepalive timeout must be between 10 and 600 seconds.").Log(TwitchApi.GetLogger());
+        }
+
+        NameValueCollection queryParameters = [];
+        if (keepaliveTimeoutSeconds.HasValue)
+        {
+            queryParameters.Add("keepalive_timeout_seconds", keepaliveTimeoutSeconds.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        // The URI is intentionally not validated as it can be overridden for testing purposes.
+        Uri targetUri = Util.BuildUri(uri ?? new(_defaultWebsocketUri), queryParameters);
+
+        ClientWebSocket client = new();
+        try
+        {
+            // The URI is intentionally not validated as it can be overridden for testing purposes.
+            await client.ConnectAsync(targetUri, cancellationToken).ConfigureAwait(false);
+            return client;
+        }
+        catch
+        {
+            client.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Receives and processes a single message from an EventSub WebSocket connection.
+    /// </summary>
+    /// <param name="socket">The WebSocket connection from which to receive the message.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous receive operation.</param>
+    /// <returns>An <see cref="EventSubWebsocketResult"/> containing the received event, close code, or exception information.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="socket"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// This method reads frames until a complete message is assembled, decodes the message according to its message type, and detects duplicate messages.
+    /// </para>
+    /// <para>
+    /// If the connection is closed, the returned result includes the corresponding <see cref="CloseCodes"/>. If a socket exception occurs, it is captured in the result rather than thrown.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Socket exceptions are intentionally caught and returned in the result record.")]
+    public static async Task<EventSubWebsocketResult> ReceiveWebsocketMessageAsync(WebSocket socket, CancellationToken cancellationToken = default)
+    {
+        if (socket is null)
+        {
+            throw new ArgumentNullException(nameof(socket)).Log(TwitchApi.GetLogger());
+        }
+
+        byte[] buffer = new byte[4096];
+        using MemoryStream memoryStream = new();
+        WebSocketReceiveResult receiveResult;
+
+        try
+        {
+            do
+            {
+                receiveResult = await socket.ReceiveAsync(new(buffer), cancellationToken).ConfigureAwait(false);
+                if (receiveResult.MessageType == WebSocketMessageType.Close)
+                {
+                    break;
+                }
+
+                await memoryStream.WriteAsync(buffer.AsMemory(0, receiveResult.Count), cancellationToken).ConfigureAwait(false);
+            }
+            while (!receiveResult.EndOfMessage);
+        }
+        catch (Exception ex)
+        {
+            return new()
+            {
+                Exception = ex
+            };
+        }
+
+        if (receiveResult.MessageType == WebSocketMessageType.Close)
+        {
+            WebSocketCloseStatus? closeStatus = receiveResult.CloseStatus ?? socket.CloseStatus;
+            CloseCodes closeCode = closeStatus.HasValue && Enum.IsDefined(typeof(CloseCodes), (int)closeStatus.Value)
+                ? (CloseCodes)(int)closeStatus.Value
+                : CloseCodes.None;
+
+            return new()
+            {
+                CloseCode = closeCode
+            };
+        }
+
+        byte[] messageBytes = memoryStream.ToArray();
+        if (messageBytes.Length == 0)
+        {
+            return new()
+            {
+                IsDuplicate = false,
+                Event = null
+            };
+        }
+
+        using JsonDocument document = JsonDocument.Parse(messageBytes);
+        if (!document.RootElement.TryGetProperty("metadata", out JsonElement metadataElement))
+        {
+            return new()
+            {
+                IsDuplicate = false,
+                Event = null
+            };
+        }
+
+        string? rawMessageType = metadataElement.TryGetProperty("message_type", out JsonElement messageTypeElement) && messageTypeElement.ValueKind == JsonValueKind.String
+            ? messageTypeElement.GetString()
+            : null;
+
+        EventMetadata.MessageTypes? mappedMessageType = rawMessageType switch
+        {
+            "session_welcome" => EventMetadata.MessageTypes.SessionWelcome,
+            "session_keepalive" => EventMetadata.MessageTypes.SessionKeepAlive,
+            "notification" => EventMetadata.MessageTypes.Notification,
+            "revocation" => EventMetadata.MessageTypes.Revocation,
+            "session_reconnect" => EventMetadata.MessageTypes.SessionReconnect,
+            _ => null
+        };
+
+        EventMetadata? deserializedMetadata = metadataElement.Deserialize<EventMetadata>(TwitchApi.SerializerOptions);
+        EventMetadata? metadata = deserializedMetadata is not null
+            ? deserializedMetadata with { MessageType = mappedMessageType }
+            : null;
+
+        string? messageId = metadataElement.TryGetProperty("message_id", out JsonElement messageIdElement) && messageIdElement.ValueKind == JsonValueKind.String
+            ? messageIdElement.GetString()
+            : metadata?.MessageId?.ToString();
+
+        if (!string.IsNullOrWhiteSpace(messageId))
+        {
+            PruneSeenMessages();
+
+            if (!_seenMessageIds.TryAdd(messageId, DateTime.UtcNow))
+            {
+                return new()
+                {
+                    IsDuplicate = true,
+                    Event = null
+                };
+            }
+        }
+
+        IEventSubEvent? eventData = null;
+        if (metadata?.MessageType is not null)
+        {
+            switch (metadata.MessageType.Value)
+            {
+                case EventMetadata.MessageTypes.SessionWelcome:
+                case EventMetadata.MessageTypes.SessionKeepAlive:
+                case EventMetadata.MessageTypes.SessionReconnect:
+                    EventPayload? sessionPayload = document.RootElement.TryGetProperty("payload", out JsonElement sessionPayloadElement)
+                        ? sessionPayloadElement.Deserialize<EventPayload>(TwitchApi.SerializerOptions)
+                        : null;
+
+                    eventData = new EventSubEvent
+                    {
+                        Metadata = metadata,
+                        Payload = sessionPayload
+                    };
+                    break;
+
+                case EventMetadata.MessageTypes.Notification:
+                case EventMetadata.MessageTypes.Revocation:
+                    if (!string.IsNullOrWhiteSpace(metadata.SubscriptionType) &&
+                        _subscriptionTypeCache.TryGetValue(metadata.SubscriptionType, out Func<byte[], EventMetadata, IEventSubEvent>? factory) &&
+                        document.RootElement.TryGetProperty("payload", out JsonElement eventPayloadElement))
+                    {
+                        byte[] payloadBytes = Encoding.UTF8.GetBytes(eventPayloadElement.GetRawText());
+                        eventData = factory(payloadBytes, metadata);
+                    }
+                    break;
+            }
+        }
+
+        return new()
+        {
+            IsDuplicate = false,
             Event = eventData
         };
     }

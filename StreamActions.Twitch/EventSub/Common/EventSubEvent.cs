@@ -24,8 +24,7 @@ namespace StreamActions.Twitch.EventSub.Common;
 /// <summary>
 /// An event received from EventSub.
 /// </summary>
-/// <typeparam name="TEventType">The type representing the event's specific data.</typeparam>
-public sealed record EventSubEvent<TEventType> : IEventSubEvent where TEventType : IEventSubType
+public record EventSubEvent : IEventSubEvent
 {
     /// <summary>
     /// The message metadata.
@@ -37,5 +36,22 @@ public sealed record EventSubEvent<TEventType> : IEventSubEvent where TEventType
     /// The event payload.
     /// </summary>
     [JsonPropertyName("payload")]
-    public EventPayload<TEventType>? Payload { get; init; }
+    public EventPayload? Payload { get; init; }
+}
+
+/// <summary>
+/// An event received from EventSub.
+/// </summary>
+/// <typeparam name="TEventType">The type representing the event's specific data.</typeparam>
+public sealed record EventSubEvent<TEventType> : EventSubEvent where TEventType : IEventSubType
+{
+    /// <summary>
+    /// The event payload.
+    /// </summary>
+    [JsonPropertyName("payload")]
+    public new EventPayload<TEventType>? Payload
+    {
+        get => base.Payload as EventPayload<TEventType>;
+        init => base.Payload = value;
+    }
 }

@@ -24,33 +24,46 @@ namespace StreamActions.Twitch.EventSub.Common;
 /// <summary>
 /// An EventSub event payload.
 /// </summary>
-/// <typeparam name="TEventType">The type representing the subscription's specific data.</typeparam>
-public sealed record EventPayload<TEventType> where TEventType : IEventSubType
+public record EventPayload
 {
     /// <summary>
     /// The subscription information, containing details about the subscription such as its type, version, status, and cost.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// This field is only included in <see cref="EventMetadata.MessageTypes.Notification"/> and <see cref="EventMetadata.MessageTypes.Revocation"/> messages.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("subscription")]
     public EventSubSubscription? Subscription { get; init; }
 
     /// <summary>
-    /// The event data specific to the subscription type, containing information about the event that triggered the subscription.
-    /// </summary>
-    /// <remarks>
-    /// This field is only included in <see cref="EventMetadata.MessageTypes.Notification"/> and <see cref="EventMetadata.MessageTypes.Revocation"/> messages.
-    /// </remarks>
-    [JsonPropertyName("event")]
-    public TEventType? Event { get; init; }
-
-    /// <summary>
     /// Session data for an EventSub websocket connection.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// This field is only included in <see cref="EventMetadata.MessageTypes.SessionWelcome"/> and <see cref="EventMetadata.MessageTypes.SessionReconnect"/> messages.
+    /// </para>
     /// </remarks>
     [JsonPropertyName("session")]
     public EventSubSession? Session { get; init; }
 }
+
+/// <summary>
+/// An EventSub event payload.
+/// </summary>
+/// <typeparam name="TEventType">The type representing the subscription's specific data.</typeparam>
+public sealed record EventPayload<TEventType> : EventPayload where TEventType : IEventSubType
+{
+    /// <summary>
+    /// The event data specific to the subscription type, containing information about the event that triggered the subscription.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This field is only included in <see cref="EventMetadata.MessageTypes.Notification"/> and <see cref="EventMetadata.MessageTypes.Revocation"/> messages.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("event")]
+    public TEventType? Event { get; init; }
+}
+
