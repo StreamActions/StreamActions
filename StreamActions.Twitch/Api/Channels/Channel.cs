@@ -151,22 +151,20 @@ public sealed partial record Channel
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserOrAppToken();
-
-        if (broadcasterId is null || !broadcasterId.Any())
+        IReadOnlyList<string>? broadcasterIdList = broadcasterId as IReadOnlyList<string> ?? broadcasterId?.ToArray();
+        if (broadcasterIdList is null || broadcasterIdList.Count == 0)
         {
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
+        if (broadcasterIdList.Count > 100)
         {
-            int broadcasterIdCount = broadcasterId.Count();
-            if (broadcasterIdCount > 100)
-            {
-                throw new ArgumentOutOfRangeException(nameof(broadcasterId), broadcasterIdCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
-            }
+            throw new ArgumentOutOfRangeException(nameof(broadcasterId), broadcasterIdList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/channels", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
+        session.RequireUserOrAppToken();
+
+        Uri uri = Util.BuildUri(new("/channels", UriKind.Relative), new() { { "broadcaster_id", broadcasterIdList } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Channel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

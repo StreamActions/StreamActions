@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
@@ -225,12 +226,12 @@ public sealed record ChannelPointsReward
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null)
+        IReadOnlyList<Guid>? idList = id as IReadOnlyList<Guid> ?? id?.ToArray();
+        if (idList is not null)
         {
-            int idCount = id.Count();
-            if (idCount > 50)
+            if (idList.Count > 50)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 50").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 50").Log(TwitchApi.GetLogger());
             }
         }
 
@@ -241,9 +242,9 @@ public sealed record ChannelPointsReward
             { "broadcaster_id", broadcasterId }
         };
 
-        if (id is not null && id.Any())
+        if (idList is not null && idList.Count > 0)
         {
-            queryParams.Add("id", id.Select(x => x.ToString("D", CultureInfo.InvariantCulture)));
+            queryParams.Add("id", idList.Select(x => x.ToString("D", CultureInfo.InvariantCulture)));
         }
 
         if (onlyManageableRewards.HasValue)
@@ -265,9 +266,9 @@ public sealed record ChannelPointsReward
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/>, <paramref name="parameters"/>, or <see cref="ChannelPointsRewardCreationParameters.Cost"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <see cref="ChannelPointsRewardCreationParameters.Title"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="ArgumentNullException"><see cref="ChannelPointsRewardCreationParameters.IsMaxPerStreamEnabled"/>, <see cref="ChannelPointsRewardCreationParameters.IsMaxPerUserPerStreamEnabled"/>, or <see cref="ChannelPointsRewardCreationParameters.IsGlobalCooldownEnabled"/> and <see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> (respectively) are not both either <see langword="null"/> or set.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.Cost"/> is < 1; <see cref="ChannelPointsRewardCreationParameters.Title"/> has more than 45 characters; <see cref="ChannelPointsRewardCreationParameters.Prompt"/> has more than 200 characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.Cost"/> is &lt; 1; <see cref="ChannelPointsRewardCreationParameters.Title"/> has more than 45 characters; <see cref="ChannelPointsRewardCreationParameters.Prompt"/> has more than 200 characters.</exception>
     /// <exception cref="InvalidOperationException"><see cref="ChannelPointsRewardCreationParameters.BackgroundColor"/> is not a valid hex triplet in the form <c>#RRGGBB</c>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is enabled and < 1.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is enabled and &lt; 1.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRedemptions"/>.</exception>
@@ -402,13 +403,14 @@ public sealed record ChannelPointsReward
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="broadcasterId">The ID of the broadcaster to add the custom reward to.</param>
+    /// <param name="id">The ID of the custom reward to update.</param>
     /// <param name="parameters">The custom reward to create.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>; <paramref name="id"/> is <see cref="Guid.Empty"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <see cref="ChannelPointsRewardCreationParameters.Title"/> is not <see langword="null"/> and is empty or whitespace.</exception>
     /// <exception cref="ArgumentNullException"><see cref="ChannelPointsRewardCreationParameters.IsMaxPerStreamEnabled"/>, <see cref="ChannelPointsRewardCreationParameters.IsMaxPerUserPerStreamEnabled"/>, or <see cref="ChannelPointsRewardCreationParameters.IsGlobalCooldownEnabled"/> and <see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> (respectively) are not both either <see langword="null"/> or set.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.Cost"/> is < 1; <see cref="ChannelPointsRewardCreationParameters.Title"/> has more than 45 characters; <see cref="ChannelPointsRewardCreationParameters.Prompt"/> has more than 200 characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.Cost"/> is &lt; 1; <see cref="ChannelPointsRewardCreationParameters.Title"/> has more than 45 characters; <see cref="ChannelPointsRewardCreationParameters.Prompt"/> has more than 200 characters.</exception>
     /// <exception cref="InvalidOperationException">No parameters were set in <paramref name="parameters"/>; <see cref="ChannelPointsRewardCreationParameters.BackgroundColor"/> is not a valid hex triplet in the form <c>#RRGGBB</c>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is < 1.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><see cref="ChannelPointsRewardCreationParameters.MaxPerStream"/>, <see cref="ChannelPointsRewardCreationParameters.MaxPerUserPerStream"/>, or <see cref="ChannelPointsRewardCreationParameters.GlobalCooldownSeconds"/> is &lt; 1.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageRedemptions"/>.</exception>

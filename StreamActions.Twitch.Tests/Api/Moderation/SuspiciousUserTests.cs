@@ -241,12 +241,12 @@ public sealed class SuspiciousUserTests : IDisposable
         ResponseData<SuspiciousUser>? response = await SuspiciousUser.AddSuspiciousStatus(session, "1234", "5678", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        SuspiciousUser user = response.Data![0];
+        SuspiciousUser user = response.Data[0];
         _ = user.BroadcasterId.Should().Be("1234");
         _ = user.ModeratorId.Should().Be("5678");
         _ = user.UserId.Should().Be("6789");
@@ -256,7 +256,7 @@ public sealed class SuspiciousUserTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/moderation/suspicious_users");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
@@ -335,17 +335,17 @@ public sealed class SuspiciousUserTests : IDisposable
         ResponseData<SuspiciousUser>? response = await SuspiciousUser.RemoveSuspiciousStatus(session, "1234", "5678", "6789").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        SuspiciousUser user = response.Data![0];
+        SuspiciousUser user = response.Data[0];
         _ = user.Status.Should().Be(SuspiciousUser.SuspiciousStatuses.NoTreatment);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/moderation/suspicious_users");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");

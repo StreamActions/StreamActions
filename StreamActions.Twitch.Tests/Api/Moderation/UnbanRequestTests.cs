@@ -159,12 +159,12 @@ public sealed class UnbanRequestTests : IDisposable
             first: 50).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        UnbanRequest item = response.Data![0];
+        UnbanRequest item = response.Data[0];
         _ = item.Id.Should().Be("req-1");
         _ = item.BroadcasterId.Should().Be("1234");
         _ = item.BroadcasterLogin.Should().Be("streamer");
@@ -183,7 +183,7 @@ public sealed class UnbanRequestTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/moderation/unban_requests");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
@@ -340,19 +340,19 @@ public sealed class UnbanRequestTests : IDisposable
         ResponseData<UnbanRequest>? response = await UnbanRequest.ResolveUnbanRequest(session, "1234", "5678", "req-1", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        UnbanRequest item = response.Data![0];
+        UnbanRequest item = response.Data[0];
         _ = item.Id.Should().Be("req-1");
         _ = item.Status.Should().Be(UnbanRequest.UnbanRequestStatuses.Approved);
         _ = item.ResolutionText.Should().Be("You have learned your lesson");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/moderation/unban_requests");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");

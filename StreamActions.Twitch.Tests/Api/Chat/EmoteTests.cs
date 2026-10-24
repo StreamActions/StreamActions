@@ -38,6 +38,31 @@ public sealed class EmoteTests : IDisposable
     #region Private Fields
 
     /// <summary>
+    /// Sample emote format array containing static format.
+    /// </summary>
+    private static readonly string[] _staticFormats = ["static"];
+
+    /// <summary>
+    /// Sample emote scales array containing all scales (1.0, 2.0, 3.0).
+    /// </summary>
+    private static readonly string[] _allScales = ["1.0", "2.0", "3.0"];
+
+    /// <summary>
+    /// Sample emote scales array containing only the 1.0 scale.
+    /// </summary>
+    private static readonly string[] _singleScale = ["1.0"];
+
+    /// <summary>
+    /// Sample emote theme modes array containing light and dark modes.
+    /// </summary>
+    private static readonly string[] _allThemeModes = ["light", "dark"];
+
+    /// <summary>
+    /// Sample emote theme modes array containing only the light mode.
+    /// </summary>
+    private static readonly string[] _lightThemeMode = ["light"];
+
+    /// <summary>
     /// The Kestrel test server fixture.
     /// </summary>
     private readonly TwitchKestrelServerFixture _fixture;
@@ -125,9 +150,9 @@ public sealed class EmoteTests : IDisposable
                     tier = "1000",
                     emote_type = "subscriptions",
                     emote_set_id = "0",
-                    format = new[] { "static" },
-                    scale = new[] { "1.0", "2.0", "3.0" },
-                    theme_mode = new[] { "light", "dark" }
+                    format = _staticFormats,
+                    scale = _allScales,
+                    theme_mode = _allThemeModes
                 }
             },
             template = "https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}"
@@ -137,10 +162,10 @@ public sealed class EmoteTests : IDisposable
         EmoteResponse? response = await Emote.GetChannelEmotes(session, "12345").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Template.Should().Be("https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}");
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Emote emote = response.Data[0];
         _ = emote.Id.Should().Be("3001");
@@ -154,7 +179,7 @@ public sealed class EmoteTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/emotes");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
     }
@@ -196,9 +221,9 @@ public sealed class EmoteTests : IDisposable
                         url_2x = "https://static-cdn.jtvnw.net/emoticons/v2/25/static/light/2.0",
                         url_4x = "https://static-cdn.jtvnw.net/emoticons/v2/25/static/light/3.0"
                     },
-                    format = new[] { "static" },
-                    scale = new[] { "1.0", "2.0", "3.0" },
-                    theme_mode = new[] { "light", "dark" }
+                    format = _staticFormats,
+                    scale = _allScales,
+                    theme_mode = _allThemeModes
                 }
             },
             template = "https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}"
@@ -208,14 +233,14 @@ public sealed class EmoteTests : IDisposable
         EmoteResponse? response = await Emote.GetGlobalEmotes(session).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
         _ = response.Data[0].Name.Should().Be("Kappa");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/emotes/global");
     }
 
@@ -284,9 +309,9 @@ public sealed class EmoteTests : IDisposable
                     emote_type = "subscriptions",
                     emote_set_id = "1234",
                     owner_id = "9876",
-                    format = new[] { "static" },
-                    scale = new[] { "1.0" },
-                    theme_mode = new[] { "light" }
+                    format = _staticFormats,
+                    scale = _singleScale,
+                    theme_mode = _lightThemeMode
                 }
             },
             template = "https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}"
@@ -296,14 +321,14 @@ public sealed class EmoteTests : IDisposable
         EmoteResponse? response = await Emote.GetEmoteSets(session, ["1234"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
         _ = response.Data[0].OwnerId.Should().Be("9876");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/emotes/set");
         _ = request.Query["emote_set_id"].ToString().Should().Be("1234");
     }
@@ -383,9 +408,9 @@ public sealed class EmoteTests : IDisposable
                     emote_type = "follower",
                     emote_set_id = "5555",
                     owner_id = "12345",
-                    format = new[] { "static" },
-                    scale = new[] { "1.0" },
-                    theme_mode = new[] { "light" }
+                    format = _staticFormats,
+                    scale = _singleScale,
+                    theme_mode = _lightThemeMode
                 }
             },
             template = "https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}"
@@ -395,13 +420,13 @@ public sealed class EmoteTests : IDisposable
         EmoteResponse? response = await Emote.GetUserEmotes(session, "9999", broadcasterId: "12345", after: "page2").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/emotes/user");
         _ = request.Query["user_id"].ToString().Should().Be("9999");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");

@@ -148,9 +148,9 @@ public sealed class BlockedUserTests : IDisposable
         ResponseData<BlockedUser>? response = await BlockedUser.GetBlockedUsers(session, "141981764", 20, "afterCursor").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         BlockedUser blocked = response.Data[0];
         _ = blocked.UserId.Should().Be("135093069");
@@ -159,7 +159,7 @@ public sealed class BlockedUserTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/users/blocks");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("first=20");
@@ -240,11 +240,11 @@ public sealed class BlockedUserTests : IDisposable
             BlockedUser.BlockReason.Spam).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/users/blocks");
         _ = request.QueryString.Should().Contain("target_user_id=135093069");
         _ = request.QueryString.Should().Contain("source_context=chat");
@@ -321,11 +321,11 @@ public sealed class BlockedUserTests : IDisposable
         JsonApiResponse? response = await BlockedUser.UnblockUser(session, "135093069").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/users/blocks");
         _ = request.QueryString.Should().Contain("target_user_id=135093069");
     }

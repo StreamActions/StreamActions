@@ -173,8 +173,8 @@ public sealed class ChannelPointsRewardTests : IDisposable
         ResponseData<ChannelPointsReward>? response = await ChannelPointsReward.GetCustomReward(session, "274637212", [rewardGuid], true).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ChannelPointsReward reward = response.Data[0];
         _ = reward.Id.Should().Be(rewardGuid);
@@ -185,7 +185,7 @@ public sealed class ChannelPointsRewardTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/channel_points/custom_rewards");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.QueryString.Should().Contain($"id={rewardGuid:D}");
@@ -252,7 +252,7 @@ public sealed class ChannelPointsRewardTests : IDisposable
     public async Task CreateCustomReward_WhenTitleIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidTitle)
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageRedemptions);
-        ChannelPointsRewardCreationParameters parameters = new() { Title = invalidTitle!, Cost = 100 };
+        ChannelPointsRewardCreationParameters parameters = new() { Title = invalidTitle, Cost = 100 };
         Func<Task> action = async () => await ChannelPointsReward.CreateCustomReward(session, "274637212", parameters).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("Title");
@@ -316,12 +316,12 @@ public sealed class ChannelPointsRewardTests : IDisposable
         ResponseData<ChannelPointsReward>? response = await ChannelPointsReward.CreateCustomReward(session, "274637212", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/channel_points/custom_rewards");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.Body.Should().Contain("\"title\":\"New Reward\"");
@@ -403,12 +403,12 @@ public sealed class ChannelPointsRewardTests : IDisposable
         ResponseData<ChannelPointsReward>? response = await ChannelPointsReward.UpdateCustomReward(session, "274637212", rewardGuid, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/channel_points/custom_rewards");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.QueryString.Should().Contain($"id={rewardGuid:D}");
@@ -488,11 +488,11 @@ public sealed class ChannelPointsRewardTests : IDisposable
         JsonApiResponse? response = await ChannelPointsReward.DeleteCustomReward(session, "274637212", rewardGuid).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/channel_points/custom_rewards");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.QueryString.Should().Contain($"id={rewardGuid:D}");

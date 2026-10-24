@@ -155,8 +155,8 @@ public sealed class CharityDonationTests : IDisposable
         ResponseData<CharityDonation>? response = await CharityDonation.GetCharityCampaignDonations(session, "123456", first: 20).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         CharityDonation donation = response.Data[0];
         _ = donation.Id.Should().Be("a1b2c3");
@@ -165,13 +165,13 @@ public sealed class CharityDonationTests : IDisposable
         _ = donation.UserLogin.Should().Be("cool_user");
         _ = donation.UserName.Should().Be("Cool_User");
         _ = donation.Amount.Should().NotBeNull();
-        _ = donation.Amount!.Value.Should().Be(500L);
+        _ = donation.Amount.Value.Should().Be(500L);
         _ = donation.Amount.DecimalPlaces.Should().Be(2);
         _ = donation.Amount.Currency.Should().Be("USD");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/charity/donations");
         _ = request.QueryString.Should().Contain("broadcaster_id=123456");
         _ = request.QueryString.Should().Contain("first=20");

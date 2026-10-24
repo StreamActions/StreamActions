@@ -302,7 +302,9 @@ public sealed record Video
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
+        IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
+
+        if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(gameId) && (idList is null || idList.Count == 0))
         {
             throw new ArgumentNullException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "must provide at least one of these parameters").Log(TwitchApi.GetLogger());
         }
@@ -324,17 +326,16 @@ public sealed record Video
             hasId = true;
         }
 
-        if (id is not null && id.Any())
+        if (idList is not null && idList.Count > 0)
         {
             if (hasId)
             {
                 throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
             }
 
-            int idCount = id.Count();
-            if (idCount > 100)
+            if (idList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
             }
         }
 
@@ -347,9 +348,9 @@ public sealed record Video
 
         NameValueCollection queryParams = [];
 
-        if (id is not null && id.Any())
+        if (idList is not null && idList.Count > 0)
         {
-            queryParams.Add("id", id);
+            queryParams.Add("id", idList);
         }
 
         if (!string.IsNullOrWhiteSpace(userId))
@@ -362,7 +363,7 @@ public sealed record Video
             queryParams.Add("game_id", gameId);
         }
 
-        if (id is null || !id.Any())
+        if (idList is null || idList.Count == 0)
         {
             queryParams.Add("first", first.ToString(CultureInfo.InvariantCulture));
             queryParams.Add("period", period.JsonValue() ?? "");
@@ -429,22 +430,20 @@ public sealed record Video
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is null || !id.Any())
+        IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
+        if (idList is null || idList.Count == 0)
         {
             throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserToken(Scope.ChannelManageVideos);
-
+        if (idList.Count > 5)
         {
-            int idCount = id.Count();
-            if (idCount > 5)
-            {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 5").Log(TwitchApi.GetLogger());
-            }
+            throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 5").Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/videos", UriKind.Relative), new() { { "id", id } });
+        session.RequireUserToken(Scope.ChannelManageVideos);
+
+        Uri uri = Util.BuildUri(new("/videos", UriKind.Relative), new() { { "id", idList } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<string>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

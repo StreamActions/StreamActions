@@ -35,7 +35,7 @@ public class JsonLowerCaseEnumConverterTests
         Third_Value
     }
 
-    private class TestModel
+    private sealed class TestModel
     {
         [System.Text.Json.Serialization.JsonConverter(typeof(JsonLowerCaseEnumConverter<TestEnum>))]
         public TestEnum EnumValue { get; set; }
@@ -47,7 +47,7 @@ public class JsonLowerCaseEnumConverterTests
     [Trait("Member", "HandleNull")]
     public void HandleNull_ShouldReturnTrue()
     {
-        var converter = new JsonLowerCaseEnumConverter<TestEnum>();
+        JsonLowerCaseEnumConverter<TestEnum> converter = new();
         converter.HandleNull.Should().BeTrue();
     }
 
@@ -60,7 +60,7 @@ public class JsonLowerCaseEnumConverterTests
     public void Read_WithLowerCaseString_ShouldParseToEnum()
     {
         string json = "{\"EnumValue\":\"firstvalue\"}";
-        var result = JsonSerializer.Deserialize<TestModel>(json);
+        TestModel? result = JsonSerializer.Deserialize<TestModel>(json);
 
         result.Should().NotBeNull();
         result!.EnumValue.Should().Be(TestEnum.FirstValue);
@@ -71,7 +71,7 @@ public class JsonLowerCaseEnumConverterTests
     public void Read_WithMixedCaseString_ShouldParseToEnum()
     {
         string json = "{\"EnumValue\":\"SeCondVaLue\"}";
-        var result = JsonSerializer.Deserialize<TestModel>(json);
+        TestModel? result = JsonSerializer.Deserialize<TestModel>(json);
 
         result.Should().NotBeNull();
         result!.EnumValue.Should().Be(TestEnum.SecondValue);
@@ -82,7 +82,7 @@ public class JsonLowerCaseEnumConverterTests
     public void Read_WithUpperCaseString_ShouldParseToEnum()
     {
         string json = "{\"EnumValue\":\"THIRD_VALUE\"}";
-        var result = JsonSerializer.Deserialize<TestModel>(json);
+        TestModel? result = JsonSerializer.Deserialize<TestModel>(json);
 
         result.Should().NotBeNull();
         result!.EnumValue.Should().Be(TestEnum.Third_Value);
@@ -93,7 +93,7 @@ public class JsonLowerCaseEnumConverterTests
     public void Read_WithInvalidString_ShouldReturnDefaultValue()
     {
         string json = "{\"EnumValue\":\"invalid\"}";
-        var result = JsonSerializer.Deserialize<TestModel>(json);
+        TestModel? result = JsonSerializer.Deserialize<TestModel>(json);
 
         result.Should().NotBeNull();
         result!.EnumValue.Should().Be(default(TestEnum));
@@ -103,12 +103,12 @@ public class JsonLowerCaseEnumConverterTests
     [Trait("Member", "Read")]
     public void Read_WithDirectReaderCall_ShouldReturnExpectedResult()
     {
-        var converter = new JsonLowerCaseEnumConverter<TestEnum>();
+        JsonLowerCaseEnumConverter<TestEnum> converter = new();
         byte[] jsonUtf8Bytes = Encoding.UTF8.GetBytes("\"secondvalue\"");
-        var reader = new Utf8JsonReader(jsonUtf8Bytes);
+        Utf8JsonReader reader = new(jsonUtf8Bytes);
         reader.Read();
 
-        var result = converter.Read(ref reader, typeof(TestEnum), new JsonSerializerOptions());
+        TestEnum result = converter.Read(ref reader, typeof(TestEnum), new JsonSerializerOptions());
 
         result.Should().Be(TestEnum.SecondValue);
     }
@@ -121,7 +121,7 @@ public class JsonLowerCaseEnumConverterTests
     [Trait("Member", "Write")]
     public void Write_ShouldSerializeToLowerCaseString()
     {
-        var model = new TestModel { EnumValue = TestEnum.SecondValue };
+        TestModel model = new() { EnumValue = TestEnum.SecondValue };
         string json = JsonSerializer.Serialize(model);
 
         json.Should().Contain("\"secondvalue\"");
@@ -132,7 +132,7 @@ public class JsonLowerCaseEnumConverterTests
     [Trait("Member", "Write")]
     public void Write_WithUnderscore_ShouldSerializeToLowerCaseString()
     {
-        var model = new TestModel { EnumValue = TestEnum.Third_Value };
+        TestModel model = new() { EnumValue = TestEnum.Third_Value };
         string json = JsonSerializer.Serialize(model);
 
         json.Should().Contain("\"third_value\"");
@@ -143,9 +143,9 @@ public class JsonLowerCaseEnumConverterTests
     [Trait("Member", "Write")]
     public void Write_WithDirectWriterCall_ShouldWriteLowerCase()
     {
-        var converter = new JsonLowerCaseEnumConverter<TestEnum>();
-        using var stream = new MemoryStream();
-        using var writer = new Utf8JsonWriter(stream);
+        JsonLowerCaseEnumConverter<TestEnum> converter = new();
+        using MemoryStream stream = new();
+        using Utf8JsonWriter writer = new(stream);
 
         converter.Write(writer, TestEnum.FirstValue, new JsonSerializerOptions());
         writer.Flush();

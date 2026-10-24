@@ -183,9 +183,9 @@ public sealed class ClipDownloadTests : IDisposable
         ResponseData<ClipDownload>? response = await ClipDownload.GetClipsDownload(session, "12345", "67890", ["1234"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         ClipDownload download = response.Data[0];
         _ = download.ClipId.Should().Be("1234");
@@ -194,7 +194,7 @@ public sealed class ClipDownloadTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/clips/downloads");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["editor_id"].ToString().Should().Be("67890");

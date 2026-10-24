@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common.Net;
+using StreamActions.Twitch.Api.EventSub;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Common;
@@ -53,7 +54,7 @@ public record ResponseData<TDataType> : JsonApiResponse
 
     /// <summary>
     /// The sum of all subscription costs in a
-    /// <see cref="EventSub.EventSubSubscription.GetEventSubSubscriptions(TwitchSession, EventSub.EventSubSubscription.SubscriptionStatus?, string, string, string)"/>
+    /// <see cref="EventSubSubscription.GetEventSubSubscriptions(TwitchSession, EventSubSubscription.SubscriptionStatus?, string?, string?, Guid?, Guid?, string?)"/>
     /// response.
     /// </summary>
     [JsonPropertyName("total_cost")]
@@ -61,7 +62,7 @@ public record ResponseData<TDataType> : JsonApiResponse
 
     /// <summary>
     /// The maximum subscription cost that is allowed in a
-    /// <see cref="EventSub.EventSubSubscription.GetEventSubSubscriptions(TwitchSession, EventSub.EventSubSubscription.SubscriptionStatus?, string, string, string)"/>
+    /// <see cref="EventSubSubscription.GetEventSubSubscriptions(TwitchSession, EventSubSubscription.SubscriptionStatus?, string?, string?, Guid?, Guid?, string?)"/>
     /// response.
     /// </summary>
     [JsonPropertyName("max_total_cost")]

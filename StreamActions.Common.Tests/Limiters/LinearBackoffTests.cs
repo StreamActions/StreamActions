@@ -45,21 +45,21 @@ public class LinearBackoffTests
         // Act & Assert 1: Initial state
         var nextTicksResult1 = calcMethod?.Invoke(backoff, null);
         nextTicksResult1.Should().NotBeNull();
-        long nextTicks1 = (long)nextTicksResult1!;
+        long nextTicks1 = (long)nextTicksResult1;
         nextTicks1.Should().Be(TimeSpan.FromMilliseconds(25).Ticks);
 
         // Act & Assert 2: Second call (simulate waiting and updating internal state)
         nextDurationField?.SetValue(backoff, TimeSpan.FromTicks(nextTicks1));
         var nextTicksResult2 = calcMethod?.Invoke(backoff, null);
         nextTicksResult2.Should().NotBeNull();
-        long nextTicks2 = (long)nextTicksResult2!;
+        long nextTicks2 = (long)nextTicksResult2;
         nextTicks2.Should().Be(TimeSpan.FromMilliseconds(40).Ticks);
 
         // Act & Assert 3: Third call (simulate waiting and updating internal state)
         nextDurationField?.SetValue(backoff, TimeSpan.FromTicks(nextTicks2));
         var nextTicksResult3 = calcMethod?.Invoke(backoff, null);
         nextTicksResult3.Should().NotBeNull();
-        long nextTicks3 = (long)nextTicksResult3!;
+        long nextTicks3 = (long)nextTicksResult3;
         // The base class logic handles clamping in Wait(), so Calc just returns the raw math.
         nextTicks3.Should().Be(TimeSpan.FromMilliseconds(55).Ticks);
     }

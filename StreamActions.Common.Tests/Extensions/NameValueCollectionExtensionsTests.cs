@@ -23,6 +23,8 @@ namespace StreamActions.Common.Tests.Extensions;
 
 public class NameValueCollectionExtensionsTests
 {
+    private static readonly string[] _expectedValues = ["value1", "value3"];
+
     [Fact]
     public void Add_NullCollection_ThrowsArgumentNullException()
     {
@@ -86,6 +88,6 @@ public class NameValueCollectionExtensionsTests
 
         // Assert
         // NameValueCollection ignores null values when retrieving via GetValues if the key already exists.
-        collection.GetValues("key").Should().BeEquivalentTo(new[] { "value1", "value3" });
+        collection.GetValues("key").Should().BeEquivalentTo(_expectedValues);
     }
 }

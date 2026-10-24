@@ -123,12 +123,12 @@ public sealed class ChatMessageTests : IDisposable
         JsonApiResponse? response = await ChatMessage.DeleteChatMessages(session, "11111", "44444", "abc-123-def").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/moderation/chat");
         _ = request.QueryString.Should().Contain("broadcaster_id=11111");
         _ = request.QueryString.Should().Contain("moderator_id=44444");
@@ -145,12 +145,12 @@ public sealed class ChatMessageTests : IDisposable
         JsonApiResponse? response = await ChatMessage.DeleteChatMessages(session, "11111", "44444").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/moderation/chat");
         _ = request.QueryString.Should().Contain("broadcaster_id=11111");
         _ = request.QueryString.Should().Contain("moderator_id=44444");

@@ -135,9 +135,9 @@ public sealed class SearchCategoryTests : IDisposable
         ResponseData<SearchCategory>? response = await SearchCategory.SearchCategories(session, "fortnite", 20, "afterCursor").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         SearchCategory category = response.Data[0];
         _ = category.Id.Should().Be("33214");
@@ -145,11 +145,11 @@ public sealed class SearchCategoryTests : IDisposable
         _ = category.BoxArtUrl.Should().Be(new Uri("https://static-cdn.jtvnw.net/ttv-boxart/33214-{width}x{height}.jpg"));
 
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("cursor123");
+        _ = response.Pagination.Cursor.Should().Be("cursor123");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/search/categories");
         _ = request.QueryString.Should().Contain("query=fortnite");
         _ = request.QueryString.Should().Contain("first=20");

@@ -107,7 +107,7 @@ public sealed class CommercialTests : IDisposable
     public async Task StartCommercial_WhenBroadcasterIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidId)
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelEditCommercial);
-        StartCommercialParameters parameters = new() { BroadcasterId = invalidId!, Length = 60 };
+        StartCommercialParameters parameters = new() { BroadcasterId = invalidId, Length = 60 };
         Func<Task> action = async () => await Commercial.StartCommercial(session, parameters).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("BroadcasterId");
@@ -165,8 +165,8 @@ public sealed class CommercialTests : IDisposable
         ResponseData<Commercial>? response = await Commercial.StartCommercial(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         Commercial commercial = response.Data[0];
         _ = commercial.Length.Should().Be(60);
@@ -178,7 +178,7 @@ public sealed class CommercialTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/channels/commercial");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"141981764\"");
         _ = request.Body.Should().Contain("\"length\":60");

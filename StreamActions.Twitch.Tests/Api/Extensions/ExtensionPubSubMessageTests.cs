@@ -130,12 +130,12 @@ public sealed class ExtensionPubSubMessageTests : IDisposable
         JsonApiResponse? response = await ExtensionPubSubMessage.SendExtensionPubSubMessage(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.IsSuccessStatusCode.Should().BeTrue();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/extensions/pubsub");
         _ = request.Body.Should().Contain("\"message\":\"hello world!\"");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"141981764\"");

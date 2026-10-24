@@ -131,21 +131,21 @@ public sealed class SharedChatSessionTests : IDisposable
         ResponseData<SharedChatSession>? response = await SharedChatSession.GetSharedChatSession(session, "12345").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         SharedChatSession chatSession = response.Data[0];
         _ = chatSession.SessionId.Should().Be(sessionId);
         _ = chatSession.HostBroadcasterId.Should().Be("12345");
         _ = chatSession.Participants.Should().NotBeNull();
-        _ = chatSession.Participants!.Count.Should().Be(2);
+        _ = chatSession.Participants.Count.Should().Be(2);
         _ = chatSession.Participants[0].BroadcasterId.Should().Be("12345");
         _ = chatSession.Participants[1].BroadcasterId.Should().Be("67890");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/shared_chat/session");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
     }

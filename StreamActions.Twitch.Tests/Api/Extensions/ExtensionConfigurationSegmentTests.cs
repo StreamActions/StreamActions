@@ -156,8 +156,8 @@ public sealed class ExtensionConfigurationSegmentTests : IDisposable
         ResponseData<ExtensionConfigurationSegment>? response = await ExtensionConfigurationSegment.GetExtensionConfigurationSegment(session, "uo6dggojyb8d6soh92zknwmi5ej1q2", ["global"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ExtensionConfigurationSegment segment = response.Data[0];
         _ = segment.Segment.Should().Be("global");
@@ -166,7 +166,7 @@ public sealed class ExtensionConfigurationSegmentTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/extensions/configurations");
         _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
         _ = request.QueryString.Should().Contain("segment=global");
@@ -195,12 +195,12 @@ public sealed class ExtensionConfigurationSegmentTests : IDisposable
         ResponseData<ExtensionConfigurationSegment>? response = await ExtensionConfigurationSegment.GetExtensionConfigurationSegment(session, "uo6dggojyb8d6soh92zknwmi5ej1q2", ["broadcaster"], "141981764").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data![0].BroadcasterId.Should().Be("141981764");
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data[0].BroadcasterId.Should().Be("141981764");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.QueryString.Should().Contain("broadcaster_id=141981764");
+        _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }
 
     #endregion GetExtensionConfigurationSegment
@@ -269,12 +269,12 @@ public sealed class ExtensionConfigurationSegmentTests : IDisposable
         JsonApiResponse? response = await ExtensionConfigurationSegment.SetExtensionConfigurationSegment(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.IsSuccessStatusCode.Should().BeTrue();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/extensions/configurations");
         _ = request.Body.Should().Contain("\"segment\":\"global\"");
         _ = request.Body.Should().Contain("\"content\":\"hello config!\"");

@@ -132,14 +132,14 @@ public sealed class BannedUserTests : IDisposable
         ResponseData<BannedUser>? response = await BannedUser.GetBannedUsers(session, "198704263", ["423374343"], first: 50, after: "prev_cursor").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("test_cursor_123");
+        _ = response.Pagination.Cursor.Should().Be("test_cursor_123");
 
-        BannedUser user = response.Data![0];
+        BannedUser user = response.Data[0];
         _ = user.UserId.Should().Be("423374343");
         _ = user.UserLogin.Should().Be("glowillig");
         _ = user.UserName.Should().Be("glowillig");
@@ -152,7 +152,7 @@ public sealed class BannedUserTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/moderation/banned");
         _ = request.QueryString.Should().Contain("broadcaster_id=198704263");
         _ = request.QueryString.Should().Contain("user_id=423374343");

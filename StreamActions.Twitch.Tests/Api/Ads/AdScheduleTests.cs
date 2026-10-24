@@ -141,8 +141,8 @@ public sealed class AdScheduleTests : IDisposable
         ResponseData<AdSchedule>? response = await AdSchedule.GetAdSchedule(session, "141981764").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         AdSchedule schedule = response.Data[0];
         _ = schedule.DurationSeconds.Should().Be(60);
@@ -156,7 +156,7 @@ public sealed class AdScheduleTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/channels/ads");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }
@@ -233,8 +233,8 @@ public sealed class AdScheduleTests : IDisposable
         ResponseData<AdSchedule>? response = await AdSchedule.SnoozeNextAd(session, "141981764").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         AdSchedule schedule = response.Data[0];
         _ = schedule.SnoozeCount.Should().Be(1);
@@ -243,7 +243,7 @@ public sealed class AdScheduleTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/channels/ads/schedule/snooze");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }

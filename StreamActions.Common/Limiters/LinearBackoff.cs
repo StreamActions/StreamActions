@@ -41,9 +41,9 @@ public sealed class LinearBackoff(TimeSpan initialDuration, TimeSpan maxDuration
     #region Protected Methods
 
     /// <summary>
-    /// Calculates the next value for <see cref="NextDuration"/>, in ticks.
+    /// Calculates the next value for <see cref="BackoffBase.NextDuration"/>, in ticks.
     /// </summary>
-    /// <returns>The next value that will be set for <see cref="NextDuration"/>, in ticks.</returns>
+    /// <returns>The next value that will be set for <see cref="BackoffBase.NextDuration"/>, in ticks.</returns>
     protected override long CalcNextDurationTicks() => this.NextDuration.Ticks + stepSize.Ticks;
 
     #endregion Protected Methods

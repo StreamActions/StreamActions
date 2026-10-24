@@ -176,12 +176,12 @@ public sealed class HypeTrainStatusTests : IDisposable
         ResponseData<HypeTrainStatus>? response = await HypeTrainStatus.GetHypeTrainStatus(session, "1337").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         HypeTrainStatus status = response.Data[0];
         _ = status.Current.Should().NotBeNull();
-        _ = status.Current!.Id.Should().Be("1b0AsbInCHZW2SQFQkCzqN07Ib2");
+        _ = status.Current.Id.Should().Be("1b0AsbInCHZW2SQFQkCzqN07Ib2");
         _ = status.Current.BroadcasterId.Should().Be("1337");
         _ = status.Current.BroadcasterLogin.Should().Be("cool_user");
         _ = status.Current.BroadcasterName.Should().Be("Cool_User");
@@ -193,7 +193,7 @@ public sealed class HypeTrainStatusTests : IDisposable
         _ = status.Current.IsSharedTrain.Should().BeTrue();
 
         _ = status.Current.TopContributions.Should().NotBeNull();
-        _ = status.Current.TopContributions!.Count.Should().Be(2);
+        _ = status.Current.TopContributions.Count.Should().Be(2);
         _ = status.Current.TopContributions[0].UserId.Should().Be("123");
         _ = status.Current.TopContributions[0].Type.Should().Be(HypeTrainContribution.HypeTrainContributionType.Bits);
         _ = status.Current.TopContributions[0].Total.Should().Be(50);
@@ -202,20 +202,20 @@ public sealed class HypeTrainStatusTests : IDisposable
         _ = status.Current.TopContributions[1].Total.Should().Be(45);
 
         _ = status.Current.SharedTrainParticipants.Should().NotBeNull();
-        _ = status.Current.SharedTrainParticipants!.Count.Should().Be(1);
+        _ = status.Current.SharedTrainParticipants.Count.Should().Be(1);
         _ = status.Current.SharedTrainParticipants[0].BroadcasterId.Should().Be("456");
 
         _ = status.AllTimeHigh.Should().NotBeNull();
-        _ = status.AllTimeHigh!.Level.Should().Be(6);
+        _ = status.AllTimeHigh.Level.Should().Be(6);
         _ = status.AllTimeHigh.Total.Should().Be(2850);
 
         _ = status.SharedAllTimeHigh.Should().NotBeNull();
-        _ = status.SharedAllTimeHigh!.Level.Should().Be(16);
+        _ = status.SharedAllTimeHigh.Level.Should().Be(16);
         _ = status.SharedAllTimeHigh.Total.Should().Be(23850);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/hypetrain/status");
         _ = request.QueryString.Should().Contain("broadcaster_id=1337");
     }

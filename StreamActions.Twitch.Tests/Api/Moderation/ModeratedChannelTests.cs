@@ -111,26 +111,26 @@ public sealed class ModeratedChannelTests : IDisposable
         ResponseData<ModeratedChannel>? response = await ModeratedChannel.GetModeratedChannels(session, "931931", after: "cursor_prev", first: 20).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(2);
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("cursor_abc_123");
+        _ = response.Pagination.Cursor.Should().Be("cursor_abc_123");
 
-        ModeratedChannel first = response.Data!.ElementAt(0);
+        ModeratedChannel first = response.Data.ElementAt(0);
         _ = first.BroadcasterId.Should().Be("12345");
         _ = first.BroadcasterLogin.Should().Be("grateful_broadcaster");
         _ = first.BroadcasterName.Should().Be("Grateful_Broadcaster");
 
-        ModeratedChannel second = response.Data!.ElementAt(1);
+        ModeratedChannel second = response.Data.ElementAt(1);
         _ = second.BroadcasterId.Should().Be("98765");
         _ = second.BroadcasterLogin.Should().Be("bashfulgamer");
         _ = second.BroadcasterName.Should().Be("BashfulGamer");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/moderation/channels");
         _ = request.QueryString.Should().Contain("user_id=931931");
         _ = request.QueryString.Should().Contain("after=cursor_prev");

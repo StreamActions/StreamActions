@@ -175,22 +175,22 @@ public sealed class GameAnalyticsTests : IDisposable
             first: 20).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         GameAnalytics analytics = response.Data[0];
         _ = analytics.GameId.Should().Be("9821");
         _ = analytics.Url.Should().Be(new Uri(reportUrl));
         _ = analytics.Type.Should().Be(GameAnalytics.GameReportType.OverviewV2);
         _ = analytics.DateRange.Should().NotBeNull();
-        _ = analytics.DateRange!.StartedAt.Should().Be(startedAt);
+        _ = analytics.DateRange.StartedAt.Should().Be(startedAt);
         _ = analytics.DateRange.EndedAt.Should().Be(endedAt);
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("eyJiIjpudWxsLJxhIjoiIn0gf5");
+        _ = response.Pagination.Cursor.Should().Be("eyJiIjpudWxsLJxhIjoiIn0gf5");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/analytics/games");
         _ = request.QueryString.Should().Contain("game_id=9821");
         _ = request.QueryString.Should().Contain("type=overview_v2");

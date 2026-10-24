@@ -134,14 +134,14 @@ public sealed class ChatBadgeTests : IDisposable
         ResponseData<ChatBadge>? response = await ChatBadge.GetChannelChatBadges(session, "12345").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         ChatBadge badge = response.Data[0];
         _ = badge.SetId.Should().Be("subscriber");
         _ = badge.Versions.Should().NotBeNull();
-        _ = badge.Versions!.Count.Should().Be(1);
+        _ = badge.Versions.Count.Should().Be(1);
 
         ChatBadgeVersion version = badge.Versions[0];
         _ = version.Id.Should().Be("0");
@@ -155,7 +155,7 @@ public sealed class ChatBadgeTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/badges");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
     }
@@ -212,14 +212,14 @@ public sealed class ChatBadgeTests : IDisposable
         ResponseData<ChatBadge>? response = await ChatBadge.GetGlobalChatBadges(session).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         ChatBadge badge = response.Data[0];
         _ = badge.SetId.Should().Be("vip");
         _ = badge.Versions.Should().NotBeNull();
-        _ = badge.Versions!.Count.Should().Be(1);
+        _ = badge.Versions.Count.Should().Be(1);
 
         ChatBadgeVersion version = badge.Versions[0];
         _ = version.Id.Should().Be("1");
@@ -228,7 +228,7 @@ public sealed class ChatBadgeTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/badges/global");
     }
 

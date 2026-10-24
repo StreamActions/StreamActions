@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
@@ -186,8 +187,11 @@ namespace StreamActions.Twitch.Api.Users
                 throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
             }
 
-            int idCount = ids?.Count() ?? 0;
-            int loginCount = logins?.Count() ?? 0;
+            IReadOnlyList<string>? idList = ids as IReadOnlyList<string> ?? ids?.ToArray();
+            IReadOnlyList<string>? loginList = logins as IReadOnlyList<string> ?? logins?.ToArray();
+
+            int idCount = idList?.Count ?? 0;
+            int loginCount = loginList?.Count ?? 0;
 
             if ((idCount + loginCount) > 100)
             {
@@ -197,9 +201,9 @@ namespace StreamActions.Twitch.Api.Users
             session.RequireUserOrAppToken();
 
             NameValueCollection queryParameters = [];
-            if (ids is not null && ids.Any())
+            if (idList is not null && idList.Count > 0)
             {
-                foreach (string idStr in ids)
+                foreach (string idStr in idList)
                 {
                     if (!string.IsNullOrEmpty(idStr))
                     {
@@ -208,9 +212,9 @@ namespace StreamActions.Twitch.Api.Users
                 }
             }
 
-            if (logins is not null && logins.Any())
+            if (loginList is not null && loginList.Count > 0)
             {
-                foreach (string loginStr in logins)
+                foreach (string loginStr in loginList)
                 {
                     if (!string.IsNullOrEmpty(loginStr))
                     {

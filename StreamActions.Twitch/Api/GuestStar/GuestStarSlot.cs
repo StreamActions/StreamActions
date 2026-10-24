@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;

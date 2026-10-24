@@ -65,7 +65,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(statusCode);
+        _ = response.Status.Should().Be(statusCode);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.IsClientErrorStatusCode.Should().BeFalse();
         _ = response.IsServerErrorStatusCode.Should().BeFalse();
@@ -92,7 +92,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(statusCode);
+        _ = response.Status.Should().Be(statusCode);
         _ = response.IsSuccessStatusCode.Should().BeFalse();
         _ = response.IsClientErrorStatusCode.Should().BeTrue();
         _ = response.IsServerErrorStatusCode.Should().BeFalse();
@@ -117,7 +117,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(statusCode);
+        _ = response.Status.Should().Be(statusCode);
         _ = response.IsSuccessStatusCode.Should().BeFalse();
         _ = response.IsClientErrorStatusCode.Should().BeFalse();
         _ = response.IsServerErrorStatusCode.Should().BeTrue();
@@ -142,7 +142,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(statusCode);
+        _ = response.Status.Should().Be(statusCode);
         _ = response.IsSuccessStatusCode.Should().BeFalse();
         _ = response.IsClientErrorStatusCode.Should().BeFalse();
         _ = response.IsServerErrorStatusCode.Should().BeFalse();
@@ -163,7 +163,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Error.Should().Be("custom_error_code");
+        _ = response.Error.Should().Be("custom_error_code");
     }
 
     [Theory]
@@ -184,7 +184,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Error.Should().Be(expectedError);
+        _ = response.Error.Should().Be(expectedError);
     }
 
     [Theory]
@@ -204,7 +204,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Error.Should().Be(expectedError);
+        _ = response.Error.Should().Be(expectedError);
     }
 
     [Fact]
@@ -222,7 +222,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Message.Should().Be("Something went wrong");
+        _ = response.Message.Should().Be("Something went wrong");
     }
 
     [Fact]
@@ -240,7 +240,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Message.Should().Be("");
+        _ = response.Message.Should().Be("");
     }
 
     [Fact]
@@ -258,7 +258,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NotFound);
+        _ = response.Status.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Theory]
@@ -278,7 +278,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(httpStatus);
+        _ = response.Status.Should().Be(httpStatus);
     }
 
     [Fact]
@@ -296,7 +296,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.CustomField.Should().Be("custom_data");
     }
 
@@ -318,7 +318,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.CustomField.Should().BeNull();
     }
 
@@ -337,7 +337,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.CustomField.Should().BeNull();
     }
 
@@ -356,7 +356,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.CustomField.Should().BeNull();
     }
 
@@ -375,7 +375,7 @@ public class HttpResponseMessageExtensionsTests
 
         // Assert
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.CustomField.Should().BeNull();
     }
 

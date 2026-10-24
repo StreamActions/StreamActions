@@ -130,13 +130,13 @@ public sealed class ExtensionSecretTests : IDisposable
         ResponseData<ExtensionSecret>? response = await ExtensionSecret.GetExtensionSecrets(session, "uo6dggojyb8d6soh92zknwmi5ej1q2").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ExtensionSecret secret = response.Data[0];
         _ = secret.FormatVersion.Should().Be(1);
         _ = secret.Secrets.Should().NotBeNull();
-        _ = secret.Secrets!.Count.Should().Be(1);
+        _ = secret.Secrets.Count.Should().Be(1);
 
         ExtensionSecretData secretData = secret.Secrets[0];
         _ = secretData.Content.Should().Be("secret_content");
@@ -145,7 +145,7 @@ public sealed class ExtensionSecretTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/extensions/jwt/secrets");
         _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
     }
@@ -217,18 +217,18 @@ public sealed class ExtensionSecretTests : IDisposable
         ResponseData<ExtensionSecret>? response = await ExtensionSecret.CreateExtensionSecret(session, "uo6dggojyb8d6soh92zknwmi5ej1q2", 600).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ExtensionSecret secret = response.Data[0];
         _ = secret.FormatVersion.Should().Be(1);
         _ = secret.Secrets.Should().NotBeNull();
-        _ = secret.Secrets!.Count.Should().Be(2);
+        _ = secret.Secrets.Count.Should().Be(2);
         _ = secret.Secrets[1].Content.Should().Be("new-secret");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/extensions/jwt/secrets");
         _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
         _ = request.QueryString.Should().Contain("delay=600");

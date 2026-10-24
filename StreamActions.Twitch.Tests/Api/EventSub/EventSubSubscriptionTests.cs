@@ -142,9 +142,9 @@ public sealed class EventSubSubscriptionTests : IDisposable
             after: "cursor_prev").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         EventSubSubscription sub = response.Data[0];
         _ = sub.Id.Should().Be(subId);
@@ -154,12 +154,12 @@ public sealed class EventSubSubscriptionTests : IDisposable
         _ = sub.CreatedAt.Should().Be(createdAt);
         _ = sub.Cost.Should().Be(1);
         _ = sub.Transport.Should().NotBeNull();
-        _ = sub.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
+        _ = sub.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
         _ = sub.Transport.Callback.Should().Be("https://example.com/callback");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/eventsub/subscriptions");
         _ = request.Query["status"].ToString().Should().Be("enabled");
         _ = request.Query["after"].ToString().Should().Be("cursor_prev");
@@ -468,9 +468,9 @@ public sealed class EventSubSubscriptionTests : IDisposable
         ResponseData<EventSubSubscription>? response = await EventSubSubscription.CreateEventSubSubscription(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.Accepted);
+        _ = response.Status.Should().Be(HttpStatusCode.Accepted);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         EventSubSubscription sub = response.Data[0];
         _ = sub.Id.Should().Be(subId);
@@ -482,7 +482,7 @@ public sealed class EventSubSubscriptionTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/eventsub/subscriptions");
         _ = request.Body.Should().Contain("\"type\":\"channel.update\"");
         _ = request.Body.Should().Contain("\"version\":\"2\"");
@@ -532,11 +532,11 @@ public sealed class EventSubSubscriptionTests : IDisposable
         JsonApiResponse? response = await EventSubSubscription.DeleteEventSubSubscription(session, subId).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/eventsub/subscriptions");
         _ = request.Query["id"].ToString().Should().Be(subId.ToString());
     }

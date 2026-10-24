@@ -112,7 +112,7 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         _ = ws.State.Should().Be(WebSocketState.Open);
         _ = this._fixture.LastRequest.Should().NotBeNull();
-        _ = this._fixture.LastRequest!.QueryString.Should().Contain("keepalive_timeout_seconds=30");
+        _ = this._fixture.LastRequest.QueryString.Should().Contain("keepalive_timeout_seconds=30");
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
@@ -167,14 +167,14 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.Should().NotBeNull();
         _ = result.IsDuplicate.Should().BeFalse();
         _ = result.Event.Should().NotBeNull();
-        _ = result.Event!.Metadata.Should().NotBeNull();
-        _ = result.Event.Metadata!.MessageType.Should().Be(EventMetadata.MessageTypes.SessionWelcome);
+        _ = result.Event.Metadata.Should().NotBeNull();
+        _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.SessionWelcome);
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent!.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload!.Session.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Session!.Id.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
+        _ = eventSubEvent.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session.Id.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
         _ = eventSubEvent.Payload.Session.Status.Should().Be(EventSubSession.ConnectionStatus.Connected);
         _ = eventSubEvent.Payload.Session.KeepaliveTimeoutSeconds.Should().Be(10);
         _ = eventSubEvent.Payload.Session.ConnectedAt.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
@@ -211,8 +211,8 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.Should().NotBeNull();
         _ = result.IsDuplicate.Should().BeFalse();
         _ = result.Event.Should().NotBeNull();
-        _ = result.Event!.Metadata.Should().NotBeNull();
-        _ = result.Event.Metadata!.MessageType.Should().Be(EventMetadata.MessageTypes.SessionKeepAlive);
+        _ = result.Event.Metadata.Should().NotBeNull();
+        _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.SessionKeepAlive);
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
@@ -254,14 +254,14 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.Should().NotBeNull();
         _ = result.IsDuplicate.Should().BeFalse();
         _ = result.Event.Should().NotBeNull();
-        _ = result.Event!.Metadata.Should().NotBeNull();
-        _ = result.Event.Metadata!.MessageType.Should().Be(EventMetadata.MessageTypes.SessionReconnect);
+        _ = result.Event.Metadata.Should().NotBeNull();
+        _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.SessionReconnect);
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent!.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload!.Session.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Session!.Status.Should().Be(EventSubSession.ConnectionStatus.Reconnecting);
+        _ = eventSubEvent.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session.Status.Should().Be(EventSubSession.ConnectionStatus.Reconnecting);
         _ = eventSubEvent.Payload.Session.ReconnectUrl.Should().Be(new Uri("wss://eventsub.wss.twitch.tv/ws?reconnect=true"));
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -328,13 +328,13 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         EventSubEvent<Follow>? followEvent = result.Event as EventSubEvent<Follow>;
         _ = followEvent.Should().NotBeNull();
-        _ = followEvent!.Metadata.Should().NotBeNull();
-        _ = followEvent.Metadata!.MessageType.Should().Be(EventMetadata.MessageTypes.Notification);
+        _ = followEvent.Metadata.Should().NotBeNull();
+        _ = followEvent.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Notification);
         _ = followEvent.Payload.Should().NotBeNull();
-        _ = followEvent.Payload!.Subscription.Should().NotBeNull();
-        _ = followEvent.Payload.Subscription!.Type.Should().Be("channel.follow");
+        _ = followEvent.Payload.Subscription.Should().NotBeNull();
+        _ = followEvent.Payload.Subscription.Type.Should().Be("channel.follow");
         _ = followEvent.Payload.Event.Should().NotBeNull();
-        _ = followEvent.Payload.Event!.UserId.Should().Be("1234");
+        _ = followEvent.Payload.Event.UserId.Should().Be("1234");
         _ = followEvent.Payload.Event.UserLogin.Should().Be("cool_user");
         _ = followEvent.Payload.Event.UserName.Should().Be("Cool_User");
         _ = followEvent.Payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -393,14 +393,14 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.Should().NotBeNull();
         _ = result.IsDuplicate.Should().BeFalse();
         _ = result.Event.Should().NotBeNull();
-        _ = result.Event!.Metadata.Should().NotBeNull();
-        _ = result.Event.Metadata!.MessageType.Should().Be(EventMetadata.MessageTypes.Revocation);
+        _ = result.Event.Metadata.Should().NotBeNull();
+        _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Revocation);
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent!.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload!.Subscription.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Subscription!.Status.Should().Be(EventSubSubscription.SubscriptionStatus.AuthorizationRevoked);
+        _ = eventSubEvent.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.AuthorizationRevoked);
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }

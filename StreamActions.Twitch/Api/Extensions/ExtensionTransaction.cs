@@ -158,12 +158,12 @@ public sealed record ExtensionTransaction
             throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null)
+        IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
+        if (idList is not null)
         {
-            int idCount = id.Count();
-            if (idCount > 100)
+            if (idList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
             }
         }
 
@@ -175,10 +175,10 @@ public sealed record ExtensionTransaction
             { "first", first.ToString(CultureInfo.InvariantCulture) }
         };
 
-        if (id is not null && id.Any())
+        if (idList is not null && idList.Count > 0)
         {
             List<string> ids = [];
-            foreach (string transactionId in id)
+            foreach (string transactionId in idList)
             {
                 if (!string.IsNullOrWhiteSpace(transactionId))
                 {

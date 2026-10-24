@@ -17,5 +17,4 @@
  */
 
 global using FluentAssertions;
-/// Global <c>using</c> statements for testing.
 global using Xunit;

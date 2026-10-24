@@ -136,8 +136,8 @@ public sealed class ExtensionLiveChannelTests : IDisposable
         ResponseData<ExtensionLiveChannel>? response = await ExtensionLiveChannel.GetExtensionLiveChannels(session, "uo6dggojyb8d6soh92zknwmi5ej1q2", 20, "after_cursor").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(2);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(2);
 
         ExtensionLiveChannel first = response.Data[0];
         _ = first.BroadcasterId.Should().Be("252766116");
@@ -148,7 +148,7 @@ public sealed class ExtensionLiveChannelTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/extensions/live");
         _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
         _ = request.QueryString.Should().Contain("first=20");

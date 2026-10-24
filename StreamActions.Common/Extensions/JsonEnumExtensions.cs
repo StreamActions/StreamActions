@@ -23,7 +23,7 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Common.Extensions;
 
 /// <summary>
-/// Extensions for enums that use attributes in the <see cref="Serialization"/> namespace.
+/// Extensions for enums that use attributes in the <see cref="StreamActions.Common.Json.Serialization"/> namespace.
 /// </summary>
 public static class JsonEnumExtensions
 {
@@ -32,7 +32,7 @@ public static class JsonEnumExtensions
     /// </summary>
     /// <typeparam name="T">The enum type to serialize.</typeparam>
     /// <param name="value">The enum value to serialize.</param>
-    /// <returns>The converted value, if tagged appropriately with a <see cref="JsonConverterAttribute"/> from the <see cref="Serialization"/> namespace; otherwise, <c>Enum.GetName(value)</c>.</returns>
+    /// <returns>The converted value, if tagged appropriately with a <see cref="JsonConverterAttribute"/> from the <see cref="StreamActions.Common.Json.Serialization"/> namespace; otherwise, <c>Enum.GetName(value)</c>.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentional")]
     public static string? JsonValue<T>(this T value) where T : struct, Enum
     {

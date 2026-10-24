@@ -160,19 +160,19 @@ public sealed class VIPTests : IDisposable
             after: "cursor123").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(2);
 
-        VIP item = response.Data![0];
+        VIP item = response.Data[0];
         _ = item.UserId.Should().Be("111");
         _ = item.UserLogin.Should().Be("vip1");
         _ = item.UserName.Should().Be("VIP1");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/channels/vips");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("user_id=111");
@@ -192,7 +192,7 @@ public sealed class VIPTests : IDisposable
         ResponseData<VIP>? response = await VIP.GetVIPs(session, "1234").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().BeEmpty();
+        _ = response.Data.Should().BeEmpty();
     }
 
     #endregion GetVIPs
@@ -262,12 +262,12 @@ public sealed class VIPTests : IDisposable
         JsonApiResponse? response = await VIP.AddChannelVIP(session, "1234", "5678").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/channels/vips");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("user_id=5678");
@@ -340,12 +340,12 @@ public sealed class VIPTests : IDisposable
         JsonApiResponse? response = await VIP.RemoveChannelVIP(session, "1234", "5678").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/channels/vips");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("user_id=5678");

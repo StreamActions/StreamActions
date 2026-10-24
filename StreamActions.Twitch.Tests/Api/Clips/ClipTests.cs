@@ -186,9 +186,9 @@ public sealed class ClipTests : IDisposable
         ResponseData<Clip>? response = await Clip.GetClips(session, broadcasterId: "12345", isFeatured: true).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Clip clip = response.Data[0];
         _ = clip.Id.Should().Be("RandomClipId");
@@ -211,7 +211,7 @@ public sealed class ClipTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/clips");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["is_featured"].ToString().Should().Be("true");

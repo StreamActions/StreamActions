@@ -201,9 +201,9 @@ public sealed record Clip
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        session.RequireUserOrAppToken();
+        IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
 
-        if (string.IsNullOrWhiteSpace(broadcasterId) && string.IsNullOrWhiteSpace(gameId) && (id is null || !id.Any()))
+        if (string.IsNullOrWhiteSpace(broadcasterId) && string.IsNullOrWhiteSpace(gameId) && (idList is null || idList.Count == 0))
         {
             throw new ArgumentNullException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "must provide at least one of these parameters").Log(TwitchApi.GetLogger());
         }
@@ -223,17 +223,16 @@ public sealed record Clip
             hasId = true;
         }
 
-        if (id is not null && id.Any())
+        if (idList is not null && idList.Count > 0)
         {
             if (hasId)
             {
                 throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
             }
 
-            int idCount = id.Count();
-            if (idCount > 100)
+            if (idList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
             }
         }
 
@@ -247,13 +246,15 @@ public sealed record Clip
             throw new ArgumentNullException(nameof(startedAt) + "," + nameof(endedAt), "both parameters must be used together").Log(TwitchApi.GetLogger());
         }
 
+        session.RequireUserOrAppToken();
+
         first = Math.Clamp(first, 1, 100);
 
         NameValueCollection queryParams = [];
 
-        if (id is not null && id.Any())
+        if (idList is not null && idList.Count > 0)
         {
-            queryParams.Add("id", id);
+            queryParams.Add("id", idList);
         }
 
         if (!string.IsNullOrWhiteSpace(broadcasterId))
@@ -266,7 +267,7 @@ public sealed record Clip
             queryParams.Add("game_id", gameId);
         }
 
-        if (id is null || !id.Any())
+        if (idList is null || idList.Count == 0)
         {
             queryParams.Add("first", first.ToString(CultureInfo.InvariantCulture));
 

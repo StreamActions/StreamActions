@@ -195,9 +195,9 @@ public sealed class VideoTests : IDisposable
         ResponseData<Video>? response = await Video.GetVideos(session, userId: "141981764", first: 20).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Video video = response.Data[0];
         _ = video.Id.Should().Be("335921245");
@@ -219,7 +219,7 @@ public sealed class VideoTests : IDisposable
         _ = video.Duration.Should().Be(TimeSpan.FromSeconds(201));
 
         _ = video.MutedSegments.Should().NotBeNull();
-        List<MutedVideoSegment> muted = video.MutedSegments!.ToList();
+        List<MutedVideoSegment> muted = video.MutedSegments.ToList();
         _ = muted.Count.Should().Be(1);
         _ = muted[0].DurationSeconds.Should().Be(30);
         _ = muted[0].Duration.Should().Be(TimeSpan.FromSeconds(30));
@@ -228,7 +228,7 @@ public sealed class VideoTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/videos");
         _ = request.QueryString.Should().Contain("user_id=141981764");
         _ = request.QueryString.Should().Contain("first=20");
@@ -323,14 +323,14 @@ public sealed class VideoTests : IDisposable
         ResponseData<string>? response = await Video.DeleteVideos(session, ["335921245"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
         _ = response.Data[0].Should().Be("335921245");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/videos");
         _ = request.QueryString.Should().Contain("id=335921245");
     }

@@ -72,7 +72,7 @@ public sealed class EventSub
         /// </summary>
         ClientFailedPingPong = 4002,
         /// <summary>
-        /// When you connect to the server, you must create a subscription within <see cref="EventSubSession.KeepAliveInterval"/> seconds or the connection is closed.
+        /// When you connect to the server, you must create a subscription within <see cref="EventSubSession.KeepaliveTimeoutSeconds"/> seconds or the connection is closed.
         /// </summary>
         ConnectionUnused = 4003,
         /// <summary>

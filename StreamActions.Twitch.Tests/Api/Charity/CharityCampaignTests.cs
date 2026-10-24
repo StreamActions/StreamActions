@@ -164,8 +164,8 @@ public sealed class CharityCampaignTests : IDisposable
         ResponseData<CharityCampaign>? response = await CharityCampaign.GetCharityCampaigns(session, "123456").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         CharityCampaign campaign = response.Data[0];
         _ = campaign.Id.Should().Be("123-abc-456-def");
@@ -178,18 +178,18 @@ public sealed class CharityCampaignTests : IDisposable
         _ = campaign.CharityWebsite.Should().Be(new Uri("https://www.example.com"));
 
         _ = campaign.CurrentAmount.Should().NotBeNull();
-        _ = campaign.CurrentAmount!.Value.Should().Be(86000L);
+        _ = campaign.CurrentAmount.Value.Should().Be(86000L);
         _ = campaign.CurrentAmount.DecimalPlaces.Should().Be(2);
         _ = campaign.CurrentAmount.Currency.Should().Be("USD");
 
         _ = campaign.TargetAmount.Should().NotBeNull();
-        _ = campaign.TargetAmount!.Value.Should().Be(1500000L);
+        _ = campaign.TargetAmount.Value.Should().Be(1500000L);
         _ = campaign.TargetAmount.DecimalPlaces.Should().Be(2);
         _ = campaign.TargetAmount.Currency.Should().Be("USD");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/charity/campaigns");
         _ = request.QueryString.Should().Contain("broadcaster_id=123456");
     }

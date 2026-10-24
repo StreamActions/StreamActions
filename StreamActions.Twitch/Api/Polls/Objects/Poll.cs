@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
@@ -203,12 +204,12 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null)
+        IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
+        if (idList is not null)
         {
-            int idCount = id.Count();
-            if (idCount > 20)
+            if (idList.Count > 20)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 20").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 20").Log(TwitchApi.GetLogger());
             }
         }
 
@@ -222,10 +223,10 @@ public sealed record Poll
             { "first", first.ToString(CultureInfo.InvariantCulture) }
         };
 
-        if (id is not null && id.Any())
+        if (idList is not null && idList.Count > 0)
         {
             List<string> ids = [];
-            foreach (string pollId in id)
+            foreach (string pollId in idList)
             {
                 if (!string.IsNullOrWhiteSpace(pollId))
                 {

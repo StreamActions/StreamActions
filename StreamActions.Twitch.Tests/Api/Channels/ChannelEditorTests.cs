@@ -149,8 +149,8 @@ public sealed class ChannelEditorTests : IDisposable
         ResponseData<ChannelEditor>? response = await ChannelEditor.GetChannelEditors(session, "141981764").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ChannelEditor editor = response.Data[0];
         _ = editor.UserId.Should().Be("1828911");
@@ -159,7 +159,7 @@ public sealed class ChannelEditorTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/channels/editors");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }

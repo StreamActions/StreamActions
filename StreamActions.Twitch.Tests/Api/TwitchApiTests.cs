@@ -353,7 +353,7 @@ public sealed class TwitchApiTests : IDisposable
         _ = response.StatusCode.Should().Be(HttpStatusCode.BadGateway);
         JsonApiResponse? parsed = await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions, TestContext.Current.CancellationToken).ConfigureAwait(true);
         _ = parsed.Should().NotBeNull();
-        _ = parsed!.Message.Should().Be(plainTextContent);
+        _ = parsed.Message.Should().Be(plainTextContent);
         _ = parsed.Status.Should().Be(HttpStatusCode.BadGateway);
     }
 

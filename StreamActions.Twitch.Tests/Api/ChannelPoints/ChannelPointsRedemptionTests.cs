@@ -223,12 +223,12 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
             ChannelPointsRedemption.RedemptionStatus.Canceled).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/channel_points/custom_rewards/redemptions");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.QueryString.Should().Contain($"reward_id={rewardGuid:D}");
@@ -387,12 +387,12 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
             parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/channel_points/custom_rewards/redemptions");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.QueryString.Should().Contain($"reward_id={rewardGuid:D}");

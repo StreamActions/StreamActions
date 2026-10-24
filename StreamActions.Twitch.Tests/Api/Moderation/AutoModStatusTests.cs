@@ -182,22 +182,22 @@ public sealed class AutoModStatusTests : IDisposable
         ResponseData<AutoModStatus>? response = await AutoModStatus.CheckAutoModStatus(session, "12345", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(2);
 
-        AutoModStatus first = response.Data!.ElementAt(0);
+        AutoModStatus first = response.Data.ElementAt(0);
         _ = first.MsgId.Should().Be("123");
         _ = first.IsPermitted.Should().BeTrue();
 
-        AutoModStatus second = response.Data!.ElementAt(1);
+        AutoModStatus second = response.Data.ElementAt(1);
         _ = second.MsgId.Should().Be("393");
         _ = second.IsPermitted.Should().BeFalse();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/moderation/enforcements/status");
         _ = request.QueryString.Should().Contain("broadcaster_id=12345");
         _ = request.Body.Should().Contain("\"msg_id\":\"123\"");
@@ -319,12 +319,12 @@ public sealed class AutoModStatusTests : IDisposable
         JsonApiResponse? response = await AutoModStatus.ManageHeldAutoModMessage(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/moderation/automod/message");
         _ = request.Body.Should().Contain("\"user_id\":\"9327994\"");
         _ = request.Body.Should().Contain("\"msg_id\":\"836013710\"");

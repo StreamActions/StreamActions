@@ -146,22 +146,22 @@ public sealed class ConduitShardTests : IDisposable
             after: "cursor_prev").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         ConduitShard shard = response.Data[0];
         _ = shard.Id.Should().Be("0");
         _ = shard.Status.Should().Be(ConduitShard.ShardStatus.Enabled);
         _ = shard.Transport.Should().NotBeNull();
-        _ = shard.Transport!.Method.Should().Be(ConduitShardTransport.TransportMethod.Webhook);
+        _ = shard.Transport.Method.Should().Be(ConduitShardTransport.TransportMethod.Webhook);
         _ = shard.Transport.Callback.Should().Be("https://example.com/callback");
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("cursor_next");
+        _ = response.Pagination.Cursor.Should().Be("cursor_next");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/eventsub/conduits/shards");
         _ = request.Query["conduit_id"].ToString().Should().Be(conduitId.ToString());
         _ = request.Query["status"].ToString().Should().Be("enabled");
@@ -405,18 +405,18 @@ public sealed class ConduitShardTests : IDisposable
         ConduitShardUpdateResponse? response = await ConduitShard.UpdateConduitShards(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         ConduitShard shard = response.Data[0];
         _ = shard.Id.Should().Be("0");
         _ = shard.Status.Should().Be(ConduitShard.ShardStatus.Enabled);
         _ = shard.Transport.Should().NotBeNull();
-        _ = shard.Transport!.Method.Should().Be(ConduitShardTransport.TransportMethod.Webhook);
+        _ = shard.Transport.Method.Should().Be(ConduitShardTransport.TransportMethod.Webhook);
 
         _ = response.Errors.Should().NotBeNull();
-        _ = response.Errors!.Count.Should().Be(1);
+        _ = response.Errors.Count.Should().Be(1);
         ConduitShardUpdateError error = response.Errors[0];
         _ = error.Id.Should().Be("1");
         _ = error.Message.Should().Be("The callback URL is invalid.");
@@ -424,7 +424,7 @@ public sealed class ConduitShardTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/eventsub/conduits/shards");
         _ = request.Body.Should().Contain(conduitId.ToString());
         _ = request.Body.Should().Contain("\"id\":\"0\"");

@@ -271,7 +271,7 @@ public static partial class Util
     /// This member only accepts full colors of the form <c>#RRGGBB</c>.
     /// </para>
     /// </remarks>
-    public static bool IsValidHexColor(string? hexColor) => hexColor is not null && HexColorRegex().Match(hexColor).Success;
+    public static bool IsValidHexColor(string? hexColor) => hexColor is not null && HexColorRegex().IsMatch(hexColor);
 
     #endregion Public Methods
 

@@ -55,7 +55,7 @@ public sealed class TokenBucketRateLimiter : IDisposable
     #region Public Enums
 
     /// <summary>
-    /// Represents the possible DateTime types of <em>headerReset</em> in <see cref="ParseHeaders(WebHeaderCollection, string, string, string)"/>.
+    /// Represents the possible DateTime types of <em>headerReset</em> in <see cref="ParseHeaders(HttpResponseHeaders, string, string, string, HeaderResetType)"/>.
     /// </summary>
     public enum HeaderResetType
     {
@@ -659,6 +659,7 @@ public sealed class TokenBucketRateLimiter : IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         this.Dispose(disposing: true);

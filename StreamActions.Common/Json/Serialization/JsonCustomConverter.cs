@@ -327,7 +327,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <param name="options">An object that specifies serialization options to use.</param>
     /// <param name="obj">The object instance that data is being deserialized into.</param>
     /// <param name="propertyName">The property name to be deserialized.</param>
-    /// <param name="propertyName">The <see cref="JsonPropertyNameAttribute.Name"/> for the property; <paramref name="propertyName"/> if not specified.</param>
+    /// <param name="jsonPropertyName">The <see cref="JsonPropertyNameAttribute.Name"/> for the property; <paramref name="propertyName"/> if not specified.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1045:Do not pass types by reference", Justification = "Passing struct with state.")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "Intentional.")]
     protected abstract void Read(ref Utf8JsonReader reader, Utf8JsonReader newReader, Type typeToConvert, JsonSerializerOptions options, T obj, string propertyName, string jsonPropertyName);
@@ -432,7 +432,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// </summary>
     /// <remarks>
     /// When <see langword="false"/> is returned for a given property in <see cref="Read(ref Utf8JsonReader, Type, JsonSerializerOptions)"/>,
-    /// control will be passed to <see cref="Read(ref Utf8JsonReader, ref Utf8JsonReader, Type, JsonSerializerOptions, T, string, string)"/>, which should
+    /// control will be passed to <see cref="Read(ref Utf8JsonReader, Utf8JsonReader, Type, JsonSerializerOptions, T, string, string)"/>, which should
     /// perform the necessary calls to read the value from the reader and then set the value onto the object provided in the first parameter.
     /// <br/><br/>
     /// When <see langword="false"/> is returned for a given property in <see cref="Write(Utf8JsonWriter, T, JsonSerializerOptions)"/>,

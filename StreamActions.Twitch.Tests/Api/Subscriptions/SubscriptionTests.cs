@@ -211,11 +211,11 @@ public sealed class SubscriptionTests : IDisposable
         SubscriptionResponse? response = await Subscription.GetBroadcasterSubscriptions(session, "141981764", first: 20, after: "cursorAfter").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Total.Should().Be(13);
         _ = response.Points.Should().Be(13);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Subscription sub = response.Data[0];
         _ = sub.BroadcasterId.Should().Be("141981764");
@@ -233,7 +233,7 @@ public sealed class SubscriptionTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/subscriptions");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("first=20");
@@ -337,9 +337,9 @@ public sealed class SubscriptionTests : IDisposable
         SubscriptionResponse? response = await Subscription.CheckUserSubscription(session, "141981764", "527115020").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Subscription sub = response.Data[0];
         _ = sub.BroadcasterId.Should().Be("141981764");
@@ -350,7 +350,7 @@ public sealed class SubscriptionTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/subscriptions/user");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("user_id=527115020");

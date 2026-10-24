@@ -140,8 +140,8 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
         ResponseData<ChannelGuestStarSettings>? response = await ChannelGuestStarSettings.GetChannelGuestStarSettings(session, "9321049", "9321049").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ChannelGuestStarSettings settings = response.Data[0];
         _ = settings.IsModeratorSendLiveEnabled.Should().BeTrue();
@@ -152,7 +152,7 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/guest_star/channel_settings");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
         _ = request.QueryString.Should().Contain("moderator_id=9321049");
@@ -238,12 +238,12 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
         JsonApiResponse? response = await ChannelGuestStarSettings.UpdateChannelGuestStarSettings(session, "9321049", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.IsSuccessStatusCode.Should().BeTrue();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/guest_star/channel_settings");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
         _ = request.Body.Should().Contain("\"slot_count\":4");

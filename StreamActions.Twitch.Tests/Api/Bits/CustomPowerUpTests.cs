@@ -172,8 +172,8 @@ public sealed class CustomPowerUpTests : IDisposable
         ResponseData<CustomPowerUp>? response = await CustomPowerUp.GetCustomPowerUps(session, "274637212").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         CustomPowerUp powerUp = response.Data[0];
         _ = powerUp.BroadcasterId.Should().Be("274637212");
@@ -189,7 +189,7 @@ public sealed class CustomPowerUpTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/bits/custom_power_ups");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
     }

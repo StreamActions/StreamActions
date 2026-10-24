@@ -132,9 +132,9 @@ public sealed class UserExtensionTests : IDisposable
         ResponseData<UserExtension>? response = await UserExtension.GetUserExtensions(session).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         UserExtension ext = response.Data[0];
         _ = ext.Id.Should().Be("upl85usdumiojfu");
@@ -142,11 +142,11 @@ public sealed class UserExtensionTests : IDisposable
         _ = ext.Name.Should().Be("SoundAlerts");
         _ = ext.CanActivate.Should().BeTrue();
         _ = ext.Type.Should().NotBeNull();
-        _ = ext.Type!.Should().Contain(UserExtension.UserExtensionTypes.Panel);
+        _ = ext.Type.Should().Contain(UserExtension.UserExtensionTypes.Panel);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/users/extensions/list");
     }
 

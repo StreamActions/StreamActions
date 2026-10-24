@@ -134,21 +134,21 @@ public sealed class ModeratorTests : IDisposable
         ResponseData<Moderator>? response = await Moderator.GetModerators(session, "198704263", ["424596340"], first: 50, after: "cursor_start").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("cursor_mod_1");
+        _ = response.Pagination.Cursor.Should().Be("cursor_mod_1");
 
-        Moderator mod = response.Data![0];
+        Moderator mod = response.Data[0];
         _ = mod.UserId.Should().Be("424596340");
         _ = mod.UserLogin.Should().Be("quotrok");
         _ = mod.UserName.Should().Be("quotrok");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/moderation/moderators");
         _ = request.QueryString.Should().Contain("broadcaster_id=198704263");
         _ = request.QueryString.Should().Contain("user_id=424596340");
@@ -223,12 +223,12 @@ public sealed class ModeratorTests : IDisposable
         JsonApiResponse? response = await Moderator.AddChannelModerator(session, "11111", "44444").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/moderation/moderators");
         _ = request.QueryString.Should().Contain("broadcaster_id=11111");
         _ = request.QueryString.Should().Contain("user_id=44444");
@@ -301,12 +301,12 @@ public sealed class ModeratorTests : IDisposable
         JsonApiResponse? response = await Moderator.RemoveChannelModerator(session, "11111", "44444").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/moderation/moderators");
         _ = request.QueryString.Should().Contain("broadcaster_id=11111");
         _ = request.QueryString.Should().Contain("user_id=44444");

@@ -32,40 +32,40 @@ public sealed class ExponentialBackoffTests
     [Trait("Member", "CalcNextDurationTicks")]
     public async Task CalcNextDurationTicks_DoublesDuration_UntilMax()
     {
-        var initial = TimeSpan.FromTicks(10);
-        var max = TimeSpan.FromTicks(100);
-        var backoff = new ExponentialBackoff(initial, max);
+        TimeSpan initial = TimeSpan.FromTicks(10);
+        TimeSpan max = TimeSpan.FromTicks(100);
+        ExponentialBackoff backoff = new(initial, max);
 
         backoff.NextDuration.Should().Be(initial);
 
-        var task = backoff.Wait(TimeSpan.FromSeconds(1));
-        var completedTask = await Task.WhenAny(task, Task.Delay(2000)).ConfigureAwait(true);
+        Task task = backoff.Wait(TimeSpan.FromSeconds(1));
+        Task completedTask = await Task.WhenAny(task, Task.Delay(2000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
         completedTask.Should().Be(task);
         await task.ConfigureAwait(true); // propagate any exceptions
         backoff.NextDuration.Should().Be(TimeSpan.FromTicks(20));
 
         task = backoff.Wait(TimeSpan.FromSeconds(1));
-        completedTask = await Task.WhenAny(task, Task.Delay(2000)).ConfigureAwait(true);
+        completedTask = await Task.WhenAny(task, Task.Delay(2000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
         completedTask.Should().Be(task);
         await task.ConfigureAwait(true);
         backoff.NextDuration.Should().Be(TimeSpan.FromTicks(40));
 
         task = backoff.Wait(TimeSpan.FromSeconds(1));
-        completedTask = await Task.WhenAny(task, Task.Delay(2000)).ConfigureAwait(true);
+        completedTask = await Task.WhenAny(task, Task.Delay(2000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
         completedTask.Should().Be(task);
         await task.ConfigureAwait(true);
         backoff.NextDuration.Should().Be(TimeSpan.FromTicks(80));
 
         // 80 * 2 = 160, but max is 100
         task = backoff.Wait(TimeSpan.FromSeconds(1));
-        completedTask = await Task.WhenAny(task, Task.Delay(2000)).ConfigureAwait(true);
+        completedTask = await Task.WhenAny(task, Task.Delay(2000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
         completedTask.Should().Be(task);
         await task.ConfigureAwait(true);
         backoff.NextDuration.Should().Be(max);
 
         // Subsequent waits should remain at max
         task = backoff.Wait(TimeSpan.FromSeconds(1));
-        completedTask = await Task.WhenAny(task, Task.Delay(2000)).ConfigureAwait(true);
+        completedTask = await Task.WhenAny(task, Task.Delay(2000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
         completedTask.Should().Be(task);
         await task.ConfigureAwait(true);
         backoff.NextDuration.Should().Be(max);
@@ -79,14 +79,14 @@ public sealed class ExponentialBackoffTests
     [Trait("Member", "Reset")]
     public async Task Reset_RestoresInitialDuration()
     {
-        var initial = TimeSpan.FromTicks(10);
-        var max = TimeSpan.FromTicks(100);
-        var backoff = new ExponentialBackoff(initial, max);
+        TimeSpan initial = TimeSpan.FromTicks(10);
+        TimeSpan max = TimeSpan.FromTicks(100);
+        ExponentialBackoff backoff = new(initial, max);
 
         backoff.NextDuration.Should().Be(initial);
 
-        var task = backoff.Wait(TimeSpan.FromSeconds(1));
-        var completedTask = await Task.WhenAny(task, Task.Delay(2000)).ConfigureAwait(true);
+        Task task = backoff.Wait(TimeSpan.FromSeconds(1));
+        Task completedTask = await Task.WhenAny(task, Task.Delay(2000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
         completedTask.Should().Be(task);
         await task.ConfigureAwait(true);
 

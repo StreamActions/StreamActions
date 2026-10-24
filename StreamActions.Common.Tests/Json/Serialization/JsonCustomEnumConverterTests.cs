@@ -111,7 +111,7 @@ public class JsonCustomEnumConverterTests
     {
         var result = JsonSerializer.Deserialize<TestClass>(json);
         result.Should().NotBeNull();
-        result!.EnumValue.Should().Be(expected);
+        result.EnumValue.Should().Be(expected);
     }
 
     #endregion Read

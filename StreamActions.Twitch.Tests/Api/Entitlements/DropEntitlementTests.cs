@@ -36,6 +36,11 @@ public sealed class DropEntitlementTests : IDisposable
     #region Private Fields
 
     /// <summary>
+    /// Sample entitlement IDs array for drop entitlement update response.
+    /// </summary>
+    private static readonly string[] _sampleEntitlementIds = ["entitlement123"];
+
+    /// <summary>
     /// The Kestrel test server fixture.
     /// </summary>
     private readonly TwitchKestrelServerFixture _fixture;
@@ -139,9 +144,9 @@ public sealed class DropEntitlementTests : IDisposable
             after: "cursor_prev").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         DropEntitlement entitlement = response.Data[0];
         _ = entitlement.Id.Should().Be("entitlement123");
@@ -152,11 +157,11 @@ public sealed class DropEntitlementTests : IDisposable
         _ = entitlement.FulfillmentStatus.Should().Be(DropEntitlement.FulfillmentStatuses.Claimed);
         _ = entitlement.LastUpdated.Should().Be(updateTime);
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("cursor_next");
+        _ = response.Pagination.Cursor.Should().Be("cursor_next");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/entitlements/drops");
         _ = request.Query["id"].ToString().Should().Be("entitlement123");
         _ = request.Query["user_id"].ToString().Should().Be("user789");
@@ -215,7 +220,7 @@ public sealed class DropEntitlementTests : IDisposable
                 new
                 {
                     status = "SUCCESS",
-                    ids = new[] { "entitlement123" }
+                    ids = _sampleEntitlementIds
                 }
             }
         });
@@ -230,19 +235,19 @@ public sealed class DropEntitlementTests : IDisposable
         ResponseData<UpdateDropsEntitlementsStatus>? response = await DropEntitlement.UpdateDropsEntitlements(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         UpdateDropsEntitlementsStatus status = response.Data[0];
         _ = status.Status.Should().Be(UpdateDropsEntitlementsStatus.Statuses.Success);
         _ = status.Ids.Should().NotBeNull();
-        _ = status.Ids!.Count.Should().Be(1);
+        _ = status.Ids.Count.Should().Be(1);
         _ = status.Ids[0].Should().Be("entitlement123");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/entitlements/drops");
         _ = request.Body.Should().Contain("\"fulfillment_status\":\"FULFILLED\"");
         _ = request.Body.Should().Contain("\"entitlement_ids\":[\"entitlement123\"]");

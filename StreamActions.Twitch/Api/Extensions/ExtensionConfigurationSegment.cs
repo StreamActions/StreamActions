@@ -108,13 +108,14 @@ public sealed record ExtensionConfigurationSegment
             throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
         }
 
-        if (segment is null || !segment.Any())
+        IReadOnlyList<string>? segmentList = segment as IReadOnlyList<string> ?? segment?.ToArray();
+        if (segmentList is null || segmentList.Count == 0)
         {
             throw new ArgumentNullException(nameof(segment)).Log(TwitchApi.GetLogger());
         }
 
         List<string> segments = [];
-        foreach (string s in segment)
+        foreach (string s in segmentList)
         {
             if (!string.IsNullOrWhiteSpace(s))
             {

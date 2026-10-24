@@ -221,12 +221,12 @@ public sealed class BanTests : IDisposable
         ResponseData<Ban>? response = await Ban.BanUser(session, "1234", "5678", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        Ban ban = response.Data![0];
+        Ban ban = response.Data[0];
         _ = ban.BroadcasterId.Should().Be("1234");
         _ = ban.ModeratorId.Should().Be("5678");
         _ = ban.UserId.Should().Be("9876");
@@ -235,7 +235,7 @@ public sealed class BanTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/moderation/bans");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
@@ -315,12 +315,12 @@ public sealed class BanTests : IDisposable
         JsonApiResponse? response = await Ban.UnbanUser(session, "1234", "5678", "9876").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/moderation/bans");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");

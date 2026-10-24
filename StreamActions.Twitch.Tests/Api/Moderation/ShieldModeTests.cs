@@ -144,12 +144,12 @@ public sealed class ShieldModeTests : IDisposable
         ResponseData<ShieldMode>? response = await ShieldMode.GetShieldModeStatus(session, "1234", "5678").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        ShieldMode item = response.Data![0];
+        ShieldMode item = response.Data[0];
         _ = item.IsActive.Should().BeTrue();
         _ = item.ModeratorId.Should().Be("98765");
         _ = item.ModeratorLogin.Should().Be("simplysimple");
@@ -158,7 +158,7 @@ public sealed class ShieldModeTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/moderation/shield_mode");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
@@ -175,8 +175,8 @@ public sealed class ShieldModeTests : IDisposable
         ResponseData<ShieldMode>? response = await ShieldMode.GetShieldModeStatus(session, "1234", "5678").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data![0].IsActive.Should().BeFalse();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data[0].IsActive.Should().BeFalse();
     }
 
     #endregion GetShieldModeStatus
@@ -264,18 +264,18 @@ public sealed class ShieldModeTests : IDisposable
         ResponseData<ShieldMode>? response = await ShieldMode.UpdateShieldModeStatus(session, "1234", "5678", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        ShieldMode item = response.Data![0];
+        ShieldMode item = response.Data[0];
         _ = item.IsActive.Should().BeFalse();
         _ = item.ModeratorId.Should().Be("98765");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/moderation/shield_mode");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");

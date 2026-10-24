@@ -129,8 +129,8 @@ public sealed class GuestStarInviteTests : IDisposable
         ResponseData<GuestStarInvite>? response = await GuestStarInvite.GetGuestStarInvites(session, "9321049", "9321049", "session123").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         GuestStarInvite invite = response.Data[0];
         _ = invite.UserId.Should().Be("144601104");
@@ -143,7 +143,7 @@ public sealed class GuestStarInviteTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/guest_star/invites");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
         _ = request.QueryString.Should().Contain("moderator_id=9321049");
@@ -186,12 +186,12 @@ public sealed class GuestStarInviteTests : IDisposable
         JsonApiResponse? response = await GuestStarInvite.SendGuestStarInvite(session, "9321049", "9321049", "session123", "144601104").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.IsSuccessStatusCode.Should().BeTrue();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/guest_star/invites");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
         _ = request.QueryString.Should().Contain("guest_id=144601104");
@@ -220,12 +220,12 @@ public sealed class GuestStarInviteTests : IDisposable
         JsonApiResponse? response = await GuestStarInvite.DeleteGuestStarInvite(session, "9321049", "9321049", "session123", "144601104").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.IsSuccessStatusCode.Should().BeTrue();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/guest_star/invites");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
         _ = request.QueryString.Should().Contain("guest_id=144601104");

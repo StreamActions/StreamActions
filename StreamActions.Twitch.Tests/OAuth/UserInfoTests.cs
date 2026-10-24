@@ -121,7 +121,7 @@ public sealed class UserInfoTests : IDisposable
         UserInfo? userInfo = await UserInfo.GetUserInfo(session).ConfigureAwait(true);
 
         _ = userInfo.Should().NotBeNull();
-        _ = userInfo!.Audience.Should().Be(this._fixture.ClientId);
+        _ = userInfo.Audience.Should().Be(this._fixture.ClientId);
         _ = userInfo.AuthorizedParty.Should().Be(this._fixture.ClientId);
         _ = userInfo.ExpiresUnix.Should().Be(1644342250);
         _ = userInfo.Expires.Should().Be(DateTime.UnixEpoch.AddSeconds(1644342250));
@@ -138,7 +138,7 @@ public sealed class UserInfoTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/oauth2/userinfo");
     }
 
@@ -156,7 +156,7 @@ public sealed class UserInfoTests : IDisposable
         UserInfo? userInfo = await UserInfo.GetUserInfo(session).ConfigureAwait(true);
 
         _ = userInfo.Should().NotBeNull();
-        _ = userInfo!.ExpiresUnix.Should().BeNull();
+        _ = userInfo.ExpiresUnix.Should().BeNull();
         _ = userInfo.Expires.Should().BeNull();
         _ = userInfo.IssuedUnix.Should().BeNull();
         _ = userInfo.Issued.Should().BeNull();

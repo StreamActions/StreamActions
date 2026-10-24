@@ -211,9 +211,9 @@ public sealed class TwitchStreamTests : IDisposable
             after: "afterCursor").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         TwitchStream stream = response.Data[0];
         _ = stream.Id.Should().Be("26007494656");
@@ -232,11 +232,11 @@ public sealed class TwitchStreamTests : IDisposable
         _ = stream.IsMature.Should().BeFalse();
 
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("cursorStream");
+        _ = response.Pagination.Cursor.Should().Be("cursorStream");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/streams");
         _ = request.QueryString.Should().Contain("user_id=23161357");
         _ = request.QueryString.Should().Contain("user_login=lirik");
@@ -339,9 +339,9 @@ public sealed class TwitchStreamTests : IDisposable
         ResponseData<TwitchStream>? response = await TwitchStream.GetFollowedStreams(session, "141981764", 100, "cursorAfter").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         TwitchStream stream = response.Data[0];
         _ = stream.Id.Should().Be("26007494656");
@@ -349,7 +349,7 @@ public sealed class TwitchStreamTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/streams/followed");
         _ = request.QueryString.Should().Contain("user_id=141981764");
         _ = request.QueryString.Should().Contain("first=100");

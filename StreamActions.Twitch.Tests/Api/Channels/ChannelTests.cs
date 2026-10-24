@@ -40,6 +40,16 @@ public sealed class ChannelTests : IDisposable
     #region Private Fields
 
     /// <summary>
+    /// Sample tags for channel information response.
+    /// </summary>
+    private static readonly string[] _sampleTags = ["DevsInTheKnow"];
+
+    /// <summary>
+    /// Sample content classification labels for channel information response.
+    /// </summary>
+    private static readonly string[] _sampleContentClassificationLabels = ["Gambling", "DrugsIntoxication"];
+
+    /// <summary>
     /// The Kestrel test server fixture.
     /// </summary>
     private readonly TwitchKestrelServerFixture _fixture;
@@ -134,8 +144,8 @@ public sealed class ChannelTests : IDisposable
                     game_name = "Science & Technology",
                     title = "TwitchDev Monthly Update",
                     delay = 0,
-                    tags = new[] { "DevsInTheKnow" },
-                    content_classification_labels = new[] { "Gambling", "DrugsIntoxication" },
+                    tags = _sampleTags,
+                    content_classification_labels = _sampleContentClassificationLabels,
                     is_branded_content = false
                 }
             }
@@ -145,8 +155,8 @@ public sealed class ChannelTests : IDisposable
         ResponseData<Channel>? response = await Channel.GetChannelInformation(session, ["141981764"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         Channel channel = response.Data[0];
         _ = channel.BroadcasterId.Should().Be("141981764");
@@ -163,7 +173,7 @@ public sealed class ChannelTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/channels");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }
@@ -291,11 +301,11 @@ public sealed class ChannelTests : IDisposable
         JsonApiResponse? response = await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/channels");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.Body.Should().Contain("\"title\":\"Updated Stream Title\"");

@@ -100,23 +100,21 @@ public sealed record UserAuthorization
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        if (userIds is null || !userIds.Any())
+        IReadOnlyList<string>? userIdList = userIds as IReadOnlyList<string> ?? userIds?.ToArray();
+        if (userIdList is null || userIdList.Count == 0)
         {
             throw new ArgumentNullException(nameof(userIds)).Log(TwitchApi.GetLogger());
         }
 
+        if (userIdList.Count > 10)
         {
-            int userIdsCount = userIds.Count();
-            if (userIdsCount > 10)
-            {
-                throw new ArgumentOutOfRangeException(nameof(userIds), userIdsCount, "must have a count <= 10").Log(TwitchApi.GetLogger());
-            }
+            throw new ArgumentOutOfRangeException(nameof(userIds), userIdList.Count, "must have a count <= 10").Log(TwitchApi.GetLogger());
         }
 
         session.RequireAppToken();
 
         NameValueCollection queryParams = [];
-        queryParams.Add("user_id", userIds);
+        queryParams.Add("user_id", userIdList);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/authorization/users", UriKind.Relative), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UserAuthorization>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

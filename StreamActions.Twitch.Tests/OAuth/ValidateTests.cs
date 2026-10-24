@@ -33,6 +33,11 @@ public sealed class ValidateTests : IDisposable
     #region Private Fields
 
     /// <summary>
+    /// Sample scopes array for OAuth validation response.
+    /// </summary>
+    private static readonly string[] _validationScopes = ["channel:read:subscriptions"];
+
+    /// <summary>
     /// The Kestrel test server fixture.
     /// </summary>
     private readonly TwitchKestrelServerFixture _fixture;
@@ -84,7 +89,7 @@ public sealed class ValidateTests : IDisposable
         {
             client_id = "wbmytr93xzw8zbg0p1izqyzzc5mbiz",
             login = "twitchdev",
-            scopes = new[] { "channel:read:subscriptions" },
+            scopes = _validationScopes,
             user_id = "141981764",
             expires_in = 5520838
         });
@@ -123,7 +128,7 @@ public sealed class ValidateTests : IDisposable
         Validate? result = await Validate.ValidateOAuth(session, $"{this._fixture.BaseUrl}/oauth2/validate").ConfigureAwait(true);
 
         _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().Be(HttpStatusCode.Unauthorized);
+        _ = result.Status.Should().Be(HttpStatusCode.Unauthorized);
         _ = result.Message.Should().Be("invalid access token");
         _ = result.ClientId.Should().BeNull();
     }

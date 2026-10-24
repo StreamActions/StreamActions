@@ -149,9 +149,9 @@ public sealed class ChatColorTests : IDisposable
         ResponseData<ChatColor>? response = await ChatColor.GetUserChatColor(session, ["11111", "22222"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(2);
+        _ = response.Data.Count.Should().Be(2);
 
         ChatColor color1 = response.Data[0];
         _ = color1.UserId.Should().Be("11111");
@@ -166,7 +166,7 @@ public sealed class ChatColorTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/color");
         _ = request.Query["user_id"].ToString().Should().Contain("11111");
     }
@@ -271,12 +271,12 @@ public sealed class ChatColorTests : IDisposable
         JsonApiResponse? response = await ChatColor.UpdateUserChatColor(session, "12345", ChatColor.NamedColor.BlueViolet).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/chat/color");
         _ = request.Query["user_id"].ToString().Should().Be("12345");
         _ = request.Query["color"].ToString().Should().Be("blue_violet");
@@ -295,11 +295,11 @@ public sealed class ChatColorTests : IDisposable
         JsonApiResponse? response = await ChatColor.UpdateUserChatColor(session, "12345", ChatColor.NamedColor.Custom, "#1E90FF").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Query["color"].ToString().Should().Be("#1E90FF");
+        _ = request.Query["color"].ToString().Should().Be("#1E90FF");
     }
 
     #endregion UpdateUserChatColor

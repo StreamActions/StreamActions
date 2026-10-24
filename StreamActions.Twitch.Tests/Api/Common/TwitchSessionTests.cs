@@ -61,7 +61,7 @@ public class TwitchSessionTests
     public void Token_WhenSetToNull_ThrowsArgumentNullException()
     {
         using TwitchSession session = new();
-        Action action = () => session.Token = null!;
+        Action action = () => session.Token = null;
         _ = action.Should().Throw<ArgumentNullException>()
             .And.ParamName.Should().Be("value");
     }

@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
@@ -85,34 +86,79 @@ public sealed record ChatColor
     /// </remarks>
     public enum NamedColor
     {
+        /// <summary>
+        /// The color blue.
+        /// </summary>
         [JsonCustomEnum("blue")]
         Blue,
+        /// <summary>
+        /// The color blue violet.
+        /// </summary>
         [JsonCustomEnum("blue_violet")]
         BlueViolet,
+        /// <summary>
+        /// The color cadet blue.
+        /// </summary>
         [JsonCustomEnum("cadet_blue")]
         CadetBlue,
+        /// <summary>
+        /// The color chocolate.
+        /// </summary>
         [JsonCustomEnum("chocolate")]
         Chocolate,
+        /// <summary>
+        /// The color coral.
+        /// </summary>
         [JsonCustomEnum("coral")]
         Coral,
+        /// <summary>
+        /// The color dodger blue.
+        /// </summary>
         [JsonCustomEnum("dodger_blue")]
         DodgerBlue,
+        /// <summary>
+        /// The color firebrick.
+        /// </summary>
         [JsonCustomEnum("firebrick")]
         Firebrick,
+        /// <summary>
+        /// The color goldenrod.
+        /// </summary>
         [JsonCustomEnum("golden_rod")]
         GoldenRod,
+        /// <summary>
+        /// The color green.
+        /// </summary>
         [JsonCustomEnum("green")]
         Green,
+        /// <summary>
+        /// The color hot pink.
+        /// </summary>
         [JsonCustomEnum("hot_pink")]
         HotPink,
+        /// <summary>
+        /// The color orange red.
+        /// </summary>
         [JsonCustomEnum("orange_red")]
         OrangeRed,
+        /// <summary>
+        /// The color red.
+        /// </summary>
         [JsonCustomEnum("red")]
         Red,
+        /// <summary>
+        /// The color sea green.
+        /// </summary>
         [JsonCustomEnum("sea_green")]
         SeaGreen,
+        /// <summary>
+        /// The color spring green.
+        /// </summary>
         [JsonCustomEnum("spring_green")]
         SpringGreen,
+        /// <summary>
+        /// The color yellow green.
+        /// </summary>
         [JsonCustomEnum("yellow_green")]
         YellowGreen,
         /// <summary>
@@ -162,22 +208,20 @@ public sealed record ChatColor
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        if (userId is null || !userId.Any())
+        IReadOnlyList<string>? userIdList = userId as IReadOnlyList<string> ?? userId?.ToArray();
+        if (userIdList is null || userIdList.Count == 0)
         {
             throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
         }
 
+        if (userIdList.Count > 100)
         {
-            int userIdCount = userId.Count();
-            if (userIdCount > 100)
-            {
-                throw new ArgumentOutOfRangeException(nameof(userId), userIdCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
-            }
+            throw new ArgumentOutOfRangeException(nameof(userId), userIdList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
         }
 
         session.RequireUserOrAppToken();
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/color", UriKind.Relative), new() { { "user_id", userId } }), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/color", UriKind.Relative), new() { { "user_id", userIdList } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatColor>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 

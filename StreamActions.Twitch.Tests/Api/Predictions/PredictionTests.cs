@@ -175,12 +175,12 @@ public sealed class PredictionTests : IDisposable
         ResponseData<Prediction>? response = await Prediction.GetPredictions(session, "1234", id: [predictionId], first: 20, after: "cursor123").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        Prediction item = response.Data![0];
+        Prediction item = response.Data[0];
         _ = item.Id.Should().Be(predictionId);
         _ = item.BroadcasterId.Should().Be("1234");
         _ = item.BroadcasterName.Should().Be("Streamer");
@@ -196,7 +196,7 @@ public sealed class PredictionTests : IDisposable
         _ = item.Outcomes.Should().NotBeNull();
         _ = item.Outcomes.Should().HaveCount(2);
 
-        PredictionOutcome outcome1 = item.Outcomes![0];
+        PredictionOutcome outcome1 = item.Outcomes[0];
         _ = outcome1.Id.Should().Be(outcome1Id);
         _ = outcome1.Title.Should().Be("Yes");
         _ = outcome1.Users.Should().Be(10);
@@ -205,7 +205,7 @@ public sealed class PredictionTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/predictions");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("first=20");
@@ -451,18 +451,18 @@ public sealed class PredictionTests : IDisposable
         ResponseData<Prediction>? response = await Prediction.CreatePrediction(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        Prediction item = response.Data![0];
+        Prediction item = response.Data[0];
         _ = item.Id.Should().Be(predictionId);
         _ = item.Title.Should().Be("Will we win?");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/predictions");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"1234\"");
         _ = request.Body.Should().Contain("\"title\":\"Will we win?\"");
@@ -648,17 +648,17 @@ public sealed class PredictionTests : IDisposable
         ResponseData<Prediction>? response = await Prediction.EndPrediction(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        Prediction item = response.Data![0];
+        Prediction item = response.Data[0];
         _ = item.Id.Should().Be(predictionId);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/predictions");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"1234\"");
         _ = request.Body.Should().Contain($"\"id\":\"{predictionId}\"");

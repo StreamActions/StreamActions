@@ -239,9 +239,9 @@ public sealed class SendChatTests : IDisposable
         ResponseData<SendChat>? response = await SendChat.SendChatMessage(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         SendChat result = response.Data[0];
         _ = result.MessageId.Should().Be("msg999");
@@ -250,7 +250,7 @@ public sealed class SendChatTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/chat/messages");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"12345\"");
         _ = request.Body.Should().Contain("\"sender_id\":\"67890\"");

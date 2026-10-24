@@ -193,12 +193,12 @@ public sealed class AnnouncementTests : IDisposable
         JsonApiResponse? response = await Announcement.SendChatAnnouncement(session, "12345", "67890", announcement).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/chat/announcements");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["moderator_id"].ToString().Should().Be("67890");

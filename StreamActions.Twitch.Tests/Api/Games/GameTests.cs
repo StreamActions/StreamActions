@@ -135,8 +135,8 @@ public sealed class GameTests : IDisposable
         ResponseData<Game>? response = await Game.GetGames(session, gameIds: ["33214"], gameNames: ["Fortnite"], igdbIds: ["1905"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         Game game = response.Data[0];
         _ = game.Id.Should().Be("33214");
@@ -146,7 +146,7 @@ public sealed class GameTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/games");
         _ = request.QueryString.Should().Contain("id=33214");
         _ = request.QueryString.Should().Contain("name=Fortnite");
@@ -201,8 +201,8 @@ public sealed class GameTests : IDisposable
         ResponseData<Game>? response = await Game.GetTopGames(session, 20, "after_cursor", "before_cursor").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         Game game = response.Data[0];
         _ = game.Id.Should().Be("493057");
@@ -210,7 +210,7 @@ public sealed class GameTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/games/top");
         _ = request.QueryString.Should().Contain("first=20");
         _ = request.QueryString.Should().Contain("after=after_cursor");

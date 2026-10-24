@@ -31,6 +31,7 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
 {
     #region Protected Methods
 
+    /// <inheritdoc/>
     protected override void Read(ref Utf8JsonReader reader, Utf8JsonReader newReader, Type typeToConvert, JsonSerializerOptions options, EventSubSubscription obj, string propertyName, string jsonPropertyName)
     {
         if (obj is null || propertyName is null)
@@ -47,7 +48,7 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
                 string typeJsonPropertyName = this.MapToJsonPropertyNames().GetValueOrDefault(nameof(EventSubSubscription.Type), nameof(EventSubSubscription.Type));
                 while (newReader.Read())
                 {
-                    if (newReader.TokenType is JsonTokenType.PropertyName && newReader.GetString()! == typeJsonPropertyName)
+                    if (newReader.TokenType is JsonTokenType.PropertyName && newReader.GetString() == typeJsonPropertyName)
                     {
                         if (newReader.Read() && newReader.TokenType is JsonTokenType.String)
                         {
@@ -69,8 +70,10 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
         }
     }
 
+    /// <inheritdoc/>
     protected override bool ShouldUseDefaultConversion(string propertyName, string jsonPropertyName) => propertyName is not nameof(EventSubSubscription.Condition) && base.ShouldUseDefaultConversion(propertyName, jsonPropertyName);
 
+    /// <inheritdoc/>
     protected override void Write(Utf8JsonWriter writer, EventSubSubscription obj, JsonSerializerOptions options, string propertyName, string jsonPropertyName, object? value) => this.DefaultWrite(writer, jsonPropertyName, value, options);
 
     #endregion Protected Methods

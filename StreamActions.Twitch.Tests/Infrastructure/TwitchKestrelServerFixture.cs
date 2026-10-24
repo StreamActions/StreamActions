@@ -560,8 +560,8 @@ public sealed class TwitchKestrelServerFixture : IAsyncLifetime, IDisposable, IA
                     use = "sig",
                     alg = "RS256",
                     kid = this._keyId,
-                    n = Base64UrlEncoder.Encode(parameters.Modulus!),
-                    e = Base64UrlEncoder.Encode(parameters.Exponent!)
+                    n = Base64UrlEncoder.Encode(parameters.Modulus),
+                    e = Base64UrlEncoder.Encode(parameters.Exponent)
                 }
             }
         };

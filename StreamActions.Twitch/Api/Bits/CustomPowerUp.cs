@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Bits.Objects;
@@ -201,12 +202,12 @@ public sealed record CustomPowerUp
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null)
+        IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
+        if (idList is not null)
         {
-            int idCount = id.Count();
-            if (idCount > 50)
+            if (idList.Count > 50)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 50").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 50").Log(TwitchApi.GetLogger());
             }
         }
 
@@ -217,9 +218,9 @@ public sealed record CustomPowerUp
             { "broadcaster_id", broadcasterId }
         };
 
-        if (id is not null && id.Any())
+        if (idList is not null && idList.Count > 0)
         {
-            queryParams.Add("id", id);
+            queryParams.Add("id", idList);
         }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/bits/custom_power_ups", UriKind.Relative), queryParams), session).ConfigureAwait(false);

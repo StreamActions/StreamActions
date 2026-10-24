@@ -153,21 +153,21 @@ public sealed class UserAuthorizationTests : IDisposable
         ResponseData<UserAuthorization>? response = await UserAuthorization.GetAuthorizationByUser(session, ["141981764"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         UserAuthorization auth = response.Data[0];
         _ = auth.UserId.Should().Be("141981764");
         _ = auth.UserName.Should().Be("TwitchDev");
         _ = auth.UserLogin.Should().Be("twitchdev");
         _ = auth.Scopes.Should().NotBeNull();
-        _ = auth.Scopes!.Should().Contain(Scope.UserReadEmail);
+        _ = auth.Scopes.Should().Contain(Scope.UserReadEmail);
         _ = auth.HasAuthorized.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/authorization/users");
         _ = request.QueryString.Should().Contain("user_id=141981764");
     }

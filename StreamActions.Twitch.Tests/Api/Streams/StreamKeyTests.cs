@@ -143,16 +143,16 @@ public sealed class StreamKeyTests : IDisposable
         ResponseData<StreamKey>? response = await StreamKey.GetStreamKey(session, "141981764").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         StreamKey streamKey = response.Data[0];
         _ = streamKey.Key.Should().Be("live_44322889_a74da6ae628b49f7d7376d8177f390");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/streams/key");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }

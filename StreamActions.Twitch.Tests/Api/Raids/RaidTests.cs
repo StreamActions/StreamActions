@@ -150,18 +150,18 @@ public sealed class RaidTests : IDisposable
         ResponseData<Raid>? response = await Raid.StartARaid(session, "1234", "5678").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        Raid raid = response.Data![0];
+        Raid raid = response.Data[0];
         _ = raid.CreatedAt.Should().Be(DateTime.Parse("2023-01-01T00:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
         _ = raid.IsMature.Should().BeFalse();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/raids");
         _ = request.QueryString.Should().Contain("from_broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("to_broadcaster_id=5678");
@@ -221,12 +221,12 @@ public sealed class RaidTests : IDisposable
         JsonApiResponse? response = await Raid.CancelARaid(session, "1234").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/raids");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
     }

@@ -41,7 +41,7 @@ public sealed record Shoutout
     /// <param name="toBroadcasterId">The ID of the broadcaster that's receiving the Shoutout.</param>
     /// <param name="moderatorId">The ID of the broadcaster or a user that is one of the broadcaster's moderators.</param>
     /// <returns>A <see cref="JsonApiResponse"/> with the response code.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="fromBroadcasterId"/>, <paramref name="toBroadcasterId"/>, or <see cref="moderatorId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="fromBroadcasterId"/>, <paramref name="toBroadcasterId"/>, or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorManageShoutouts"/>.</exception>
     /// <remarks>

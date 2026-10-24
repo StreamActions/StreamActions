@@ -173,9 +173,9 @@ public sealed class StreamMarkerTests : IDisposable
         ResponseData<StreamMarker>? response = await StreamMarker.CreateStreamMarker(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         StreamMarker marker = response.Data[0];
         _ = marker.Id.Should().Be("106b80bd-88f3-4c10-994f-4d9e9b04f3bf");
@@ -186,7 +186,7 @@ public sealed class StreamMarkerTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/streams/markers");
         _ = request.Body.Should().Contain("\"user_id\":\"123\"");
         _ = request.Body.Should().Contain("\"description\":\"hello world\"");

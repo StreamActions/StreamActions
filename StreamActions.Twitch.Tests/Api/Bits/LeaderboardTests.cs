@@ -159,8 +159,8 @@ public sealed class LeaderboardTests : IDisposable
             userId: "158010205").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
         _ = response.Total.Should().Be(2);
 
         Leaderboard entry = response.Data[0];
@@ -170,12 +170,12 @@ public sealed class LeaderboardTests : IDisposable
         _ = entry.Rank.Should().Be(1);
         _ = entry.Score.Should().Be(12543);
         _ = response.DateRange.Should().NotBeNull();
-        _ = response.DateRange!.StartedAt.Should().Be(startedAt);
+        _ = response.DateRange.StartedAt.Should().Be(startedAt);
         _ = response.DateRange.EndedAt.Should().Be(endedAt);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/bits/leaderboard");
         _ = request.QueryString.Should().Contain("count=10");
         _ = request.QueryString.Should().Contain("period=week");

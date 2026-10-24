@@ -561,7 +561,7 @@ public class UtilTests
 
         // Assert
         _ = result.Should().BeOfType<TestStruct>();
-        _ = ((TestStruct)result!).Value.Should().Be(0);
+        _ = ((TestStruct)result).Value.Should().Be(0);
     }
 
     #endregion GetDefault

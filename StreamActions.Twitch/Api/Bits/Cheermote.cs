@@ -105,7 +105,7 @@ public sealed record Cheermote
     /// Gets a list of Cheermotes that users can use to cheer Bits in any Bits-enabled channel's chat room. Cheermotes are animated emotes that viewers can assign Bits to.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
-    /// <param name="broadcasterId">The ID of the broadcaster whose custom Cheermotes you want to get. If not specified, the response contains only global Cheermotes.
+    /// <param name="broadcasterId">The ID of the broadcaster whose custom Cheermotes you want to get. If not specified, the response contains only global Cheermotes.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Cheermote"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>

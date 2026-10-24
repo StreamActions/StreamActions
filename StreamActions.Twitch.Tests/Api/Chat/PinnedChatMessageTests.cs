@@ -168,9 +168,9 @@ public sealed class PinnedChatMessageTests : IDisposable
         ResponseData<PinnedChatMessage>? response = await PinnedChatMessage.GetPinnedChatMessages(session, "12345", "67890").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         PinnedChatMessage pin = response.Data[0];
         _ = pin.MessageId.Should().Be("msg123");
@@ -179,11 +179,11 @@ public sealed class PinnedChatMessageTests : IDisposable
         _ = pin.SenderUserLogin.Should().Be("sender");
         _ = pin.PinnedByUserId.Should().Be("67890");
         _ = pin.Message.Should().NotBeNull();
-        _ = pin.Message!.Text.Should().Be("Important announcement!");
+        _ = pin.Message.Text.Should().Be("Important announcement!");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/pins");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["moderator_id"].ToString().Should().Be("67890");
@@ -235,11 +235,11 @@ public sealed class PinnedChatMessageTests : IDisposable
         JsonApiResponse? response = await PinnedChatMessage.PinChatMessage(session, "12345", "67890", "msg123", durationSeconds: 60).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/chat/pins");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["moderator_id"].ToString().Should().Be("67890");
@@ -276,11 +276,11 @@ public sealed class PinnedChatMessageTests : IDisposable
         JsonApiResponse? response = await PinnedChatMessage.UnpinChatMessage(session, "12345", "67890", "msg123").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/chat/pins");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["moderator_id"].ToString().Should().Be("67890");

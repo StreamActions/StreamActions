@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
@@ -267,7 +268,6 @@ public sealed record VIP
     /// <term>422 Unprocessable Entity</term>
     /// <description><paramref name="userId"/> is not a VIP in the broadcaster's channel.</description>
     /// </item>
-    /// <item>
     /// <item>
     /// <term>429 Too Many Requests</term>
     /// <description><paramref name="broadcasterId"/> has exceeded the rate limit for this endpoint.</description>

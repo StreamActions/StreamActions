@@ -103,8 +103,8 @@ public sealed class ContentClassificationLabelTests : IDisposable
         ResponseData<ContentClassificationLabel>? response = await ContentClassificationLabel.GetContentClassificationLabels(session).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ContentClassificationLabel label = response.Data[0];
         _ = label.Id.Should().Be("Gambling");
@@ -113,7 +113,7 @@ public sealed class ContentClassificationLabelTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/content_classification_labels");
     }
 
@@ -136,7 +136,7 @@ public sealed class ContentClassificationLabelTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/content_classification_labels");
         _ = request.QueryString.Should().Contain("locale=en-US");
     }

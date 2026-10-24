@@ -165,7 +165,7 @@ public sealed class EventSubPayloadTests
     public void GetEventType_WhenAutomodMessageHoldV2_ReturnsHoldType()
     {
         Type? type = EventSubPayload.GetEventType("automod.message.hold", "2");
-        _ = type.Should().Be(typeof(AutomodHold));
+        _ = type.Should().Be<AutomodHold>();
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public sealed class EventSubPayloadTests
     public void GetEventType_WhenChannelChatMessageDelete_ReturnsMessageDeleteType()
     {
         Type? type = EventSubPayload.GetEventType("channel.chat.message_delete");
-        _ = type.Should().Be(typeof(ChatMessageDelete));
+        _ = type.Should().Be<ChatMessageDelete>();
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public sealed class EventSubPayloadTests
     public void GetEventType_WhenChannelGuestStarSessionBeginBeta_ReturnsSessionBeginType()
     {
         Type? type = EventSubPayload.GetEventType("channel.guest_star_session.begin", "beta");
-        _ = type.Should().Be(typeof(GuestStarSessionBegin));
+        _ = type.Should().Be<GuestStarSessionBegin>();
     }
 
     [Fact]
@@ -2234,7 +2234,7 @@ public sealed class EventSubPayloadTests
     {
         EventPayload<TEventType>? payload = JsonSerializer.Deserialize<EventPayload<TEventType>>(json, TwitchApi.SerializerOptions);
         _ = payload.Should().NotBeNull();
-        _ = payload!.Event.Should().NotBeNull();
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Should().BeOfType<TEventType>();
         return payload;
     }

@@ -126,13 +126,13 @@ public sealed class BlockedTermTests : IDisposable
         ResponseData<BlockedTerm>? response = await BlockedTerm.GetBlockedTerms(session, "1234", "5678", first: 10, after: "cursor123").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
         _ = response.Pagination.Should().NotBeNull();
 
-        BlockedTerm term = response.Data![0];
+        BlockedTerm term = response.Data[0];
         _ = term.BroadcasterId.Should().Be("1234");
         _ = term.ModeratorId.Should().Be("5678");
         _ = term.Id.Should().Be("520e4d4e-0cda-49c7-821e-e5ef4f88c2f2");
@@ -143,7 +143,7 @@ public sealed class BlockedTermTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/moderation/blocked_terms");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
@@ -261,12 +261,12 @@ public sealed class BlockedTermTests : IDisposable
         ResponseData<BlockedTerm>? response = await BlockedTerm.AddBlockedTerm(session, "1234", "5678", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        BlockedTerm term = response.Data![0];
+        BlockedTerm term = response.Data[0];
         _ = term.BroadcasterId.Should().Be("1234");
         _ = term.ModeratorId.Should().Be("5678");
         _ = term.Id.Should().Be("c9fc79b8-0f63-4ef7-9d38-efd811e74ac2");
@@ -274,7 +274,7 @@ public sealed class BlockedTermTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/moderation/blocked_terms");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
@@ -352,12 +352,12 @@ public sealed class BlockedTermTests : IDisposable
         JsonApiResponse? response = await BlockedTerm.RemoveBlockedTerm(session, "1234", "5678", "c9fc79b8-0f63-4ef7-9d38-efd811e74ac2").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/moderation/blocked_terms");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");

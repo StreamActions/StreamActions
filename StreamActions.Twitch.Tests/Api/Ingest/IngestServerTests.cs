@@ -98,8 +98,8 @@ public sealed class IngestServerTests : IDisposable
         IngestResponse? response = await IngestServer.GetIngestServers($"{this._fixture.BaseUrl}/ingests").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Ingests.Should().NotBeNull();
-        _ = response.Ingests!.Count.Should().Be(2);
+        _ = response.Ingests.Should().NotBeNull();
+        _ = response.Ingests.Count.Should().Be(2);
 
         IngestServer server = response.Ingests[0];
         _ = server.Id.Should().Be(0);
@@ -114,7 +114,7 @@ public sealed class IngestServerTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/ingests");
     }
 
@@ -133,8 +133,8 @@ public sealed class IngestServerTests : IDisposable
         IngestResponse? response = await IngestServer.GetIngestServers($"{this._fixture.BaseUrl}/ingests").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Ingests.Should().NotBeNull();
-        _ = response.Ingests!.Should().BeEmpty();
+        _ = response.Ingests.Should().NotBeNull();
+        _ = response.Ingests.Should().BeEmpty();
     }
 
     #endregion GetIngestServers

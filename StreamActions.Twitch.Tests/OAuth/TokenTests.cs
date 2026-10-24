@@ -35,6 +35,16 @@ public sealed class TokenTests : IDisposable
     #region Private Fields
 
     /// <summary>
+    /// Sample scopes array for OAuth authorization response.
+    /// </summary>
+    private static readonly string[] _authorizationScopes = ["chat:read", "chat:edit"];
+
+    /// <summary>
+    /// Sample scopes array for OAuth refresh response.
+    /// </summary>
+    private static readonly string[] _refreshScopes = ["chat:read"];
+
+    /// <summary>
     /// The Kestrel test server fixture.
     /// </summary>
     private readonly TwitchKestrelServerFixture _fixture;
@@ -101,7 +111,7 @@ public sealed class TokenTests : IDisposable
             access_token = expectedBearer,
             expires_in = 14124,
             refresh_token = expectedRefresh,
-            scope = new[] { "chat:read", "chat:edit" },
+            scope = _authorizationScopes,
             token_type = "bearer"
         });
 
@@ -109,17 +119,17 @@ public sealed class TokenTests : IDisposable
         Token? token = await Token.AuthorizeOAuth("test_auth_code", redirectUri).ConfigureAwait(true);
 
         _ = token.Should().NotBeNull();
-        _ = token!.AccessToken.Should().Be(expectedBearer);
+        _ = token.AccessToken.Should().Be(expectedBearer);
         _ = token.RefreshToken.Should().Be(expectedRefresh);
         _ = token.ExpiresIn.Should().Be(14124);
         _ = token.TokenType.Should().Be("bearer");
         _ = token.Scopes.Should().NotBeNull();
-        _ = token.Scopes!.Select(s => s.Name).Should().Equal(["chat:read", "chat:edit"]);
+        _ = token.Scopes.Select(s => s.Name).Should().Equal(["chat:read", "chat:edit"]);
         _ = token.Expires.Should().BeCloseTo(DateTime.UtcNow.AddSeconds(14124), TimeSpan.FromSeconds(5));
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Body.Should().Contain("grant_type=authorization_code");
         _ = request.Body.Should().Contain("code=test_auth_code");
         _ = request.Body.Should().Contain($"client_id={this._fixture.ClientId}");
@@ -144,13 +154,13 @@ public sealed class TokenTests : IDisposable
         Token? token = await Token.AuthorizeApp().ConfigureAwait(true);
 
         _ = token.Should().NotBeNull();
-        _ = token!.AccessToken.Should().Be(expectedBearer);
+        _ = token.AccessToken.Should().Be(expectedBearer);
         _ = token.ExpiresIn.Should().Be(5011271);
         _ = token.TokenType.Should().Be("bearer");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Body.Should().Contain("grant_type=client_credentials");
         _ = request.Body.Should().Contain($"client_id={this._fixture.ClientId}");
     }
@@ -207,7 +217,7 @@ public sealed class TokenTests : IDisposable
             access_token = newBearer,
             expires_in = 15583,
             refresh_token = newRefresh,
-            scope = new[] { "chat:read" },
+            scope = _refreshScopes,
             token_type = "bearer"
         });
 
@@ -307,11 +317,11 @@ public sealed class TokenTests : IDisposable
         JsonWebToken? jwt = await token.GetJwtTokenAsync().ConfigureAwait(true);
 
         _ = jwt.Should().NotBeNull();
-        _ = jwt!.Subject.Should().Be("141981764");
+        _ = jwt.Subject.Should().Be("141981764");
         _ = jwt.Audiences.Should().Contain(this._fixture.ClientId);
         _ = jwt.Issuer.Should().Be(this._fixture.BaseUrl);
         _ = jwt.TryGetClaim("preferred_username", out System.Security.Claims.Claim? usernameClaim).Should().BeTrue();
-        _ = usernameClaim!.Value.Should().Be("twitchdev");
+        _ = usernameClaim.Value.Should().Be("twitchdev");
     }
 
     #endregion GetJwtTokenAsync

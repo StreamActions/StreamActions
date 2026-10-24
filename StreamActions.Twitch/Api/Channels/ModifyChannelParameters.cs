@@ -17,12 +17,13 @@ using StreamActions.Twitch.Api.Channels.Objects;
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Channels;
 
 /// <summary>
-/// The parameters for <see cref="Channel.ModifyChannelInformation(Common.TwitchSession, ModifyChannelParameters)"/>.
+/// The parameters for <see cref="Channel.ModifyChannelInformation(TwitchSession, string, ModifyChannelParameters)"/>.
 /// </summary>
 public sealed record ModifyChannelParameters
 {

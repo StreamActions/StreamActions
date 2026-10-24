@@ -150,12 +150,12 @@ public sealed class ExtensionRequiredConfigurationTests : IDisposable
         JsonApiResponse? response = await ExtensionRequiredConfiguration.SetExtensionRequiredConfiguration(session, "274637212", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.IsSuccessStatusCode.Should().BeTrue();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/extensions/required_configuration");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.Body.Should().Contain("\"required_configuration\":\"RCS\"");

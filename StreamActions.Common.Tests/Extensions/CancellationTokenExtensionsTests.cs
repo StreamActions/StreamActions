@@ -45,7 +45,7 @@ public class CancellationTokenExtensionsTests
 
         // Wait a short time to allow the background task to complete if it hasn't already.
         // WaitAsync spawns a background thread (Task.Run), so it might take a moment.
-        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(1000)).ConfigureAwait(true);
+        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(1000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
 
         // Assert
         completedTask.Should().Be(waitTask, "the task should complete immediately since the token was already canceled");
@@ -69,7 +69,7 @@ public class CancellationTokenExtensionsTests
         cts.CancelAfter(50);
 
         // Wait for it to complete or timeout
-        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(2000)).ConfigureAwait(true);
+        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(2000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
 
         // Assert
         completedTask.Should().Be(waitTask, "the task should complete after the token is canceled");
@@ -87,7 +87,7 @@ public class CancellationTokenExtensionsTests
         Task waitTask = cts.Token.WaitAsync();
 
         // Wait a short amount of time
-        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(100)).ConfigureAwait(true);
+        Task completedTask = await Task.WhenAny(waitTask, Task.Delay(100, TestContext.Current.CancellationToken)).ConfigureAwait(true);
 
         // Assert
         completedTask.Should().NotBe(waitTask, "the task should not complete if the token is not canceled");

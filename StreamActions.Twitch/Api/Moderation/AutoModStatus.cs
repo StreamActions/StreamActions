@@ -22,6 +22,7 @@ using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Moderation.Objects;
+using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
 using System.Net.Http.Json;

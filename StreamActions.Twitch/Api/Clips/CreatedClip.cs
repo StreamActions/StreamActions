@@ -72,7 +72,7 @@ public sealed record CreatedClip
     /// You can specify a clip that's from 5 seconds to 60 seconds in length. The URL is valid for up to 24 hours or until the clip is published, whichever comes first.
     /// </para>
     /// <para>
-    /// Creating a clip is an asynchronous process that can take a short amount of time to complete. To determine whether the clip was successfully created, call <see cref="Clip.GetClips(TwitchSession, IEnumerable{string}?, string?, string?, string?, string?, int, DateTime?, DateTime?)"/> using the <see cref="Id"/> that this request returned.
+    /// Creating a clip is an asynchronous process that can take a short amount of time to complete. To determine whether the clip was successfully created, call <see cref="Clip.GetClips(TwitchSession, string?, string?, IEnumerable{string}?, DateTime?, DateTime?, int, string?, string?, bool?)"/> using the <see cref="Id"/> that this request returned.
     /// If Get Clips returns the clip, the clip was successfully created. If after 60 seconds Get Clips hasn't returned the clip, assume it failed.
     /// </para>
     /// <para>

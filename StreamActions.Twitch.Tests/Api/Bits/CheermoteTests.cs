@@ -128,8 +128,8 @@ public sealed class CheermoteTests : IDisposable
         ResponseData<Cheermote>? response = await Cheermote.GetCheermotes(session).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         Cheermote cheermote = response.Data[0];
         _ = cheermote.Prefix.Should().Be("Cheer");
@@ -138,14 +138,14 @@ public sealed class CheermoteTests : IDisposable
         _ = cheermote.LastUpdated.Should().Be(lastUpdated);
         _ = cheermote.IsCharitable.Should().BeFalse();
         _ = cheermote.Tiers.Should().NotBeNull();
-        _ = cheermote.Tiers!.Count.Should().Be(1);
+        _ = cheermote.Tiers.Count.Should().Be(1);
         _ = cheermote.Tiers[0].Id.Should().Be("1");
         _ = cheermote.Tiers[0].MinBits.Should().Be(1);
         _ = cheermote.Tiers[0].CanCheer.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/bits/cheermotes");
     }
 
@@ -168,7 +168,7 @@ public sealed class CheermoteTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/bits/cheermotes");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }

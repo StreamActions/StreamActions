@@ -120,13 +120,13 @@ public sealed class ExtensionBitsProductTests : IDisposable
         ResponseData<ExtensionProductData>? response = await ExtensionBitsProduct.GetExtensionBitsProducts(session, shouldIncludeAll).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ExtensionProductData product = response.Data[0];
         _ = product.Sku.Should().Be("1010");
         _ = product.Cost.Should().NotBeNull();
-        _ = product.Cost!.Amount.Should().Be(990);
+        _ = product.Cost.Amount.Should().Be(990);
         _ = product.Cost.Type.Should().Be(ExtensionProductCost.ExtensionProductCostType.Bits);
         _ = product.InDevelopment.Should().BeTrue();
         _ = product.DisplayName.Should().Be("Rusty Crate 2");
@@ -135,7 +135,7 @@ public sealed class ExtensionBitsProductTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/bits/extensions");
         if (shouldIncludeAll)
         {
@@ -233,8 +233,8 @@ public sealed class ExtensionBitsProductTests : IDisposable
         ResponseData<ExtensionProductData>? response = await ExtensionBitsProduct.UpdateExtensionBitsProduct(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ExtensionProductData product = response.Data[0];
         _ = product.Sku.Should().Be("1010");
@@ -243,7 +243,7 @@ public sealed class ExtensionBitsProductTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/bits/extensions");
         _ = request.Body.Should().Contain("\"sku\":\"1010\"");
         _ = request.Body.Should().Contain("\"display_name\":\"Rusty Crate 2\"");

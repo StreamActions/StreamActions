@@ -152,16 +152,16 @@ public sealed class ChannelScheduleTests : IDisposable
         ResponseDataObject<ChannelSchedule>? response = await ChannelSchedule.GetChannelStreamSchedule(session, "141981764").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
 
-        ChannelSchedule schedule = response.Data!;
+        ChannelSchedule schedule = response.Data;
         _ = schedule.BroadcasterId.Should().Be("141981764");
         _ = schedule.BroadcasterName.Should().Be("TwitchDev");
         _ = schedule.BroadcasterLogin.Should().Be("twitchdev");
         _ = schedule.Vacation.Should().BeNull();
         _ = schedule.Segments.Should().NotBeNull();
-        _ = schedule.Segments!.Count.Should().Be(1);
+        _ = schedule.Segments.Count.Should().Be(1);
 
         ScheduleSegment segment = schedule.Segments[0];
         _ = segment.Id.Should().Be("segment123");
@@ -171,12 +171,12 @@ public sealed class ChannelScheduleTests : IDisposable
         _ = segment.CanceledUntil.Should().BeNull();
         _ = segment.IsRecurring.Should().BeFalse();
         _ = segment.Category.Should().NotBeNull();
-        _ = segment.Category!.Id.Should().Be("509670");
+        _ = segment.Category.Id.Should().Be("509670");
         _ = segment.Category.Name.Should().Be("Science & Technology");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/schedule");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }
@@ -232,7 +232,7 @@ public sealed class ChannelScheduleTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/schedule/icalendar");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }
@@ -310,12 +310,12 @@ public sealed class ChannelScheduleTests : IDisposable
         JsonApiResponse? response = await ChannelSchedule.UpdateChannelStreamSchedule(session, "141981764", isVacationEnabled: true, vacationStartTime: start, vacationEndTime: end, timezone: "America/New_York").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/schedule/settings");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("is_vacation_enabled=true");
@@ -408,14 +408,14 @@ public sealed class ChannelScheduleTests : IDisposable
         ResponseDataObject<ChannelSchedule>? response = await ChannelSchedule.CreateChannelStreamScheduleSegment(session, "141981764", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Segments.Should().NotBeNull();
-        _ = response.Data.Segments![0].Id.Should().Be("seg_new_123");
+        _ = response.Data.Segments.Should().NotBeNull();
+        _ = response.Data.Segments[0].Id.Should().Be("seg_new_123");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/schedule/segment");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.Body.Should().Contain("\"duration\":\"60\"");
@@ -484,14 +484,14 @@ public sealed class ChannelScheduleTests : IDisposable
         ResponseDataObject<ChannelSchedule>? response = await ChannelSchedule.UpdateChannelStreamScheduleSegment(session, "141981764", "seg_123", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Segments.Should().NotBeNull();
-        _ = response.Data.Segments![0].EndTime.Should().Be(DateTime.Parse("2021-07-01T20:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
+        _ = response.Data.Segments.Should().NotBeNull();
+        _ = response.Data.Segments[0].EndTime.Should().Be(DateTime.Parse("2021-07-01T20:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/schedule/segment");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("id=seg_123");
@@ -532,12 +532,12 @@ public sealed class ChannelScheduleTests : IDisposable
         JsonApiResponse? response = await ChannelSchedule.DeleteChannelStreamScheduleSegment(session, "141981764", "seg_123").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/schedule/segment");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("id=seg_123");

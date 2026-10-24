@@ -143,9 +143,9 @@ public sealed class ChatSettingsTests : IDisposable
         ResponseData<ChatSettings>? response = await ChatSettings.GetChatSettings(session, "12345", "67890").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         ChatSettings settings = response.Data[0];
         _ = settings.BroadcasterId.Should().Be("12345");
@@ -162,7 +162,7 @@ public sealed class ChatSettingsTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/settings");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["moderator_id"].ToString().Should().Be("67890");
@@ -285,9 +285,9 @@ public sealed class ChatSettingsTests : IDisposable
         ResponseData<ChatSettings>? response = await ChatSettings.UpdateChatSettings(session, "12345", "67890", updateRequest).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         ChatSettings updated = response.Data[0];
         _ = updated.SlowMode.Should().BeTrue();
@@ -296,7 +296,7 @@ public sealed class ChatSettingsTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/chat/settings");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["moderator_id"].ToString().Should().Be("67890");

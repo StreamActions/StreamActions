@@ -171,12 +171,12 @@ public sealed class PollTests : IDisposable
         ResponseData<Poll>? response = await Poll.GetPolls(session, "1234", id: ["p1", "p2"], first: 20, after: "cursor123").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        Poll poll = response.Data![0];
+        Poll poll = response.Data[0];
         _ = poll.Id.Should().Be("p1");
         _ = poll.BroadcasterId.Should().Be("1234");
         _ = poll.BroadcasterName.Should().Be("Streamer");
@@ -192,7 +192,7 @@ public sealed class PollTests : IDisposable
         _ = poll.Choices.Should().NotBeNull();
         _ = poll.Choices.Should().HaveCount(2);
 
-        PollChoice choice1 = poll.Choices![0];
+        PollChoice choice1 = poll.Choices[0];
         _ = choice1.Id.Should().Be("c1");
         _ = choice1.Title.Should().Be("Chocolate");
         _ = choice1.Votes.Should().Be(10);
@@ -200,7 +200,7 @@ public sealed class PollTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/polls");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("first=20");
@@ -468,18 +468,18 @@ public sealed class PollTests : IDisposable
         ResponseData<Poll>? response = await Poll.CreatePoll(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        Poll poll = response.Data![0];
+        Poll poll = response.Data[0];
         _ = poll.Id.Should().Be("p1");
         _ = poll.Title.Should().Be("Favorite Game?");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/polls");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"1234\"");
         _ = request.Body.Should().Contain("\"title\":\"Favorite Game?\"");
@@ -645,17 +645,17 @@ public sealed class PollTests : IDisposable
         ResponseData<Poll>? response = await Poll.EndPoll(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        Poll poll = response.Data![0];
+        Poll poll = response.Data[0];
         _ = poll.Id.Should().Be("p1");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/polls");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"1234\"");
         _ = request.Body.Should().Contain("\"id\":\"p1\"");

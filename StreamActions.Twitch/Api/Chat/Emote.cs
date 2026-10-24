@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
@@ -93,7 +94,7 @@ public sealed record Emote
     /// This field is not present in the <see cref="GetGlobalEmotes"/> API.
     /// </para>
     /// <para>
-    /// This may be blank for some global emotes, such as those with an <see cref="EmoteType"/> of <see cref="EmoteTypes.Hypetrain"/>.
+    /// This may be blank for some global emotes, such as those with an <see cref="EmoteType"/> of <see cref="EmoteTypes.HypeTrain"/>.
     /// </para>
     /// </remarks>
     [JsonPropertyName("emote_set_id")]

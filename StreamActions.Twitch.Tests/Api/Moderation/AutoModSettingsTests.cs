@@ -141,12 +141,12 @@ public sealed class AutoModSettingsTests : IDisposable
         ResponseData<AutoModSettings>? response = await AutoModSettings.GetAutoModSettings(session, "1234", "5678").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        AutoModSettings settings = response.Data![0];
+        AutoModSettings settings = response.Data[0];
         _ = settings.BroadcasterId.Should().Be("1234");
         _ = settings.ModeratorId.Should().Be("5678");
         _ = settings.OverallLevel.Should().BeNull();
@@ -161,7 +161,7 @@ public sealed class AutoModSettingsTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/moderation/automod/settings");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
@@ -263,19 +263,19 @@ public sealed class AutoModSettingsTests : IDisposable
         ResponseData<AutoModSettings>? response = await AutoModSettings.UpdateAutoModSettings(session, "1234", "5678", update).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
 
-        AutoModSettings result = response.Data![0];
+        AutoModSettings result = response.Data[0];
         _ = result.BroadcasterId.Should().Be("1234");
         _ = result.ModeratorId.Should().Be("5678");
         _ = result.OverallLevel.Should().Be(3);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/moderation/automod/settings");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");

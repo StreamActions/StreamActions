@@ -178,9 +178,9 @@ public sealed class FollowedChannelTests : IDisposable
         ResponseData<FollowedChannel>? response = await FollowedChannel.GetFollowedChannels(session, "123456", first: 20).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Total.Should().Be(8);
+        _ = response.Total.Should().Be(8);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         FollowedChannel channel = response.Data[0];
         _ = channel.BroadcasterId.Should().Be("654321");
@@ -190,7 +190,7 @@ public sealed class FollowedChannelTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/channels/followed");
         _ = request.QueryString.Should().Contain("user_id=123456");
         _ = request.QueryString.Should().Contain("first=20");

@@ -168,8 +168,8 @@ public sealed class ExtensionTransactionTests : IDisposable
         ResponseData<ExtensionTransaction>? response = await ExtensionTransaction.GetExtensionTransactions(session, "uo6dggojyb8d6soh92zknwmi5ej1q2", ["74c52265-e214-48a6-91b9-23b6014e8041"], 20).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         ExtensionTransaction transaction = response.Data[0];
         _ = transaction.Id.Should().Be("74c52265-e214-48a6-91b9-23b6014e8041");
@@ -183,10 +183,10 @@ public sealed class ExtensionTransactionTests : IDisposable
         _ = transaction.ProductType.Should().Be(ExtensionTransaction.ExtensionProductType.BitsInExtension);
 
         _ = transaction.ProductData.Should().NotBeNull();
-        _ = transaction.ProductData!.Domain.Should().Be("twitch.ext.uo6dggojyb8d6soh92zknwmi5ej1q2");
+        _ = transaction.ProductData.Domain.Should().Be("twitch.ext.uo6dggojyb8d6soh92zknwmi5ej1q2");
         _ = transaction.ProductData.Sku.Should().Be("testSku100");
         _ = transaction.ProductData.Cost.Should().NotBeNull();
-        _ = transaction.ProductData.Cost!.Amount.Should().Be(100);
+        _ = transaction.ProductData.Cost.Amount.Should().Be(100);
         _ = transaction.ProductData.Cost.Type.Should().Be(ExtensionProductCost.ExtensionProductCostType.Bits);
         _ = transaction.ProductData.InDevelopment.Should().BeFalse();
         _ = transaction.ProductData.DisplayName.Should().Be("Test Product 100");
@@ -194,7 +194,7 @@ public sealed class ExtensionTransactionTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/extensions/transactions");
         _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
         _ = request.QueryString.Should().Contain("id=74c52265-e214-48a6-91b9-23b6014e8041");

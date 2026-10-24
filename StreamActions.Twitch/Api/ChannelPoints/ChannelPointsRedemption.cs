@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
@@ -224,12 +225,12 @@ public sealed record ChannelPointsRedemption
             throw new ArgumentNullException(nameof(rewardId)).Log(TwitchApi.GetLogger());
         }
 
-        if (id is not null)
+        IReadOnlyList<Guid>? idList = id as IReadOnlyList<Guid> ?? id?.ToArray();
+        if (idList is not null)
         {
-            int idCount = id.Count();
-            if (idCount > 50)
+            if (idList.Count > 50)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 50").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 50").Log(TwitchApi.GetLogger());
             }
         }
 
@@ -254,9 +255,9 @@ public sealed record ChannelPointsRedemption
             { "sort", sort.JsonValue() ?? "" }
         };
 
-        if (id is not null && id.Any())
+        if (idList is not null && idList.Count > 0)
         {
-            queryParams.Add("id", id.Select(x => x.ToString("D", CultureInfo.InvariantCulture)));
+            queryParams.Add("id", idList.Select(x => x.ToString("D", CultureInfo.InvariantCulture)));
         }
         else
         {

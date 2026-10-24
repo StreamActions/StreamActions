@@ -119,9 +119,9 @@ public sealed class ConduitTests : IDisposable
         ResponseData<Conduit>? response = await Conduit.GetConduits(session).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Conduit conduit = response.Data[0];
         _ = conduit.Id.Should().Be(conduitId);
@@ -129,7 +129,7 @@ public sealed class ConduitTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/eventsub/conduits");
     }
 
@@ -231,9 +231,9 @@ public sealed class ConduitTests : IDisposable
         ResponseData<Conduit>? response = await Conduit.CreateConduits(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Conduit conduit = response.Data[0];
         _ = conduit.Id.Should().Be(conduitId);
@@ -241,7 +241,7 @@ public sealed class ConduitTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/eventsub/conduits");
         _ = request.Body.Should().Contain("\"shard_count\":10");
     }
@@ -363,9 +363,9 @@ public sealed class ConduitTests : IDisposable
         ResponseData<Conduit>? response = await Conduit.UpdateConduits(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Conduit conduit = response.Data[0];
         _ = conduit.Id.Should().Be(conduitId);
@@ -373,7 +373,7 @@ public sealed class ConduitTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PATCH");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/eventsub/conduits");
         _ = request.Body.Should().Contain(conduitId.ToString());
         _ = request.Body.Should().Contain("\"shard_count\":15");
@@ -434,11 +434,11 @@ public sealed class ConduitTests : IDisposable
         JsonApiResponse? response = await Conduit.DeleteConduit(session, conduitId).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/eventsub/conduits");
         _ = request.Query["id"].ToString().Should().Be(conduitId.ToString());
     }

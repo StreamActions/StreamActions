@@ -145,13 +145,13 @@ public sealed class GuestStarSessionTests : IDisposable
         ResponseData<GuestStarSession>? response = await GuestStarSession.GetGuestStarSession(session, "9321049", "9321049").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         GuestStarSession starSession = response.Data[0];
         _ = starSession.Id.Should().Be("2KFRQbFtpmfyD3IevNRnCzOPRJI");
         _ = starSession.Guests.Should().NotBeNull();
-        _ = starSession.Guests!.Count.Should().Be(1);
+        _ = starSession.Guests.Count.Should().Be(1);
 
         GuestStarGuest guest = starSession.Guests[0];
         _ = guest.SlotId.Should().Be("0");
@@ -160,13 +160,13 @@ public sealed class GuestStarSessionTests : IDisposable
         _ = guest.IsLive.Should().BeTrue();
         _ = guest.Volume.Should().Be(100);
         _ = guest.AudioSettings.Should().NotBeNull();
-        _ = guest.AudioSettings!.IsAvailable.Should().BeTrue();
+        _ = guest.AudioSettings.IsAvailable.Should().BeTrue();
         _ = guest.VideoSettings.Should().NotBeNull();
-        _ = guest.VideoSettings!.IsHostEnabled.Should().BeTrue();
+        _ = guest.VideoSettings.IsHostEnabled.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/guest_star/session");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
         _ = request.QueryString.Should().Contain("moderator_id=9321049");
@@ -248,15 +248,15 @@ public sealed class GuestStarSessionTests : IDisposable
         ResponseData<GuestStarSession>? response = await GuestStarSession.CreateGuestStarSession(session, "9321049").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         GuestStarSession starSession = response.Data[0];
         _ = starSession.Id.Should().Be("2KFRQbFtpmfyD3IevNRnCzOPRJI");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/guest_star/session");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
     }
@@ -308,15 +308,15 @@ public sealed class GuestStarSessionTests : IDisposable
         ResponseData<GuestStarSession>? response = await GuestStarSession.EndGuestStarSession(session, "9321049", "2KFRQbFtpmfyD3IevNRnCzOPRJI").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         GuestStarSession starSession = response.Data[0];
         _ = starSession.Id.Should().Be("2KFRQbFtpmfyD3IevNRnCzOPRJI");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("DELETE");
+        _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/guest_star/session");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
         _ = request.QueryString.Should().Contain("session_id=2KFRQbFtpmfyD3IevNRnCzOPRJI");

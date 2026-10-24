@@ -35,7 +35,7 @@ public class JsonUpperCaseEnumConverterTests
         SecondValue
     }
 
-    private class TestClass
+    private sealed class TestClass
     {
         [JsonConverter(typeof(JsonUpperCaseEnumConverter<TestEnumValue>))]
         public TestEnumValue EnumValue { get; set; }
@@ -89,7 +89,7 @@ public class JsonUpperCaseEnumConverterTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.EnumValue.Should().Be(expectedEnum);
+        result.EnumValue.Should().Be(expectedEnum);
     }
 
     [Theory]
@@ -103,7 +103,7 @@ public class JsonUpperCaseEnumConverterTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.EnumValue.Should().Be(expectedEnum);
+        result.EnumValue.Should().Be(expectedEnum);
     }
 
     [Theory]
@@ -117,7 +117,7 @@ public class JsonUpperCaseEnumConverterTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.EnumValue.Should().Be(default(TestEnumValue));
+        result.EnumValue.Should().Be(default(TestEnumValue));
     }
 
     #endregion Read

@@ -161,7 +161,7 @@ public sealed partial class TwitchApi : IApi
     /// <param name="content">The body of the request, for methods that require it.</param>
     /// <param name="dontRefresh">Used by <see cref="Token.RefreshOAuth(TwitchSession, string?)"/> to prevent cyclic refresh loops.</param>
     /// <returns>A <see cref="HttpResponseMessage"/> containing the response data.</returns>
-    /// <exception cref="InvalidOperationException">Did not call <see cref="Init(string)"/> with a valid Client Id or <paramref name="session"/> does not have an OAuth token.</exception>
+    /// <exception cref="InvalidOperationException">Did not call <see cref="Init(string, string?, string)"/> with a valid Client Id or <paramref name="session"/> does not have an OAuth token.</exception>
     /// <remarks>
     /// <para>
     /// Non-JSON responses are converted to the standard <c>{status,error,message}</c> format.

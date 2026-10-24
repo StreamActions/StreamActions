@@ -302,8 +302,8 @@ public sealed class ExtensionTests : IDisposable
         ResponseData<Extension>? response = await Extension.GetReleasedExtensions(session, "pgn0bjv51epi7eaekt53tovjnc82qo").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
 
         Extension item = response.Data[0];
         _ = item.AuthorName.Should().Be("Twitch Developer Experience");
@@ -312,7 +312,7 @@ public sealed class ExtensionTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/extensions/released");
         _ = request.QueryString.Should().Contain("extension_id=pgn0bjv51epi7eaekt53tovjnc82qo");
     }

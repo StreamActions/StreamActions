@@ -157,21 +157,21 @@ public sealed class ChatterTests : IDisposable
         ResponseData<Chatter>? response = await Chatter.GetChatters(session, "12345", "67890", first: 50, after: "cursor123").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Chatter chatter = response.Data[0];
         _ = chatter.UserId.Should().Be("128393667");
         _ = chatter.UserLogin.Should().Be("cooler_user");
         _ = chatter.UserName.Should().Be("Cooler_User");
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("eyJiIjpudWxsLCJhIjp7IkN1cnNvciI6Ik1qQXpNREE9In19");
+        _ = response.Pagination.Cursor.Should().Be("eyJiIjpudWxsLCJhIjp7IkN1cnNvciI6Ik1qQXpNREE9In19");
         _ = response.Total.Should().Be(8);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/chatters");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["moderator_id"].ToString().Should().Be("67890");

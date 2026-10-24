@@ -153,9 +153,9 @@ public sealed class CreatedClipTests : IDisposable
         ResponseData<CreatedClip>? response = await CreatedClip.CreateClip(session, "12345", title: "Awesome Clip", duration: 30f).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.Accepted);
+        _ = response.Status.Should().Be(HttpStatusCode.Accepted);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         CreatedClip clip = response.Data[0];
         _ = clip.Id.Should().Be("12345678");
@@ -163,7 +163,7 @@ public sealed class CreatedClipTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/clips");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["title"].ToString().Should().Be("Awesome Clip");
@@ -308,9 +308,9 @@ public sealed class CreatedClipTests : IDisposable
         ResponseData<CreatedClip>? response = await CreatedClip.CreateClipFromVod(session, "12345", "67890", "99999", 120, "My Vod Clip", duration: 45f).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.Accepted);
+        _ = response.Status.Should().Be(HttpStatusCode.Accepted);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         CreatedClip clip = response.Data[0];
         _ = clip.Id.Should().Be("vodclip999");
@@ -318,7 +318,7 @@ public sealed class CreatedClipTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/videos/clips");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["editor_id"].ToString().Should().Be("67890");

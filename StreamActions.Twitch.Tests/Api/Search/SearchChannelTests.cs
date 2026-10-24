@@ -143,9 +143,9 @@ public sealed class SearchChannelTests : IDisposable
         ResponseData<SearchChannel>? response = await SearchChannel.SearchChannels(session, "loserfruit", true, 20, "afterCursor").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         SearchChannel channel = response.Data[0];
         _ = channel.BroadcasterLanguage.Should().Be("en");
@@ -161,11 +161,11 @@ public sealed class SearchChannelTests : IDisposable
         _ = channel.StartedAt.Should().Be(DateTime.Parse("2021-06-03T18:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
 
         _ = response.Pagination.Should().NotBeNull();
-        _ = response.Pagination!.Cursor.Should().Be("cursor456");
+        _ = response.Pagination.Cursor.Should().Be("cursor456");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/search/channels");
         _ = request.QueryString.Should().Contain("query=loserfruit");
         _ = request.QueryString.Should().Contain("live_only=true");

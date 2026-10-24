@@ -205,9 +205,9 @@ public sealed class EventSubWebhookTests : IDisposable
 
         EventSubEvent<Follow>? followEvent = result.Event as EventSubEvent<Follow>;
         _ = followEvent.Should().NotBeNull();
-        _ = followEvent!.Payload.Should().NotBeNull();
-        _ = followEvent.Payload!.Event.Should().NotBeNull();
-        _ = followEvent.Payload.Event!.UserId.Should().Be("1234");
+        _ = followEvent.Payload.Should().NotBeNull();
+        _ = followEvent.Payload.Event.Should().NotBeNull();
+        _ = followEvent.Payload.Event.UserId.Should().Be("1234");
         _ = followEvent.Payload.Event.BroadcasterUserId.Should().Be("1337");
     }
 
@@ -309,9 +309,9 @@ public sealed class EventSubWebhookTests : IDisposable
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent!.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload!.Subscription.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Subscription!.Status.Should().Be(EventSubSubscription.SubscriptionStatus.AuthorizationRevoked);
+        _ = eventSubEvent.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.AuthorizationRevoked);
     }
 
     [Fact]

@@ -45,7 +45,7 @@ public sealed class BackoffBaseTests
 
         public void SetNextDurationReflectively(TimeSpan duration)
         {
-            var field = typeof(BackoffBase).GetField("_nextDuration", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new InvalidOperationException("Could not find _nextDuration field.");
+            FieldInfo? field = typeof(BackoffBase).GetField("_nextDuration", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new InvalidOperationException("Could not find _nextDuration field.");
             this.Rwl.EnterWriteLock();
             try
             {
@@ -66,10 +66,10 @@ public sealed class BackoffBaseTests
     [Trait("Member", "Constructor")]
     public void Constructor_InitializesProperties()
     {
-        var initial = TimeSpan.FromTicks(10);
-        var max = TimeSpan.FromTicks(100);
+        TimeSpan initial = TimeSpan.FromTicks(10);
+        TimeSpan max = TimeSpan.FromTicks(100);
 
-        var backoff = new TestBackoff(initial, max);
+        TestBackoff backoff = new(initial, max);
 
         backoff.IntialDuration.Should().Be(initial);
         backoff.MaxDuration.Should().Be(max);
@@ -86,8 +86,8 @@ public sealed class BackoffBaseTests
     [Trait("Member", "IntialDuration")]
     public void IntialDuration_ReturnsSetValue()
     {
-        var initial = TimeSpan.FromTicks(50);
-        var backoff = new TestBackoff(initial, TimeSpan.FromTicks(100));
+        TimeSpan initial = TimeSpan.FromTicks(50);
+        TestBackoff backoff = new(initial, TimeSpan.FromTicks(100));
 
         backoff.IntialDuration.Should().Be(initial);
     }
@@ -100,8 +100,8 @@ public sealed class BackoffBaseTests
     [Trait("Member", "MaxDuration")]
     public void MaxDuration_ReturnsSetValue()
     {
-        var max = TimeSpan.FromTicks(200);
-        var backoff = new TestBackoff(TimeSpan.FromTicks(10), max);
+        TimeSpan max = TimeSpan.FromTicks(200);
+        TestBackoff backoff = new(TimeSpan.FromTicks(10), max);
 
         backoff.MaxDuration.Should().Be(max);
     }
@@ -114,9 +114,9 @@ public sealed class BackoffBaseTests
     [Trait("Member", "NextDuration")]
     public void NextDuration_ReturnsCurrentNextDuration()
     {
-        var initial = TimeSpan.FromTicks(10);
-        var max = TimeSpan.FromTicks(100);
-        var backoff = new TestBackoff(initial, max);
+        TimeSpan initial = TimeSpan.FromTicks(10);
+        TimeSpan max = TimeSpan.FromTicks(100);
+        TestBackoff backoff = new(initial, max);
 
         backoff.NextDuration.Should().Be(initial);
 
@@ -133,8 +133,8 @@ public sealed class BackoffBaseTests
     [Trait("Member", "IsReset")]
     public void IsReset_ReturnsTrueWhenNextDurationEqualsInitialDuration()
     {
-        var initial = TimeSpan.FromTicks(10);
-        var backoff = new TestBackoff(initial, TimeSpan.FromTicks(100));
+        TimeSpan initial = TimeSpan.FromTicks(10);
+        TestBackoff backoff = new(initial, TimeSpan.FromTicks(100));
 
         backoff.IsReset.Should().BeTrue();
 
@@ -151,8 +151,8 @@ public sealed class BackoffBaseTests
     [Trait("Member", "IsMaxDuration")]
     public void IsMaxDuration_ReturnsTrueWhenNextDurationEqualsMaxDuration()
     {
-        var max = TimeSpan.FromTicks(100);
-        var backoff = new TestBackoff(TimeSpan.FromTicks(10), max);
+        TimeSpan max = TimeSpan.FromTicks(100);
+        TestBackoff backoff = new(TimeSpan.FromTicks(10), max);
 
         backoff.IsMaxDuration.Should().BeFalse();
 
@@ -169,8 +169,8 @@ public sealed class BackoffBaseTests
     [Trait("Member", "Reset")]
     public void Reset_RestoresNextDurationToInitialDuration()
     {
-        var initial = TimeSpan.FromTicks(10);
-        var backoff = new TestBackoff(initial, TimeSpan.FromTicks(100));
+        TimeSpan initial = TimeSpan.FromTicks(10);
+        TestBackoff backoff = new(initial, TimeSpan.FromTicks(100));
 
         // Advance _nextDuration artificially
         backoff.SetNextDurationReflectively(TimeSpan.FromTicks(50));
@@ -188,33 +188,33 @@ public sealed class BackoffBaseTests
     [Trait("Member", "Reset")]
     public async Task Reset_WithTimeout_ThrowsTimeoutExceptionIfLockFails()
     {
-        var initial = TimeSpan.FromTicks(10);
-        var backoff = new TestBackoff(initial, TimeSpan.FromTicks(100));
+        TimeSpan initial = TimeSpan.FromTicks(10);
+        TestBackoff backoff = new(initial, TimeSpan.FromTicks(100));
 
         // Ensure _nextDuration is not initial so Reset attempts to get write lock
         backoff.SetNextDurationReflectively(TimeSpan.FromTicks(50));
 
-        using var lockTakenEvent = new SemaphoreSlim(0, 1);
-        using var releaseLockEvent = new SemaphoreSlim(0, 1);
+        using SemaphoreSlim lockTakenEvent = new(0, 1);
+        using SemaphoreSlim releaseLockEvent = new(0, 1);
 
         // Lock in a background thread
-        var lockTask = Task.Run(() =>
+        Task lockTask = Task.Run(() =>
         {
-            var rwl = backoff.GetRwl();
+            ReaderWriterLockSlim rwl = backoff.GetRwl();
 
             rwl.EnterWriteLock();
             try
             {
                 lockTakenEvent.Release();
-                releaseLockEvent.Wait();
+                releaseLockEvent.Wait(TestContext.Current.CancellationToken);
             }
             finally
             {
                 rwl.ExitWriteLock();
             }
-        });
+        }, TestContext.Current.CancellationToken);
 
-        await lockTakenEvent.WaitAsync().ConfigureAwait(true); // Wait for background thread to acquire lock
+        await lockTakenEvent.WaitAsync(TestContext.Current.CancellationToken).ConfigureAwait(true); // Wait for background thread to acquire lock
 
         try
         {
@@ -236,9 +236,9 @@ public sealed class BackoffBaseTests
     [Trait("Member", "Wait")]
     public async Task Wait_WaitsForNextDurationAndCalculatesNewNextDuration()
     {
-        var initial = TimeSpan.FromTicks(10);
-        var max = TimeSpan.FromTicks(100);
-        var backoff = new TestBackoff(initial, max);
+        TimeSpan initial = TimeSpan.FromTicks(10);
+        TimeSpan max = TimeSpan.FromTicks(100);
+        TestBackoff backoff = new(initial, max);
 
         backoff.NextTicksToReturn = 50;
 

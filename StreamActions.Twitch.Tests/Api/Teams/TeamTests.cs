@@ -142,9 +142,9 @@ public sealed class TeamTests : IDisposable
         ResponseData<Team>? response = await Team.GetChannelTeams(session, "96909659").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Team team = response.Data[0];
         _ = team.BroadcasterId.Should().Be("96909659");
@@ -162,7 +162,7 @@ public sealed class TeamTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/teams/channel");
         _ = request.QueryString.Should().Contain("broadcaster_id=96909659");
     }
@@ -255,15 +255,15 @@ public sealed class TeamTests : IDisposable
         ResponseData<Team>? response = await Team.GetTeams(session, teamId: "1").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         Team team = response.Data[0];
         _ = team.Id.Should().Be("1");
         _ = team.TeamName.Should().Be("staff");
         _ = team.Users.Should().NotBeNull();
-        _ = team.Users!.Count.Should().Be(1);
+        _ = team.Users.Count.Should().Be(1);
 
         TeamMember member = team.Users[0];
         _ = member.UserId.Should().Be("141981764");
@@ -272,7 +272,7 @@ public sealed class TeamTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/teams");
         _ = request.QueryString.Should().Contain("id=1");
     }
@@ -298,11 +298,11 @@ public sealed class TeamTests : IDisposable
         ResponseData<Team>? response = await Team.GetTeams(session, teamName: "staff").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/teams");
         _ = request.QueryString.Should().Contain("name=staff");
     }

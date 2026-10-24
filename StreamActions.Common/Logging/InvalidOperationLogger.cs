@@ -51,7 +51,13 @@ public static partial class InvalidOperationLogger
     /// <param name="paramName">The message that was <see langword="null"/>.</param>
     /// <param name="message">A message that describes the error.</param>
     /// <param name="exception">The exception that was thrown.</param>
-    public static void ArgumentNull(this ILogger logger, string type, string member, string? paramName = null, string? message = null, Exception? exception = null) => logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName } }, message), exception);
+    public static void ArgumentNull(this ILogger logger, string type, string member, string? paramName = null, string? message = null, Exception? exception = null)
+    {
+        if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+        {
+            logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName } }, message), exception);
+        }
+    }
 
     /// <summary>
     /// Logs that an <see cref="ArgumentNullException"/> was thrown.
@@ -94,7 +100,13 @@ public static partial class InvalidOperationLogger
     /// <param name="actualValue">The value of <paramref name="paramName"/> that caused this exception.</param>
     /// <param name="message">A message that describes the error.</param>
     /// <param name="exception">The exception that was thrown.</param>
-    public static void ArgumentOutOfRange(this ILogger logger, string type, string member, string? paramName = null, object? actualValue = null, string? message = null, Exception? exception = null) => logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName }, { nameof(actualValue), actualValue?.ToString() } }, message), exception);
+    public static void ArgumentOutOfRange(this ILogger logger, string type, string member, string? paramName = null, object? actualValue = null, string? message = null, Exception? exception = null)
+    {
+        if (logger?.IsEnabled(LogLevel.Debug) ?? false)
+        {
+            logger.ArgumentNull(type + "." + member, Logger.ConstructLogMessage(new Dictionary<string, object?>() { { nameof(paramName), paramName }, { nameof(actualValue), actualValue?.ToString() } }, message), exception);
+        }
+    }
 
     /// <summary>
     /// Logs that an <see cref="ArgumentOutOfRangeException"/> was thrown.

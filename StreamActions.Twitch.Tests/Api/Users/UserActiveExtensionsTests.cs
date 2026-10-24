@@ -138,12 +138,12 @@ public sealed class UserActiveExtensionsTests : IDisposable
         ResponseDataObject<UserActiveExtensions>? response = await UserActiveExtensions.GetUserActiveExtensions(session, "141981764").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
 
-        UserActiveExtensions activeExts = response.Data!;
+        UserActiveExtensions activeExts = response.Data;
         _ = activeExts.Panel.Should().NotBeNull();
-        _ = activeExts.Panel!.Should().ContainKey("1");
+        _ = activeExts.Panel.Should().ContainKey("1");
         UserActiveExtension panel = activeExts.Panel["1"];
         _ = panel.Active.Should().BeTrue();
         _ = panel.Id.Should().Be("upl85usdumiojfu");
@@ -151,7 +151,7 @@ public sealed class UserActiveExtensionsTests : IDisposable
         _ = panel.Name.Should().Be("SoundAlerts");
 
         _ = activeExts.Overlay.Should().NotBeNull();
-        _ = activeExts.Overlay!.Should().ContainKey("1");
+        _ = activeExts.Overlay.Should().ContainKey("1");
         UserActiveExtension overlay = activeExts.Overlay["1"];
         _ = overlay.Active.Should().BeTrue();
         _ = overlay.Id.Should().Be("overlay_id");
@@ -159,7 +159,7 @@ public sealed class UserActiveExtensionsTests : IDisposable
         _ = overlay.Name.Should().Be("OverlayExtension");
 
         _ = activeExts.Component.Should().NotBeNull();
-        _ = activeExts.Component!.Should().ContainKey("1");
+        _ = activeExts.Component.Should().ContainKey("1");
         UserActiveComponentExtension comp = activeExts.Component["1"];
         _ = comp.Active.Should().BeTrue();
         _ = comp.Id.Should().Be("comp_id");
@@ -170,7 +170,7 @@ public sealed class UserActiveExtensionsTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/users/extensions");
         _ = request.QueryString.Should().Contain("user_id=141981764");
     }
@@ -273,14 +273,14 @@ public sealed class UserActiveExtensionsTests : IDisposable
         ResponseDataObject<UserActiveExtensions>? response = await UserActiveExtensions.UpdateUserExtensions(session, parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Panel.Should().NotBeNull();
-        _ = response.Data.Panel!.Should().ContainKey("1");
+        _ = response.Data.Panel.Should().NotBeNull();
+        _ = response.Data.Panel.Should().ContainKey("1");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/users/extensions");
         _ = request.Body.Should().Contain("\"data\"");
     }

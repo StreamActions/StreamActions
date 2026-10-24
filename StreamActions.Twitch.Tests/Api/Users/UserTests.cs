@@ -140,9 +140,9 @@ public sealed class UserTests : IDisposable
         ResponseData<User>? response = await User.GetUsers(session, ids: ["141981764"], logins: ["twitchdev"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         User user = response.Data[0];
         _ = user.Id.Should().Be("141981764");
@@ -158,7 +158,7 @@ public sealed class UserTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/users");
         _ = request.QueryString.Should().Contain("id=141981764");
         _ = request.QueryString.Should().Contain("login=twitchdev");
@@ -243,9 +243,9 @@ public sealed class UserTests : IDisposable
         ResponseData<User>? response = await User.UpdateUser(session, "new description").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data!.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(1);
 
         User user = response.Data[0];
         _ = user.Id.Should().Be("141981764");
@@ -253,7 +253,7 @@ public sealed class UserTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/users");
         _ = request.QueryString.Should().Contain("description=new%20description");
     }

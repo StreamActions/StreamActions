@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Common;
+using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
@@ -199,12 +200,12 @@ public sealed record Subscription
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        if (userId is not null)
+        IReadOnlyList<string>? userIdList = userId as IReadOnlyList<string> ?? userId?.ToArray();
+        if (userIdList is not null)
         {
-            int userIdCount = userId.Count();
-            if (userIdCount > 100)
+            if (userIdList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(userId), userIdCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(userId), userIdList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
             }
         }
 
@@ -218,10 +219,10 @@ public sealed record Subscription
             { "first", first.ToString(CultureInfo.InvariantCulture) }
         };
 
-        if (userId is not null && userId.Any())
+        if (userIdList is not null && userIdList.Count > 0)
         {
             List<string> userIds = [];
-            foreach (string pollId in userId)
+            foreach (string pollId in userIdList)
             {
                 if (!string.IsNullOrWhiteSpace(pollId))
                 {

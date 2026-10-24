@@ -106,17 +106,15 @@ public sealed record ClipDownload
             throw new ArgumentNullException(nameof(editorId)).Log(TwitchApi.GetLogger());
         }
 
-        if (clipId is null || !clipId.Any())
+        IReadOnlyList<string>? clipIdList = clipId as IReadOnlyList<string> ?? clipId?.ToArray();
+        if (clipIdList is null || clipIdList.Count == 0)
         {
             throw new ArgumentNullException(nameof(clipId)).Log(TwitchApi.GetLogger());
         }
 
+        if (clipIdList.Count > 10)
         {
-            int clipIdCount = clipId.Count();
-            if (clipIdCount > 10)
-            {
-                throw new ArgumentOutOfRangeException(nameof(clipId), clipIdCount, "must have a count <= 10").Log(TwitchApi.GetLogger());
-            }
+            throw new ArgumentOutOfRangeException(nameof(clipId), clipIdList.Count, "must have a count <= 10").Log(TwitchApi.GetLogger());
         }
 
         session.RequireUserOrAppToken(Scope.ChannelManageClips, Scope.EditorManageClips);
@@ -126,7 +124,7 @@ public sealed record ClipDownload
             { "broadcaster_id", broadcasterId },
             { "editor_id", editorId }
         };
-        queryParams.Add("clip_id", clipId);
+        queryParams.Add("clip_id", clipIdList);
 
         Uri uri = Util.BuildUri(new("/clips/downloads", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);

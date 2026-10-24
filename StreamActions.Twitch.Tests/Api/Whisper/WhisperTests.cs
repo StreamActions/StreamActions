@@ -186,11 +186,11 @@ public sealed class WhisperTests : IDisposable
         JsonApiResponse? response = await WhisperApi.SendWhisper(session, "141981764", "527115020", message).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
-        _ = response!.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("POST");
+        _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/whispers");
         _ = request.QueryString.Should().Contain("from_user_id=141981764");
         _ = request.QueryString.Should().Contain("to_user_id=527115020");
