@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.EventSub.Automod.Message.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Automod.Message.Objects;

@@ -17,9 +17,7 @@
  */
 
 using Microsoft.IdentityModel.JsonWebTokens;
-using StreamActions.Common.Exceptions;
 using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
@@ -70,10 +68,7 @@ public sealed class TokenTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test completion.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 

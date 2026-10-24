@@ -34,7 +34,7 @@ public class InvalidOperationLoggerTests
     {
         ArgumentNullException exception = null!;
         Action action = () => InvalidOperationLogger.Log(exception, this._logger);
-        action.Should().Throw<ArgumentNullException>();
+        _ = action.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -44,13 +44,13 @@ public class InvalidOperationLoggerTests
         var exception = new ArgumentNullException("param1", "Exception message");
         var result = InvalidOperationLogger.Log(exception, this._logger);
 
-        result.Should().Be(exception);
-        this._logger.Logs.Should().ContainSingle();
+        _ = result.Should().Be(exception);
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Debug);
-        log.EventId.Id.Should().Be(1000);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Contain("Argument Null: Exception message (Parameter 'param1')");
+        _ = log.LogLevel.Should().Be(LogLevel.Debug);
+        _ = log.EventId.Id.Should().Be(1000);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Contain("Argument Null: Exception message (Parameter 'param1')");
     }
 
     [Fact]
@@ -60,12 +60,12 @@ public class InvalidOperationLoggerTests
         var exception = new ArgumentNullException("param1");
         InvalidOperationLogger.ArgumentNull(this._logger, "TestMember", "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Debug);
-        log.EventId.Id.Should().Be(1000);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestMember] Argument Null: TestMessage");
+        _ = log.LogLevel.Should().Be(LogLevel.Debug);
+        _ = log.EventId.Id.Should().Be(1000);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestMember] Argument Null: TestMessage");
     }
 
     [Fact]
@@ -75,12 +75,12 @@ public class InvalidOperationLoggerTests
         var exception = new ArgumentNullException("param1");
         InvalidOperationLogger.ArgumentNull(this._logger, "TestType", "TestMember", "param1", "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Debug);
-        log.EventId.Id.Should().Be(1000);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestType.TestMember] Argument Null: TestMessage (paramName was `param1`)");
+        _ = log.LogLevel.Should().Be(LogLevel.Debug);
+        _ = log.EventId.Id.Should().Be(1000);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestType.TestMember] Argument Null: TestMessage (paramName was `param1`)");
     }
 
     #endregion
@@ -93,7 +93,7 @@ public class InvalidOperationLoggerTests
     {
         ArgumentOutOfRangeException exception = null!;
         Action action = () => InvalidOperationLogger.Log(exception, this._logger);
-        action.Should().Throw<ArgumentNullException>();
+        _ = action.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -103,12 +103,12 @@ public class InvalidOperationLoggerTests
         var exception = new ArgumentOutOfRangeException("param1", 42, "Exception message");
         var result = InvalidOperationLogger.Log(exception, this._logger);
 
-        result.Should().Be(exception);
-        this._logger.Logs.Should().ContainSingle();
+        _ = result.Should().Be(exception);
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Debug);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Contain($"Exception message (Parameter 'param1'){Environment.NewLine}Actual value was 42.");
+        _ = log.LogLevel.Should().Be(LogLevel.Debug);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Contain($"Exception message (Parameter 'param1'){Environment.NewLine}Actual value was 42.");
     }
 
     [Fact]
@@ -118,12 +118,12 @@ public class InvalidOperationLoggerTests
         var exception = new ArgumentOutOfRangeException("param1");
         InvalidOperationLogger.ArgumentOutOfRange(this._logger, "TestMember", "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Debug);
-        log.EventId.Id.Should().Be(1001);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestMember] Argument Out of Range: TestMessage");
+        _ = log.LogLevel.Should().Be(LogLevel.Debug);
+        _ = log.EventId.Id.Should().Be(1001);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestMember] Argument Out of Range: TestMessage");
     }
 
     [Fact]
@@ -133,12 +133,12 @@ public class InvalidOperationLoggerTests
         var exception = new ArgumentOutOfRangeException("param1");
         InvalidOperationLogger.ArgumentOutOfRange(this._logger, "TestType", "TestMember", "param1", 42, "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Debug);
-        log.EventId.Id.Should().Be(1000);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestType.TestMember] Argument Null: TestMessage (paramName was `param1`) (actualValue was `42`)");
+        _ = log.LogLevel.Should().Be(LogLevel.Debug);
+        _ = log.EventId.Id.Should().Be(1000);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestType.TestMember] Argument Null: TestMessage (paramName was `param1`) (actualValue was `42`)");
     }
 
     #endregion
@@ -151,7 +151,7 @@ public class InvalidOperationLoggerTests
     {
         InvalidOperationException exception = null!;
         Action action = () => InvalidOperationLogger.Log(exception, this._logger);
-        action.Should().Throw<ArgumentNullException>();
+        _ = action.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -161,13 +161,13 @@ public class InvalidOperationLoggerTests
         var exception = new InvalidOperationException("Exception message");
         var result = InvalidOperationLogger.Log(exception, this._logger);
 
-        result.Should().Be(exception);
-        this._logger.Logs.Should().ContainSingle();
+        _ = result.Should().Be(exception);
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Debug);
-        log.EventId.Id.Should().Be(1002);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Contain("Invalid Operation: Exception message");
+        _ = log.LogLevel.Should().Be(LogLevel.Debug);
+        _ = log.EventId.Id.Should().Be(1002);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Contain("Invalid Operation: Exception message");
     }
 
     [Fact]
@@ -177,12 +177,12 @@ public class InvalidOperationLoggerTests
         var exception = new InvalidOperationException("Exception message");
         InvalidOperationLogger.InvalidOperation(this._logger, "TestMember", "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Debug);
-        log.EventId.Id.Should().Be(1002);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestMember] Invalid Operation: TestMessage");
+        _ = log.LogLevel.Should().Be(LogLevel.Debug);
+        _ = log.EventId.Id.Should().Be(1002);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestMember] Invalid Operation: TestMessage");
     }
 
     [Fact]
@@ -192,12 +192,12 @@ public class InvalidOperationLoggerTests
         var exception = new InvalidOperationException("Exception message");
         InvalidOperationLogger.InvalidOperation(this._logger, "TestType", "TestMember", "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Debug);
-        log.EventId.Id.Should().Be(1002);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestType.TestMember] Invalid Operation: TestMessage");
+        _ = log.LogLevel.Should().Be(LogLevel.Debug);
+        _ = log.EventId.Id.Should().Be(1002);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestType.TestMember] Invalid Operation: TestMessage");
     }
 
     #endregion
@@ -210,7 +210,7 @@ public class InvalidOperationLoggerTests
     {
         ScopeMissingException exception = null!;
         Action action = () => InvalidOperationLogger.Log(exception, this._logger);
-        action.Should().Throw<ArgumentNullException>();
+        _ = action.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -220,13 +220,13 @@ public class InvalidOperationLoggerTests
         var exception = new ScopeMissingException("scope:test", "Exception message");
         var result = InvalidOperationLogger.Log(exception, this._logger);
 
-        result.Should().Be(exception);
-        this._logger.Logs.Should().ContainSingle();
+        _ = result.Should().Be(exception);
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Error);
-        log.EventId.Id.Should().Be(1010);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Contain("Scope Missing: Missing scopes scope:test, Exception message.");
+        _ = log.LogLevel.Should().Be(LogLevel.Error);
+        _ = log.EventId.Id.Should().Be(1010);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Contain("Scope Missing: Missing scopes scope:test, Exception message.");
     }
 
     [Fact]
@@ -236,12 +236,12 @@ public class InvalidOperationLoggerTests
         var exception = new ScopeMissingException("scope:test", "Exception message");
         InvalidOperationLogger.ScopeMissing(this._logger, "TestMember", "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Error);
-        log.EventId.Id.Should().Be(1010);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestMember] Scope Missing: TestMessage");
+        _ = log.LogLevel.Should().Be(LogLevel.Error);
+        _ = log.EventId.Id.Should().Be(1010);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestMember] Scope Missing: TestMessage");
     }
 
     [Fact]
@@ -251,12 +251,12 @@ public class InvalidOperationLoggerTests
         var exception = new ScopeMissingException("scope:test", "Exception message");
         InvalidOperationLogger.ScopeMissing(this._logger, "TestType", "TestMember", "scope:test", "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Error);
-        log.EventId.Id.Should().Be(1010);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestType.TestMember] Scope Missing: TestMessage (scope was `scope:test`)");
+        _ = log.LogLevel.Should().Be(LogLevel.Error);
+        _ = log.EventId.Id.Should().Be(1010);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestType.TestMember] Scope Missing: TestMessage (scope was `scope:test`)");
     }
 
     #endregion
@@ -269,7 +269,7 @@ public class InvalidOperationLoggerTests
     {
         TokenTypeException exception = null!;
         Action action = () => InvalidOperationLogger.Log(exception, this._logger);
-        action.Should().Throw<ArgumentNullException>();
+        _ = action.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -279,13 +279,13 @@ public class InvalidOperationLoggerTests
         var exception = new TokenTypeException("expectedType", "actualType", new InvalidOperationException("inner exception"));
         var result = InvalidOperationLogger.Log(exception, this._logger);
 
-        result.Should().Be(exception);
-        this._logger.Logs.Should().ContainSingle();
+        _ = result.Should().Be(exception);
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Error);
-        log.EventId.Id.Should().Be(1020);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Contain("Token Type: Incorrect token type. Expected: expectedType. Actual: actualType.");
+        _ = log.LogLevel.Should().Be(LogLevel.Error);
+        _ = log.EventId.Id.Should().Be(1020);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Contain("Token Type: Incorrect token type. Expected: expectedType. Actual: actualType.");
     }
 
     [Fact]
@@ -295,12 +295,12 @@ public class InvalidOperationLoggerTests
         var exception = new TokenTypeException("expectedType", "actualType");
         InvalidOperationLogger.TokenType(this._logger, "TestMember", "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Error);
-        log.EventId.Id.Should().Be(1020);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestMember] Token Type: TestMessage");
+        _ = log.LogLevel.Should().Be(LogLevel.Error);
+        _ = log.EventId.Id.Should().Be(1020);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestMember] Token Type: TestMessage");
     }
 
     [Fact]
@@ -310,12 +310,12 @@ public class InvalidOperationLoggerTests
         var exception = new TokenTypeException("expectedType", "actualType");
         InvalidOperationLogger.TokenType(this._logger, "TestType", "TestMember", "expectedType", "actualType", "TestMessage", exception);
 
-        this._logger.Logs.Should().ContainSingle();
+        _ = this._logger.Logs.Should().ContainSingle();
         var log = this._logger.Logs.Single();
-        log.LogLevel.Should().Be(LogLevel.Error);
-        log.EventId.Id.Should().Be(1020);
-        log.Exception.Should().Be(exception);
-        log.Message.Should().Be("[TestType.TestMember] Token Type: TestMessage (expected was `expectedType`) (actual was `actualType`)");
+        _ = log.LogLevel.Should().Be(LogLevel.Error);
+        _ = log.EventId.Id.Should().Be(1020);
+        _ = log.Exception.Should().Be(exception);
+        _ = log.Message.Should().Be("[TestType.TestMember] Token Type: TestMessage (expected was `expectedType`) (actual was `actualType`)");
     }
 
     #endregion

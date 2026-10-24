@@ -16,16 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using Microsoft.AspNetCore.Http;
-using StreamActions.Common.Exceptions;
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Games;
-using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
-using System.Net;
 
 namespace StreamActions.Twitch.Tests.Api.Games;
 
@@ -63,10 +56,7 @@ public sealed class GameTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test execution.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -96,7 +86,7 @@ public sealed class GameTests : IDisposable
     public async Task GetGames_WhenMoreThan100IdsProvided_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        List<string> ids = Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture)).ToList();
+        List<string> ids = [.. Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture))];
 
         Func<Task> action = async () => await Game.GetGames(session, gameIds: ids).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))

@@ -16,13 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Json.Serialization;
-using System;
-using System.IO;
 using System.Text;
 using System.Text.Json;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Json.Serialization;
 
@@ -48,7 +44,7 @@ public class JsonLowerCaseEnumConverterTests
     public void HandleNull_ShouldReturnTrue()
     {
         JsonLowerCaseEnumConverter<TestEnum> converter = new();
-        converter.HandleNull.Should().BeTrue();
+        _ = converter.HandleNull.Should().BeTrue();
     }
 
     #endregion HandleNull
@@ -62,8 +58,8 @@ public class JsonLowerCaseEnumConverterTests
         string json = "{\"EnumValue\":\"firstvalue\"}";
         TestModel? result = JsonSerializer.Deserialize<TestModel>(json);
 
-        result.Should().NotBeNull();
-        result!.EnumValue.Should().Be(TestEnum.FirstValue);
+        _ = result.Should().NotBeNull();
+        _ = result!.EnumValue.Should().Be(TestEnum.FirstValue);
     }
 
     [Fact]
@@ -73,8 +69,8 @@ public class JsonLowerCaseEnumConverterTests
         string json = "{\"EnumValue\":\"SeCondVaLue\"}";
         TestModel? result = JsonSerializer.Deserialize<TestModel>(json);
 
-        result.Should().NotBeNull();
-        result!.EnumValue.Should().Be(TestEnum.SecondValue);
+        _ = result.Should().NotBeNull();
+        _ = result!.EnumValue.Should().Be(TestEnum.SecondValue);
     }
 
     [Fact]
@@ -84,8 +80,8 @@ public class JsonLowerCaseEnumConverterTests
         string json = "{\"EnumValue\":\"THIRD_VALUE\"}";
         TestModel? result = JsonSerializer.Deserialize<TestModel>(json);
 
-        result.Should().NotBeNull();
-        result!.EnumValue.Should().Be(TestEnum.Third_Value);
+        _ = result.Should().NotBeNull();
+        _ = result!.EnumValue.Should().Be(TestEnum.Third_Value);
     }
 
     [Fact]
@@ -95,8 +91,8 @@ public class JsonLowerCaseEnumConverterTests
         string json = "{\"EnumValue\":\"invalid\"}";
         TestModel? result = JsonSerializer.Deserialize<TestModel>(json);
 
-        result.Should().NotBeNull();
-        result!.EnumValue.Should().Be(default(TestEnum));
+        _ = result.Should().NotBeNull();
+        _ = result!.EnumValue.Should().Be(default);
     }
 
     [Fact]
@@ -106,11 +102,11 @@ public class JsonLowerCaseEnumConverterTests
         JsonLowerCaseEnumConverter<TestEnum> converter = new();
         byte[] jsonUtf8Bytes = Encoding.UTF8.GetBytes("\"secondvalue\"");
         Utf8JsonReader reader = new(jsonUtf8Bytes);
-        reader.Read();
+        _ = reader.Read();
 
         TestEnum result = converter.Read(ref reader, typeof(TestEnum), new JsonSerializerOptions());
 
-        result.Should().Be(TestEnum.SecondValue);
+        _ = result.Should().Be(TestEnum.SecondValue);
     }
 
     #endregion Read
@@ -124,8 +120,8 @@ public class JsonLowerCaseEnumConverterTests
         TestModel model = new() { EnumValue = TestEnum.SecondValue };
         string json = JsonSerializer.Serialize(model);
 
-        json.Should().Contain("\"secondvalue\"");
-        json.Should().NotContain("\"SecondValue\"");
+        _ = json.Should().Contain("\"secondvalue\"");
+        _ = json.Should().NotContain("\"SecondValue\"");
     }
 
     [Fact]
@@ -135,8 +131,8 @@ public class JsonLowerCaseEnumConverterTests
         TestModel model = new() { EnumValue = TestEnum.Third_Value };
         string json = JsonSerializer.Serialize(model);
 
-        json.Should().Contain("\"third_value\"");
-        json.Should().NotContain("\"Third_Value\"");
+        _ = json.Should().Contain("\"third_value\"");
+        _ = json.Should().NotContain("\"Third_Value\"");
     }
 
     [Fact]
@@ -151,7 +147,7 @@ public class JsonLowerCaseEnumConverterTests
         writer.Flush();
 
         string json = Encoding.UTF8.GetString(stream.ToArray());
-        json.Should().Be("\"firstvalue\"");
+        _ = json.Should().Be("\"firstvalue\"");
     }
 
     #endregion Write

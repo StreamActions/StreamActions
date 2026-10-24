@@ -20,12 +20,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using StreamActions.Twitch.Api;
-using StreamActions.Twitch.EventSub;
 using StreamActions.Twitch.EventSub.Common;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Concurrent;
@@ -295,14 +293,11 @@ public sealed class TwitchKestrelServerFixture : IAsyncLifetime, IDisposable, IA
     /// <param name="method">The HTTP method.</param>
     /// <param name="path">The request path.</param>
     /// <param name="statusCode">The HTTP status code to return.</param>
-    public void RegisterStatusCode(string method, string path, int statusCode)
-    {
-        this.RegisterHandler(method, path, context =>
-        {
-            context.Response.StatusCode = statusCode;
-            return Task.CompletedTask;
-        });
-    }
+    public void RegisterStatusCode(string method, string path, int statusCode) => this.RegisterHandler(method, path, context =>
+                                                                                       {
+                                                                                           context.Response.StatusCode = statusCode;
+                                                                                           return Task.CompletedTask;
+                                                                                       });
 
     /// <summary>
     /// Registers a string response with an <see cref="HttpStatusCode"/> for a specific HTTP method and path.
@@ -408,11 +403,9 @@ public sealed class TwitchKestrelServerFixture : IAsyncLifetime, IDisposable, IA
     {
         string trimmed = path.Trim();
         string withLeadingSlash = trimmed.StartsWith('/') ? trimmed : "/" + trimmed;
-        if (withLeadingSlash.StartsWith("/helix/", StringComparison.OrdinalIgnoreCase))
-        {
-            return withLeadingSlash["/helix".Length..];
-        }
-        return withLeadingSlash;
+        return withLeadingSlash.StartsWith("/helix/", StringComparison.OrdinalIgnoreCase)
+            ? withLeadingSlash["/helix".Length..]
+            : withLeadingSlash;
     }
 
     /// <summary>
@@ -430,7 +423,7 @@ public sealed class TwitchKestrelServerFixture : IAsyncLifetime, IDisposable, IA
             context.Request.Body.Position = 0;
         }
 
-        HeaderDictionary headersCopy = new(context.Request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase));
+        HeaderDictionary headersCopy = [.. context.Request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase)];
         QueryCollection queryCopy = new(context.Request.Query.ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.OrdinalIgnoreCase));
         RecordedRequest recorded = new()
         {

@@ -16,16 +16,11 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Streams;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
 using System.Net;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.Streams;
 
@@ -63,10 +58,7 @@ public sealed class TwitchStreamTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after each test.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -92,7 +84,7 @@ public sealed class TwitchStreamTests : IDisposable
     public async Task GetStreams_WhenUserIdsExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        List<string> userIds = Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture)).ToList();
+        List<string> userIds = [.. Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture))];
 
         Func<Task> action = async () => await TwitchStream.GetStreams(session, userIds: userIds).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
@@ -107,7 +99,7 @@ public sealed class TwitchStreamTests : IDisposable
     public async Task GetStreams_WhenUserLoginsExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        List<string> userLogins = Enumerable.Range(1, 101).Select(i => $"login{i}").ToList();
+        List<string> userLogins = [.. Enumerable.Range(1, 101).Select(i => $"login{i}")];
 
         Func<Task> action = async () => await TwitchStream.GetStreams(session, userLogins: userLogins).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
@@ -122,7 +114,7 @@ public sealed class TwitchStreamTests : IDisposable
     public async Task GetStreams_WhenGameIdsExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        List<string> gameIds = Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture)).ToList();
+        List<string> gameIds = [.. Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture))];
 
         Func<Task> action = async () => await TwitchStream.GetStreams(session, gameIds: gameIds).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
@@ -137,7 +129,7 @@ public sealed class TwitchStreamTests : IDisposable
     public async Task GetStreams_WhenLanguagesExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        List<string> languages = Enumerable.Range(1, 101).Select(i => $"l{i}").ToList();
+        List<string> languages = [.. Enumerable.Range(1, 101).Select(i => $"l{i}")];
 
         Func<Task> action = async () => await TwitchStream.GetStreams(session, languages: languages).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))

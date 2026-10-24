@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomReward.Objects;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 

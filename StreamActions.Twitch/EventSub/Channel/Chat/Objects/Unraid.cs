@@ -16,8 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.EventSub.Channel.Chat.Objects;
-
 namespace StreamActions.Twitch.EventSub.Channel.Chat.Objects;
 
 /// <summary>

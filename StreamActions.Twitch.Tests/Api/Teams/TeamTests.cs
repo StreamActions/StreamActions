@@ -16,15 +16,10 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Teams;
 using StreamActions.Twitch.Api.Teams.Objects;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.Teams;
 
@@ -62,10 +57,7 @@ public sealed class TeamTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after each test.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 

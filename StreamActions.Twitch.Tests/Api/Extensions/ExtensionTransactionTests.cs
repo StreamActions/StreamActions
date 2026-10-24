@@ -16,16 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using Microsoft.AspNetCore.Http;
-using StreamActions.Common.Exceptions;
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Extensions;
 using StreamActions.Twitch.Api.Extensions.Objects;
-using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
-using System.Net;
 
 namespace StreamActions.Twitch.Tests.Api.Extensions;
 
@@ -63,10 +56,7 @@ public sealed class ExtensionTransactionTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test execution.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -108,7 +98,7 @@ public sealed class ExtensionTransactionTests : IDisposable
     public async Task GetExtensionTransactions_WhenMoreThan100IdsProvided_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        List<string> ids = Enumerable.Range(1, 101).Select(i => $"id_{i}").ToList();
+        List<string> ids = [.. Enumerable.Range(1, 101).Select(i => $"id_{i}")];
 
         Func<Task> action = async () => await ExtensionTransaction.GetExtensionTransactions(session, "ext123", ids).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))

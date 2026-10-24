@@ -36,7 +36,7 @@ public sealed class TokenBucketRateLimiterTests
         long initial = limiter.Remaining;
         _ = returnTokenMethod!.Invoke(limiter, [TimeSpan.FromSeconds(1)]);
 
-        limiter.Remaining.Should().Be((int)(initial + 1));
+        _ = limiter.Remaining.Should().Be((int)(initial + 1));
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public sealed class TokenBucketRateLimiterTests
                 }
             };
 
-            act.Should().Throw<TimeoutException>().WithMessage("Timed out attempting to acquire upgradeable read lock.");
+            _ = act.Should().Throw<TimeoutException>().WithMessage("Timed out attempting to acquire upgradeable read lock.");
         }
         finally
         {
@@ -120,7 +120,7 @@ public sealed class TokenBucketRateLimiterTests
                 }
             };
 
-            act.Should().Throw<TimeoutException>().WithMessage("Timed out attempting to acquire write lock.");
+            _ = act.Should().Throw<TimeoutException>().WithMessage("Timed out attempting to acquire write lock.");
         }
         finally
         {
@@ -141,8 +141,8 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.UpdateLimit(3);
 
-        limiter.Limit.Should().Be(3);
-        limiter.Remaining.Should().Be(3);
+        _ = limiter.Limit.Should().Be(3);
+        _ = limiter.Remaining.Should().Be(3);
     }
 
     [Fact]
@@ -154,8 +154,8 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.UpdateLimit(10);
 
-        limiter.Limit.Should().Be(10);
-        limiter.Remaining.Should().Be(2);
+        _ = limiter.Limit.Should().Be(10);
+        _ = limiter.Remaining.Should().Be(2);
     }
 
     [Fact]
@@ -166,13 +166,13 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.UpdateLimit(0);
 
-        limiter.Limit.Should().Be(5);
-        limiter.Remaining.Should().Be(5);
+        _ = limiter.Limit.Should().Be(5);
+        _ = limiter.Remaining.Should().Be(5);
 
         limiter.UpdateLimit(-1);
 
-        limiter.Limit.Should().Be(5);
-        limiter.Remaining.Should().Be(5);
+        _ = limiter.Limit.Should().Be(5);
+        _ = limiter.Remaining.Should().Be(5);
     }
 
     [Fact]
@@ -183,8 +183,8 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.UpdateLimit(5);
 
-        limiter.Limit.Should().Be(5);
-        limiter.Remaining.Should().Be(5);
+        _ = limiter.Limit.Should().Be(5);
+        _ = limiter.Remaining.Should().Be(5);
     }
 
     #endregion UpdateLimit
@@ -200,7 +200,7 @@ public sealed class TokenBucketRateLimiterTests
         await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
 
         // Wait should complete successfully, consuming the token
-        limiter.Remaining.Should().Be(0);
+        _ = limiter.Remaining.Should().Be(0);
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public sealed class TokenBucketRateLimiterTests
 
         Func<Task> act = async () => await limiter.WaitForRateLimit(TimeSpan.FromMilliseconds(50)).ConfigureAwait(true);
 
-        await act.Should().ThrowAsync<TimeoutException>().WithMessage("Timed out waiting for the rate limit.").ConfigureAwait(true);
+        _ = await act.Should().ThrowAsync<TimeoutException>().WithMessage("Timed out waiting for the rate limit.").ConfigureAwait(true);
     }
 
     [Fact]
@@ -231,7 +231,7 @@ public sealed class TokenBucketRateLimiterTests
 
         Func<Task> act = async () => await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(true);
 
-        await act.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
+        _ = await act.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public sealed class TokenBucketRateLimiterTests
 
         await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
 
-        limiter.Remaining.Should().Be(0);
+        _ = limiter.Remaining.Should().Be(0);
     }
 
     #endregion WaitForRateLimit
@@ -265,9 +265,9 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.ParseHeaders(response.Headers);
 
-        limiter.Limit.Should().Be(100);
-        limiter.Remaining.Should().Be(50);
-        limiter.NextReset.Should().Be(DateTimeOffset.FromUnixTimeSeconds(futureEpoch).UtcDateTime.Ticks);
+        _ = limiter.Limit.Should().Be(100);
+        _ = limiter.Remaining.Should().Be(50);
+        _ = limiter.NextReset.Should().Be(DateTimeOffset.FromUnixTimeSeconds(futureEpoch).UtcDateTime.Ticks);
     }
 
     [Fact]
@@ -284,7 +284,7 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.Milliseconds);
 
-        limiter.NextReset.Should().Be(DateTimeOffset.FromUnixTimeMilliseconds(futureEpoch).UtcDateTime.Ticks);
+        _ = limiter.NextReset.Should().Be(DateTimeOffset.FromUnixTimeMilliseconds(futureEpoch).UtcDateTime.Ticks);
     }
 
     [Fact]
@@ -301,7 +301,7 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.Ticks);
 
-        limiter.NextReset.Should().Be(futureTicks);
+        _ = limiter.NextReset.Should().Be(futureTicks);
     }
 
     [Fact]
@@ -318,7 +318,7 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.ISO8601);
 
-        limiter.NextReset.Should().Be(DateTime.Parse(isoDate, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal).Ticks);
+        _ = limiter.NextReset.Should().Be(DateTime.Parse(isoDate, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal).Ticks);
     }
 
     [Fact]
@@ -336,9 +336,9 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.ParseHeaders(response.Headers);
 
-        limiter.Limit.Should().Be(10);
-        limiter.Remaining.Should().Be(5);
-        limiter.NextReset.Should().Be(originalReset);
+        _ = limiter.Limit.Should().Be(10);
+        _ = limiter.Remaining.Should().Be(5);
+        _ = limiter.NextReset.Should().Be(originalReset);
     }
 
     [Fact]
@@ -354,7 +354,7 @@ public sealed class TokenBucketRateLimiterTests
 
         Action act = () => limiter.ParseHeaders(response.Headers, headerResetType: (TokenBucketRateLimiter.HeaderResetType)999);
 
-        act.Should().Throw<ArgumentOutOfRangeException>();
+        _ = act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     #endregion ParseHeaders
@@ -373,15 +373,15 @@ public sealed class TokenBucketRateLimiterTests
         // Update period to 50ms
         limiter.UpdatePeriod(TimeSpan.FromMilliseconds(50).Ticks);
 
-        limiter.Period.Should().Be(TimeSpan.FromMilliseconds(50).Ticks);
+        _ = limiter.Period.Should().Be(TimeSpan.FromMilliseconds(50).Ticks);
 
         // Consume the token, the next one should be available in 50ms instead of 100ms
         await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
-        limiter.Remaining.Should().Be(0);
+        _ = limiter.Remaining.Should().Be(0);
 
         long expectedNextReset = DateTime.UtcNow.Ticks + TimeSpan.FromMilliseconds(50).Ticks;
         // Check if next reset is around 50ms from now (allow a small margin for execution time)
-        Math.Abs(limiter.NextResetDateTime.Ticks - expectedNextReset).Should().BeLessThan(TimeSpan.FromMilliseconds(500).Ticks);
+        _ = Math.Abs(limiter.NextResetDateTime.Ticks - expectedNextReset).Should().BeLessThan(TimeSpan.FromMilliseconds(500).Ticks);
     }
 
     [Fact]
@@ -397,15 +397,15 @@ public sealed class TokenBucketRateLimiterTests
         // Update period to 50ms
         limiter.UpdatePeriod(TimeSpan.FromMilliseconds(50));
 
-        limiter.PeriodTimeSpan.Should().Be(TimeSpan.FromMilliseconds(50));
+        _ = limiter.PeriodTimeSpan.Should().Be(TimeSpan.FromMilliseconds(50));
 
         // Consume the token, the next one should be available in 50ms instead of 100ms
         await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
-        limiter.Remaining.Should().Be(0);
+        _ = limiter.Remaining.Should().Be(0);
 
         long expectedNextReset = DateTime.UtcNow.Ticks + TimeSpan.FromMilliseconds(50).Ticks;
         // Check if next reset is around 50ms from now (allow a small margin for execution time)
-        Math.Abs(limiter.NextResetDateTime.Ticks - expectedNextReset).Should().BeLessThan(TimeSpan.FromMilliseconds(500).Ticks);
+        _ = Math.Abs(limiter.NextResetDateTime.Ticks - expectedNextReset).Should().BeLessThan(TimeSpan.FromMilliseconds(500).Ticks);
     }
 
     [Theory]
@@ -419,7 +419,7 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.UpdatePeriod(invalidPeriodTicks);
 
-        limiter.Period.Should().Be(TimeSpan.FromMilliseconds(100).Ticks);
+        _ = limiter.Period.Should().Be(TimeSpan.FromMilliseconds(100).Ticks);
     }
 
     #endregion UpdatePeriod

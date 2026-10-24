@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
-using StreamActions.Twitch.Api.Channels.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;

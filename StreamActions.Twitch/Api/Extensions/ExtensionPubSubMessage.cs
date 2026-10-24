@@ -16,13 +16,11 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Api.Extensions.Objects;
 using System.Net.Http.Json;
 
 namespace StreamActions.Twitch.Api.Extensions;

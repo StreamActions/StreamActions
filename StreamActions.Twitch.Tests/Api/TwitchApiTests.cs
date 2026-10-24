@@ -16,13 +16,10 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
-using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
 using System.Text.Json;
@@ -63,10 +60,7 @@ public sealed class TwitchApiTests : IDisposable
     /// <summary>
     /// Disposes test resources and resets server state.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 

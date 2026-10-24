@@ -38,7 +38,7 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
     /// <summary>
     /// A cache mapping enum values to their corresponding custom string values defined by <see cref="JsonCustomEnumAttribute"/>.
     /// </summary>
-    private static readonly Dictionary<T, string> EnumToStringMap = new();
+    private static readonly Dictionary<T, string> EnumToStringMap = [];
 
     #endregion Static Fields
 
@@ -85,30 +85,14 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
     /// </remarks>
     /// <param name="value">The string value to convert.</param>
     /// <returns>The enum value of type <typeparamref name="T"/> that has a matching <see cref="JsonCustomEnumAttribute"/>; <see langword="default"/> if there is no match.</returns>
-    public T Convert(string value)
-    {
-        if (value is not null && StringToEnumMap.TryGetValue(value, out T result))
-        {
-            return result;
-        }
-
-        return default;
-    }
+    public T Convert(string value) => value is not null && StringToEnumMap.TryGetValue(value, out T result) ? result : default;
 
     /// <summary>
     /// Converts the given enum value into a string.
     /// </summary>
     /// <param name="value">The enum value to convert.</param>
     /// <returns>The string value defined in the <see cref="JsonCustomEnumAttribute"/> applied to the enum value; <see cref="Enum.GetName{TEnum}(TEnum)"/> if the attribute is not present.</returns>
-    public string? Convert(T value)
-    {
-        if (EnumToStringMap.TryGetValue(value, out string? result))
-        {
-            return result;
-        }
-
-        return Enum.GetName(value);
-    }
+    public string? Convert(T value) => EnumToStringMap.TryGetValue(value, out string? result) ? result : Enum.GetName(value);
 
     /// <inheritdoc/>
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => this.Convert(reader.GetString()!);

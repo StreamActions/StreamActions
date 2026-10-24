@@ -19,7 +19,6 @@
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Channel.Prediction.Objects;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.Prediction;

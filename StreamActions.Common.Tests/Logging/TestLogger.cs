@@ -17,30 +17,21 @@
  */
 
 using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.ObjectModel;
 
 namespace StreamActions.Common.Tests.Logging;
 
-public class LogEntry
+public class LogEntry(LogLevel logLevel, EventId eventId, Exception? exception, string message)
 {
-    public LogLevel LogLevel { get; }
-    public EventId EventId { get; }
-    public Exception? Exception { get; }
-    public string Message { get; }
-
-    public LogEntry(LogLevel logLevel, EventId eventId, Exception? exception, string message)
-    {
-        this.LogLevel = logLevel;
-        this.EventId = eventId;
-        this.Exception = exception;
-        this.Message = message;
-    }
+    public LogLevel LogLevel { get; } = logLevel;
+    public EventId EventId { get; } = eventId;
+    public Exception? Exception { get; } = exception;
+    public string Message { get; } = message;
 }
 
 public class TestLogger : ILogger
 {
-    public Collection<LogEntry> Logs { get; } = new();
+    public Collection<LogEntry> Logs { get; } = [];
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 

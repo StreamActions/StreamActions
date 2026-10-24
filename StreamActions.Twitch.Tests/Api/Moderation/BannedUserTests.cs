@@ -16,10 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Moderation.Objects;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
@@ -61,10 +58,7 @@ public sealed class BannedUserTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test completion.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -97,7 +91,7 @@ public sealed class BannedUserTests : IDisposable
     public async Task GetBannedUsers_WhenUserIdsExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModerationRead);
-        List<string> userIds = Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture)).ToList();
+        List<string> userIds = [.. Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture))];
         Func<Task> action = async () => await BannedUser.GetBannedUsers(session, "1234", userIds).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
             .WithParameterName("userIds");

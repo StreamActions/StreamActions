@@ -55,14 +55,7 @@ public static class HttpResponseMessageExtensions
             {
                 string content = await message.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-                if (string.IsNullOrWhiteSpace(content))
-                {
-                    response = new T() { Status = message.StatusCode };
-                }
-                else
-                {
-                    response = JsonSerializer.Deserialize<T>(content, options);
-                }
+                response = string.IsNullOrWhiteSpace(content) ? new T() { Status = message.StatusCode } : JsonSerializer.Deserialize<T>(content, options);
             }
         }
 

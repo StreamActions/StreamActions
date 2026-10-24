@@ -16,12 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using System;
 using System.Text.Json.Serialization;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Extensions;
 
@@ -101,7 +98,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().Be("FirstValue");
+        _ = result.Should().Be("FirstValue");
     }
 
     [Fact]
@@ -115,7 +112,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().Be("FIRSTVALUE");
+        _ = result.Should().Be("FIRSTVALUE");
     }
 
     [Fact]
@@ -129,7 +126,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().Be("firstvalue");
+        _ = result.Should().Be("firstvalue");
     }
 
     [Fact]
@@ -143,7 +140,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().Be("custom-first");
+        _ = result.Should().Be("custom-first");
     }
 
     [Fact]
@@ -157,7 +154,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().Be("MissingAttributeValue");
+        _ = result.Should().Be("MissingAttributeValue");
     }
 
     [Fact]
@@ -171,7 +168,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().Be("FirstValue");
+        _ = result.Should().Be("FirstValue");
     }
 
     [Fact]
@@ -185,7 +182,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().BeNull();
+        _ = result.Should().BeNull();
     }
 
     [Fact]
@@ -199,7 +196,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().BeNull();
+        _ = result.Should().BeNull();
     }
 
     [Fact]
@@ -213,7 +210,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().BeNull();
+        _ = result.Should().BeNull();
     }
 
     [Fact]
@@ -227,7 +224,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().Be("FirstValue");
+        _ = result.Should().Be("FirstValue");
     }
 
     [Fact]
@@ -241,7 +238,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().BeNull();
+        _ = result.Should().BeNull();
     }
 
     [Fact]
@@ -255,7 +252,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().Be("FirstValue");
+        _ = result.Should().Be("FirstValue");
     }
 
     [Fact]
@@ -269,7 +266,7 @@ public class JsonEnumExtensionsTests
         string? result = val.JsonValue();
 
         // Assert
-        result.Should().BeNull();
+        _ = result.Should().BeNull();
     }
 
     #endregion JsonValue

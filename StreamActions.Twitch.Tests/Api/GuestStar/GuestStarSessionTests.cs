@@ -16,17 +16,10 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using Microsoft.AspNetCore.Http;
-using StreamActions.Common.Exceptions;
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.GuestStar;
 using StreamActions.Twitch.Api.GuestStar.Objects;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
-using System.Net;
 
 namespace StreamActions.Twitch.Tests.Api.GuestStar;
 
@@ -64,10 +57,7 @@ public sealed class GuestStarSessionTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test execution.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 

@@ -17,9 +17,7 @@
  */
 
 using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Moderation.Objects;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
@@ -61,10 +59,7 @@ public sealed class VIPTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test completion.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -97,7 +92,7 @@ public sealed class VIPTests : IDisposable
     public async Task GetVIPs_WhenUserIdsCountExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadVips);
-        List<string> userIds = Enumerable.Range(1, 101).Select(static i => i.ToString(CultureInfo.InvariantCulture)).ToList();
+        List<string> userIds = [.. Enumerable.Range(1, 101).Select(static i => i.ToString(CultureInfo.InvariantCulture))];
         Func<Task> action = async () => await VIP.GetVIPs(session, "1234", userIds).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
             .WithParameterName("userId");

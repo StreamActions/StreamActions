@@ -20,7 +20,6 @@ using Microsoft.Extensions.Logging;
 using StreamActions.Common.Attributes;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Interfaces;
-using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;

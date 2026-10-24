@@ -421,7 +421,7 @@ public sealed record Prediction
             throw new ArgumentNullException(nameof(parameters.Id)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Status is null || parameters.Status == PredictionStatus.Invalid || parameters.Status == PredictionStatus.Active)
+        if (parameters.Status is null or PredictionStatus.Invalid or PredictionStatus.Active)
         {
             throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be one of Resolved, Canceled, or Locked").Log(TwitchApi.GetLogger());
         }

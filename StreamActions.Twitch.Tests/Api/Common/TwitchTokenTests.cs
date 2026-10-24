@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 
@@ -122,7 +121,7 @@ public class TwitchTokenTests
     public void FromApiResponse_WithOldToken_WhenOldTokenIsNull_ThrowsArgumentNullException()
     {
         Token response = new() { AccessToken = TestTokenFactory.CreateToken("BEARER") };
-        Action action = () => TwitchToken.FromApiResponse(response, (TwitchToken)null!);
+        Action action = () => TwitchToken.FromApiResponse(response, null!);
         _ = action.Should().Throw<ArgumentNullException>()
             .And.ParamName.Should().Be("oldToken");
     }

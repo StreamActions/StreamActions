@@ -43,7 +43,7 @@ public static class Logger
 
         if (message is not null)
         {
-            msg.Append(message);
+            _ = msg.Append(message);
             if (!string.IsNullOrWhiteSpace(message))
             {
                 hasContent = true;
@@ -58,10 +58,10 @@ public static class Logger
                 {
                     if (hasContent)
                     {
-                        msg.Append(' ');
+                        _ = msg.Append(' ');
                     }
 
-                    msg.Append('(').Append(param.Key).Append(" was `").Append(param.Value).Append("`)");
+                    _ = msg.Append('(').Append(param.Key).Append(" was `").Append(param.Value).Append("`)");
                     hasContent = true;
                 }
             }
@@ -69,7 +69,7 @@ public static class Logger
 
         if (!hasContent)
         {
-            msg.Append(nameof(msg) + " was null");
+            _ = msg.Append(nameof(msg) + " was null");
         }
 
         return msg.ToString();
@@ -106,21 +106,11 @@ public static class Logger
         {
             MethodBase? m = f.GetMethod();
 
-            if (m is null)
-            {
-                s = "null";
-            }
-            else
-            {
-                if (addNamespace)
-                {
-                    s = $"{m.ReflectedType?.Namespace ?? "null"}.{m.ReflectedType?.Name ?? "null"}.{m.Name}";
-                }
-                else
-                {
-                    s = $"{m.ReflectedType?.Name ?? "null"}.{m.Name}";
-                }
-            }
+            s = m is null
+                ? "null"
+                : addNamespace
+                    ? $"{m.ReflectedType?.Namespace ?? "null"}.{m.ReflectedType?.Name ?? "null"}.{m.Name}"
+                    : $"{m.ReflectedType?.Name ?? "null"}.{m.Name}";
         }
         else
         {
@@ -140,21 +130,11 @@ public static class Logger
                 {
                     MethodBase? m = f.GetMethod();
 
-                    if (m is null)
-                    {
-                        s = $"{s}@null";
-                    }
-                    else
-                    {
-                        if (addNamespace)
-                        {
-                            s = $"{s}@{m.ReflectedType?.Namespace ?? "null"}.{m.ReflectedType?.Name ?? "null"}.{m.Name}";
-                        }
-                        else
-                        {
-                            s = $"{s}@{m.ReflectedType?.Name ?? "null"}.{m.Name}";
-                        }
-                    }
+                    s = m is null
+                        ? $"{s}@null"
+                        : addNamespace
+                            ? $"{s}@{m.ReflectedType?.Namespace ?? "null"}.{m.ReflectedType?.Name ?? "null"}.{m.Name}"
+                            : $"{s}@{m.ReflectedType?.Name ?? "null"}.{m.Name}";
                 }
                 else
                 {

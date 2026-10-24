@@ -16,16 +16,13 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.Api.EventSub.Objects;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
 using System.Net;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.EventSub;
 
@@ -63,10 +60,7 @@ public sealed class EventSubSubscriptionTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after each test.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 

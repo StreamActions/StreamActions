@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Twitch.Api.Moderation.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Moderation;

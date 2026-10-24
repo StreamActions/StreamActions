@@ -16,11 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Predictions;
 using StreamActions.Twitch.Api.Predictions.Objects;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
@@ -61,10 +58,7 @@ public sealed class PredictionTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test completion.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -117,7 +111,7 @@ public sealed class PredictionTests : IDisposable
     public async Task GetPredictions_WhenIdCountExceeds25_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadPredictions);
-        List<Guid> ids = Enumerable.Range(1, 26).Select(static _ => Guid.NewGuid()).ToList();
+        List<Guid> ids = [.. Enumerable.Range(1, 26).Select(static _ => Guid.NewGuid())];
         Func<Task> action = async () => await Prediction.GetPredictions(session, "1234", id: ids).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
             .WithParameterName("id");
@@ -347,7 +341,7 @@ public sealed class PredictionTests : IDisposable
     public async Task CreatePrediction_WhenOutcomesCountOutOfRange_ThrowsArgumentOutOfRangeException(int count)
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManagePredictions);
-        List<PredictionCreationOutcome> outcomes = Enumerable.Range(1, count).Select(static i => new PredictionCreationOutcome { Title = $"Outcome {i}" }).ToList();
+        List<PredictionCreationOutcome> outcomes = [.. Enumerable.Range(1, count).Select(static i => new PredictionCreationOutcome { Title = $"Outcome {i}" })];
         PredictionCreationParameters parameters = new()
         {
             BroadcasterId = "1234",

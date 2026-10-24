@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Concurrent;
 

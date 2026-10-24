@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Schedule.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)

@@ -16,32 +16,18 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Limiters;
-using System;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Limiters;
 
 public sealed class BackoffBaseTests
 {
-    private sealed class TestBackoff : BackoffBase
+    private sealed class TestBackoff(TimeSpan initialDuration, TimeSpan maxDuration) : BackoffBase(initialDuration, maxDuration)
     {
-        public long NextTicksToReturn { get; set; }
+        public long NextTicksToReturn { get; set; } = initialDuration.Ticks * 2;
 
-        public TestBackoff(TimeSpan initialDuration, TimeSpan maxDuration)
-            : base(initialDuration, maxDuration)
-        {
-            this.NextTicksToReturn = initialDuration.Ticks * 2;
-        }
-
-        protected override long CalcNextDurationTicks()
-        {
-            return this.NextTicksToReturn;
-        }
+        protected override long CalcNextDurationTicks() => this.NextTicksToReturn;
 
         public void SetNextDurationReflectively(TimeSpan duration)
         {
@@ -71,11 +57,11 @@ public sealed class BackoffBaseTests
 
         TestBackoff backoff = new(initial, max);
 
-        backoff.IntialDuration.Should().Be(initial);
-        backoff.MaxDuration.Should().Be(max);
-        backoff.NextDuration.Should().Be(initial);
-        backoff.IsReset.Should().BeTrue();
-        backoff.IsMaxDuration.Should().BeFalse();
+        _ = backoff.IntialDuration.Should().Be(initial);
+        _ = backoff.MaxDuration.Should().Be(max);
+        _ = backoff.NextDuration.Should().Be(initial);
+        _ = backoff.IsReset.Should().BeTrue();
+        _ = backoff.IsMaxDuration.Should().BeFalse();
     }
 
     #endregion Constructor
@@ -89,7 +75,7 @@ public sealed class BackoffBaseTests
         TimeSpan initial = TimeSpan.FromTicks(50);
         TestBackoff backoff = new(initial, TimeSpan.FromTicks(100));
 
-        backoff.IntialDuration.Should().Be(initial);
+        _ = backoff.IntialDuration.Should().Be(initial);
     }
 
     #endregion IntialDuration
@@ -103,7 +89,7 @@ public sealed class BackoffBaseTests
         TimeSpan max = TimeSpan.FromTicks(200);
         TestBackoff backoff = new(TimeSpan.FromTicks(10), max);
 
-        backoff.MaxDuration.Should().Be(max);
+        _ = backoff.MaxDuration.Should().Be(max);
     }
 
     #endregion MaxDuration
@@ -118,11 +104,11 @@ public sealed class BackoffBaseTests
         TimeSpan max = TimeSpan.FromTicks(100);
         TestBackoff backoff = new(initial, max);
 
-        backoff.NextDuration.Should().Be(initial);
+        _ = backoff.NextDuration.Should().Be(initial);
 
         backoff.SetNextDurationReflectively(TimeSpan.FromTicks(20));
 
-        backoff.NextDuration.Should().Be(TimeSpan.FromTicks(20));
+        _ = backoff.NextDuration.Should().Be(TimeSpan.FromTicks(20));
     }
 
     #endregion NextDuration
@@ -136,11 +122,11 @@ public sealed class BackoffBaseTests
         TimeSpan initial = TimeSpan.FromTicks(10);
         TestBackoff backoff = new(initial, TimeSpan.FromTicks(100));
 
-        backoff.IsReset.Should().BeTrue();
+        _ = backoff.IsReset.Should().BeTrue();
 
         backoff.SetNextDurationReflectively(TimeSpan.FromTicks(20));
 
-        backoff.IsReset.Should().BeFalse();
+        _ = backoff.IsReset.Should().BeFalse();
     }
 
     #endregion IsReset
@@ -154,11 +140,11 @@ public sealed class BackoffBaseTests
         TimeSpan max = TimeSpan.FromTicks(100);
         TestBackoff backoff = new(TimeSpan.FromTicks(10), max);
 
-        backoff.IsMaxDuration.Should().BeFalse();
+        _ = backoff.IsMaxDuration.Should().BeFalse();
 
         backoff.SetNextDurationReflectively(max);
 
-        backoff.IsMaxDuration.Should().BeTrue();
+        _ = backoff.IsMaxDuration.Should().BeTrue();
     }
 
     #endregion IsMaxDuration
@@ -174,14 +160,14 @@ public sealed class BackoffBaseTests
 
         // Advance _nextDuration artificially
         backoff.SetNextDurationReflectively(TimeSpan.FromTicks(50));
-        backoff.NextDuration.Should().Be(TimeSpan.FromTicks(50));
-        backoff.IsReset.Should().BeFalse();
+        _ = backoff.NextDuration.Should().Be(TimeSpan.FromTicks(50));
+        _ = backoff.IsReset.Should().BeFalse();
 
         // Call Reset
         backoff.Reset(TimeSpan.FromSeconds(1));
 
-        backoff.NextDuration.Should().Be(initial);
-        backoff.IsReset.Should().BeTrue();
+        _ = backoff.NextDuration.Should().Be(initial);
+        _ = backoff.IsReset.Should().BeTrue();
     }
 
     [Fact]
@@ -205,7 +191,7 @@ public sealed class BackoffBaseTests
             rwl.EnterWriteLock();
             try
             {
-                lockTakenEvent.Release();
+                _ = lockTakenEvent.Release();
                 releaseLockEvent.Wait(TestContext.Current.CancellationToken);
             }
             finally
@@ -219,11 +205,11 @@ public sealed class BackoffBaseTests
         try
         {
             Action act = () => backoff.Reset(TimeSpan.FromMilliseconds(10));
-            act.Should().Throw<TimeoutException>();
+            _ = act.Should().Throw<TimeoutException>();
         }
         finally
         {
-            releaseLockEvent.Release(); // Let background thread release the lock
+            _ = releaseLockEvent.Release(); // Let background thread release the lock
             await lockTask.ConfigureAwait(true);
         }
     }
@@ -238,13 +224,14 @@ public sealed class BackoffBaseTests
     {
         TimeSpan initial = TimeSpan.FromTicks(10);
         TimeSpan max = TimeSpan.FromTicks(100);
-        TestBackoff backoff = new(initial, max);
-
-        backoff.NextTicksToReturn = 50;
+        TestBackoff backoff = new(initial, max)
+        {
+            NextTicksToReturn = 50
+        };
 
         await backoff.Wait(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
 
-        backoff.NextDuration.Should().Be(TimeSpan.FromTicks(50));
+        _ = backoff.NextDuration.Should().Be(TimeSpan.FromTicks(50));
     }
 
     #endregion Wait

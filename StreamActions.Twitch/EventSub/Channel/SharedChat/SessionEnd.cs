@@ -18,7 +18,6 @@
 
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
-using StreamActions.Twitch.EventSub.Channel.SharedChat.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.SharedChat;

@@ -16,18 +16,13 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Common.Exceptions;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Chat;
-using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Drawing;
 using System.Globalization;
 using System.Net;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.Chat;
 
@@ -65,10 +60,7 @@ public sealed class ChatColorTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after each test.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -111,7 +103,7 @@ public sealed class ChatColorTests : IDisposable
     public async Task GetUserChatColor_WhenUserIdCountExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession();
-        List<string> userIds = Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture)).ToList();
+        List<string> userIds = [.. Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture))];
         Func<Task> action = async () => await ChatColor.GetUserChatColor(session, userIds).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
             .WithParameterName("userId");

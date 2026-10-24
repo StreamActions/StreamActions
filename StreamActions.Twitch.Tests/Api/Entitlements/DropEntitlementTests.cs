@@ -16,14 +16,10 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Entitlements;
-using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
 using System.Net;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.Entitlements;
 
@@ -66,10 +62,7 @@ public sealed class DropEntitlementTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after each test.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -95,7 +88,7 @@ public sealed class DropEntitlementTests : IDisposable
     public async Task GetDropsEntitlements_WhenIdsCountExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        List<string> ids = Enumerable.Range(1, 101).Select(i => $"id{i}").ToList();
+        List<string> ids = [.. Enumerable.Range(1, 101).Select(i => $"id{i}")];
 
         Func<Task> action = async () => await DropEntitlement.GetDropsEntitlements(session, ids: ids).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))

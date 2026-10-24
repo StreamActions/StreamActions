@@ -17,8 +17,6 @@
  */
 
 using StreamActions.Common.Extensions;
-using System;
-using System.Threading.Tasks;
 
 namespace StreamActions.Common.Tests.Extensions;
 
@@ -40,8 +38,8 @@ public class EventHandlerExtensionsTests
 
         EventHandler<EventArgs> handler = (sender, e) =>
         {
-            sender.Should().Be(expectedSender);
-            e.Should().Be(expectedArgs);
+            _ = sender.Should().Be(expectedSender);
+            _ = e.Should().Be(expectedArgs);
             wasInvoked = true;
         };
 
@@ -49,7 +47,7 @@ public class EventHandlerExtensionsTests
         await handler.InvokeAsync(expectedSender, expectedArgs).ConfigureAwait(true);
 
         // Assert
-        wasInvoked.Should().BeTrue();
+        _ = wasInvoked.Should().BeTrue();
     }
 
     [Fact]
@@ -63,7 +61,7 @@ public class EventHandlerExtensionsTests
         Func<Task> act = async () => await handler!.InvokeAsync(new object(), new EventArgs()).ConfigureAwait(true);
 
         // Assert
-        await act.Should().NotThrowAsync().ConfigureAwait(true);
+        _ = await act.Should().NotThrowAsync().ConfigureAwait(true);
     }
 
     #endregion

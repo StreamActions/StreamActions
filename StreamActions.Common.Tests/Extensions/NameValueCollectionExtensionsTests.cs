@@ -33,7 +33,7 @@ public class NameValueCollectionExtensionsTests
 
         // Act & Assert
         Action act = () => collection!.Add("key", ["value1"]);
-        act.Should().Throw<ArgumentNullException>().WithParameterName("collection");
+        _ = act.Should().Throw<ArgumentNullException>().WithParameterName("collection");
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class NameValueCollectionExtensionsTests
 
         // Act & Assert
         Action act = () => collection.Add("key", values!);
-        act.Should().Throw<ArgumentNullException>().WithParameterName("values");
+        _ = act.Should().Throw<ArgumentNullException>().WithParameterName("values");
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class NameValueCollectionExtensionsTests
         collection.Add("key", values);
 
         // Assert
-        collection.GetValues("key").Should().BeEquivalentTo(values);
+        _ = collection.GetValues("key").Should().BeEquivalentTo(values);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class NameValueCollectionExtensionsTests
         collection.Add(null, values);
 
         // Assert
-        collection.GetValues(null).Should().BeEquivalentTo(values);
+        _ = collection.GetValues(null).Should().BeEquivalentTo(values);
     }
 
     [Fact]
@@ -88,6 +88,6 @@ public class NameValueCollectionExtensionsTests
 
         // Assert
         // NameValueCollection ignores null values when retrieving via GetValues if the key already exists.
-        collection.GetValues("key").Should().BeEquivalentTo(_expectedValues);
+        _ = collection.GetValues("key").Should().BeEquivalentTo(_expectedValues);
     }
 }

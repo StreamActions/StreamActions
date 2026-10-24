@@ -219,7 +219,7 @@ public sealed record BlockedTerm
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Text.Length < 2 || parameters.Text.Length > 500)
+        if (parameters.Text.Length is < 2 or > 500)
         {
             throw new ArgumentOutOfRangeException(nameof(parameters), parameters.Text.Length, "text must be between 2 and 500 characters.").Log(TwitchApi.GetLogger());
         }

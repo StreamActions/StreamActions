@@ -16,12 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Extensions;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Extensions;
 
@@ -48,8 +43,8 @@ public class CancellationTokenExtensionsTests
         Task completedTask = await Task.WhenAny(waitTask, Task.Delay(1000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
 
         // Assert
-        completedTask.Should().Be(waitTask, "the task should complete immediately since the token was already canceled");
-        waitTask.IsCompletedSuccessfully.Should().BeTrue();
+        _ = completedTask.Should().Be(waitTask, "the task should complete immediately since the token was already canceled");
+        _ = waitTask.IsCompletedSuccessfully.Should().BeTrue();
     }
 
     [Fact]
@@ -63,7 +58,7 @@ public class CancellationTokenExtensionsTests
         Task waitTask = cts.Token.WaitAsync();
 
         // Assert it's not complete initially
-        waitTask.IsCompleted.Should().BeFalse("the task should not complete before the token is canceled");
+        _ = waitTask.IsCompleted.Should().BeFalse("the task should not complete before the token is canceled");
 
         // Cancel after a short delay
         cts.CancelAfter(50);
@@ -72,8 +67,8 @@ public class CancellationTokenExtensionsTests
         Task completedTask = await Task.WhenAny(waitTask, Task.Delay(2000, TestContext.Current.CancellationToken)).ConfigureAwait(true);
 
         // Assert
-        completedTask.Should().Be(waitTask, "the task should complete after the token is canceled");
-        waitTask.IsCompletedSuccessfully.Should().BeTrue();
+        _ = completedTask.Should().Be(waitTask, "the task should complete after the token is canceled");
+        _ = waitTask.IsCompletedSuccessfully.Should().BeTrue();
     }
 
     [Fact]
@@ -90,8 +85,8 @@ public class CancellationTokenExtensionsTests
         Task completedTask = await Task.WhenAny(waitTask, Task.Delay(100, TestContext.Current.CancellationToken)).ConfigureAwait(true);
 
         // Assert
-        completedTask.Should().NotBe(waitTask, "the task should not complete if the token is not canceled");
-        waitTask.IsCompleted.Should().BeFalse();
+        _ = completedTask.Should().NotBe(waitTask, "the task should not complete if the token is not canceled");
+        _ = waitTask.IsCompleted.Should().BeFalse();
     }
 
     #endregion WaitAsync

@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Twitch.EventSub.Channel.Poll.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.Poll.Objects;

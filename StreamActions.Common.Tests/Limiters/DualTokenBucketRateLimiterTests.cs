@@ -16,12 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Limiters;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Limiters;
 
@@ -37,7 +32,7 @@ public sealed class DualTokenBucketRateLimiterTests
 
         Action act = () => _ = new DualTokenBucketRateLimiter(null!, globalBucket);
 
-        act.Should().Throw<ArgumentNullException>().WithParameterName("localBucket");
+        _ = act.Should().Throw<ArgumentNullException>().WithParameterName("localBucket");
     }
 
     [Fact]
@@ -48,7 +43,7 @@ public sealed class DualTokenBucketRateLimiterTests
 
         Action act = () => _ = new DualTokenBucketRateLimiter(localBucket, null!);
 
-        act.Should().Throw<ArgumentNullException>().WithParameterName("globalBucket");
+        _ = act.Should().Throw<ArgumentNullException>().WithParameterName("globalBucket");
     }
 
     [Fact]
@@ -60,8 +55,8 @@ public sealed class DualTokenBucketRateLimiterTests
 
         DualTokenBucketRateLimiter limiter = new(localBucket, globalBucket);
 
-        limiter.LocalBucket.Should().BeSameAs(localBucket);
-        limiter.GlobalBucket.Should().BeSameAs(globalBucket);
+        _ = limiter.LocalBucket.Should().BeSameAs(localBucket);
+        _ = limiter.GlobalBucket.Should().BeSameAs(globalBucket);
     }
 
     #endregion Constructor
@@ -77,7 +72,7 @@ public sealed class DualTokenBucketRateLimiterTests
 
         DualTokenBucketRateLimiter limiter = new(localBucket, globalBucket);
 
-        limiter.IsBothFull.Should().BeTrue();
+        _ = limiter.IsBothFull.Should().BeTrue();
     }
 
     [Fact]
@@ -91,7 +86,7 @@ public sealed class DualTokenBucketRateLimiterTests
 
         DualTokenBucketRateLimiter limiter = new(localBucket, globalBucket);
 
-        limiter.IsBothFull.Should().BeFalse();
+        _ = limiter.IsBothFull.Should().BeFalse();
     }
 
     [Fact]
@@ -105,7 +100,7 @@ public sealed class DualTokenBucketRateLimiterTests
 
         DualTokenBucketRateLimiter limiter = new(localBucket, globalBucket);
 
-        limiter.IsBothFull.Should().BeFalse();
+        _ = limiter.IsBothFull.Should().BeFalse();
     }
 
     [Fact]
@@ -120,7 +115,7 @@ public sealed class DualTokenBucketRateLimiterTests
 
         DualTokenBucketRateLimiter limiter = new(localBucket, globalBucket);
 
-        limiter.IsBothFull.Should().BeFalse();
+        _ = limiter.IsBothFull.Should().BeFalse();
     }
 
     #endregion IsBothFull
@@ -138,9 +133,9 @@ public sealed class DualTokenBucketRateLimiterTests
 
         bool result = await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
 
-        result.Should().BeTrue();
-        localBucket.Remaining.Should().Be(0);
-        globalBucket.Remaining.Should().Be(0);
+        _ = result.Should().BeTrue();
+        _ = localBucket.Remaining.Should().Be(0);
+        _ = globalBucket.Remaining.Should().Be(0);
     }
 
     [Fact]
@@ -157,8 +152,8 @@ public sealed class DualTokenBucketRateLimiterTests
 
         bool result = await limiter.WaitForRateLimit(TimeSpan.FromMilliseconds(50)).ConfigureAwait(true);
 
-        result.Should().BeFalse();
-        globalBucket.Remaining.Should().Be(1); // Token should be returned
+        _ = result.Should().BeFalse();
+        _ = globalBucket.Remaining.Should().Be(1); // Token should be returned
     }
 
     [Fact]
@@ -175,8 +170,8 @@ public sealed class DualTokenBucketRateLimiterTests
 
         bool result = await limiter.WaitForRateLimit(TimeSpan.FromMilliseconds(50)).ConfigureAwait(true);
 
-        result.Should().BeFalse();
-        localBucket.Remaining.Should().Be(1); // Token should be returned
+        _ = result.Should().BeFalse();
+        _ = localBucket.Remaining.Should().Be(1); // Token should be returned
     }
 
     [Fact]
@@ -199,8 +194,8 @@ public sealed class DualTokenBucketRateLimiterTests
         // Even though it's canceled, the method catches OperationCanceledException and returns false
         bool result = await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(true);
 
-        result.Should().BeFalse();
-        globalBucket.Remaining.Should().Be(1); // Token should be returned
+        _ = result.Should().BeFalse();
+        _ = globalBucket.Remaining.Should().Be(1); // Token should be returned
     }
 
     [Fact]
@@ -220,9 +215,9 @@ public sealed class DualTokenBucketRateLimiterTests
 
         bool result = await limiter.WaitForRateLimit(TimeSpan.FromMilliseconds(50)).ConfigureAwait(true);
 
-        result.Should().BeFalse();
-        localBucket.Remaining.Should().Be(0);
-        globalBucket.Remaining.Should().Be(0);
+        _ = result.Should().BeFalse();
+        _ = localBucket.Remaining.Should().Be(0);
+        _ = globalBucket.Remaining.Should().Be(0);
     }
 
     [Fact]
@@ -245,8 +240,8 @@ public sealed class DualTokenBucketRateLimiterTests
         // Even though it's canceled, the method catches OperationCanceledException and returns false
         bool result = await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(true);
 
-        result.Should().BeFalse();
-        localBucket.Remaining.Should().Be(1); // Token should be returned
+        _ = result.Should().BeFalse();
+        _ = localBucket.Remaining.Should().Be(1); // Token should be returned
     }
 
     #endregion WaitForRateLimit

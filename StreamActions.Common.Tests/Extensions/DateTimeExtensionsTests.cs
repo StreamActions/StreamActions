@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common.Extensions;
-using System;
 
 namespace StreamActions.Common.Tests.Extensions;
 
@@ -37,7 +36,7 @@ public class DateTimeExtensionsTests
         string result = dt.ToRfc3339();
 
         // Assert
-        result.Should().Be("2023-10-24T15:30:45Z");
+        _ = result.Should().Be("2023-10-24T15:30:45Z");
     }
 
     [Fact]
@@ -53,7 +52,7 @@ public class DateTimeExtensionsTests
         string result = dtUnspecified.ToRfc3339();
 
         // Assert
-        result.Should().Be(expectedString);
+        _ = result.Should().Be(expectedString);
     }
 
     [Fact]
@@ -69,7 +68,7 @@ public class DateTimeExtensionsTests
         string result = dtLocal.ToRfc3339();
 
         // Assert
-        result.Should().Be(expectedString);
+        _ = result.Should().Be(expectedString);
     }
 
     [Fact]
@@ -85,7 +84,7 @@ public class DateTimeExtensionsTests
         // Assert
         // The expected value is 0001-01-01T00:00:00Z but might vary based on local time conversion if MinValue is local.
         // We use MinValue.ToUniversalTime() to ensure it's in UTC for a deterministic test.
-        result.Should().Be("0001-01-01T00:00:00Z");
+        _ = result.Should().Be("0001-01-01T00:00:00Z");
     }
 
     [Fact]
@@ -99,6 +98,6 @@ public class DateTimeExtensionsTests
         string result = dt.ToRfc3339();
 
         // Assert
-        result.Should().Be("9999-12-31T23:59:59Z");
+        _ = result.Should().Be("9999-12-31T23:59:59Z");
     }
 }

@@ -21,7 +21,6 @@ using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
-using StreamActions.Twitch.Api.Chat.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -395,7 +394,7 @@ public sealed record Emote
             throw new ArgumentNullException(nameof(emoteSetIds)).Log(TwitchApi.GetLogger());
         }
 
-        IReadOnlyList<string> emoteSetIdList = emoteSetIds as IReadOnlyList<string> ?? emoteSetIds.ToArray();
+        IReadOnlyList<string> emoteSetIdList = emoteSetIds as IReadOnlyList<string> ?? [.. emoteSetIds];
 
         if (emoteSetIdList.Count == 0)
         {
@@ -409,7 +408,7 @@ public sealed record Emote
 
         session.RequireUserOrAppToken();
 
-        System.Collections.Specialized.NameValueCollection query = new();
+        System.Collections.Specialized.NameValueCollection query = [];
         foreach (string emoteSetId in emoteSetIdList)
         {
             query.Add("emote_set_id", emoteSetId);

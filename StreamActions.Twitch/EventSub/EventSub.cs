@@ -513,6 +513,8 @@ public sealed class EventSub
                         eventData = factory(payloadBytes, metadata);
                     }
                     break;
+                default:
+                    break;
             }
         }
 

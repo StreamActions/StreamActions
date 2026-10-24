@@ -16,15 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.Api.ChannelPoints;
-using StreamActions.Twitch.Api.ChannelPoints.Objects;
-using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.ChannelPoints;
 
@@ -62,10 +56,7 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test execution.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -121,7 +112,7 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
     public async Task GetCustomRewardRedemption_WhenIdCountExceeds50_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadRedemptions);
-        List<Guid> ids = Enumerable.Range(1, 51).Select(_ => Guid.NewGuid()).ToList();
+        List<Guid> ids = [.. Enumerable.Range(1, 51).Select(_ => Guid.NewGuid())];
         Func<Task> action = async () => await ChannelPointsRedemption.GetCustomRewardRedemption(session, "274637212", Guid.NewGuid(), id: ids).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
             .WithParameterName("id");
@@ -318,7 +309,7 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
     public async Task UpdateRedemptionStatus_WhenIdCountExceeds50_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageRedemptions);
-        List<Guid> ids = Enumerable.Range(1, 51).Select(_ => Guid.NewGuid()).ToList();
+        List<Guid> ids = [.. Enumerable.Range(1, 51).Select(_ => Guid.NewGuid())];
         ChannelPointsRedemptionUpdateParameters parameters = new() { Status = ChannelPointsRedemption.RedemptionStatus.Fulfilled };
         Func<Task> action = async () => await ChannelPointsRedemption.UpdateRedemptionStatus(session, ids, "274637212", Guid.NewGuid(), parameters).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))

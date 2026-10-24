@@ -16,17 +16,12 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Common.Exceptions;
 using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Schedule;
 using StreamActions.Twitch.Api.Schedule.Objects;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.Schedule;
 
@@ -64,10 +59,7 @@ public sealed class ChannelScheduleTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after each test.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -110,7 +102,7 @@ public sealed class ChannelScheduleTests : IDisposable
     public async Task GetChannelStreamSchedule_WhenSegmentIdsExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession();
-        List<string> segmentIds = Enumerable.Range(1, 101).Select(i => $"seg_{i}").ToList();
+        List<string> segmentIds = [.. Enumerable.Range(1, 101).Select(i => $"seg_{i}")];
 
         Func<Task> action = async () => await ChannelSchedule.GetChannelStreamSchedule(session, "141981764", segmentIds: segmentIds).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))

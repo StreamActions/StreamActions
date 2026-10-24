@@ -16,11 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Json.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Json.Serialization;
 
@@ -51,7 +49,7 @@ public class JsonUpperCaseEnumConverterTests
         JsonUpperCaseEnumConverter<TestEnumValue> converter = new();
 
         // Act & Assert
-        converter.HandleNull.Should().BeTrue();
+        _ = converter.HandleNull.Should().BeTrue();
     }
 
     #endregion HandleNull
@@ -71,7 +69,7 @@ public class JsonUpperCaseEnumConverterTests
         string json = JsonSerializer.Serialize(testObject);
 
         // Assert
-        json.Should().Be(expectedJson);
+        _ = json.Should().Be(expectedJson);
     }
 
     #endregion Write
@@ -88,8 +86,8 @@ public class JsonUpperCaseEnumConverterTests
         TestClass? result = JsonSerializer.Deserialize<TestClass>(json);
 
         // Assert
-        result.Should().NotBeNull();
-        result.EnumValue.Should().Be(expectedEnum);
+        _ = result.Should().NotBeNull();
+        _ = result.EnumValue.Should().Be(expectedEnum);
     }
 
     [Theory]
@@ -102,8 +100,8 @@ public class JsonUpperCaseEnumConverterTests
         TestClass? result = JsonSerializer.Deserialize<TestClass>(json);
 
         // Assert
-        result.Should().NotBeNull();
-        result.EnumValue.Should().Be(expectedEnum);
+        _ = result.Should().NotBeNull();
+        _ = result.EnumValue.Should().Be(expectedEnum);
     }
 
     [Theory]
@@ -116,8 +114,8 @@ public class JsonUpperCaseEnumConverterTests
         TestClass? result = JsonSerializer.Deserialize<TestClass>(json);
 
         // Assert
-        result.Should().NotBeNull();
-        result.EnumValue.Should().Be(default(TestEnumValue));
+        _ = result.Should().NotBeNull();
+        _ = result.EnumValue.Should().Be(default);
     }
 
     #endregion Read

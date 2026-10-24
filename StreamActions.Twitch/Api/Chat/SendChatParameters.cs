@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common.Logging;
-using StreamActions.Twitch.Api.Chat.Objects;
 using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
@@ -101,7 +100,7 @@ public sealed record SendChatParameters
 
         if (message.StartsWith("/me "))
         {
-            message = message.Substring(4);
+            message = message[4..];
         }
 
         return char.ConvertFromUtf32(1) + "ACTION " + message + char.ConvertFromUtf32(1);

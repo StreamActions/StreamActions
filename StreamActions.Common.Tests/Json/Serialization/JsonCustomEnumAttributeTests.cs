@@ -16,10 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Json.Serialization;
-using System;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Json.Serialization;
 
@@ -41,7 +38,7 @@ public class JsonCustomEnumAttributeTests
         var attribute = new JsonCustomEnumAttribute(expectedValue);
 
         // Assert
-        attribute.Value.Should().Be(expectedValue);
+        _ = attribute.Value.Should().Be(expectedValue);
     }
 
     #endregion Constructor
@@ -59,10 +56,10 @@ public class JsonCustomEnumAttributeTests
         var attributes = type.GetCustomAttributes(typeof(AttributeUsageAttribute), false);
 
         // Assert
-        attributes.Should().ContainSingle();
+        _ = attributes.Should().ContainSingle();
         var usageAttribute = (AttributeUsageAttribute)attributes[0];
-        usageAttribute.ValidOn.Should().Be(AttributeTargets.Field);
-        usageAttribute.AllowMultiple.Should().BeFalse();
+        _ = usageAttribute.ValidOn.Should().Be(AttributeTargets.Field);
+        _ = usageAttribute.AllowMultiple.Should().BeFalse();
     }
 
     #endregion AttributeUsage

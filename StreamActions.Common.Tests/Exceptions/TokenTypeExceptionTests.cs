@@ -16,10 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Exceptions;
-using System;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Exceptions;
 
@@ -38,10 +35,10 @@ public class TokenTypeExceptionTests
         var exception = new TokenTypeException();
 
         // Assert
-        exception.Message.Should().Be("Incorrect token type.");
-        exception.ExpectedType.Should().BeNull();
-        exception.ActualType.Should().BeNull();
-        exception.InnerException.Should().BeNull();
+        _ = exception.Message.Should().Be("Incorrect token type.");
+        _ = exception.ExpectedType.Should().BeNull();
+        _ = exception.ActualType.Should().BeNull();
+        _ = exception.InnerException.Should().BeNull();
     }
 
     #endregion TokenTypeException()
@@ -60,10 +57,10 @@ public class TokenTypeExceptionTests
         var exception = new TokenTypeException(expected, actual);
 
         // Assert
-        exception.Message.Should().Be("Incorrect token type. Expected: expectedType. Actual: actualType.");
-        exception.ExpectedType.Should().Be(expected);
-        exception.ActualType.Should().Be(actual);
-        exception.InnerException.Should().BeNull();
+        _ = exception.Message.Should().Be("Incorrect token type. Expected: expectedType. Actual: actualType.");
+        _ = exception.ExpectedType.Should().Be(expected);
+        _ = exception.ActualType.Should().Be(actual);
+        _ = exception.InnerException.Should().BeNull();
     }
 
     [Fact]
@@ -74,10 +71,10 @@ public class TokenTypeExceptionTests
         var exception = new TokenTypeException(null, null);
 
         // Assert
-        exception.Message.Should().Be("Incorrect token type. Expected: . Actual: .");
-        exception.ExpectedType.Should().BeNull();
-        exception.ActualType.Should().BeNull();
-        exception.InnerException.Should().BeNull();
+        _ = exception.Message.Should().Be("Incorrect token type. Expected: . Actual: .");
+        _ = exception.ExpectedType.Should().BeNull();
+        _ = exception.ActualType.Should().BeNull();
+        _ = exception.InnerException.Should().BeNull();
     }
 
     #endregion TokenTypeException(string?, string?)
@@ -97,10 +94,10 @@ public class TokenTypeExceptionTests
         var exception = new TokenTypeException(expected, actual, innerException);
 
         // Assert
-        exception.Message.Should().Be("Incorrect token type. Expected: expectedType. Actual: actualType.");
-        exception.ExpectedType.Should().Be(expected);
-        exception.ActualType.Should().Be(actual);
-        exception.InnerException.Should().Be(innerException);
+        _ = exception.Message.Should().Be("Incorrect token type. Expected: expectedType. Actual: actualType.");
+        _ = exception.ExpectedType.Should().Be(expected);
+        _ = exception.ActualType.Should().Be(actual);
+        _ = exception.InnerException.Should().Be(innerException);
     }
 
     #endregion TokenTypeException(string?, string?, Exception?)

@@ -16,13 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Common.Exceptions;
 using StreamActions.Twitch.Api.Channels;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.Channels;
 
@@ -60,10 +56,7 @@ public sealed class ChannelFollowerTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test execution.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 

@@ -17,8 +17,6 @@
  */
 
 using StreamActions.Common.Extensions;
-using System;
-using System.Collections.Generic;
 
 namespace StreamActions.Common.Tests.Extensions;
 
@@ -31,7 +29,7 @@ public class ListExtensionsTests
     {
         List<int> source = null!;
         Action act = () => source.GetElementAtOrDefault(0);
-        act.Should().ThrowExactly<ArgumentNullException>().WithParameterName("source");
+        _ = act.Should().ThrowExactly<ArgumentNullException>().WithParameterName("source");
     }
 
     [Fact]
@@ -39,7 +37,7 @@ public class ListExtensionsTests
     {
         List<int> source = [1, 2, 3];
         var result = source.GetElementAtOrDefault(-1);
-        result.Should().Be(0); // default(int)
+        _ = result.Should().Be(0); // default(int)
     }
 
     [Fact]
@@ -47,7 +45,7 @@ public class ListExtensionsTests
     {
         List<int> source = [10, 20, 30];
         var result = source.GetElementAtOrDefault(1);
-        result.Should().Be(20);
+        _ = result.Should().Be(20);
     }
 
     [Fact]
@@ -55,7 +53,7 @@ public class ListExtensionsTests
     {
         List<int> source = [10, 20, 30];
         var result = source.GetElementAtOrDefault(5);
-        result.Should().Be(0); // default(int)
+        _ = result.Should().Be(0); // default(int)
     }
 
     [Fact]
@@ -63,7 +61,7 @@ public class ListExtensionsTests
     {
         List<int> source = [10, 20, 30];
         var result = source.GetElementAtOrDefault(5, 99);
-        result.Should().Be(99);
+        _ = result.Should().Be(99);
     }
 
     #endregion GetElementAtOrDefault
@@ -75,7 +73,7 @@ public class ListExtensionsTests
     {
         List<string> source = null!;
         Action act = () => source.IsNullEmptyOrOutOfRange(0);
-        act.Should().ThrowExactly<ArgumentNullException>().WithParameterName("source");
+        _ = act.Should().ThrowExactly<ArgumentNullException>().WithParameterName("source");
     }
 
     [Fact]
@@ -83,7 +81,7 @@ public class ListExtensionsTests
     {
         List<string> source = ["test"];
         var result = source.IsNullEmptyOrOutOfRange(-1);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -91,7 +89,7 @@ public class ListExtensionsTests
     {
         List<string> source = ["test"];
         var result = source.IsNullEmptyOrOutOfRange(5);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -99,7 +97,7 @@ public class ListExtensionsTests
     {
         List<string> source = [null!];
         var result = source.IsNullEmptyOrOutOfRange(0);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -107,7 +105,7 @@ public class ListExtensionsTests
     {
         List<string> source = [""];
         var result = source.IsNullEmptyOrOutOfRange(0);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -115,7 +113,7 @@ public class ListExtensionsTests
     {
         List<string> source = ["content"];
         var result = source.IsNullEmptyOrOutOfRange(0);
-        result.Should().BeFalse();
+        _ = result.Should().BeFalse();
     }
 
     [Fact]
@@ -123,7 +121,7 @@ public class ListExtensionsTests
     {
         List<string> source = ["   "];
         var result = source.IsNullEmptyOrOutOfRange(0);
-        result.Should().BeFalse();
+        _ = result.Should().BeFalse();
     }
 
     #endregion IsNullEmptyOrOutOfRange
@@ -135,7 +133,7 @@ public class ListExtensionsTests
     {
         List<string?> source = null!;
         Action act = () => source.IsNullWhiteSpaceOrOutOfRange(0);
-        act.Should().ThrowExactly<ArgumentNullException>().WithParameterName("source");
+        _ = act.Should().ThrowExactly<ArgumentNullException>().WithParameterName("source");
     }
 
     [Fact]
@@ -143,7 +141,7 @@ public class ListExtensionsTests
     {
         List<string?> source = ["test"];
         var result = source.IsNullWhiteSpaceOrOutOfRange(-1);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -151,7 +149,7 @@ public class ListExtensionsTests
     {
         List<string?> source = ["test"];
         var result = source.IsNullWhiteSpaceOrOutOfRange(5);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -159,7 +157,7 @@ public class ListExtensionsTests
     {
         List<string?> source = ["test"];
         var result = source.IsNullWhiteSpaceOrOutOfRange(1);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -167,7 +165,7 @@ public class ListExtensionsTests
     {
         List<string?> source = [null];
         var result = source.IsNullWhiteSpaceOrOutOfRange(0);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -175,7 +173,7 @@ public class ListExtensionsTests
     {
         List<string?> source = [""];
         var result = source.IsNullWhiteSpaceOrOutOfRange(0);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -183,7 +181,7 @@ public class ListExtensionsTests
     {
         List<string?> source = ["   "];
         var result = source.IsNullWhiteSpaceOrOutOfRange(0);
-        result.Should().BeTrue();
+        _ = result.Should().BeTrue();
     }
 
     [Fact]
@@ -191,7 +189,7 @@ public class ListExtensionsTests
     {
         List<string?> source = ["content"];
         var result = source.IsNullWhiteSpaceOrOutOfRange(0);
-        result.Should().BeFalse();
+        _ = result.Should().BeFalse();
     }
 
     #endregion IsNullWhiteSpaceOrOutOfRange

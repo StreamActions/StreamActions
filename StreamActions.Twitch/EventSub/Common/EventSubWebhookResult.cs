@@ -16,8 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.Api.EventSub;
-
 namespace StreamActions.Twitch.EventSub.Common;
 
 /// <summary>

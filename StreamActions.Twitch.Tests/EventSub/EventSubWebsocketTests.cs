@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.EventSub.Channel;
 using StreamActions.Twitch.EventSub.Common;
@@ -24,7 +23,6 @@ using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
 using System.Net.WebSockets;
 using System.Text;
-using Xunit;
 using EventSubService = StreamActions.Twitch.EventSub.EventSub;
 
 namespace StreamActions.Twitch.Tests.EventSub;
@@ -63,10 +61,7 @@ public sealed class EventSubWebsocketTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test completion.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 

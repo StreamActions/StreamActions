@@ -16,18 +16,12 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Common.Exceptions;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Channels;
-using StreamActions.Twitch.Api.Channels.Objects;
-using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
 using System.Net;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.Channels;
 
@@ -75,10 +69,7 @@ public sealed class ChannelTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test execution.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -117,7 +108,7 @@ public sealed class ChannelTests : IDisposable
     public async Task GetChannelInformation_WhenBroadcasterIdCountExceeds100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        List<string> ids = Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture)).ToList();
+        List<string> ids = [.. Enumerable.Range(1, 101).Select(i => i.ToString(CultureInfo.InvariantCulture))];
         Func<Task> action = async () => await Channel.GetChannelInformation(session, ids).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
             .WithParameterName("broadcasterId");
@@ -248,7 +239,7 @@ public sealed class ChannelTests : IDisposable
     public async Task ModifyChannelInformation_WhenTagsCountExceeds10_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
-        List<string> tags = Enumerable.Range(1, 11).Select(i => $"Tag{i}").ToList();
+        List<string> tags = [.. Enumerable.Range(1, 11).Select(i => $"Tag{i}")];
         ModifyChannelParameters parameters = new() { Tags = tags };
         Func<Task> action = async () => await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))

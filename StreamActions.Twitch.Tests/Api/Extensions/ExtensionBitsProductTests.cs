@@ -16,16 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using Microsoft.AspNetCore.Http;
-using StreamActions.Common.Exceptions;
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Extensions;
 using StreamActions.Twitch.Api.Extensions.Objects;
-using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
-using System.Net;
 
 namespace StreamActions.Twitch.Tests.Api.Extensions;
 
@@ -63,10 +56,7 @@ public sealed class ExtensionBitsProductTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test execution.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -137,14 +127,9 @@ public sealed class ExtensionBitsProductTests : IDisposable
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/bits/extensions");
-        if (shouldIncludeAll)
-        {
-            _ = request.QueryString.Should().Contain("should_include_all=true");
-        }
-        else
-        {
-            _ = request.QueryString.Should().NotContain("should_include_all=true");
-        }
+        _ = shouldIncludeAll
+            ? request.QueryString.Should().Contain("should_include_all=true")
+            : request.QueryString.Should().NotContain("should_include_all=true");
     }
 
     #endregion GetExtensionBitsProducts

@@ -16,16 +16,11 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Streams;
 using StreamActions.Twitch.Api.Streams.Objects;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.Streams;
 
@@ -63,10 +58,7 @@ public sealed class StreamMarkerTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after each test.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -321,11 +313,11 @@ public sealed class StreamMarkerTests : IDisposable
         _ = userMarkers.UserName.Should().Be("TestUser");
         _ = userMarkers.Videos.Should().NotBeNull();
 
-        List<VideoMarkers> videos = userMarkers.Videos!.ToList();
+        List<VideoMarkers> videos = [.. userMarkers.Videos!];
         _ = videos.Count.Should().Be(1);
         _ = videos[0].VideoId.Should().Be("456");
 
-        List<StreamMarker> markers = videos[0].Markers!.ToList();
+        List<StreamMarker> markers = [.. videos[0].Markers!];
         _ = markers.Count.Should().Be(1);
         _ = markers[0].Id.Should().Be("marker1");
         _ = markers[0].CreatedAt.Should().Be(DateTime.Parse("2018-08-20T20:10:03Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));

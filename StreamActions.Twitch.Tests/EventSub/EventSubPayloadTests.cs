@@ -16,13 +16,11 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.EventSub.Common;
 using System.Reflection;
 using System.Text.Json;
-using Xunit;
 using AdBreakBegin = StreamActions.Twitch.EventSub.Channel.AdBreak.Begin;
 using AutomodHold = StreamActions.Twitch.EventSub.Automod.Message.Hold;
 using AutomodMessageUpdate = StreamActions.Twitch.EventSub.Automod.Message.Update;

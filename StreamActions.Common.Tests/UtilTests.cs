@@ -27,7 +27,7 @@ namespace StreamActions.Common.Tests;
 /// <summary>
 /// Performs unit testing on methods in <see cref="Util"/>.
 /// </summary>
-public class UtilTests
+public partial class UtilTests
 {
     #region IsNullOrDefault
 
@@ -162,10 +162,10 @@ public class UtilTests
     public void DurationStringToTimeSpan_WithUnknownCaptureGroup_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        Regex regex = new("(?<unknown>1)");
+        Regex regex = MyRegex();
         Match match = regex.Match("1");
         MethodInfo? method = typeof(Util).GetMethod("ParseDurationMatch", BindingFlags.NonPublic | BindingFlags.Static);
-        method.Should().NotBeNull();
+        _ = method.Should().NotBeNull();
 
         // Act
         Action act = () =>
@@ -213,7 +213,7 @@ public class UtilTests
     public void HexColorToColor_ValidHexColor_ReturnsCorrectColor(string hexColor, int r, int g, int b)
     {
         Color expected = Color.FromArgb(r, g, b);
-        Util.HexColorToColor(hexColor).Should().Be(expected);
+        _ = Util.HexColorToColor(hexColor).Should().Be(expected);
     }
 
     [Theory]
@@ -231,10 +231,7 @@ public class UtilTests
     [InlineData("The hex color is #FF5733 in the middle of this line.")]
     [InlineData("#FF5733 is at the beginning of this line.")]
     [InlineData("This line ends with #FF5733.")]
-    public void HexColorToColor_InvalidHexColor_ReturnsEmptyColor(string hexColor)
-    {
-        Util.HexColorToColor(hexColor).Should().Be(Color.Empty);
-    }
+    public void HexColorToColor_InvalidHexColor_ReturnsEmptyColor(string hexColor) => _ = Util.HexColorToColor(hexColor).Should().Be(Color.Empty);
 
     [Fact]
     [Trait("Member", "HexColorToColor")]
@@ -248,7 +245,7 @@ public class UtilTests
 
         // Assert
         _ = act.Should().NotThrow<FormatException>();
-        Util.HexColorToColor(invalidHexColor).Should().Be(Color.Empty);
+        _ = Util.HexColorToColor(invalidHexColor).Should().Be(Color.Empty);
     }
 
     #endregion HexColorToColor
@@ -563,6 +560,9 @@ public class UtilTests
         _ = result.Should().BeOfType<TestStruct>();
         _ = ((TestStruct)result).Value.Should().Be(0);
     }
+
+    [GeneratedRegex("(?<unknown>1)")]
+    private static partial Regex MyRegex();
 
     #endregion GetDefault
 }

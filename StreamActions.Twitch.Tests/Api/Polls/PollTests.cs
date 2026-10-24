@@ -16,11 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Polls;
 using StreamActions.Twitch.Api.Polls.Objects;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
@@ -61,10 +58,7 @@ public sealed class PollTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after test completion.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -117,7 +111,7 @@ public sealed class PollTests : IDisposable
     public async Task GetPolls_WhenIdCountExceeds20_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadPolls);
-        List<string> ids = Enumerable.Range(1, 21).Select(static i => $"id_{i}").ToList();
+        List<string> ids = [.. Enumerable.Range(1, 21).Select(static i => $"id_{i}")];
         Func<Task> action = async () => await Poll.GetPolls(session, "1234", id: ids).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
             .WithParameterName("id");
@@ -343,7 +337,7 @@ public sealed class PollTests : IDisposable
     public async Task CreatePoll_WhenChoicesCountOutOfRange_ThrowsArgumentOutOfRangeException(int count)
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManagePolls);
-        List<PollCreationChoice> choices = Enumerable.Range(1, count).Select(static i => new PollCreationChoice { Title = $"Choice {i}" }).ToList();
+        List<PollCreationChoice> choices = [.. Enumerable.Range(1, count).Select(static i => new PollCreationChoice { Title = $"Choice {i}" })];
         PollCreationParameters parameters = new()
         {
             BroadcasterId = "1234",

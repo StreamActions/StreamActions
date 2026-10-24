@@ -16,10 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Exceptions;
-using System;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Exceptions;
 
@@ -35,9 +32,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException();
 
         // Assert
-        exception.Message.Should().Be("Missing scope Unknown.");
-        exception.Scope.Should().BeNull();
-        exception.InnerException.Should().BeNull();
+        _ = exception.Message.Should().Be("Missing scope Unknown.");
+        _ = exception.Scope.Should().BeNull();
+        _ = exception.InnerException.Should().BeNull();
     }
 
     [Fact]
@@ -51,9 +48,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException(scope);
 
         // Assert
-        exception.Message.Should().Be("Missing scope user:read:email.");
-        exception.Scope.Should().Be("user:read:email");
-        exception.InnerException.Should().BeNull();
+        _ = exception.Message.Should().Be("Missing scope user:read:email.");
+        _ = exception.Scope.Should().Be("user:read:email");
+        _ = exception.InnerException.Should().BeNull();
     }
 
     [Fact]
@@ -67,9 +64,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException(scope);
 
         // Assert
-        exception.Message.Should().Be("Missing scope Unknown.");
-        exception.Scope.Should().BeNull();
-        exception.InnerException.Should().BeNull();
+        _ = exception.Message.Should().Be("Missing scope Unknown.");
+        _ = exception.Scope.Should().BeNull();
+        _ = exception.InnerException.Should().BeNull();
     }
 
     [Fact]
@@ -84,9 +81,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException(scope, innerException);
 
         // Assert
-        exception.Message.Should().Be("Missing scope user:read:email.");
-        exception.Scope.Should().Be("user:read:email");
-        exception.InnerException.Should().Be(innerException);
+        _ = exception.Message.Should().Be("Missing scope user:read:email.");
+        _ = exception.Scope.Should().Be("user:read:email");
+        _ = exception.InnerException.Should().Be(innerException);
     }
 
     [Fact]
@@ -101,9 +98,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException(scope, innerException);
 
         // Assert
-        exception.Message.Should().Be("Missing scope Unknown.");
-        exception.Scope.Should().BeNull();
-        exception.InnerException.Should().Be(innerException);
+        _ = exception.Message.Should().Be("Missing scope Unknown.");
+        _ = exception.Scope.Should().BeNull();
+        _ = exception.InnerException.Should().Be(innerException);
     }
 
     [Fact]
@@ -117,9 +114,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException(scopes);
 
         // Assert
-        exception.Message.Should().Be("Missing scopes user:read:email, channel:read:subscriptions.");
-        exception.Scope.Should().Be("user:read:email, channel:read:subscriptions");
-        exception.InnerException.Should().BeNull();
+        _ = exception.Message.Should().Be("Missing scopes user:read:email, channel:read:subscriptions.");
+        _ = exception.Scope.Should().Be("user:read:email, channel:read:subscriptions");
+        _ = exception.InnerException.Should().BeNull();
     }
 
     [Fact]
@@ -133,9 +130,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException(scopes);
 
         // Assert
-        exception.Message.Should().Be("Missing scopes user:read:email, , channel:read:subscriptions.");
-        exception.Scope.Should().Be("user:read:email, , channel:read:subscriptions");
-        exception.InnerException.Should().BeNull();
+        _ = exception.Message.Should().Be("Missing scopes user:read:email, , channel:read:subscriptions.");
+        _ = exception.Scope.Should().Be("user:read:email, , channel:read:subscriptions");
+        _ = exception.InnerException.Should().BeNull();
     }
 
     [Fact]
@@ -149,9 +146,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException(scopes!);
 
         // Assert
-        exception.Message.Should().Be("Missing scopes Unknown.");
-        exception.Scope.Should().Be("Unknown");
-        exception.InnerException.Should().BeNull();
+        _ = exception.Message.Should().Be("Missing scopes Unknown.");
+        _ = exception.Scope.Should().Be("Unknown");
+        _ = exception.InnerException.Should().BeNull();
     }
 
     [Fact]
@@ -166,9 +163,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException(scopes, innerException);
 
         // Assert
-        exception.Message.Should().Be("Missing scopes user:read:email, channel:read:subscriptions.");
-        exception.Scope.Should().Be("user:read:email, channel:read:subscriptions");
-        exception.InnerException.Should().Be(innerException);
+        _ = exception.Message.Should().Be("Missing scopes user:read:email, channel:read:subscriptions.");
+        _ = exception.Scope.Should().Be("user:read:email, channel:read:subscriptions");
+        _ = exception.InnerException.Should().Be(innerException);
     }
 
     [Fact]
@@ -183,9 +180,9 @@ public class ScopeMissingExceptionTests
         var exception = new ScopeMissingException(scopes!, innerException);
 
         // Assert
-        exception.Message.Should().Be("Missing scopes Unknown.");
-        exception.Scope.Should().Be("Unknown");
-        exception.InnerException.Should().Be(innerException);
+        _ = exception.Message.Should().Be("Missing scopes Unknown.");
+        _ = exception.Scope.Should().Be("Unknown");
+        _ = exception.InnerException.Should().Be(innerException);
     }
 
     #endregion ScopeMissingException

@@ -66,11 +66,11 @@ public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : s
     {
         string val = reader.GetString()!;
 
-        foreach (var item in s_values)
+        foreach (var (Name, Value) in s_values)
         {
-            if (item.Name.Equals(val, StringComparison.InvariantCultureIgnoreCase))
+            if (Name.Equals(val, StringComparison.InvariantCultureIgnoreCase))
             {
-                return item.Value;
+                return Value;
             }
         }
 

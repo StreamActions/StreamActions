@@ -16,16 +16,11 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
-using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Users;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
 using System.Net;
-using Xunit;
 
 namespace StreamActions.Twitch.Tests.Api.Users;
 
@@ -63,10 +58,7 @@ public sealed class UserTests : IDisposable
     /// <summary>
     /// Resets the server fixture state after each test.
     /// </summary>
-    public void Dispose()
-    {
-        this._fixture.Reset();
-    }
+    public void Dispose() => this._fixture.Reset();
 
     #endregion IDisposable Implementation
 
@@ -92,8 +84,8 @@ public sealed class UserTests : IDisposable
     public async Task GetUsers_WhenCombinedIdsAndLoginsExceed100_ThrowsArgumentOutOfRangeException()
     {
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        List<string> ids = Enumerable.Range(1, 60).Select(i => i.ToString(CultureInfo.InvariantCulture)).ToList();
-        List<string> logins = Enumerable.Range(1, 41).Select(i => $"login{i}").ToList();
+        List<string> ids = [.. Enumerable.Range(1, 60).Select(i => i.ToString(CultureInfo.InvariantCulture))];
+        List<string> logins = [.. Enumerable.Range(1, 41).Select(i => $"login{i}")];
 
         Func<Task> action = async () => await User.GetUsers(session, ids: ids, logins: logins).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))

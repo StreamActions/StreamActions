@@ -23,7 +23,6 @@ using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Globalization;
-using System.Linq;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -143,7 +142,7 @@ public sealed record DropEntitlement
 
         if (ids is not null)
         {
-            List<string> idsList = ids.ToList();
+            List<string> idsList = [.. ids];
             if (idsList.Count > 100)
             {
                 throw new ArgumentOutOfRangeException(nameof(ids), idsList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
