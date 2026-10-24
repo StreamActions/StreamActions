@@ -17,6 +17,10 @@
  */
 
 using System.Collections.Specialized;
+using System.Drawing;
+using System.Globalization;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace StreamActions.Common.Tests;
 
@@ -60,7 +64,7 @@ public class UtilTests
     public static IEnumerable<object[]> StructTestData =>
     [
         [default(Guid), true],
-        [Guid.NewGuid(), false]
+        [new Guid("00000000-0000-0000-0000-000000000001"), false]
     ];
 
     [Theory]
@@ -128,7 +132,7 @@ public class UtilTests
     public void DurationStringToTimeSpan_ReturnsExpectedResult(string duration, string expectedTimeSpanString)
     {
         // Arrange
-        TimeSpan expected = TimeSpan.Parse(expectedTimeSpanString, System.Globalization.CultureInfo.InvariantCulture);
+        TimeSpan expected = TimeSpan.Parse(expectedTimeSpanString, CultureInfo.InvariantCulture);
 
         // Act
         TimeSpan result = Util.DurationStringToTimeSpan(duration);
@@ -158,9 +162,9 @@ public class UtilTests
     public void DurationStringToTimeSpan_WithUnknownCaptureGroup_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        System.Text.RegularExpressions.Regex regex = new("(?<unknown>1)");
-        System.Text.RegularExpressions.Match match = regex.Match("1");
-        System.Reflection.MethodInfo? method = typeof(Util).GetMethod("ParseDurationMatch", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Regex regex = new("(?<unknown>1)");
+        Match match = regex.Match("1");
+        MethodInfo? method = typeof(Util).GetMethod("ParseDurationMatch", BindingFlags.NonPublic | BindingFlags.Static);
         method.Should().NotBeNull();
 
         // Act
@@ -170,7 +174,7 @@ public class UtilTests
             {
                 _ = method!.Invoke(null, [match, "1"]);
             }
-            catch (System.Reflection.TargetInvocationException ex)
+            catch (TargetInvocationException ex)
             {
                 throw ex.InnerException!;
             }
@@ -208,7 +212,7 @@ public class UtilTests
     [InlineData("#aBcDeF", 171, 205, 239)]
     public void HexColorToColor_ValidHexColor_ReturnsCorrectColor(string hexColor, int r, int g, int b)
     {
-        System.Drawing.Color expected = System.Drawing.Color.FromArgb(r, g, b);
+        Color expected = Color.FromArgb(r, g, b);
         Util.HexColorToColor(hexColor).Should().Be(expected);
     }
 
@@ -229,7 +233,7 @@ public class UtilTests
     [InlineData("This line ends with #FF5733.")]
     public void HexColorToColor_InvalidHexColor_ReturnsEmptyColor(string hexColor)
     {
-        Util.HexColorToColor(hexColor).Should().Be(System.Drawing.Color.Empty);
+        Util.HexColorToColor(hexColor).Should().Be(Color.Empty);
     }
 
     [Fact]
@@ -244,7 +248,7 @@ public class UtilTests
 
         // Assert
         _ = act.Should().NotThrow<FormatException>();
-        Util.HexColorToColor(invalidHexColor).Should().Be(System.Drawing.Color.Empty);
+        Util.HexColorToColor(invalidHexColor).Should().Be(Color.Empty);
     }
 
     #endregion HexColorToColor

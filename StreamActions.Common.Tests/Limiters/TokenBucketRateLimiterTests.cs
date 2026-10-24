@@ -16,13 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using StreamActions.Common.Limiters;
-using System;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
+using System.Globalization;
+using System.Reflection;
 
 namespace StreamActions.Common.Tests.Limiters;
 
@@ -35,10 +31,10 @@ public sealed class TokenBucketRateLimiterTests
     public void ReturnToken_IncrementsRemainingTokenCount()
     {
         using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
-        var returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        MethodInfo? returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", BindingFlags.Instance | BindingFlags.NonPublic);
 
         long initial = limiter.Remaining;
-        returnTokenMethod!.Invoke(limiter, new object[] { TimeSpan.FromSeconds(1) });
+        _ = returnTokenMethod!.Invoke(limiter, [TimeSpan.FromSeconds(1)]);
 
         limiter.Remaining.Should().Be((int)(initial + 1));
     }
@@ -48,20 +44,20 @@ public sealed class TokenBucketRateLimiterTests
     public async Task ReturnToken_ThrowsTimeoutException_WhenUpgradeableReadLockFails()
     {
         using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
-        var returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        var rwlField = typeof(TokenBucketRateLimiter).GetField("_rwl", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        var rwl = (ReaderWriterLockSlim)rwlField!.GetValue(limiter)!;
+        MethodInfo? returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", BindingFlags.Instance | BindingFlags.NonPublic);
+        FieldInfo? rwlField = typeof(TokenBucketRateLimiter).GetField("_rwl", BindingFlags.Instance | BindingFlags.NonPublic);
+        ReaderWriterLockSlim rwl = (ReaderWriterLockSlim)rwlField!.GetValue(limiter)!;
 
-        var tcs = new TaskCompletionSource();
-        var tcs2 = new TaskCompletionSource();
+        TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource tcs2 = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var t = Task.Run(() =>
+        Task t = Task.Run(() =>
         {
             rwl.EnterWriteLock();
             tcs.SetResult();
             tcs2.Task.Wait();
             rwl.ExitWriteLock();
-        });
+        }, TestContext.Current.CancellationToken);
 
         await tcs.Task.ConfigureAwait(true);
 
@@ -71,9 +67,9 @@ public sealed class TokenBucketRateLimiterTests
             {
                 try
                 {
-                    returnTokenMethod!.Invoke(limiter, new object[] { TimeSpan.FromMilliseconds(10) });
+                    _ = returnTokenMethod!.Invoke(limiter, [TimeSpan.FromMilliseconds(10)]);
                 }
-                catch (System.Reflection.TargetInvocationException ex)
+                catch (TargetInvocationException ex)
                 {
                     throw ex.InnerException!;
                 }
@@ -93,20 +89,20 @@ public sealed class TokenBucketRateLimiterTests
     public async Task ReturnToken_ThrowsTimeoutException_WhenWriteLockFails()
     {
         using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
-        var returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        var rwlField = typeof(TokenBucketRateLimiter).GetField("_rwl", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        var rwl = (ReaderWriterLockSlim)rwlField!.GetValue(limiter)!;
+        MethodInfo? returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", BindingFlags.Instance | BindingFlags.NonPublic);
+        FieldInfo? rwlField = typeof(TokenBucketRateLimiter).GetField("_rwl", BindingFlags.Instance | BindingFlags.NonPublic);
+        ReaderWriterLockSlim rwl = (ReaderWriterLockSlim)rwlField!.GetValue(limiter)!;
 
-        var tcs = new TaskCompletionSource();
-        var tcs2 = new TaskCompletionSource();
+        TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource tcs2 = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var t = Task.Run(() =>
+        Task t = Task.Run(() =>
         {
             rwl.EnterReadLock();
             tcs.SetResult();
             tcs2.Task.Wait();
             rwl.ExitReadLock();
-        });
+        }, TestContext.Current.CancellationToken);
 
         await tcs.Task.ConfigureAwait(true);
 
@@ -116,9 +112,9 @@ public sealed class TokenBucketRateLimiterTests
             {
                 try
                 {
-                    returnTokenMethod!.Invoke(limiter, new object[] { TimeSpan.FromMilliseconds(100) });
+                    _ = returnTokenMethod!.Invoke(limiter, [TimeSpan.FromMilliseconds(100)]);
                 }
-                catch (System.Reflection.TargetInvocationException ex)
+                catch (TargetInvocationException ex)
                 {
                     throw ex.InnerException!;
                 }
@@ -265,7 +261,7 @@ public sealed class TokenBucketRateLimiterTests
         response.Headers.Add("Ratelimit-Limit", "100");
         response.Headers.Add("Ratelimit-Remaining", "50");
         long futureEpoch = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
-        response.Headers.Add("Ratelimit-Reset", futureEpoch.ToString(System.Globalization.CultureInfo.InvariantCulture)); // some unix timestamp in seconds
+        response.Headers.Add("Ratelimit-Reset", futureEpoch.ToString(CultureInfo.InvariantCulture)); // some unix timestamp in seconds
 
         limiter.ParseHeaders(response.Headers);
 
@@ -284,7 +280,7 @@ public sealed class TokenBucketRateLimiterTests
         response.Headers.Add("Ratelimit-Limit", "100");
         response.Headers.Add("Ratelimit-Remaining", "50");
         long futureEpoch = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeMilliseconds();
-        response.Headers.Add("Ratelimit-Reset", futureEpoch.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        response.Headers.Add("Ratelimit-Reset", futureEpoch.ToString(CultureInfo.InvariantCulture));
 
         limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.Milliseconds);
 
@@ -301,7 +297,7 @@ public sealed class TokenBucketRateLimiterTests
         response.Headers.Add("Ratelimit-Limit", "100");
         response.Headers.Add("Ratelimit-Remaining", "50");
         long futureTicks = DateTime.UtcNow.Ticks + TimeSpan.FromHours(1).Ticks;
-        response.Headers.Add("Ratelimit-Reset", futureTicks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        response.Headers.Add("Ratelimit-Reset", futureTicks.ToString(CultureInfo.InvariantCulture));
 
         limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.Ticks);
 
@@ -322,7 +318,7 @@ public sealed class TokenBucketRateLimiterTests
 
         limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.ISO8601);
 
-        limiter.NextReset.Should().Be(DateTime.Parse(isoDate, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal).Ticks);
+        limiter.NextReset.Should().Be(DateTime.Parse(isoDate, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal).Ticks);
     }
 
     [Fact]
