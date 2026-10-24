@@ -41,12 +41,12 @@ public sealed partial record Scope
     /// <summary>
     /// A <see cref="IReadOnlyDictionary{TKey, TValue}"/> mapping <see cref="Name"/> to a <see cref="Scope"/> object.
     /// </summary>
-    public static IReadOnlyDictionary<string, Scope> Scopes => _scopes.AsReadOnly();
+    public static IReadOnlyDictionary<string, Scope> Scopes => (_scopes ??= []).AsReadOnly();
 
     /// <summary>
     /// Backing dictionary for <see cref="Scopes"/>.
     /// </summary>
-    private static readonly Dictionary<string, Scope> _scopes = [];
+    private static Dictionary<string, Scope>? _scopes;
 
     #region Scopes
 
@@ -98,6 +98,7 @@ public sealed partial record Scope
         this.Name = name;
         this.Description = description;
 
+        _scopes ??= [];
         _scopes.Add(name, this);
     }
 }

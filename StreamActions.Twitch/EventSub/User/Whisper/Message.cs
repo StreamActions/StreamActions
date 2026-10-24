@@ -18,8 +18,8 @@
 
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
-using System.Text.Json.Serialization;
 using StreamActions.Twitch.EventSub.User.Whisper.Objects;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.User.Whisper;
 

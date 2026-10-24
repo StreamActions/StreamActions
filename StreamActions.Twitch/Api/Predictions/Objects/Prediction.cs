@@ -245,7 +245,7 @@ public sealed record Prediction
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/predictions"), queryParams);
+        Uri uri = Util.BuildUri(new("/predictions", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Prediction>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -352,7 +352,7 @@ public sealed record Prediction
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/predictions"), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/predictions", UriKind.Relative), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Prediction>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -431,7 +431,7 @@ public sealed record Prediction
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/predictions"), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/predictions", UriKind.Relative), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Prediction>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

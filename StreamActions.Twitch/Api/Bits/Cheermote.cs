@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Bits.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -21,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
+using StreamActions.Twitch.Api.Bits.Objects;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Text.Json.Serialization;
@@ -143,7 +143,7 @@ public sealed record Cheermote
             queryParams.Add("broadcaster_id", broadcasterId);
         }
 
-        Uri uri = Util.BuildUri(new("/bits/cheermotes"), queryParams);
+        Uri uri = Util.BuildUri(new("/bits/cheermotes", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Cheermote>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

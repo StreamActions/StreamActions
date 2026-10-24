@@ -152,7 +152,7 @@ public sealed record ExtensionAnalytics
             queryParams.Add("ended_at", endedAt.Value.Date.ToRfc3339());
         }
 
-        Uri uri = Util.BuildUri(new("/analytics/extensions"), queryParams);
+        Uri uri = Util.BuildUri(new("/analytics/extensions", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ExtensionAnalytics>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

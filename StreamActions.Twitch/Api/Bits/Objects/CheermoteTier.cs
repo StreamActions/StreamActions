@@ -48,7 +48,7 @@ public sealed record CheermoteTier
     /// <summary>
     /// The color associated with this tier level.
     /// </summary>
-    [JsonPropertyName("color")]
+    [JsonIgnore]
     public Color? Color => Util.IsValidHexColor(this.ColorString ?? "") ? Util.HexColorToColor(this.ColorString ?? "") : null;
 
     /// <summary>

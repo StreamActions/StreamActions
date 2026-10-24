@@ -155,7 +155,7 @@ public sealed record ChannelGuestStarSettings
             { "moderator_id", moderatorId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/channel_settings"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/channel_settings", UriKind.Relative), queryParams), session).ConfigureAwait(false);
 
         return await response.ReadFromJsonAsync<ResponseData<ChannelGuestStarSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -212,7 +212,7 @@ public sealed record ChannelGuestStarSettings
         };
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/guest_star/channel_settings"), queryParams), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/guest_star/channel_settings", UriKind.Relative), queryParams), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

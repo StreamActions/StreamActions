@@ -172,7 +172,7 @@ public sealed record GuestStarInvite
             { "session_id", sessionId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/invites"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/invites", UriKind.Relative), queryParams), session).ConfigureAwait(false);
 
         return await response.ReadFromJsonAsync<ResponseData<GuestStarInvite>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -248,7 +248,7 @@ public sealed record GuestStarInvite
             { "guest_id", guestId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/invites"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/invites", UriKind.Relative), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -327,7 +327,7 @@ public sealed record GuestStarInvite
             { "guest_id", guestId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/invites"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/invites", UriKind.Relative), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

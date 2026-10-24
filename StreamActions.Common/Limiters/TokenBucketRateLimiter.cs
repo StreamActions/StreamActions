@@ -135,9 +135,9 @@ public sealed class TokenBucketRateLimiter : IDisposable
     public void ParseHeaders(HttpResponseHeaders headers, string headerLimit = "Ratelimit-Limit", string headerRemaining = "Ratelimit-Remaining",
     string headerReset = "Ratelimit-Reset", HeaderResetType headerResetType = HeaderResetType.Seconds)
     {
-        string? limitS = headers?.GetValues(headerLimit).FirstOrDefault();
-        string? remainingS = headers?.GetValues(headerRemaining).FirstOrDefault();
-        string? resetS = headers?.GetValues(headerReset).FirstOrDefault();
+        string? limitS = headers is not null && headers.TryGetValues(headerLimit, out IEnumerable<string>? limitValues) ? limitValues.FirstOrDefault() : null;
+        string? remainingS = headers is not null && headers.TryGetValues(headerRemaining, out IEnumerable<string>? remainingValues) ? remainingValues.FirstOrDefault() : null;
+        string? resetS = headers is not null && headers.TryGetValues(headerReset, out IEnumerable<string>? resetValues) ? resetValues.FirstOrDefault() : null;
 
         if (limitS is not null)
         {

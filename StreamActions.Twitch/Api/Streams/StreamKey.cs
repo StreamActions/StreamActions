@@ -94,7 +94,7 @@ public sealed record StreamKey
             { "broadcaster_id", broadcasterId }
         };
 
-        Uri requestUri = Util.BuildUri(new("/streams/key"), queryParameters);
+        Uri requestUri = Util.BuildUri(new("/streams/key", UriKind.Relative), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<StreamKey>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

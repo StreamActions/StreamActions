@@ -152,7 +152,7 @@ public sealed record GameAnalytics
             queryParams.Add("ended_at", endedAt.Value.Date.ToRfc3339());
         }
 
-        Uri uri = Util.BuildUri(new("/analytics/games"), queryParams);
+        Uri uri = Util.BuildUri(new("/analytics/games", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<GameAnalytics>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

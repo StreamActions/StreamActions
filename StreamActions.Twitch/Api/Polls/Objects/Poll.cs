@@ -244,7 +244,7 @@ public sealed record Poll
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/polls"), queryParams);
+        Uri uri = Util.BuildUri(new("/polls", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Poll>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -360,7 +360,7 @@ public sealed record Poll
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/polls"), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/polls", UriKind.Relative), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Poll>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -428,13 +428,13 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(parameters.Status)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Status is not PollStatus.Terminated or PollStatus.Archived)
+        if (parameters.Status is not PollStatus.Terminated and not PollStatus.Archived)
         {
             throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be one of Terminated or Archived").Log(TwitchApi.GetLogger());
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/polls"), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/polls", UriKind.Relative), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Poll>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

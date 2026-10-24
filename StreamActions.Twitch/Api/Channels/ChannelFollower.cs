@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Channels.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -21,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
+using StreamActions.Twitch.Api.Channels.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
@@ -144,7 +144,7 @@ public sealed record ChannelFollower
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/channels/followers"), queryParams);
+        Uri uri = Util.BuildUri(new("/channels/followers", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChannelFollower>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

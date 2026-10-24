@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Charity.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -20,6 +19,7 @@ using StreamActions.Twitch.Api.Charity.Objects;
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
+using StreamActions.Twitch.Api.Charity.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -139,7 +139,7 @@ public sealed record CharityDonation
             queryParameters.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/charity/donations"), queryParameters);
+        Uri uri = Util.BuildUri(new("/charity/donations", UriKind.Relative), queryParameters);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<CharityDonation>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

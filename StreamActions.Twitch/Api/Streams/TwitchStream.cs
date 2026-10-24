@@ -24,17 +24,17 @@ using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.Api.Streams;
 
 /// <summary>
 /// Represents a Twitch stream.
 /// </summary>
-    [SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Intentionally named to match Twitch API")]
+[SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Intentionally named to match Twitch API")]
 public sealed record TwitchStream
 {
     /// <summary>
@@ -261,7 +261,7 @@ public sealed record TwitchStream
             queryParameters.Add("after", after);
         }
 
-        Uri requestUri = Util.BuildUri(new("/streams"), queryParameters);
+        Uri requestUri = Util.BuildUri(new("/streams", UriKind.Relative), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<TwitchStream>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
@@ -328,7 +328,7 @@ public sealed record TwitchStream
             queryParameters.Add("after", after);
         }
 
-        Uri requestUri = Util.BuildUri(new("/streams/followed"), queryParameters);
+        Uri requestUri = Util.BuildUri(new("/streams/followed", UriKind.Relative), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<TwitchStream>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

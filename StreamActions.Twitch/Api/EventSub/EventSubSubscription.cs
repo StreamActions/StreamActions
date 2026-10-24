@@ -22,8 +22,8 @@ using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Api.EventSub.Objects;
 using StreamActions.Twitch.Api.EventSub.Conditions;
+using StreamActions.Twitch.Api.EventSub.Objects;
 using System.Collections.Specialized;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
@@ -297,7 +297,7 @@ public sealed record EventSubSubscription
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/eventsub/subscriptions"), queryParams);
+        Uri uri = Util.BuildUri(new("/eventsub/subscriptions", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<EventSubSubscription>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -427,7 +427,7 @@ public sealed record EventSubSubscription
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        Uri uri = Util.BuildUri(new("/eventsub/subscriptions"));
+        Uri uri = Util.BuildUri(new("/eventsub/subscriptions", UriKind.Relative));
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<EventSubSubscription>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -483,7 +483,7 @@ public sealed record EventSubSubscription
             throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/eventsub/subscriptions"), new() { { "id", id.ToString() } });
+        Uri uri = Util.BuildUri(new("/eventsub/subscriptions", UriKind.Relative), new() { { "id", id.ToString() } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

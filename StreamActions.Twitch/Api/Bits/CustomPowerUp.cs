@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Bits.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -20,6 +19,7 @@ using StreamActions.Twitch.Api.Bits.Objects;
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
+using StreamActions.Twitch.Api.Bits.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -222,7 +222,7 @@ public sealed record CustomPowerUp
             queryParams.Add("id", id);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/bits/custom_power_ups"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/bits/custom_power_ups", UriKind.Relative), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<CustomPowerUp>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

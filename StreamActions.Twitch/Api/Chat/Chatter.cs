@@ -19,8 +19,8 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Chat.Objects;
+using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
@@ -129,7 +129,7 @@ public sealed record Chatter
             queryParams.Add("after", after);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/chatters"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/chatters", UriKind.Relative), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Chatter>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

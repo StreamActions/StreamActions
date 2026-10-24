@@ -124,7 +124,7 @@ public sealed record ExtensionLiveChannel
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/extensions/live"), queryParams);
+        Uri uri = Util.BuildUri(new("/extensions/live", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ExtensionLiveChannel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

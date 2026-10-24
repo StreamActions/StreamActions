@@ -17,6 +17,7 @@
  */
 
 using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using StreamActions.Common.Attributes;
@@ -176,9 +177,27 @@ public sealed record Token : JsonApiResponse
     }
 
     /// <summary>
+    /// The default OpenID Connect configuration URL.
+    /// </summary>
+    private const string _defaultOpenIdConnectConfigurationUrl = "https://id.twitch.tv/oauth2/.well-known/openid-configuration";
+
+    /// <summary>
     /// The OpenID Connect configuration from Twitch.
     /// </summary>
-    internal static readonly Lazy<OpenIdConnectConfiguration> _openIdConnectConfiguration = new(() => OpenIdConnectConfigurationRetriever.GetAsync("https://id.twitch.tv/oauth2/.well-known/openid-configuration", CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult());
+    internal static Lazy<OpenIdConnectConfiguration> _openIdConnectConfiguration = CreateOpenIdConnectConfiguration(_defaultOpenIdConnectConfigurationUrl);
+
+    /// <summary>
+    /// Sets the URL used to retrieve the OpenID Connect configuration.
+    /// </summary>
+    /// <param name="url">The OpenID Connect configuration URL.</param>
+    internal static void SetOpenIdConnectConfigurationUrl(string url = _defaultOpenIdConnectConfigurationUrl) => _openIdConnectConfiguration = CreateOpenIdConnectConfiguration(url);
+
+    /// <summary>
+    /// Creates a new <see cref="Lazy{T}"/> instance for retrieving the OpenID Connect configuration from the specified URL.
+    /// </summary>
+    /// <param name="url">The URL from which to retrieve the OpenID Connect configuration.</param>
+    /// <returns>A <see cref="Lazy{T}"/> resolving to <see cref="OpenIdConnectConfiguration"/>.</returns>
+    private static Lazy<OpenIdConnectConfiguration> CreateOpenIdConnectConfiguration(string url) => new(() => { HttpDocumentRetriever documentRetriever = new() { RequireHttps = url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) }; return OpenIdConnectConfigurationRetriever.GetAsync(url, documentRetriever, CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult(); });
 
     /// <summary>
     /// Validates and converts <see cref="IdToken"/>, if present, to a <see cref="JsonWebToken"/>.

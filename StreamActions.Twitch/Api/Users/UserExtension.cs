@@ -129,7 +129,7 @@ public sealed record UserExtension
 
         session.RequireUserToken(Scope.UserReadBroadcast, Scope.UserEditBroadcast);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new("/users/extensions/list"), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new("/users/extensions/list", UriKind.Relative), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UserExtension>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

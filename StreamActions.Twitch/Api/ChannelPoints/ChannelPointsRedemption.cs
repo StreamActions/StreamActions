@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.ChannelPoints.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -21,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
+using StreamActions.Twitch.Api.ChannelPoints.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -269,7 +269,7 @@ public sealed record ChannelPointsRedemption
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards/redemptions"), queryParams);
+        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards/redemptions", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChannelPointsReward>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -357,7 +357,7 @@ public sealed record ChannelPointsRedemption
             }
         }
 
-        if (parameters.Status is not RedemptionStatus.Fulfilled or RedemptionStatus.Canceled)
+        if (parameters.Status is not RedemptionStatus.Fulfilled and not RedemptionStatus.Canceled)
         {
             throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be Fulfilled or Canceled").Log(TwitchApi.GetLogger());
         }
@@ -371,7 +371,7 @@ public sealed record ChannelPointsRedemption
             { "id", id.Select(x => x.ToString("D", CultureInfo.InvariantCulture)) }
         };
 
-        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards/redemptions"), queryParams);
+        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards/redemptions", UriKind.Relative), queryParams);
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChannelPointsReward>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

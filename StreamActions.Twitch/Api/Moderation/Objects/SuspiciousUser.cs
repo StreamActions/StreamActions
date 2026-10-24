@@ -201,7 +201,7 @@ public sealed record SuspiciousUser
 
         session.RequireUserOrAppToken(Scope.ModeratorManageSuspiciousUsers);
 
-        Uri uri = Util.BuildUri(new("/moderation/suspicious_users"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
+        Uri uri = Util.BuildUri(new("/moderation/suspicious_users", UriKind.Relative), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<SuspiciousUser>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
@@ -271,7 +271,7 @@ public sealed record SuspiciousUser
 
         session.RequireUserOrAppToken(Scope.ModeratorManageSuspiciousUsers);
 
-        Uri uri = Util.BuildUri(new("/moderation/suspicious_users"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId }, { "user_id", userId } });
+        Uri uri = Util.BuildUri(new("/moderation/suspicious_users", UriKind.Relative), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId }, { "user_id", userId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<SuspiciousUser>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

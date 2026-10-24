@@ -174,7 +174,7 @@ public sealed record DropEntitlement
             queryParameters.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/entitlements/drops"), queryParameters);
+        Uri uri = Util.BuildUri(new("/entitlements/drops", UriKind.Relative), queryParameters);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<DropEntitlement>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -221,7 +221,7 @@ public sealed record DropEntitlement
         session.RequireUserOrAppToken();
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/entitlements/drops")), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/entitlements/drops", UriKind.Relative)), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UpdateDropsEntitlementsStatus>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

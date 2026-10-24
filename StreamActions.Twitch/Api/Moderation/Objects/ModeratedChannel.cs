@@ -112,7 +112,7 @@ public sealed record ModeratedChannel
         first = Math.Clamp(first, 1, 100);
         queryParameters.Add("first", first.ToString(CultureInfo.InvariantCulture));
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/channels"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/channels", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ModeratedChannel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

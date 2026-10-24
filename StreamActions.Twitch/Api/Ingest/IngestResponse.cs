@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Ingest.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -18,6 +17,7 @@ using StreamActions.Twitch.Api.Ingest.Objects;
  */
 
 using StreamActions.Common.Net;
+using StreamActions.Twitch.Api.Ingest.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Ingest;

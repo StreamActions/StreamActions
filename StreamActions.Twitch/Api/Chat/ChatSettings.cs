@@ -19,8 +19,8 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Chat.Objects;
+using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
@@ -156,7 +156,7 @@ public sealed record ChatSettings
             query.Add("moderator_id", moderatorId);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/settings"), query), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/settings", UriKind.Relative), query), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -238,7 +238,7 @@ public sealed record ChatSettings
         };
 
         using HttpContent content = JsonContent.Create(settings, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/chat/settings"), query), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/chat/settings", UriKind.Relative), query), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

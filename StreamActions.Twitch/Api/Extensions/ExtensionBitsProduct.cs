@@ -75,7 +75,7 @@ public sealed record ExtensionBitsProduct
             queryParams.Add("should_include_all", "true");
         }
 
-        Uri uri = Util.BuildUri(new("/bits/extensions"), queryParams);
+        Uri uri = Util.BuildUri(new("/bits/extensions", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ExtensionProductData>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -123,7 +123,7 @@ public sealed record ExtensionBitsProduct
         session.RequireAppToken();
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, new("/bits/extensions"), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, new("/bits/extensions", UriKind.Relative), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ExtensionProductData>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

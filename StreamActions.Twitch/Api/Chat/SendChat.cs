@@ -18,8 +18,8 @@
 
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Chat.Objects;
+using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
@@ -160,7 +160,7 @@ public sealed record SendChat
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/chat/messages"), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/chat/messages", UriKind.Relative), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<SendChat>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

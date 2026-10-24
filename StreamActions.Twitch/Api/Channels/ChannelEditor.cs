@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Channels.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -21,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
+using StreamActions.Twitch.Api.Channels.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -97,7 +97,7 @@ public sealed record ChannelEditor
 
         session.RequireUserToken(Scope.ChannelReadEditors);
 
-        Uri uri = Util.BuildUri(new("/channels/editors"), new() { { "broadcaster_id", broadcasterId } });
+        Uri uri = Util.BuildUri(new("/channels/editors", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChannelEditor>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

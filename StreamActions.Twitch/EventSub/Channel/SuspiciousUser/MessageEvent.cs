@@ -18,10 +18,10 @@
 
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
-using StreamActions.Twitch.EventSub.Common.ChatMessage;
-using System.Text.Json.Serialization;
 using StreamActions.Twitch.EventSub.Channel.SuspiciousUser.Objects;
+using StreamActions.Twitch.EventSub.Common.ChatMessage;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.SuspiciousUser;
 

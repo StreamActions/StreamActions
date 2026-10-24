@@ -147,7 +147,7 @@ public sealed record Warning
 
         session.RequireUserOrAppToken(Scope.ModeratorManageWarnings);
 
-        Uri uri = Util.BuildUri(new("/moderation/warnings"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
+        Uri uri = Util.BuildUri(new("/moderation/warnings", UriKind.Relative), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Warning>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

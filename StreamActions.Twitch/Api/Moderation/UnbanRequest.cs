@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Moderation.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -22,6 +21,7 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Moderation.Objects;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -231,7 +231,7 @@ public sealed record UnbanRequest
         first = Math.Clamp(first, 1, 100);
         queryParameters.Add("first", first.ToString(CultureInfo.InvariantCulture));
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/unban_requests"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/unban_requests", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UnbanRequest>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -315,7 +315,7 @@ public sealed record UnbanRequest
             { "unban_request_id", unbanRequestId }
         };
 
-        Uri uri = Util.BuildUri(new("/moderation/unban_requests"), queryParameters);
+        Uri uri = Util.BuildUri(new("/moderation/unban_requests", UriKind.Relative), queryParameters);
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UnbanRequest>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

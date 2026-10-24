@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Channels.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -22,6 +21,7 @@ using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
+using StreamActions.Twitch.Api.Channels.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -166,7 +166,7 @@ public sealed partial record Channel
             }
         }
 
-        Uri uri = Util.BuildUri(new("/channels"), new() { { "broadcaster_id", broadcasterId } });
+        Uri uri = Util.BuildUri(new("/channels", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Channel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -289,7 +289,7 @@ public sealed partial record Channel
             parameters = parameters with { Delay = Math.Clamp(parameters.Delay.Value, 0, 900) };
         }
 
-        Uri uri = Util.BuildUri(new("/channels"), new() { { "broadcaster_id", broadcasterId } });
+        Uri uri = Util.BuildUri(new("/channels", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);

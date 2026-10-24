@@ -16,8 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Chat.Objects;
+using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Chat;

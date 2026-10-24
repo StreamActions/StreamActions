@@ -162,7 +162,7 @@ public sealed record Ban
         queryParameters.Add("moderator_id", moderatorId);
 
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/bans"), queryParameters), session, jsonContent).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/bans", UriKind.Relative), queryParameters), session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Ban>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -243,7 +243,7 @@ public sealed record Ban
         queryParameters.Add("moderator_id", moderatorId);
         queryParameters.Add("user_id", userId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/moderation/bans"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/moderation/bans", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

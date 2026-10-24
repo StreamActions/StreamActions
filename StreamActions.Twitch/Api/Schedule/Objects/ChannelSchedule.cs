@@ -158,7 +158,7 @@ public sealed record ChannelSchedule
             queryParameters.Add("after", after);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/schedule"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/schedule", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseDataObject<ChannelSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -209,10 +209,11 @@ public sealed record ChannelSchedule
         NameValueCollection queryParameters = [];
         queryParameters.Add("broadcaster_id", broadcasterId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/schedule/icalendar"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/schedule/icalendar", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         if (response.IsSuccessStatusCode)
         {
-            return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            JsonApiResponse? apiResponse = await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+            return apiResponse?.Message;
         }
 
         return null;
@@ -314,7 +315,7 @@ public sealed record ChannelSchedule
             queryParameters.Add("timezone", timezone);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/schedule/settings"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/schedule/settings", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -397,7 +398,7 @@ public sealed record ChannelSchedule
         queryParameters.Add("broadcaster_id", broadcasterId);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/schedule/segment"), queryParameters), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/schedule/segment", UriKind.Relative), queryParameters), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseDataObject<ChannelSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -491,7 +492,7 @@ public sealed record ChannelSchedule
         queryParameters.Add("id", segmentId);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/schedule/segment"), queryParameters), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/schedule/segment", UriKind.Relative), queryParameters), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseDataObject<ChannelSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -570,7 +571,7 @@ public sealed record ChannelSchedule
         queryParameters.Add("broadcaster_id", broadcasterId);
         queryParameters.Add("id", segmentId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/schedule/segment"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/schedule/segment", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

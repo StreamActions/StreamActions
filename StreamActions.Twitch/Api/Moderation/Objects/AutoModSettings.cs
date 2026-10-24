@@ -167,7 +167,7 @@ public sealed record AutoModSettings
         queryParameters.Add("broadcaster_id", broadcasterId);
         queryParameters.Add("moderator_id", moderatorId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/automod/settings"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/automod/settings", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<AutoModSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -287,7 +287,7 @@ public sealed record AutoModSettings
         queryParameters.Add("moderator_id", moderatorId);
 
         using JsonContent jsonContent = JsonContent.Create(clampedSettings, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/moderation/automod/settings"), queryParameters), session, jsonContent).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/moderation/automod/settings", UriKind.Relative), queryParameters), session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<AutoModSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

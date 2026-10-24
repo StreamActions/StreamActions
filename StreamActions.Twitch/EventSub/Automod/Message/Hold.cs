@@ -19,8 +19,8 @@
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
-using System.Text.Json.Serialization;
 using StreamActions.Twitch.EventSub.Automod.Message.Objects;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Automod.Message;
 

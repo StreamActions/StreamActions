@@ -203,7 +203,7 @@ public sealed record Goal
 
         session.RequireUserToken(Scope.ChannelReadGoals);
 
-        Uri uri = Util.BuildUri(new("/goals"), new() { { "broadcaster_id", broadcasterId } });
+        Uri uri = Util.BuildUri(new("/goals", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Goal>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

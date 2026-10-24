@@ -20,9 +20,9 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Streams.Objects;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
-using StreamActions.Twitch.Api.Streams.Objects;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Net.Http.Json;
@@ -152,7 +152,7 @@ public sealed record UserMarkers
             queryParameters.Add("after", after);
         }
 
-        Uri requestUri = Util.BuildUri(new("/streams/markers"), queryParameters);
+        Uri requestUri = Util.BuildUri(new("/streams/markers", UriKind.Relative), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UserMarkers>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

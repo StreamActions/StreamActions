@@ -130,7 +130,7 @@ public sealed record Raid
             throw new ArgumentNullException(nameof(toBroadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/raids"), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId } }), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/raids", UriKind.Relative), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Raid>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -194,7 +194,7 @@ public sealed record Raid
             throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/raids"), new() { { "broadcaster_id", broadcasterId } }), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/raids", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

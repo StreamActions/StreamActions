@@ -16,16 +16,16 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Text.Json.Serialization;
 using StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomReward.Objects;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomReward.Objects;
 
 /// <summary>
 /// Whether a maximum per user per stream is enabled and what the maximum is.
 /// </summary>
-    [SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Intentionally named to match Twitch API")]
+[SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "Intentionally named to match Twitch API")]
 public sealed record MaxPerUserPerStream
 {
     /// <summary>

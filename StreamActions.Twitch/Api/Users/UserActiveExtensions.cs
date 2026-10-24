@@ -116,7 +116,7 @@ public sealed record UserActiveExtensions
             queryParams.Add("user_id", userId);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/users/extensions"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/users/extensions", UriKind.Relative), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseDataObject<UserActiveExtensions>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -171,7 +171,7 @@ public sealed record UserActiveExtensions
         session.RequireUserToken(Scope.UserEditBroadcast);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, new("/users/extensions"), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, new("/users/extensions", UriKind.Relative), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseDataObject<UserActiveExtensions>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

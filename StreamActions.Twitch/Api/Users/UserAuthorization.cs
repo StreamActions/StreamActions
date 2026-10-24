@@ -118,7 +118,7 @@ public sealed record UserAuthorization
         NameValueCollection queryParams = [];
         queryParams.Add("user_id", userIds);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/authorization/users"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/authorization/users", UriKind.Relative), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UserAuthorization>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

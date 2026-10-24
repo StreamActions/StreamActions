@@ -296,7 +296,7 @@ public sealed record Clip
             queryParams.Add("is_featured", isFeatured.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant());
         }
 
-        Uri uri = Util.BuildUri(new("/clips"), queryParams);
+        Uri uri = Util.BuildUri(new("/clips", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Clip>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

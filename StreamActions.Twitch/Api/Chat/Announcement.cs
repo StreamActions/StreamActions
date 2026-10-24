@@ -21,8 +21,8 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Chat.Objects;
+using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
@@ -169,7 +169,7 @@ public sealed record Announcement
 
         session.RequireUserOrAppToken(Scope.ModeratorManageAnnouncements);
 
-        Uri uri = Util.BuildUri(new("/chat/announcements"), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
+        Uri uri = Util.BuildUri(new("/chat/announcements", UriKind.Relative), new() { { "broadcaster_id", broadcasterId }, { "moderator_id", moderatorId } });
         using JsonContent jsonContent = JsonContent.Create(message, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);

@@ -20,8 +20,8 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Chat.Objects;
+using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Net.Http.Json;
@@ -114,7 +114,7 @@ public sealed record Shoutout
 
         session.RequireUserOrAppToken(Scope.ModeratorManageShoutouts);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/chat/shoutouts"), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId }, { "moderator_id", moderatorId } }), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/chat/shoutouts", UriKind.Relative), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId }, { "moderator_id", moderatorId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

@@ -106,7 +106,7 @@ public sealed record SearchCategory
             queryParameters.Add("after", after);
         }
 
-        Uri requestUri = Util.BuildUri(new("/search/categories"), queryParameters);
+        Uri requestUri = Util.BuildUri(new("/search/categories", UriKind.Relative), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<SearchCategory>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

@@ -149,7 +149,7 @@ public sealed record BlockedTerm
             queryParameters.Add("after", after);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/blocked_terms"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/blocked_terms", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<BlockedTerm>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -230,7 +230,7 @@ public sealed record BlockedTerm
         queryParameters.Add("moderator_id", moderatorId);
 
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/blocked_terms"), queryParameters), session, jsonContent).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/blocked_terms", UriKind.Relative), queryParameters), session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<BlockedTerm>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -299,7 +299,7 @@ public sealed record BlockedTerm
         queryParameters.Add("moderator_id", moderatorId);
         queryParameters.Add("id", id);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/moderation/blocked_terms"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/moderation/blocked_terms", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

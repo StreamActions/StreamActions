@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.HypeTrain.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -21,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.HypeTrain.Objects;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
@@ -102,7 +102,7 @@ public sealed record HypeTrainStatus
             { "broadcaster_id", broadcasterId }
         };
 
-        Uri uri = Util.BuildUri(new("/hypetrain/status"), queryParams);
+        Uri uri = Util.BuildUri(new("/hypetrain/status", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<HypeTrainStatus>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

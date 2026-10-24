@@ -20,10 +20,14 @@ using Microsoft.Extensions.Logging;
 using StreamActions.Common.Attributes;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Interfaces;
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.OAuth;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -81,6 +85,8 @@ public sealed partial class TwitchApi : IApi
     public static JsonSerializerOptions SerializerOptions => new()
     {
         Converters = {
+            new CustomEnumConverterFactory(),
+            new EventSubConditionConverter(),
             new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
         }
     };
@@ -116,14 +122,15 @@ public sealed partial class TwitchApi : IApi
         ClientId = clientId;
         ClientSecret = clientSecret;
 
-        _ = _httpClient.DefaultRequestHeaders.Remove("Client-Id");
-        _ = _httpClient.DefaultRequestHeaders.Remove("User-Agent");
+        HttpClient newClient = CreateHttpClient();
+        newClient.DefaultRequestHeaders.Add("Client-Id", clientId);
+        _ = newClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "StreamActions/TwitchAPI/" + (typeof(TwitchApi).Assembly.GetName()?.Version?.ToString() ?? "0.0.0.0"));
+        // Intentionally not validating the baseAddress here, as it is possible to use a custom Helix endpoint for testing.
+        newClient.BaseAddress = new Uri(baseAddress);
+        newClient.Timeout = TimeSpan.FromSeconds(30);
 
-        _httpClient.DefaultRequestHeaders.Add("Client-Id", clientId);
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "StreamActions/TwitchAPI/" + typeof(TwitchApi).Assembly.GetName()?.Version?.ToString() ?? "0.0.0.0");
-        // Intentially not validating the baseAddress here, as it is possible to use a custom Helix endpoint for testing.
-        _httpClient.BaseAddress = new Uri(baseAddress);
-        _httpClient.Timeout = TimeSpan.FromSeconds(30);
+        HttpClient oldClient = Interlocked.Exchange(ref _httpClient, newClient);
+        oldClient.Dispose();
     }
 
     #endregion Public Methods
@@ -182,7 +189,13 @@ public sealed partial class TwitchApi : IApi
         {
             await session.RateLimiter.WaitForRateLimit(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
 
-            using HttpRequestMessage request = new(method, uri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
+            Uri targetUri = !uri.IsAbsoluteUri && uri.OriginalString.StartsWith('/')
+                ? new(uri.OriginalString.TrimStart('/'), UriKind.Relative)
+                : uri.IsAbsoluteUri && uri.Scheme == Uri.UriSchemeFile
+                    ? new((uri.PathAndQuery + uri.Fragment).TrimStart('/'), UriKind.Relative)
+                    : uri;
+
+            using HttpRequestMessage request = new(method, targetUri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
             request.Content = content;
 
             if (session.Token != TwitchToken.Empty)
@@ -200,7 +213,7 @@ public sealed partial class TwitchApi : IApi
                         if (!string.IsNullOrWhiteSpace(session.Token.Refresh))
                         {
                             string oldRefresh = session.Token.Refresh;
-                            if (session._refreshLock.WaitOne(TimeSpan.FromSeconds(30)))
+                            if (await session._refreshLock.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false))
                             {
                                 try
                                 {
@@ -222,7 +235,7 @@ public sealed partial class TwitchApi : IApi
                                 }
                                 finally
                                 {
-                                    session._refreshLock.ReleaseMutex();
+                                    _ = session._refreshLock.Release();
                                 }
                             }
 
@@ -237,7 +250,7 @@ public sealed partial class TwitchApi : IApi
                         if (!string.IsNullOrWhiteSpace(session.Token.OAuth))
                         {
                             string oldOAuth = session.Token.OAuth;
-                            if (session._refreshLock.WaitOne(TimeSpan.FromSeconds(30)))
+                            if (await session._refreshLock.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false))
                             {
                                 try
                                 {
@@ -259,7 +272,7 @@ public sealed partial class TwitchApi : IApi
                                 }
                                 finally
                                 {
-                                    session._refreshLock.ReleaseMutex();
+                                    _ = session._refreshLock.Release();
                                 }
                             }
 
@@ -305,10 +318,7 @@ public sealed partial class TwitchApi : IApi
     /// <summary>
     /// The <see cref="HttpClient"/> that is used for all requests.
     /// </summary>
-    private static readonly HttpClient _httpClient = new(new SocketsHttpHandler
-    {
-        PooledConnectionLifetime = TimeSpan.FromMinutes(2)
-    });
+    private static HttpClient _httpClient = CreateHttpClient();
 
     /// <summary>
     /// The <see cref="ILogger"/> for logging.
@@ -326,9 +336,82 @@ public sealed partial class TwitchApi : IApi
 
     #region Private Methods
 
+    /// <summary>
+    /// Creates a new <see cref="HttpClient"/> configured with socket connection pooling.
+    /// </summary>
+    /// <returns>A new <see cref="HttpClient"/> instance.</returns>
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "HttpClient takes ownership of and disposes the SocketsHttpHandler.")]
+    private static HttpClient CreateHttpClient() => new(new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+    }, disposeHandler: true);
+
     [GeneratedRegex(@"^\s*[\{\[].*[\}\]]\s*$", RegexOptions.Singleline)]
     private static partial Regex JSONRegex();
 
     #endregion Private Methods
+
+    #region Private Classes
+
+    private sealed class CustomEnumConverterFactory : JsonConverterFactory
+    {
+        public override bool CanConvert(Type typeToConvert)
+        {
+            Type enumType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
+            return enumType.IsEnum && enumType.GetCustomAttribute<JsonConverterAttribute>()?.ConverterType is not null;
+        }
+
+        public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+        {
+            Type? underlyingType = Nullable.GetUnderlyingType(typeToConvert);
+            Type enumType = underlyingType ?? typeToConvert;
+            Type innerConverterType = enumType.GetCustomAttribute<JsonConverterAttribute>()!.ConverterType!;
+            if (underlyingType is null)
+            {
+                return (JsonConverter?)Activator.CreateInstance(innerConverterType);
+            }
+
+            Type wrapperType = typeof(NullableEnumConverter<,>).MakeGenericType(enumType, innerConverterType);
+            return (JsonConverter?)Activator.CreateInstance(wrapperType);
+        }
+    }
+
+    private sealed class NullableEnumConverter<TEnum, TConverter> : JsonConverter<TEnum?>
+        where TEnum : struct, Enum
+        where TConverter : JsonConverter<TEnum>, new()
+    {
+        private readonly TConverter _inner = new();
+
+        public override TEnum? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            reader.TokenType == JsonTokenType.Null ? null : this._inner.Read(ref reader, typeof(TEnum), options);
+
+        public override void Write(Utf8JsonWriter writer, TEnum? value, JsonSerializerOptions options)
+        {
+            if (value.HasValue)
+            {
+                this._inner.Write(writer, value.Value, options);
+            }
+            else
+            {
+                writer.WriteNullValue();
+            }
+        }
+    }
+
+    private sealed class EventSubConditionConverter : JsonConverter<EventSubCondition>
+    {
+        public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(EventSubCondition);
+
+        public override EventSubCondition? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            reader.Skip();
+            return null;
+        }
+
+        public override void Write(Utf8JsonWriter writer, EventSubCondition value, JsonSerializerOptions options) =>
+            JsonSerializer.Serialize(writer, value, value.GetType(), options);
+    }
+
+    #endregion Private Classes
 
 }

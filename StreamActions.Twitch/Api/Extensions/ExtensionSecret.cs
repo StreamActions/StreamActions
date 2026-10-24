@@ -92,7 +92,7 @@ public sealed record ExtensionSecret
             { "extension_id", extensionId }
         };
 
-        Uri uri = Util.BuildUri(new("/extensions/jwt/secrets"), queryParams);
+        Uri uri = Util.BuildUri(new("/extensions/jwt/secrets", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ExtensionSecret>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -146,7 +146,7 @@ public sealed record ExtensionSecret
             { "delay", delay.ToString(CultureInfo.InvariantCulture) }
         };
 
-        Uri uri = Util.BuildUri(new("/extensions/jwt/secrets"), queryParams);
+        Uri uri = Util.BuildUri(new("/extensions/jwt/secrets", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ExtensionSecret>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

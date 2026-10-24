@@ -124,7 +124,7 @@ public sealed record AdSchedule
 
         session.RequireUserOrAppToken(Scope.ChannelReadAds);
 
-        Uri uri = Util.BuildUri(new("/channels/ads"), new() { { "broadcaster_id", broadcasterId } });
+        Uri uri = Util.BuildUri(new("/channels/ads", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<AdSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -180,7 +180,7 @@ public sealed record AdSchedule
 
         session.RequireUserOrAppToken(Scope.ChannelManageAds);
 
-        Uri uri = Util.BuildUri(new("/channels/ads/schedule/snooze"), new() { { "broadcaster_id", broadcasterId } });
+        Uri uri = Util.BuildUri(new("/channels/ads/schedule/snooze", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<AdSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

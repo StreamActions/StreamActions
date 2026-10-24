@@ -23,10 +23,10 @@ using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.EventSub.Objects;
 using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.Api.EventSub;
 
@@ -82,7 +82,7 @@ public sealed record Conduit
 
         session.RequireAppToken();
 
-        Uri uri = Util.BuildUri(new("/eventsub/conduits"));
+        Uri uri = Util.BuildUri(new("/eventsub/conduits", UriKind.Relative));
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Conduit>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -141,7 +141,7 @@ public sealed record Conduit
         session.RequireAppToken();
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        Uri uri = Util.BuildUri(new("/eventsub/conduits"));
+        Uri uri = Util.BuildUri(new("/eventsub/conduits", UriKind.Relative));
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Conduit>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -209,7 +209,7 @@ public sealed record Conduit
         session.RequireAppToken();
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        Uri uri = Util.BuildUri(new("/eventsub/conduits"));
+        Uri uri = Util.BuildUri(new("/eventsub/conduits", UriKind.Relative));
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Conduit>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -264,7 +264,7 @@ public sealed record Conduit
             { "id", id.ToString("D", CultureInfo.InvariantCulture) }
         };
 
-        Uri uri = Util.BuildUri(new("/eventsub/conduits"), queryParams);
+        Uri uri = Util.BuildUri(new("/eventsub/conduits", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

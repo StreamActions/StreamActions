@@ -1,6 +1,6 @@
-using System.Text.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.Warning;
 

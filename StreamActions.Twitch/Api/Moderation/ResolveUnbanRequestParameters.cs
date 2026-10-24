@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Moderation.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -18,6 +17,7 @@ using StreamActions.Twitch.Api.Moderation.Objects;
  */
 
 using StreamActions.Common.Json.Serialization;
+using StreamActions.Twitch.Api.Moderation.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.Moderation;

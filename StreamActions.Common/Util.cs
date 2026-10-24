@@ -45,6 +45,16 @@ public static partial class Util
     {
         ArgumentNullException.ThrowIfNull(baseUri);
 
+        if (!baseUri.IsAbsoluteUri)
+        {
+            string relativeOriginal = baseUri.OriginalString;
+            bool hasLeadingSlash = relativeOriginal.StartsWith('/');
+            Uri syntheticBase = new("http://localhost" + (hasLeadingSlash ? relativeOriginal : "/" + relativeOriginal));
+            Uri builtSynthetic = BuildUri(syntheticBase, queryParams, fragmentParams);
+            string pathAndQueryAndFragment = builtSynthetic.PathAndQuery + builtSynthetic.Fragment;
+            return new(hasLeadingSlash ? pathAndQueryAndFragment : pathAndQueryAndFragment.TrimStart('/'), UriKind.Relative);
+        }
+
         UriBuilder uriBuilder = new(baseUri);
 
         StringBuilder paramStringBuilder = new();

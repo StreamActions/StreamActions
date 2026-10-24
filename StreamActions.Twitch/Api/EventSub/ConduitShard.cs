@@ -23,10 +23,10 @@ using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.EventSub.Objects;
 using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Twitch.Api.EventSub;
 
@@ -169,7 +169,7 @@ public sealed record ConduitShard
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/eventsub/conduits/shards"), queryParams);
+        Uri uri = Util.BuildUri(new("/eventsub/conduits/shards", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ConduitShard>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -254,7 +254,7 @@ public sealed record ConduitShard
         session.RequireAppToken();
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        Uri uri = Util.BuildUri(new("/eventsub/conduits/shards"));
+        Uri uri = Util.BuildUri(new("/eventsub/conduits/shards", UriKind.Relative));
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ConduitShardUpdateResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

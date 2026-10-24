@@ -141,7 +141,7 @@ public sealed record ExtensionConfigurationSegment
             queryParams.Add("broadcaster_id", broadcasterId);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/extensions/configurations"), queryParams), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/extensions/configurations", UriKind.Relative), queryParams), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ExtensionConfigurationSegment>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -188,7 +188,7 @@ public sealed record ExtensionConfigurationSegment
         session.RequireJwtToken();
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, new("/extensions/configurations"), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, new("/extensions/configurations", UriKind.Relative), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

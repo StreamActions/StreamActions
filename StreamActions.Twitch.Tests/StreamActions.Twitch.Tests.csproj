@@ -28,7 +28,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\StreamActions.Common\StreamActions.Common.csproj" />
 		<ProjectReference Include="..\StreamActions.Twitch\StreamActions.Twitch.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="Microsoft.AspNetCore.Http" />
+		<Using Include="StreamActions.Common.Exceptions" />
+		<Using Include="StreamActions.Twitch.Api.Common" />
+		<Using Include="StreamActions.Twitch.Exceptions" />
 	</ItemGroup>
 
 </Project>

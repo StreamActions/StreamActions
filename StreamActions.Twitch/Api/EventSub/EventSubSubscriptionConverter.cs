@@ -38,7 +38,7 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
             return;
         }
 
-        if (propertyName == this.MapToJsonPropertyNames().GetValueOrDefault(nameof(EventSubSubscription.Condition), nameof(EventSubSubscription.Condition)))
+        if (propertyName == nameof(EventSubSubscription.Condition))
         {
             string? subscriptionType = obj.Type;
 
@@ -51,7 +51,7 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
                     {
                         if (newReader.Read() && newReader.TokenType is JsonTokenType.String)
                         {
-                            subscriptionType = reader.GetString();
+                            subscriptionType = newReader.GetString();
                             break;
                         }
                     }
@@ -61,6 +61,10 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
             if (!string.IsNullOrWhiteSpace(subscriptionType) && _subscriptionTypesToConditions.TryGetValue(subscriptionType, out Type? conditionType))
             {
                 this.SetMember(obj, propertyName, JsonSerializer.Deserialize(ref reader, conditionType, options));
+            }
+            else
+            {
+                reader.Skip();
             }
         }
     }
@@ -84,12 +88,12 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
         {
             if (typeof(IEventSubType).IsAssignableFrom(type) && type.IsClass && !type.IsAbstract)
             {
-                string? eventSubType = (string?)type.GetProperty(nameof(IEventSubType.Type), BindingFlags.Static)?.GetValue(null);
-                Type? eventSubConditionType = (Type?)type.GetProperty(nameof(IEventSubType.EventSubConditionType))?.GetValue(null);
+                string? eventSubType = (string?)type.GetProperty(nameof(IEventSubType.Type), BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
+                Type? eventSubConditionType = (Type?)type.GetProperty(nameof(IEventSubType.EventSubConditionType), BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
 
                 if (eventSubType is not null && eventSubConditionType is not null)
                 {
-                    subscriptionTypesToConditions.Add(eventSubType, eventSubConditionType);
+                    subscriptionTypesToConditions[eventSubType] = eventSubConditionType;
                 }
             }
         }

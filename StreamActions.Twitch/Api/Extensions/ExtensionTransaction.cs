@@ -204,7 +204,7 @@ public sealed record ExtensionTransaction
             }
         }
 
-        Uri uri = Util.BuildUri(new("/extensions/transactions"), queryParams);
+        Uri uri = Util.BuildUri(new("/extensions/transactions", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ExtensionTransaction>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

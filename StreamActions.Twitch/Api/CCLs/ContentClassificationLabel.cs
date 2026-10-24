@@ -90,7 +90,7 @@ public sealed record ContentClassificationLabel
             queryParams.Add("locale", locale);
         }
 
-        Uri uri = Util.BuildUri(new("/content_classification_labels"), queryParams);
+        Uri uri = Util.BuildUri(new("/content_classification_labels", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ContentClassificationLabel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

@@ -131,7 +131,7 @@ public sealed record Game
             queryParameters.Add("igdb_id", igdbIdList);
         }
 
-        Uri requestUri = Util.BuildUri(new("/games"), queryParameters);
+        Uri requestUri = Util.BuildUri(new("/games", UriKind.Relative), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Game>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
@@ -188,7 +188,7 @@ public sealed record Game
             queryParameters.Add("before", before);
         }
 
-        Uri requestUri = Util.BuildUri(new("/games/top"), queryParameters);
+        Uri requestUri = Util.BuildUri(new("/games/top", UriKind.Relative), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Game>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

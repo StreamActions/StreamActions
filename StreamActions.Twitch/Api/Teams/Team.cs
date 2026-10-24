@@ -181,7 +181,7 @@ public sealed record Team
         NameValueCollection queryParameters = [];
         queryParameters.Add("broadcaster_id", broadcasterId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/teams/channel"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/teams/channel", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Team>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -254,7 +254,7 @@ public sealed record Team
             queryParameters.Add("name", teamName);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/teams"), queryParameters), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/teams", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Team>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

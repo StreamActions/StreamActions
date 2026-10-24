@@ -385,7 +385,7 @@ public sealed record Video
             }
         }
 
-        Uri uri = Util.BuildUri(new("/videos"), queryParams);
+        Uri uri = Util.BuildUri(new("/videos", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Video>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -444,7 +444,7 @@ public sealed record Video
             }
         }
 
-        Uri uri = Util.BuildUri(new("/videos"), new() { { "id", id } });
+        Uri uri = Util.BuildUri(new("/videos", UriKind.Relative), new() { { "id", id } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<string>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

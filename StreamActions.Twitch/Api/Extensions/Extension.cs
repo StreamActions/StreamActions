@@ -228,7 +228,7 @@ public sealed record Extension
             queryParams.Add("extension_version", extensionVersion);
         }
 
-        Uri uri = Util.BuildUri(new("/extensions"), queryParams);
+        Uri uri = Util.BuildUri(new("/extensions", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Extension>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -290,7 +290,7 @@ public sealed record Extension
             queryParams.Add("extension_version", extensionVersion);
         }
 
-        Uri uri = Util.BuildUri(new("/extensions/released"), queryParams);
+        Uri uri = Util.BuildUri(new("/extensions/released", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Extension>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

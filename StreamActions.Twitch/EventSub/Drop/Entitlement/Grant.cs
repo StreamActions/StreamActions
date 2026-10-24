@@ -16,11 +16,11 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Text.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Drop.Entitlement.Objects;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Drop.Entitlement;
 

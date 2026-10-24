@@ -167,7 +167,7 @@ public sealed record SearchChannel
             queryParameters.Add("after", after);
         }
 
-        Uri requestUri = Util.BuildUri(new("/search/channels"), queryParameters);
+        Uri requestUri = Util.BuildUri(new("/search/channels", UriKind.Relative), queryParameters);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, requestUri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<SearchChannel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);

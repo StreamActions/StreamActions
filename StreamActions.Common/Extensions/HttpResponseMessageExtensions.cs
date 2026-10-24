@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace StreamActions.Common.Extensions;
@@ -37,13 +36,37 @@ public static class HttpResponseMessageExtensions
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <typeparam name="T">The target type to deserialize to.</typeparam>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    public static async Task<T?> ReadFromJsonAsync<T>(this HttpResponseMessage message, JsonSerializerOptions? options, CancellationToken cancellationToken = default) where T : JsonApiResponse
+    /// <exception cref="ArgumentNullException"><paramref name="message"/> is <see langword="null"/>.</exception>
+    public static async Task<T?> ReadFromJsonAsync<T>(this HttpResponseMessage message, JsonSerializerOptions? options = null, CancellationToken cancellationToken = default) where T : JsonApiResponse, new()
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        T? response = await message.Content.ReadFromJsonAsync<T>(options, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        response ??= (T)new JsonApiResponse() { Status = message.StatusCode };
+        T? response = null;
+
+        if (message.Content != null)
+        {
+            if (message.Content.Headers.ContentLength == 0)
+            {
+                response = new T() { Status = message.StatusCode };
+            }
+            else
+            {
+                string content = await message.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    response = new T() { Status = message.StatusCode };
+                }
+                else
+                {
+                    response = JsonSerializer.Deserialize<T>(content, options);
+                }
+            }
+        }
+
+        response ??= new T() { Status = message.StatusCode };
 
         if (response.Status != message.StatusCode)
         {

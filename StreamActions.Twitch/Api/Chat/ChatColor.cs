@@ -21,8 +21,8 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
-using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Chat.Objects;
+using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using System.Drawing;
@@ -177,7 +177,7 @@ public sealed record ChatColor
 
         session.RequireUserOrAppToken();
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/color"), new() { { "user_id", userId } }), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/color", UriKind.Relative), new() { { "user_id", userId } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatColor>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -256,7 +256,7 @@ public sealed record ChatColor
             }
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/chat/color"), new() { { "user_id", userId }, { "color", scolor } }), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/chat/color", UriKind.Relative), new() { { "user_id", userId }, { "color", scolor } }), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

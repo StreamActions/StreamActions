@@ -128,7 +128,7 @@ public sealed record Whisper
             throw new ArgumentNullException(nameof(message)).Log(TwitchApi.GetLogger());
         }
 
-        Uri uri = Util.BuildUri(new("/whispers"), new() { { "from_user_id", fromUserId }, { "to_user_id", toUserId } });
+        Uri uri = Util.BuildUri(new("/whispers", UriKind.Relative), new() { { "from_user_id", fromUserId }, { "to_user_id", toUserId } });
         using JsonContent jsonContent = JsonContent.Create(message, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);

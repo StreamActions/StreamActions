@@ -62,7 +62,7 @@ public sealed record TwitchSession : IDisposable
     /// <summary>
     /// <inheritdoc/>
     /// </summary>
-    public void Dispose() => this._refreshLock.Close();
+    public void Dispose() => this._refreshLock.Dispose();
 
     /// <summary>
     /// Checks if a JWT token is present.
@@ -132,7 +132,7 @@ public sealed record TwitchSession : IDisposable
             throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.").Log(TwitchApi.GetLogger());
         }
 
-        if (this.Token.Type is not TwitchToken.TokenType.App or TwitchToken.TokenType.User)
+        if (this.Token.Type is not TwitchToken.TokenType.App and not TwitchToken.TokenType.User)
         {
             throw new TokenTypeException($"{nameof(TwitchToken.TokenType.App)} or {nameof(TwitchToken.TokenType.User)}", (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString()).Log(TwitchApi.GetLogger());
         }
@@ -190,7 +190,7 @@ public sealed record TwitchSession : IDisposable
     /// <summary>
     /// Used as a locking object by <see cref="TwitchApi.PerformHttpRequest(HttpMethod, Uri, TwitchSession, HttpContent?, bool)"/> to prevent multiple simultaneous or back-to-back OAuth Refreshes.
     /// </summary>
-    internal Mutex _refreshLock = new();
+    internal SemaphoreSlim _refreshLock = new(1, 1);
 
     #endregion Internal Fields
 

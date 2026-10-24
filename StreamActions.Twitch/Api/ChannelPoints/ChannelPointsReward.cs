@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.ChannelPoints.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -21,6 +20,7 @@ using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
+using StreamActions.Twitch.Api.ChannelPoints.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -251,7 +251,7 @@ public sealed record ChannelPointsReward
             queryParams.Add("only_manageable_rewards", onlyManageableRewards.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant());
         }
 
-        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards"), queryParams);
+        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChannelPointsReward>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -392,7 +392,7 @@ public sealed record ChannelPointsReward
         };
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards"), queryParams);
+        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChannelPointsReward>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -546,7 +546,7 @@ public sealed record ChannelPointsReward
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards"), queryParams);
+        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChannelPointsReward>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -623,7 +623,7 @@ public sealed record ChannelPointsReward
             { "id", id.ToString("D", CultureInfo.InvariantCulture) }
         };
 
-        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards"), queryParams);
+        Uri uri = Util.BuildUri(new("/channel_points/custom_rewards", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

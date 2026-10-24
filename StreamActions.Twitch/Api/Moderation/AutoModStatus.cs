@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Moderation.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -22,6 +21,7 @@ using StreamActions.Common.Extensions;
 using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Api.Moderation.Objects;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
 using System.Net.Http.Json;
@@ -125,7 +125,7 @@ public sealed record AutoModStatus
         queryParameters.Add("broadcaster_id", broadcasterId);
 
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/enforcements/status"), queryParameters), session, jsonContent).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/enforcements/status", UriKind.Relative), queryParameters), session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<AutoModStatus>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -201,7 +201,7 @@ public sealed record AutoModStatus
         session.RequireUserOrAppToken(Scope.ModeratorManageAutomod);
 
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/automod/message")), session, jsonContent).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/automod/message", UriKind.Relative)), session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

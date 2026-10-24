@@ -259,7 +259,7 @@ public sealed record Subscription
             queryParams.Add("after", after);
         }
 
-        Uri uri = Util.BuildUri(new("/subscriptions"), queryParams);
+        Uri uri = Util.BuildUri(new("/subscriptions", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<SubscriptionResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -326,7 +326,7 @@ public sealed record Subscription
             { "user_id", userId }
         };
 
-        Uri uri = Util.BuildUri(new("/subscriptions/user"), queryParams);
+        Uri uri = Util.BuildUri(new("/subscriptions/user", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<SubscriptionResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

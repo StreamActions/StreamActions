@@ -35,4 +35,8 @@
     <ProjectReference Include="..\StreamActions.Common\StreamActions.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="StreamActions.Twitch.Tests" />
+  </ItemGroup>
+
 </Project>

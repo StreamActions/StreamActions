@@ -219,7 +219,7 @@ namespace StreamActions.Twitch.Api.Users
                 }
             }
 
-            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/users"), queryParameters), session).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/users", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
             return await response.ReadFromJsonAsync<ResponseData<User>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
 
@@ -279,7 +279,7 @@ namespace StreamActions.Twitch.Api.Users
                 queryParameters.Add("description", description);
             }
 
-            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/users"), queryParameters), session).ConfigureAwait(false);
+            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/users", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
             return await response.ReadFromJsonAsync<ResponseData<User>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
         }
     }
