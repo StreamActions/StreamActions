@@ -16,13 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Logging;
-using System;
-using System.Linq;
-using Xunit;
 
 namespace StreamActions.Common.Tests.Logging;
 
