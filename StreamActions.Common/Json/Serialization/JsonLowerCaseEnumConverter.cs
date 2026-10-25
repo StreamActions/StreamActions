@@ -32,7 +32,7 @@ public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : s
     /// <summary>
     /// A cached array of enum names and their corresponding parsed values, to avoid allocations and reflection during read operations.
     /// </summary>
-    private static readonly (string Name, T Value)[] s_values = GetValues();
+    private static readonly (string Name, T Value)[] _values = GetValues();
 
     /// <summary>
     /// Initializes the cached enum values and names for the generic type <typeparamref name="T"/>.
@@ -41,7 +41,7 @@ public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : s
     private static (string Name, T Value)[] GetValues()
     {
         string[] names = Enum.GetNames<T>();
-        var values = new (string, T)[names.Length];
+        (string, T)[] values = new (string, T)[names.Length];
         for (int i = 0; i < names.Length; i++)
         {
             values[i] = (names[i], Enum.Parse<T>(names[i]));
@@ -66,7 +66,7 @@ public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : s
     {
         string val = reader.GetString()!;
 
-        foreach (var (Name, Value) in s_values)
+        foreach ((string Name, T Value) in _values)
         {
             if (Name.Equals(val, StringComparison.InvariantCultureIgnoreCase))
             {

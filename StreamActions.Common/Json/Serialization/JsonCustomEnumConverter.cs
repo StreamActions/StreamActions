@@ -33,12 +33,12 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
     /// <summary>
     /// A cache mapping the custom string values defined by <see cref="JsonCustomEnumAttribute"/> to their corresponding enum values.
     /// </summary>
-    private static readonly Dictionary<string, T> StringToEnumMap = new(StringComparer.InvariantCultureIgnoreCase);
+    private static readonly Dictionary<string, T> _stringToEnumMap = new(StringComparer.InvariantCultureIgnoreCase);
 
     /// <summary>
     /// A cache mapping enum values to their corresponding custom string values defined by <see cref="JsonCustomEnumAttribute"/>.
     /// </summary>
-    private static readonly Dictionary<T, string> EnumToStringMap = [];
+    private static readonly Dictionary<T, string> _enumToStringMap = [];
 
     #endregion Static Fields
 
@@ -59,8 +59,8 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
                 if (attribute is JsonCustomEnumAttribute customAttr && customAttr.Value is not null)
                 {
                     T eval = Enum.Parse<T>(name);
-                    StringToEnumMap[customAttr.Value] = eval;
-                    EnumToStringMap[eval] = customAttr.Value;
+                    _stringToEnumMap[customAttr.Value] = eval;
+                    _enumToStringMap[eval] = customAttr.Value;
                 }
             }
         }
@@ -81,18 +81,20 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
     /// Converts the given string into an enum value.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// The string comparison is performed using <see cref="StringComparison.InvariantCultureIgnoreCase"/>.
+    /// </para>
     /// </remarks>
     /// <param name="value">The string value to convert.</param>
     /// <returns>The enum value of type <typeparamref name="T"/> that has a matching <see cref="JsonCustomEnumAttribute"/>; <see langword="default"/> if there is no match.</returns>
-    public T Convert(string value) => value is not null && StringToEnumMap.TryGetValue(value, out T result) ? result : default;
+    public T Convert(string value) => value is not null && _stringToEnumMap.TryGetValue(value, out T result) ? result : default;
 
     /// <summary>
     /// Converts the given enum value into a string.
     /// </summary>
     /// <param name="value">The enum value to convert.</param>
     /// <returns>The string value defined in the <see cref="JsonCustomEnumAttribute"/> applied to the enum value; <see cref="Enum.GetName{TEnum}(TEnum)"/> if the attribute is not present.</returns>
-    public string? Convert(T value) => EnumToStringMap.TryGetValue(value, out string? result) ? result : Enum.GetName(value);
+    public string? Convert(T value) => _enumToStringMap.TryGetValue(value, out string? result) ? result : Enum.GetName(value);
 
     /// <inheritdoc/>
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => this.Convert(reader.GetString()!);

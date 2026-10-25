@@ -105,7 +105,7 @@ public sealed class ValidateTests : IDisposable
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request!.Method.Should().Be("GET");
-        _ = request.Headers["Authorization"].ToString().Should().Be($"Bearer {tokenString}");
+        _ = request.Headers.Authorization.ToString().Should().Be($"Bearer {tokenString}");
     }
 
     [Fact]

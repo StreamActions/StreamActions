@@ -30,7 +30,7 @@ public sealed class JsonUpperCaseEnumConverter<T> : JsonConverter<T> where T : s
     /// <summary>
     /// Cached array of the names of the enum values for type <typeparamref name="T"/>.
     /// </summary>
-    private static readonly string[] s_names = Enum.GetNames<T>();
+    private static readonly string[] _names = Enum.GetNames<T>();
 
     #region Public Properties
 
@@ -46,7 +46,7 @@ public sealed class JsonUpperCaseEnumConverter<T> : JsonConverter<T> where T : s
     {
         string val = reader.GetString()!;
 
-        foreach (string name in s_names)
+        foreach (string name in _names)
         {
             if (name.Equals(val, StringComparison.InvariantCultureIgnoreCase))
             {

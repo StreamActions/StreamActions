@@ -48,24 +48,24 @@ public partial class UtilTests
     [Theory]
     [Trait("Member", "IsNullOrDefault")]
     [MemberData(nameof(ClassTestData))]
-    public void IsNullOrDefault_WithClass_ReturnsCorrectBoolean(object? argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
+    public void IsNullOrDefault_WithClass_ReturnsCorrectBoolean(Uri? argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
 
-    public static IEnumerable<object?[]> ClassTestData =>
-    [
-        [null, true],
-        [new object(), false]
-    ];
+    public static TheoryData<Uri?, bool> ClassTestData => new()
+    {
+        { null, true },
+        { new Uri("https://example.com"), false }
+    };
 
     [Theory]
     [Trait("Member", "IsNullOrDefault")]
     [MemberData(nameof(StructTestData))]
     public void IsNullOrDefault_WithStruct_ReturnsCorrectBoolean(Guid argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
 
-    public static IEnumerable<object[]> StructTestData =>
-    [
-        [default(Guid), true],
-        [new Guid("00000000-0000-0000-0000-000000000001"), false]
-    ];
+    public static TheoryData<Guid, bool> StructTestData => new()
+    {
+        { default, true },
+        { new Guid("00000000-0000-0000-0000-000000000001"), false }
+    };
 
     [Theory]
     [Trait("Member", "IsNullOrDefault")]
@@ -76,16 +76,9 @@ public partial class UtilTests
 
     [Theory]
     [Trait("Member", "IsNullOrDefault")]
-    [MemberData(nameof(ObjectBoxingTestData))]
+    [InlineData(0, true)]
+    [InlineData(1, false)]
     public void IsNullOrDefault_WithObjectBoxingValueType_ReturnsCorrectBoolean(object argument, bool expected) => Util.IsNullOrDefault(argument).Should().Be(expected);
-
-    public static IEnumerable<object[]> ObjectBoxingTestData =>
-    [
-        // IsNullOrDefault has special logic for boxed value types
-        // It checks the underlying runtime type and compares to its default instance
-        [0, true],
-        [1, false]
-    ];
 
     #endregion IsNullOrDefault
 
