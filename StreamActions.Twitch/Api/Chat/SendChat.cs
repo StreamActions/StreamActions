@@ -150,13 +150,10 @@ public sealed record SendChat
             throw new ArgumentOutOfRangeException(nameof(parameters.Pin), parameters.Pin, "cannot be combined with ReplyParentMessageId or ForSourceOnly").Log(TwitchApi.GetLogger());
         }
 
+        session.RequireUserOrAppToken(Scope.UserWriteChat);
         if (parameters.Pin == true)
         {
-            session.RequireUserOrAppToken(Scope.UserWriteChat, Scope.ModeratorManageChatMessages);
-        }
-        else
-        {
-            session.RequireUserOrAppToken(Scope.UserWriteChat);
+            session.RequireUserOrAppToken(Scope.ModeratorManageChatMessages);
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);

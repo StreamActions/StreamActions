@@ -61,6 +61,9 @@ public sealed class UserInfoTests : IDisposable
 
     #region GetUserInfo
 
+    /// <summary>
+    /// Tests that <see cref="UserInfo.GetUserInfo(TwitchSession, string?)"/> throws an <see cref="ArgumentNullException"/> when the session is null.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetUserInfo")]
     public async Task GetUserInfo_WhenSessionIsNull_ThrowsArgumentNullException()
@@ -70,6 +73,9 @@ public sealed class UserInfoTests : IDisposable
             .WithParameterName("session");
     }
 
+    /// <summary>
+    /// Tests that <see cref="UserInfo.GetUserInfo(TwitchSession, string?)"/> throws a <see cref="TokenTypeException"/> when the session token is not a user token.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetUserInfo")]
     public async Task GetUserInfo_WhenSessionIsNotUserToken_ThrowsTokenTypeException()
@@ -79,6 +85,9 @@ public sealed class UserInfoTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="UserInfo.GetUserInfo(TwitchSession, string?)"/> throws a <see cref="TwitchScopeMissingException"/> when the session lacks the openid scope.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetUserInfo")]
     public async Task GetUserInfo_WhenSessionMissingOpenIdScope_ThrowsTwitchScopeMissingException()
@@ -88,6 +97,29 @@ public sealed class UserInfoTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="UserInfo.GetUserInfo(TwitchSession, string?)"/> throws an <see cref="InvalidOperationException"/> when the session OAuth token is null or whitespace.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetUserInfo")]
+    public async Task GetUserInfo_WhenOAuthIsNullOrWhitespace_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.OpenID]
+            }
+        };
+
+        Func<Task> action = async () => await UserInfo.GetUserInfo(session).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UserInfo.GetUserInfo(TwitchSession, string?)"/> successfully queries user info and maps all properties when the openid scope is present.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetUserInfo")]
     public async Task GetUserInfo_WhenSessionHasOpenIdScope_GetsUserInfoAndMapsAllProperties()
@@ -115,7 +147,7 @@ public sealed class UserInfoTests : IDisposable
         UserInfo? userInfo = await UserInfo.GetUserInfo(session).ConfigureAwait(true);
 
         _ = userInfo.Should().NotBeNull();
-        _ = userInfo.Audience.Should().Be(this._fixture.ClientId);
+        _ = userInfo!.Audience.Should().Be(this._fixture.ClientId);
         _ = userInfo.AuthorizedParty.Should().Be(this._fixture.ClientId);
         _ = userInfo.ExpiresUnix.Should().Be(1644342250);
         _ = userInfo.Expires.Should().Be(DateTime.UnixEpoch.AddSeconds(1644342250));
@@ -132,10 +164,40 @@ public sealed class UserInfoTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request.Method.Should().Be("GET");
+        _ = request!.Method.Should().Be("GET");
+        _ = request.Path.Should().Be("/oauth2/userinfo");
+        _ = this._fixture.LastRequest!.Headers.Authorization.ToString().Should().StartWith("Bearer ");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UserInfo.GetUserInfo(TwitchSession, string?)"/> requests user info from an explicit base address URI.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetUserInfo")]
+    public async Task GetUserInfo_WhenExplicitBaseAddressProvided_RequestsConfiguredUrlAndReturnsUserInfo()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/oauth2/userinfo", new
+        {
+            sub = "141981764"
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.OpenID);
+        Uri explicitBaseAddress = new($"{this._fixture.BaseUrl}/oauth2/userinfo");
+
+        UserInfo? userInfo = await UserInfo.GetUserInfo(session, explicitBaseAddress.ToString()).ConfigureAwait(true);
+
+        _ = userInfo.Should().NotBeNull();
+        _ = userInfo!.Subject.Should().Be("141981764");
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request!.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/oauth2/userinfo");
     }
 
+    /// <summary>
+    /// Tests that <see cref="UserInfo.GetUserInfo(TwitchSession, string?)"/> returns null for calculated and optional properties when omitted from the response.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetUserInfo")]
     public async Task GetUserInfo_WhenUserInfoPropertiesNull_CalculatedPropertiesReturnNull()
@@ -150,13 +212,20 @@ public sealed class UserInfoTests : IDisposable
         UserInfo? userInfo = await UserInfo.GetUserInfo(session).ConfigureAwait(true);
 
         _ = userInfo.Should().NotBeNull();
+        _ = userInfo!.Audience.Should().BeNull();
+        _ = userInfo.AuthorizedParty.Should().BeNull();
         _ = userInfo.ExpiresUnix.Should().BeNull();
         _ = userInfo.Expires.Should().BeNull();
         _ = userInfo.IssuedUnix.Should().BeNull();
         _ = userInfo.Issued.Should().BeNull();
+        _ = userInfo.Email.Should().BeNull();
+        _ = userInfo.EmailVerified.Should().BeNull();
         _ = userInfo.Picture.Should().BeNull();
         _ = userInfo.PictureUri.Should().BeNull();
+        _ = userInfo.PreferredUsername.Should().BeNull();
+        _ = userInfo.UpdatedAt.Should().BeNull();
     }
 
     #endregion GetUserInfo
 }
+

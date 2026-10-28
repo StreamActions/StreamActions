@@ -164,6 +164,11 @@ public sealed class ExtensionConfigurationSegmentTests : IDisposable
         _ = request.QueryString.Should().Contain("segment=global");
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionConfigurationSegment.GetExtensionConfigurationSegment"/> includes broadcaster_id when requesting broadcaster segment.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "GetExtensionConfigurationSegment")]
     public async Task GetExtensionConfigurationSegment_WhenValidBroadcasterRequest_IncludesBroadcasterId()
@@ -188,10 +193,63 @@ public sealed class ExtensionConfigurationSegmentTests : IDisposable
 
         _ = response.Should().NotBeNull();
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data[0].BroadcasterId.Should().Be("141981764");
+        _ = response.Data.Count.Should().Be(1);
+
+        ExtensionConfigurationSegment segment = response.Data[0];
+        _ = segment.BroadcasterId.Should().Be("141981764");
+        _ = segment.Segment.Should().Be("broadcaster");
+        _ = segment.Content.Should().Be("custom broadcaster config");
+        _ = segment.Version.Should().Be("0.0.2");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
+        _ = request.QueryString.Should().Contain("segment=broadcaster");
+        _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionConfigurationSegment.GetExtensionConfigurationSegment"/> sends multiple segment query parameters when multiple segments are requested.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetExtensionConfigurationSegment")]
+    public async Task GetExtensionConfigurationSegment_WhenMultipleSegmentsProvided_IncludesAllSegmentsInQueryString()
+    {
+        const string jsonResponse = """
+        {
+          "data": [
+            {
+              "segment": "broadcaster",
+              "broadcaster_id": "141981764",
+              "content": "custom broadcaster config",
+              "version": "0.0.2"
+            },
+            {
+              "segment": "developer",
+              "broadcaster_id": "141981764",
+              "content": "dev config",
+              "version": "0.0.1"
+            }
+          ]
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/extensions/configurations", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateJwtSession();
+        ResponseData<ExtensionConfigurationSegment>? response = await ExtensionConfigurationSegment.GetExtensionConfigurationSegment(session, "uo6dggojyb8d6soh92zknwmi5ej1q2", ["broadcaster", "developer"], "141981764").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(2);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
+        _ = request.QueryString.Should().Contain("segment=broadcaster");
+        _ = request.QueryString.Should().Contain("segment=developer");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }
 
@@ -243,6 +301,11 @@ public sealed class ExtensionConfigurationSegmentTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionConfigurationSegment.SetExtensionConfigurationSegment"/> sends a PUT request and returns success.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "SetExtensionConfigurationSegment")]
     public async Task SetExtensionConfigurationSegment_WhenValidRequest_SendsPutAndReturnsSuccess()
@@ -268,8 +331,48 @@ public sealed class ExtensionConfigurationSegmentTests : IDisposable
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/extensions/configurations");
+        _ = request.Body.Should().Contain("\"extension_id\":\"uo6dggojyb8d6soh92zknwmi5ej1q2\"");
         _ = request.Body.Should().Contain("\"segment\":\"global\"");
         _ = request.Body.Should().Contain("\"content\":\"hello config!\"");
+        _ = request.Body.Should().Contain("\"version\":\"0.0.1\"");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionConfigurationSegment.SetExtensionConfigurationSegment"/> includes broadcaster_id and omits version when version is null.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SetExtensionConfigurationSegment")]
+    public async Task SetExtensionConfigurationSegment_WhenVersionIsNull_IncludesBroadcasterIdAndOmitsVersion()
+    {
+        this._fixture.RegisterStatusCode("PUT", "/helix/extensions/configurations", StatusCodes.Status204NoContent);
+
+        SetExtensionConfigurationSegmentParameters parameters = new()
+        {
+            ExtensionId = "uo6dggojyb8d6soh92zknwmi5ej1q2",
+            Segment = "broadcaster",
+            BroadcasterId = "141981764",
+            Content = "hello config!",
+            Version = null
+        };
+
+        using TwitchSession session = TestTokenFactory.CreateJwtSession();
+        JsonApiResponse? response = await ExtensionConfigurationSegment.SetExtensionConfigurationSegment(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("PUT");
+        _ = request.Path.Should().Be("/helix/extensions/configurations");
+        _ = request.Body.Should().Contain("\"extension_id\":\"uo6dggojyb8d6soh92zknwmi5ej1q2\"");
+        _ = request.Body.Should().Contain("\"segment\":\"broadcaster\"");
+        _ = request.Body.Should().Contain("\"broadcaster_id\":\"141981764\"");
+        _ = request.Body.Should().Contain("\"content\":\"hello config!\"");
+        _ = request.Body.Should().NotContain("version");
     }
 
     #endregion SetExtensionConfigurationSegment

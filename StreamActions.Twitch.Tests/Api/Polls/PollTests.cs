@@ -20,6 +20,7 @@ using StreamActions.Twitch.Api.Polls;
 using StreamActions.Twitch.Api.Polls.Objects;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
+using System.Globalization;
 using System.Net;
 
 namespace StreamActions.Twitch.Tests.Api.Polls;
@@ -192,6 +193,15 @@ public sealed class PollTests : IDisposable
         _ = choice1.Votes.Should().Be(10);
         _ = choice1.ChannelPointsVotes.Should().Be(5);
 
+        PollChoice choice2 = poll.Choices[1];
+        _ = choice2.Id.Should().Be("c2");
+        _ = choice2.Title.Should().Be("Vanilla");
+        _ = choice2.Votes.Should().Be(8);
+        _ = choice2.ChannelPointsVotes.Should().Be(4);
+
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursor123");
+
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");
@@ -201,6 +211,57 @@ public sealed class PollTests : IDisposable
         _ = request.QueryString.Should().Contain("id=p1");
         _ = request.QueryString.Should().Contain("id=p2");
         _ = request.QueryString.Should().Contain("after=cursor123");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Poll.GetPolls"/> with default optional parameters omits id and after from query parameters.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetPolls")]
+    public async Task GetPolls_WhenDefaultOptionalParameters_OmitsOptionalQueryParameters()
+    {
+        const string json = "{\"data\":[]}";
+        this._fixture.RegisterResponse("GET", "/polls", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadPolls);
+        ResponseData<Poll>? response = await Poll.GetPolls(session, "1234").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("GET");
+        _ = request.Path.Should().Be("/helix/polls");
+        _ = request.QueryString.Should().Contain("broadcaster_id=1234");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.Query.ContainsKey("id").Should().BeFalse();
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Poll.GetPolls"/> clamps first to [1, 20].
+    /// </summary>
+    /// <param name="first">The first parameter to test.</param>
+    /// <param name="expectedQuery">The expected query string fragment.</param>
+    [Theory]
+    [Trait("Member", "GetPolls")]
+    [InlineData(0, "first=1")]
+    [InlineData(50, "first=20")]
+    public async Task GetPolls_WhenFirstOutOfRange_ClampsFirst(int first, string expectedQuery)
+    {
+        const string json = "{\"data\":[]}";
+        this._fixture.RegisterResponse("GET", "/polls", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadPolls);
+        ResponseData<Poll>? response = await Poll.GetPolls(session, "1234", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain(expectedQuery);
     }
 
     #endregion GetPolls
@@ -469,7 +530,31 @@ public sealed class PollTests : IDisposable
 
         Poll poll = response.Data[0];
         _ = poll.Id.Should().Be("p1");
+        _ = poll.BroadcasterId.Should().Be("1234");
+        _ = poll.BroadcasterName.Should().Be("Streamer");
+        _ = poll.BroadcasterLogin.Should().Be("streamer");
         _ = poll.Title.Should().Be("Favorite Game?");
+        _ = poll.ChannelPointsVotingEnabled.Should().BeTrue();
+        _ = poll.ChannelPointsPerVote.Should().Be(10);
+        _ = poll.Status.Should().Be(Poll.PollStatus.Active);
+        _ = poll.DurationSeconds.Should().Be(300);
+        _ = poll.Duration.Should().Be(TimeSpan.FromSeconds(300));
+        _ = poll.StartedAt.Should().Be(DateTime.Parse("2023-01-01T00:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = poll.EndedAt.Should().BeNull();
+        _ = poll.Choices.Should().NotBeNull();
+        _ = poll.Choices.Should().HaveCount(2);
+
+        PollChoice choice1 = poll.Choices[0];
+        _ = choice1.Id.Should().Be("c1");
+        _ = choice1.Title.Should().Be("Game A");
+        _ = choice1.Votes.Should().Be(0);
+        _ = choice1.ChannelPointsVotes.Should().Be(0);
+
+        PollChoice choice2 = poll.Choices[1];
+        _ = choice2.Id.Should().Be("c2");
+        _ = choice2.Title.Should().Be("Game B");
+        _ = choice2.Votes.Should().Be(0);
+        _ = choice2.ChannelPointsVotes.Should().Be(0);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -477,6 +562,82 @@ public sealed class PollTests : IDisposable
         _ = request.Path.Should().Be("/helix/polls");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"1234\"");
         _ = request.Body.Should().Contain("\"title\":\"Favorite Game?\"");
+        _ = request.Body.Should().Contain("\"duration\":300");
+        _ = request.Body.Should().Contain("\"choices\"");
+        _ = request.Body.Should().Contain("\"Game A\"");
+        _ = request.Body.Should().Contain("\"Game B\"");
+        _ = request.Body.Should().Contain("\"channel_points_voting_enabled\":true");
+        _ = request.Body.Should().Contain("\"channel_points_per_vote\":10");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Poll.CreatePoll"/> without optional channel points voting omits them from request body.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreatePoll")]
+    public async Task CreatePoll_WhenChannelPointsVotingDisabled_OmitsChannelPointsFieldsFromBody()
+    {
+        const string json = "{\"data\":[{\"id\":\"p1\",\"broadcaster_id\":\"1234\",\"title\":\"Favorite Game?\"}]}";
+        this._fixture.RegisterResponse("POST", "/helix/polls", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManagePolls);
+        PollCreationParameters parameters = new()
+        {
+            BroadcasterId = "1234",
+            Title = "Favorite Game?",
+            Duration = 300,
+            Choices = [new() { Title = "Game A" }, new() { Title = "Game B" }],
+            ChannelPointsVotingEnabled = null,
+            ChannelPointsPerVote = null
+        };
+
+        ResponseData<Poll>? response = await Poll.CreatePoll(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().NotContain("channel_points_voting_enabled");
+        _ = request.Body.Should().NotContain("channel_points_per_vote");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Poll.CreatePoll"/> clamps duration and channel points per vote.
+    /// </summary>
+    /// <param name="duration">The duration to test.</param>
+    /// <param name="points">The channel points per vote to test.</param>
+    /// <param name="expectedDuration">The expected clamped duration.</param>
+    /// <param name="expectedPoints">The expected clamped points.</param>
+    [Theory]
+    [Trait("Member", "CreatePoll")]
+    [InlineData(5, 0, 15, 1)]
+    [InlineData(2000, 2000000, 1800, 1000000)]
+    public async Task CreatePoll_WhenValuesOutOfRange_ClampsValues(int duration, int points, int expectedDuration, int expectedPoints)
+    {
+        const string json = "{\"data\":[{\"id\":\"p1\",\"broadcaster_id\":\"1234\",\"title\":\"Favorite Game?\"}]}";
+        this._fixture.RegisterResponse("POST", "/helix/polls", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManagePolls);
+        PollCreationParameters parameters = new()
+        {
+            BroadcasterId = "1234",
+            Title = "Favorite Game?",
+            Duration = duration,
+            Choices = [new() { Title = "Game A" }, new() { Title = "Game B" }],
+            ChannelPointsVotingEnabled = true,
+            ChannelPointsPerVote = points
+        };
+
+        ResponseData<Poll>? response = await Poll.CreatePoll(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain($"\"duration\":{expectedDuration}");
+        _ = request.Body.Should().Contain($"\"channel_points_per_vote\":{expectedPoints}");
     }
 
     #endregion CreatePoll
@@ -625,7 +786,8 @@ public sealed class PollTests : IDisposable
     [InlineData(Poll.PollStatus.Archived)]
     public async Task EndPoll_WhenValidRequest_PatchesAndReturnsPoll(Poll.PollStatus status)
     {
-        const string json = "{\"data\":[{\"id\":\"p1\",\"broadcaster_id\":\"1234\",\"broadcaster_name\":\"Streamer\",\"broadcaster_login\":\"streamer\",\"title\":\"Favorite Game?\",\"choices\":[{\"id\":\"c1\",\"title\":\"Game A\",\"votes\":5,\"channel_points_votes\":2}],\"status\":\"TERMINATED\",\"duration\":300,\"started_at\":\"2023-01-01T00:00:00Z\",\"ended_at\":\"2023-01-01T00:05:00Z\"}]}";
+        string statusString = status.ToString().ToUpperInvariant();
+        string json = $"{{\"data\":[{{\"id\":\"p1\",\"broadcaster_id\":\"1234\",\"broadcaster_name\":\"Streamer\",\"broadcaster_login\":\"streamer\",\"title\":\"Favorite Game?\",\"choices\":[{{\"id\":\"c1\",\"title\":\"Game A\",\"votes\":5,\"channel_points_votes\":2}}],\"status\":\"{statusString}\",\"duration\":300,\"started_at\":\"2023-01-01T00:00:00Z\",\"ended_at\":\"2023-01-01T00:05:00Z\"}}]}}";
         this._fixture.RegisterResponse("PATCH", "/helix/polls", json);
 
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManagePolls);
@@ -646,6 +808,23 @@ public sealed class PollTests : IDisposable
 
         Poll poll = response.Data[0];
         _ = poll.Id.Should().Be("p1");
+        _ = poll.BroadcasterId.Should().Be("1234");
+        _ = poll.BroadcasterName.Should().Be("Streamer");
+        _ = poll.BroadcasterLogin.Should().Be("streamer");
+        _ = poll.Title.Should().Be("Favorite Game?");
+        _ = poll.Status.Should().Be(status);
+        _ = poll.DurationSeconds.Should().Be(300);
+        _ = poll.Duration.Should().Be(TimeSpan.FromSeconds(300));
+        _ = poll.StartedAt.Should().Be(DateTime.Parse("2023-01-01T00:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = poll.EndedAt.Should().Be(DateTime.Parse("2023-01-01T00:05:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = poll.Choices.Should().NotBeNull();
+        _ = poll.Choices.Should().HaveCount(1);
+
+        PollChoice choice1 = poll.Choices[0];
+        _ = choice1.Id.Should().Be("c1");
+        _ = choice1.Title.Should().Be("Game A");
+        _ = choice1.Votes.Should().Be(5);
+        _ = choice1.ChannelPointsVotes.Should().Be(2);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -653,6 +832,7 @@ public sealed class PollTests : IDisposable
         _ = request.Path.Should().Be("/helix/polls");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"1234\"");
         _ = request.Body.Should().Contain("\"id\":\"p1\"");
+        _ = request.Body.Should().Contain($"\"status\":\"{statusString}\"");
     }
 
     #endregion EndPoll

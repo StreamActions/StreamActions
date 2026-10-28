@@ -21,6 +21,7 @@ using StreamActions.Twitch.Api.Schedule;
 using StreamActions.Twitch.Api.Schedule.Objects;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
+using System.Globalization;
 using System.Net;
 
 namespace StreamActions.Twitch.Tests.Api.Schedule;
@@ -135,7 +136,10 @@ public sealed class ChannelScheduleTests : IDisposable
     ""broadcaster_id"": ""141981764"",
     ""broadcaster_name"": ""TwitchDev"",
     ""broadcaster_login"": ""twitchdev"",
-    ""vacation"": null
+    ""vacation"": {
+      ""start_time"": ""2021-08-01T00:00:00Z"",
+      ""end_time"": ""2021-08-15T00:00:00Z""
+    }
   },
   ""pagination"": {}
 }");
@@ -151,14 +155,16 @@ public sealed class ChannelScheduleTests : IDisposable
         _ = schedule.BroadcasterId.Should().Be("141981764");
         _ = schedule.BroadcasterName.Should().Be("TwitchDev");
         _ = schedule.BroadcasterLogin.Should().Be("twitchdev");
-        _ = schedule.Vacation.Should().BeNull();
+        _ = schedule.Vacation.Should().NotBeNull();
+        _ = schedule.Vacation.StartTime.Should().Be(DateTime.Parse("2021-08-01T00:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = schedule.Vacation.EndTime.Should().Be(DateTime.Parse("2021-08-15T00:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = schedule.Segments.Should().NotBeNull();
         _ = schedule.Segments.Count.Should().Be(1);
 
         ScheduleSegment segment = schedule.Segments[0];
         _ = segment.Id.Should().Be("segment123");
-        _ = segment.StartTime.Should().Be(DateTime.Parse("2021-07-01T18:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
-        _ = segment.EndTime.Should().Be(DateTime.Parse("2021-07-01T19:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
+        _ = segment.StartTime.Should().Be(DateTime.Parse("2021-07-01T18:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = segment.EndTime.Should().Be(DateTime.Parse("2021-07-01T19:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = segment.Title.Should().Be("TwitchDev Monthly Update // July 1, 2021");
         _ = segment.CanceledUntil.Should().BeNull();
         _ = segment.IsRecurring.Should().BeFalse();
@@ -171,6 +177,56 @@ public sealed class ChannelScheduleTests : IDisposable
         _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/schedule");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.GetChannelStreamSchedule"/> sends optional query parameters when specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetChannelStreamSchedule")]
+    public async Task GetChannelStreamSchedule_WhenOptionalParametersProvided_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterResponse("GET", "/helix/schedule", @"{ ""data"": { ""segments"": [], ""broadcaster_id"": ""141981764"", ""broadcaster_name"": ""TwitchDev"", ""broadcaster_login"": ""twitchdev"", ""vacation"": null }, ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        DateTime startTime = DateTime.Parse("2021-08-01T12:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+        List<string> segmentIds = ["seg1", "seg2"];
+
+        ResponseDataObject<ChannelSchedule>? response = await ChannelSchedule.GetChannelStreamSchedule(session, "141981764", segmentIds: segmentIds, startTime: startTime, first: 15, after: "cursor123").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
+        _ = request.QueryString.Should().Contain("id=seg1");
+        _ = request.QueryString.Should().Contain("id=seg2");
+        _ = request.QueryString.Should().Contain($"start_time={Uri.EscapeDataString(startTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture))}");
+        _ = request.QueryString.Should().Contain("first=15");
+        _ = request.QueryString.Should().Contain("after=cursor123");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.GetChannelStreamSchedule"/> clamps the first parameter between 1 and 25.
+    /// </summary>
+    /// <param name="first">The first count to test.</param>
+    /// <param name="expectedClamped">The expected clamped count.</param>
+    [Theory]
+    [Trait("Member", "GetChannelStreamSchedule")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(30, 25)]
+    [InlineData(100, 25)]
+    public async Task GetChannelStreamSchedule_WhenFirstOutOfRange_ClampsFirst(int first, int expectedClamped)
+    {
+        this._fixture.RegisterResponse("GET", "/helix/schedule", @"{ ""data"": { ""segments"": [], ""broadcaster_id"": ""141981764"", ""broadcaster_name"": ""TwitchDev"", ""broadcaster_login"": ""twitchdev"", ""vacation"": null }, ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        ResponseDataObject<ChannelSchedule>? response = await ChannelSchedule.GetChannelStreamSchedule(session, "141981764", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedClamped}");
     }
 
     #endregion GetChannelStreamSchedule
@@ -311,12 +367,58 @@ public sealed class ChannelScheduleTests : IDisposable
         _ = request.Path.Should().Be("/helix/schedule/settings");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("is_vacation_enabled=true");
+        _ = request.QueryString.Should().Contain($"vacation_start_time={Uri.EscapeDataString(start.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture))}");
+        _ = request.QueryString.Should().Contain($"vacation_end_time={Uri.EscapeDataString(end.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture))}");
         _ = request.QueryString.Should().Contain("timezone=America%2FNew_York");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.UpdateChannelStreamSchedule"/> omits vacation times and timezone when only isVacationEnabled is set.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateChannelStreamSchedule")]
+    public async Task UpdateChannelStreamSchedule_WhenOnlyIsVacationEnabledProvided_OmitsOptionalQueryParameters()
+    {
+        this._fixture.RegisterStatusCode("PATCH", "/helix/schedule/settings", StatusCodes.Status204NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageSchedule);
+        JsonApiResponse? response = await ChannelSchedule.UpdateChannelStreamSchedule(session, "141981764", isVacationEnabled: false).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
+        _ = request.QueryString.Should().Contain("is_vacation_enabled=false");
+        _ = request.QueryString.Should().NotContain("vacation_start_time");
+        _ = request.QueryString.Should().NotContain("vacation_end_time");
+        _ = request.QueryString.Should().NotContain("timezone");
     }
 
     #endregion UpdateChannelStreamSchedule
 
     #region CreateChannelStreamScheduleSegment
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.CreateChannelStreamScheduleSegment"/> throws <see cref="ArgumentNullException"/> when session is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateChannelStreamScheduleSegment")]
+    public async Task CreateChannelStreamScheduleSegment_WhenSessionIsNull_ThrowsArgumentNullException()
+    {
+        CreateChannelStreamScheduleSegmentParameters parameters = new()
+        {
+            StartTime = DateTime.UtcNow.AddDays(1),
+            Timezone = "America/New_York",
+            Duration = "60",
+            Title = "Test Stream"
+        };
+
+        Func<Task> action = async () => await ChannelSchedule.CreateChannelStreamScheduleSegment(null!, "141981764", parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("session");
+    }
 
     /// <summary>
     /// Tests that <see cref="ChannelSchedule.CreateChannelStreamScheduleSegment"/> throws <see cref="ArgumentNullException"/> when parameters are null.
@@ -357,6 +459,46 @@ public sealed class ChannelScheduleTests : IDisposable
     }
 
     /// <summary>
+    /// Tests that <see cref="ChannelSchedule.CreateChannelStreamScheduleSegment"/> throws <see cref="TokenTypeException"/> when session is an App token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateChannelStreamScheduleSegment")]
+    public async Task CreateChannelStreamScheduleSegment_WhenSessionIsAppToken_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        CreateChannelStreamScheduleSegmentParameters parameters = new()
+        {
+            StartTime = DateTime.UtcNow.AddDays(1),
+            Timezone = "America/New_York",
+            Duration = "60",
+            Title = "Test Stream"
+        };
+
+        Func<Task> action = async () => await ChannelSchedule.CreateChannelStreamScheduleSegment(session, "141981764", parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.CreateChannelStreamScheduleSegment"/> throws <see cref="TwitchScopeMissingException"/> when required scope is missing.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateChannelStreamScheduleSegment")]
+    public async Task CreateChannelStreamScheduleSegment_WhenScopeIsMissing_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmail);
+        CreateChannelStreamScheduleSegmentParameters parameters = new()
+        {
+            StartTime = DateTime.UtcNow.AddDays(1),
+            Timezone = "America/New_York",
+            Duration = "60",
+            Title = "Test Stream"
+        };
+
+        Func<Task> action = async () => await ChannelSchedule.CreateChannelStreamScheduleSegment(session, "141981764", parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
     /// Tests that <see cref="ChannelSchedule.CreateChannelStreamScheduleSegment"/> creates segment and returns schedule.
     /// </summary>
     [Fact]
@@ -389,7 +531,7 @@ public sealed class ChannelScheduleTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageSchedule);
         CreateChannelStreamScheduleSegmentParameters parameters = new()
         {
-            StartTime = DateTime.Parse("2021-07-01T18:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal),
+            StartTime = DateTime.Parse("2021-07-01T18:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal),
             Timezone = "America/New_York",
             Duration = "60",
             IsRecurring = false,
@@ -402,21 +544,74 @@ public sealed class ChannelScheduleTests : IDisposable
         _ = response.Should().NotBeNull();
         _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data.Segments.Should().NotBeNull();
-        _ = response.Data.Segments[0].Id.Should().Be("seg_new_123");
+
+        ChannelSchedule schedule = response.Data;
+        _ = schedule.BroadcasterId.Should().Be("141981764");
+        _ = schedule.BroadcasterName.Should().Be("TwitchDev");
+        _ = schedule.BroadcasterLogin.Should().Be("twitchdev");
+        _ = schedule.Vacation.Should().BeNull();
+        _ = schedule.Segments.Should().NotBeNull();
+        _ = schedule.Segments.Count.Should().Be(1);
+
+        ScheduleSegment segment = schedule.Segments[0];
+        _ = segment.Id.Should().Be("seg_new_123");
+        _ = segment.StartTime.Should().Be(DateTime.Parse("2021-07-01T18:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = segment.EndTime.Should().Be(DateTime.Parse("2021-07-01T19:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = segment.Title.Should().Be("TwitchDev Monthly Update // July 1, 2021");
+        _ = segment.CanceledUntil.Should().BeNull();
+        _ = segment.IsRecurring.Should().BeFalse();
+        _ = segment.Category.Should().NotBeNull();
+        _ = segment.Category.Id.Should().Be("509670");
+        _ = segment.Category.Name.Should().Be("Science & Technology");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/schedule/segment");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
-        _ = request.Body.Should().Contain("\"duration\":\"60\"");
+        _ = request.Body.Should().Contain("\"start_time\"");
         _ = request.Body.Should().Contain("\"timezone\":\"America/New_York\"");
+        _ = request.Body.Should().Contain("\"duration\":\"60\"");
+        _ = request.Body.Should().Contain("\"is_recurring\":false");
+        _ = request.Body.Should().Contain("\"category_id\":\"509670\"");
+        _ = request.Body.Should().Contain("\"title\":\"TwitchDev Monthly Update // July 1, 2021\"");
     }
 
     #endregion CreateChannelStreamScheduleSegment
 
     #region UpdateChannelStreamScheduleSegment
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.UpdateChannelStreamScheduleSegment"/> throws <see cref="ArgumentNullException"/> when session is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateChannelStreamScheduleSegment")]
+    public async Task UpdateChannelStreamScheduleSegment_WhenSessionIsNull_ThrowsArgumentNullException()
+    {
+        UpdateChannelStreamScheduleSegmentParameters parameters = new() { Duration = "120" };
+        Func<Task> action = async () => await ChannelSchedule.UpdateChannelStreamScheduleSegment(null!, "141981764", "seg_123", parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("session");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.UpdateChannelStreamScheduleSegment"/> throws <see cref="ArgumentNullException"/> when broadcasterId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidBroadcasterId">The invalid broadcaster ID to test.</param>
+    [Theory]
+    [Trait("Member", "UpdateChannelStreamScheduleSegment")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateChannelStreamScheduleSegment_WhenBroadcasterIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidBroadcasterId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageSchedule);
+        UpdateChannelStreamScheduleSegmentParameters parameters = new() { Duration = "120" };
+
+        Func<Task> action = async () => await ChannelSchedule.UpdateChannelStreamScheduleSegment(session, invalidBroadcasterId!, "seg_123", parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("broadcasterId");
+    }
 
     /// <summary>
     /// Tests that <see cref="ChannelSchedule.UpdateChannelStreamScheduleSegment"/> throws <see cref="ArgumentNullException"/> when segmentId is null or whitespace.
@@ -435,6 +630,47 @@ public sealed class ChannelScheduleTests : IDisposable
         Func<Task> action = async () => await ChannelSchedule.UpdateChannelStreamScheduleSegment(session, "141981764", invalidSegmentId!, parameters).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("segmentId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.UpdateChannelStreamScheduleSegment"/> throws <see cref="ArgumentNullException"/> when parameters are null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateChannelStreamScheduleSegment")]
+    public async Task UpdateChannelStreamScheduleSegment_WhenParametersIsNull_ThrowsArgumentNullException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageSchedule);
+        Func<Task> action = async () => await ChannelSchedule.UpdateChannelStreamScheduleSegment(session, "141981764", "seg_123", null!).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("parameters");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.UpdateChannelStreamScheduleSegment"/> throws <see cref="TokenTypeException"/> when session is an App token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateChannelStreamScheduleSegment")]
+    public async Task UpdateChannelStreamScheduleSegment_WhenSessionIsAppToken_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        UpdateChannelStreamScheduleSegmentParameters parameters = new() { Duration = "120" };
+
+        Func<Task> action = async () => await ChannelSchedule.UpdateChannelStreamScheduleSegment(session, "141981764", "seg_123", parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.UpdateChannelStreamScheduleSegment"/> throws <see cref="TwitchScopeMissingException"/> when required scope is missing.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateChannelStreamScheduleSegment")]
+    public async Task UpdateChannelStreamScheduleSegment_WhenScopeIsMissing_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmail);
+        UpdateChannelStreamScheduleSegmentParameters parameters = new() { Duration = "120" };
+
+        Func<Task> action = async () => await ChannelSchedule.UpdateChannelStreamScheduleSegment(session, "141981764", "seg_123", parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
     /// <summary>
@@ -470,7 +706,12 @@ public sealed class ChannelScheduleTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageSchedule);
         UpdateChannelStreamScheduleSegmentParameters parameters = new()
         {
-            Duration = "120"
+            StartTime = DateTime.Parse("2021-07-01T18:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal),
+            Duration = "120",
+            CategoryId = "509670",
+            Title = "TwitchDev Monthly Update // July 1, 2021",
+            IsCanceled = false,
+            Timezone = "America/New_York"
         };
 
         ResponseDataObject<ChannelSchedule>? response = await ChannelSchedule.UpdateChannelStreamScheduleSegment(session, "141981764", "seg_123", parameters).ConfigureAwait(true);
@@ -478,8 +719,25 @@ public sealed class ChannelScheduleTests : IDisposable
         _ = response.Should().NotBeNull();
         _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data.Segments.Should().NotBeNull();
-        _ = response.Data.Segments[0].EndTime.Should().Be(DateTime.Parse("2021-07-01T20:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
+
+        ChannelSchedule schedule = response.Data;
+        _ = schedule.BroadcasterId.Should().Be("141981764");
+        _ = schedule.BroadcasterName.Should().Be("TwitchDev");
+        _ = schedule.BroadcasterLogin.Should().Be("twitchdev");
+        _ = schedule.Vacation.Should().BeNull();
+        _ = schedule.Segments.Should().NotBeNull();
+        _ = schedule.Segments.Count.Should().Be(1);
+
+        ScheduleSegment segment = schedule.Segments[0];
+        _ = segment.Id.Should().Be("seg_123");
+        _ = segment.StartTime.Should().Be(DateTime.Parse("2021-07-01T18:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = segment.EndTime.Should().Be(DateTime.Parse("2021-07-01T20:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = segment.Title.Should().Be("TwitchDev Monthly Update // July 1, 2021");
+        _ = segment.CanceledUntil.Should().BeNull();
+        _ = segment.IsRecurring.Should().BeFalse();
+        _ = segment.Category.Should().NotBeNull();
+        _ = segment.Category.Id.Should().Be("509670");
+        _ = segment.Category.Name.Should().Be("Science & Technology");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -487,12 +745,46 @@ public sealed class ChannelScheduleTests : IDisposable
         _ = request.Path.Should().Be("/helix/schedule/segment");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("id=seg_123");
+        _ = request.Body.Should().Contain("\"start_time\"");
         _ = request.Body.Should().Contain("\"duration\":\"120\"");
+        _ = request.Body.Should().Contain("\"category_id\":\"509670\"");
+        _ = request.Body.Should().Contain("\"title\":\"TwitchDev Monthly Update // July 1, 2021\"");
+        _ = request.Body.Should().Contain("\"is_canceled\":false");
+        _ = request.Body.Should().Contain("\"timezone\":\"America/New_York\"");
     }
 
     #endregion UpdateChannelStreamScheduleSegment
 
     #region DeleteChannelStreamScheduleSegment
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.DeleteChannelStreamScheduleSegment"/> throws <see cref="ArgumentNullException"/> when session is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeleteChannelStreamScheduleSegment")]
+    public async Task DeleteChannelStreamScheduleSegment_WhenSessionIsNull_ThrowsArgumentNullException()
+    {
+        Func<Task> action = async () => await ChannelSchedule.DeleteChannelStreamScheduleSegment(null!, "141981764", "seg_123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("session");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.DeleteChannelStreamScheduleSegment"/> throws <see cref="ArgumentNullException"/> when broadcasterId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidBroadcasterId">The invalid broadcaster ID to test.</param>
+    [Theory]
+    [Trait("Member", "DeleteChannelStreamScheduleSegment")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DeleteChannelStreamScheduleSegment_WhenBroadcasterIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidBroadcasterId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageSchedule);
+        Func<Task> action = async () => await ChannelSchedule.DeleteChannelStreamScheduleSegment(session, invalidBroadcasterId!, "seg_123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("broadcasterId");
+    }
 
     /// <summary>
     /// Tests that <see cref="ChannelSchedule.DeleteChannelStreamScheduleSegment"/> throws <see cref="ArgumentNullException"/> when segmentId is null or whitespace.
@@ -509,6 +801,30 @@ public sealed class ChannelScheduleTests : IDisposable
         Func<Task> action = async () => await ChannelSchedule.DeleteChannelStreamScheduleSegment(session, "141981764", invalidSegmentId!).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("segmentId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.DeleteChannelStreamScheduleSegment"/> throws <see cref="TokenTypeException"/> when session is an App token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeleteChannelStreamScheduleSegment")]
+    public async Task DeleteChannelStreamScheduleSegment_WhenSessionIsAppToken_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await ChannelSchedule.DeleteChannelStreamScheduleSegment(session, "141981764", "seg_123").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelSchedule.DeleteChannelStreamScheduleSegment"/> throws <see cref="TwitchScopeMissingException"/> when required scope is missing.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeleteChannelStreamScheduleSegment")]
+    public async Task DeleteChannelStreamScheduleSegment_WhenScopeIsMissing_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmail);
+        Func<Task> action = async () => await ChannelSchedule.DeleteChannelStreamScheduleSegment(session, "141981764", "seg_123").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
     /// <summary>
@@ -537,3 +853,4 @@ public sealed class ChannelScheduleTests : IDisposable
 
     #endregion DeleteChannelStreamScheduleSegment
 }
+

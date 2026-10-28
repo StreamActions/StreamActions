@@ -159,6 +159,49 @@ public sealed class BlockedUserTests : IDisposable
         _ = request.QueryString.Should().Contain("after=afterCursor");
     }
 
+    /// <summary>
+    /// Tests that <see cref="BlockedUser.GetBlockedUsers"/> omits optional query parameters when using default values.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBlockedUsers")]
+    public async Task GetBlockedUsers_WhenDefaultOptionalParameters_OmitsOptionalQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/users/blocks", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadBlockedUsers);
+        ResponseData<BlockedUser>? response = await BlockedUser.GetBlockedUsers(session, "141981764").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="BlockedUser.GetBlockedUsers"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="first">The first count to test.</param>
+    /// <param name="expectedClamped">The expected clamped count.</param>
+    [Theory]
+    [Trait("Member", "GetBlockedUsers")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(150, 100)]
+    public async Task GetBlockedUsers_WhenFirstOutOfRange_ClampsFirst(int first, int expectedClamped)
+    {
+        this._fixture.RegisterEndpoint("/helix/users/blocks", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadBlockedUsers);
+        ResponseData<BlockedUser>? response = await BlockedUser.GetBlockedUsers(session, "141981764", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedClamped}");
+    }
+
     #endregion GetBlockedUsers
 
     #region BlockUser
@@ -242,6 +285,28 @@ public sealed class BlockedUserTests : IDisposable
         _ = request.QueryString.Should().Contain("target_user_id=135093069");
         _ = request.QueryString.Should().Contain("source_context=chat");
         _ = request.QueryString.Should().Contain("reason=spam");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="BlockedUser.BlockUser"/> omits source_context and reason when null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "BlockUser")]
+    public async Task BlockUser_WhenSourceContextAndReasonAreNull_OmitsOptionalQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/users/blocks", HttpStatusCode.NoContent, string.Empty);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserManageBlockedUsers);
+        JsonApiResponse? response = await BlockedUser.BlockUser(session, "135093069").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("target_user_id=135093069");
+        _ = request.QueryString.Should().NotContain("source_context=");
+        _ = request.QueryString.Should().NotContain("reason=");
     }
 
     #endregion BlockUser

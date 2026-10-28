@@ -19,6 +19,7 @@
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.EventSub.Common;
+using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using AdBreakBegin = StreamActions.Twitch.EventSub.Channel.AdBreak.Begin;
@@ -59,6 +60,7 @@ using CustomRewardRemove = StreamActions.Twitch.EventSub.Channel.ChannelPointsCu
 using CustomRewardUpdate = StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomReward.Update;
 using DropEntitlementGrant = StreamActions.Twitch.EventSub.Drop.Entitlement.Grant;
 using GoalBegin = StreamActions.Twitch.EventSub.Channel.Goal.Begin;
+using GoalTypeEnum = StreamActions.Twitch.EventSub.Channel.Goal.Objects.GoalType;
 using GoalEnd = StreamActions.Twitch.EventSub.Channel.Goal.GoalEnd;
 using GoalProgress = StreamActions.Twitch.EventSub.Channel.Goal.Progress;
 using GuestStarGuestUpdate = StreamActions.Twitch.EventSub.Channel.GuestStarGuest.Update;
@@ -158,6 +160,9 @@ public sealed class EventSubPayloadTests
 {
     #region GetEventType
 
+    /// <summary>
+    /// Verifies that <see cref="EventSubPayload.GetEventType(string, string?)"/> resolves the correct type for automod.message.hold version 2.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetEventType")]
     public void GetEventType_WhenAutomodMessageHoldV2_ReturnsHoldType()
@@ -166,6 +171,9 @@ public sealed class EventSubPayloadTests
         _ = type.Should().Be<AutomodHold>();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventSubPayload.GetEventType(string, string?)"/> returns null when the subscription version does not match.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetEventType")]
     public void GetEventType_WhenAutomodMessageHoldV1_ReturnsNull()
@@ -174,6 +182,9 @@ public sealed class EventSubPayloadTests
         _ = type.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventSubPayload.GetEventType(string, string?)"/> resolves the correct type when the version parameter is omitted.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetEventType")]
     public void GetEventType_WhenChannelChatMessageDelete_ReturnsMessageDeleteType()
@@ -182,6 +193,9 @@ public sealed class EventSubPayloadTests
         _ = type.Should().Be<ChatMessageDelete>();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventSubPayload.GetEventType(string, string?)"/> resolves the correct type when the version is a string like beta.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetEventType")]
     public void GetEventType_WhenChannelGuestStarSessionBeginBeta_ReturnsSessionBeginType()
@@ -190,6 +204,20 @@ public sealed class EventSubPayloadTests
         _ = type.Should().Be<GuestStarSessionBegin>();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventSubPayload.GetEventType(string, string?)"/> resolves the event type in a case-insensitive manner.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetEventType")]
+    public void GetEventType_WhenUpperCaseSubscriptionType_ReturnsFollowType()
+    {
+        Type? type = EventSubPayload.GetEventType("CHANNEL.FOLLOW", "2");
+        _ = type.Should().Be<ChannelFollow>();
+    }
+
+    /// <summary>
+    /// Verifies that <see cref="EventSubPayload.GetEventType(string, string?)"/> returns null for an unrecognized subscription type.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetEventType")]
     public void GetEventType_WhenUnknownSubscriptionType_ReturnsNull()
@@ -198,6 +226,10 @@ public sealed class EventSubPayloadTests
         _ = type.Should().BeNull();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="EventSubPayload.GetEventType(string, string?)"/> returns null when the subscription type string is null, empty, or whitespace.
+    /// </summary>
+    /// <param name="invalidType">The invalid subscription type string.</param>
     [Theory]
     [Trait("Member", "GetEventType")]
     [InlineData(null)]
@@ -215,6 +247,9 @@ public sealed class EventSubPayloadTests
 
     #region Automod Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a automod.message.hold (version 2) EventSub payload returns a populated <see cref="AutomodHold"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_AutomodMessageHold_ParsesHoldEvent()
@@ -233,15 +268,27 @@ public sealed class EventSubPayloadTests
             "reason": "automod"
           }
         }
+        
         """;
 
         EventPayload<AutomodHold> payload = DeserializePayload<AutomodHold>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("automod.message.hold");
+        _ = payload.Subscription.Version.Should().Be("2");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("baduser");
+        _ = payload.Event.UserName.Should().Be("BadUser");
         _ = payload.Event.MessageId.Should().Be("bad-msg-123");
         _ = payload.Event.Reason.Should().Be(AutomodHold.HoldReason.Automod);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a automod.message.update (version 2) EventSub payload returns a populated <see cref="AutomodMessageUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_AutomodMessageUpdate_ParsesUpdateEvent()
@@ -263,13 +310,30 @@ public sealed class EventSubPayloadTests
             "status": "approved"
           }
         }
+        
         """;
 
         EventPayload<AutomodMessageUpdate> payload = DeserializePayload<AutomodMessageUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("automod.message.update");
+        _ = payload.Subscription.Version.Should().Be("2");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("baduser");
+        _ = payload.Event.UserName.Should().Be("BadUser");
         _ = payload.Event!.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
+        _ = payload.Event.MessageId.Should().Be("bad-msg-123");
         _ = payload.Event.Status.Should().Be(AutomodMessageUpdate.MessageStatus.Approved);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a automod.settings.update (version 1) EventSub payload returns a populated <see cref="AutomodSettingsUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_AutomodSettingsUpdate_ParsesSettingsUpdateEvent()
@@ -287,13 +351,26 @@ public sealed class EventSubPayloadTests
             "overall_level": 2
           }
         }
+        
         """;
 
         EventPayload<AutomodSettingsUpdate> payload = DeserializePayload<AutomodSettingsUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("automod.settings.update");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
         _ = payload.Event.OverallLevel.Should().Be(2);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a automod.terms.update (version 1) EventSub payload returns a populated <see cref="AutomodTermsUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_AutomodTermsUpdate_ParsesTermsUpdateEvent()
@@ -309,14 +386,26 @@ public sealed class EventSubPayloadTests
             "moderator_user_login": "mod",
             "moderator_user_name": "Mod",
             "action": "add_permitted",
-            "list": "terms",
+            "from_automod": false,
             "terms": [ "term1", "term2" ]
           }
         }
+        
         """;
 
         EventPayload<AutomodTermsUpdate> payload = DeserializePayload<AutomodTermsUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("automod.terms.update");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
         _ = payload.Event!.Action.Should().Be(AutomodTermAction.AddPermitted);
+        _ = payload.Event.FromAutomod.Should().BeFalse();
         _ = payload.Event.Terms.Should().Contain("term1");
     }
 
@@ -324,6 +413,9 @@ public sealed class EventSubPayloadTests
 
     #region Channel Core Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.ban (version 1) EventSub payload returns a populated <see cref="ChannelBan"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelBan_ParsesBanEvent()
@@ -345,14 +437,30 @@ public sealed class EventSubPayloadTests
             "is_permanent": true
           }
         }
+        
         """;
 
         EventPayload<ChannelBan> payload = DeserializePayload<ChannelBan>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.ban");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("baduser");
+        _ = payload.Event.UserName.Should().Be("BadUser");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
         _ = payload.Event.Reason.Should().Be("spam");
         _ = payload.Event.IsPermanent.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.cheer (version 1) EventSub payload returns a populated <see cref="ChannelCheer"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelCheer_ParsesCheerEvent()
@@ -372,13 +480,28 @@ public sealed class EventSubPayloadTests
             "bits": 100
           }
         }
+        
         """;
 
         EventPayload<ChannelCheer> payload = DeserializePayload<ChannelCheer>(json);
-        _ = payload.Event!.Bits.Should().Be(100);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.cheer");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.IsAnonymous.Should().BeFalse();
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("cheerer");
+        _ = payload.Event.UserName.Should().Be("Cheerer");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Message.Should().Be("cheer100");
+        _ = payload.Event!.Bits.Should().Be(100);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.follow (version 2) EventSub payload returns a populated <see cref="ChannelFollow"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelFollow_ParsesFollowEvent()
@@ -395,13 +518,25 @@ public sealed class EventSubPayloadTests
             "broadcaster_user_name": "Streamer"
           }
         }
+        
         """;
 
         EventPayload<ChannelFollow> payload = DeserializePayload<ChannelFollow>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.follow");
+        _ = payload.Subscription.Version.Should().Be("2");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("follower");
+        _ = payload.Event.UserName.Should().Be("Follower");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.raid (version 1) EventSub payload returns a populated <see cref="ChannelRaid"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelRaid_ParsesRaidEvent()
@@ -419,14 +554,26 @@ public sealed class EventSubPayloadTests
             "viewers": 50
           }
         }
+        
         """;
 
         EventPayload<ChannelRaid> payload = DeserializePayload<ChannelRaid>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.raid");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.FromBroadcasterUserId.Should().Be("1001");
+        _ = payload.Event.FromBroadcasterUserLogin.Should().Be("raider");
+        _ = payload.Event.FromBroadcasterUserName.Should().Be("Raider");
         _ = payload.Event.ToBroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.ToBroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.ToBroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Viewers.Should().Be(50);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.subscribe (version 1) EventSub payload returns a populated <see cref="ChannelSubscribe"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelSubscribe_ParsesSubscribeEvent()
@@ -445,13 +592,27 @@ public sealed class EventSubPayloadTests
             "is_gift": false
           }
         }
+        
         """;
 
         EventPayload<ChannelSubscribe> payload = DeserializePayload<ChannelSubscribe>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.subscribe");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("subscriber");
+        _ = payload.Event.UserName.Should().Be("Subscriber");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.Tier.Should().Be("1000");
         _ = payload.Event.IsGift.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.unban (version 1) EventSub payload returns a populated <see cref="ChannelUnban"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelUnban_ParsesUnbanEvent()
@@ -471,13 +632,28 @@ public sealed class EventSubPayloadTests
             "moderator_user_name": "Mod"
           }
         }
+        
         """;
 
         EventPayload<ChannelUnban> payload = DeserializePayload<ChannelUnban>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.unban");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("unbanned");
+        _ = payload.Event.UserName.Should().Be("Unbanned");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.update (version 2) EventSub payload returns a populated <see cref="ChannelUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelUpdate_ParsesUpdateEvent()
@@ -495,10 +671,20 @@ public sealed class EventSubPayloadTests
             "category_name": "Just Chatting"
           }
         }
+        
         """;
 
         EventPayload<ChannelUpdate> payload = DeserializePayload<ChannelUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.update");
+        _ = payload.Subscription.Version.Should().Be("2");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.Title.Should().Be("Fun Stream");
+        _ = payload.Event.Language.Should().Be("en");
+        _ = payload.Event.CategoryId.Should().Be("509658");
         _ = payload.Event.CategoryName.Should().Be("Just Chatting");
     }
 
@@ -506,6 +692,9 @@ public sealed class EventSubPayloadTests
 
     #region Channel AdBreak & Bits Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.ad_break.begin (version 1) EventSub payload returns a populated <see cref="AdBreakBegin"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelAdBreakBegin_ParsesBeginEvent()
@@ -522,13 +711,25 @@ public sealed class EventSubPayloadTests
             "broadcaster_user_name": "Streamer"
           }
         }
+        
         """;
 
         EventPayload<AdBreakBegin> payload = DeserializePayload<AdBreakBegin>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.ad_break.begin");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.DurationSeconds.Should().Be(60);
+        _ = payload.Event.StartedAt.Should().Be(DateTime.Parse("2023-01-01T00:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = payload.Event.IsAutomatic.Should().BeFalse();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.bits.use (version 1) EventSub payload returns a populated <see cref="BitsUse"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelBitsUse_ParsesUseEvent()
@@ -546,17 +747,30 @@ public sealed class EventSubPayloadTests
             "bits": 500
           }
         }
+        
         """;
 
         EventPayload<BitsUse> payload = DeserializePayload<BitsUse>(json);
-        _ = payload.Event!.Bits.Should().Be(500);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.bits.use");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("bitsuser");
+        _ = payload.Event.UserName.Should().Be("BitsUser");
+        _ = payload.Event!.Bits.Should().Be(500);
     }
 
     #endregion Channel AdBreak & Bits Payloads
 
     #region Channel Points Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.channel_points_automatic_reward_redemption.add (version 2) EventSub payload returns a populated <see cref="AutoRedemptionAdd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPointsAutomaticRewardRedemptionAdd_ParsesAddEvent()
@@ -574,13 +788,26 @@ public sealed class EventSubPayloadTests
             "id": "redemption-123"
           }
         }
+        
         """;
 
         EventPayload<AutoRedemptionAdd> payload = DeserializePayload<AutoRedemptionAdd>(json);
-        _ = payload.Event!.Id.Should().Be("redemption-123");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_automatic_reward_redemption.add");
+        _ = payload.Subscription.Version.Should().Be("2");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("pointsuser");
+        _ = payload.Event.UserName.Should().Be("PointsUser");
+        _ = payload.Event!.Id.Should().Be("redemption-123");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.channel_points_custom_reward.add (version 1) EventSub payload returns a populated <see cref="CustomRewardAdd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPointsCustomRewardAdd_ParsesAddEvent()
@@ -599,14 +826,27 @@ public sealed class EventSubPayloadTests
             "prompt": "Drink water"
           }
         }
+        
         """;
 
         EventPayload<CustomRewardAdd> payload = DeserializePayload<CustomRewardAdd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward.add");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("reward-123");
-        _ = payload.Event.Title.Should().Be("Hydrate");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.IsEnabled.Should().BeTrue();
         _ = payload.Event.Cost.Should().Be(100);
+        _ = payload.Event.Title.Should().Be("Hydrate");
+        _ = payload.Event.Prompt.Should().Be("Drink water");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.channel_points_custom_reward.remove (version 1) EventSub payload returns a populated <see cref="CustomRewardRemove"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPointsCustomRewardRemove_ParsesRemoveEvent()
@@ -622,13 +862,24 @@ public sealed class EventSubPayloadTests
             "title": "Hydrate"
           }
         }
+        
         """;
 
         EventPayload<CustomRewardRemove> payload = DeserializePayload<CustomRewardRemove>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward.remove");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("reward-123");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Title.Should().Be("Hydrate");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.channel_points_custom_reward.update (version 1) EventSub payload returns a populated <see cref="CustomRewardUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPointsCustomRewardUpdate_ParsesUpdateEvent()
@@ -645,13 +896,25 @@ public sealed class EventSubPayloadTests
             "title": "Hydrate More"
           }
         }
+        
         """;
 
         EventPayload<CustomRewardUpdate> payload = DeserializePayload<CustomRewardUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward.update");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("reward-123");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.Cost.Should().Be(200);
         _ = payload.Event.Title.Should().Be("Hydrate More");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.channel_points_custom_reward_redemption.add (version 1) EventSub payload returns a populated <see cref="CustomRedemptionAdd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPointsCustomRewardRedemptionAdd_ParsesAddEvent()
@@ -671,14 +934,28 @@ public sealed class EventSubPayloadTests
             "status": "unfulfilled"
           }
         }
+        
         """;
 
         EventPayload<CustomRedemptionAdd> payload = DeserializePayload<CustomRedemptionAdd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward_redemption.add");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("redemption-456");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("pointsuser");
+        _ = payload.Event.UserName.Should().Be("PointsUser");
         _ = payload.Event.UserInput.Should().Be("drink up");
         _ = payload.Event.Status.Should().Be("unfulfilled");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.channel_points_custom_reward_redemption.update (version 1) EventSub payload returns a populated <see cref="CustomRedemptionUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPointsCustomRewardRedemptionUpdate_ParsesUpdateEvent()
@@ -697,9 +974,21 @@ public sealed class EventSubPayloadTests
             "status": "fulfilled"
           }
         }
+        
         """;
 
         EventPayload<CustomRedemptionUpdate> payload = DeserializePayload<CustomRedemptionUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward_redemption.update");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("redemption-456");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("pointsuser");
+        _ = payload.Event.UserName.Should().Be("PointsUser");
         _ = payload.Event!.Status.Should().Be("fulfilled");
     }
 
@@ -707,6 +996,9 @@ public sealed class EventSubPayloadTests
 
     #region Charity Campaign Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.charity_campaign.progress (version 1) EventSub payload returns a populated <see cref="CharityProgress"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelCharityCampaignProgress_ParsesProgressEvent()
@@ -723,13 +1015,25 @@ public sealed class EventSubPayloadTests
             "charity_description": "Children Hospital"
           }
         }
+        
         """;
 
         EventPayload<CharityProgress> payload = DeserializePayload<CharityProgress>(json);
-        _ = payload.Event!.CharityName.Should().Be("St. Jude");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.charity_campaign.progress");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("charity-1");
         _ = payload.Event.BroadcasterId.Should().Be("1337");
+        _ = payload.Event.BroadcasterLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterName.Should().Be("Streamer");
+        _ = payload.Event!.CharityName.Should().Be("St. Jude");
+        _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.charity_campaign.start (version 1) EventSub payload returns a populated <see cref="CharityStart"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelCharityCampaignStart_ParsesStartEvent()
@@ -746,12 +1050,25 @@ public sealed class EventSubPayloadTests
             "charity_description": "Children Hospital"
           }
         }
+        
         """;
 
         EventPayload<CharityStart> payload = DeserializePayload<CharityStart>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.charity_campaign.start");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("charity-1");
+        _ = payload.Event.BroadcasterId.Should().Be("1337");
+        _ = payload.Event.BroadcasterLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterName.Should().Be("Streamer");
         _ = payload.Event!.CharityName.Should().Be("St. Jude");
+        _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.charity_campaign.stop (version 1) EventSub payload returns a populated <see cref="CharityStop"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelCharityCampaignStop_ParsesStopEvent()
@@ -768,12 +1085,25 @@ public sealed class EventSubPayloadTests
             "charity_description": "Children Hospital"
           }
         }
+        
         """;
 
         EventPayload<CharityStop> payload = DeserializePayload<CharityStop>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.charity_campaign.stop");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("charity-1");
+        _ = payload.Event.BroadcasterId.Should().Be("1337");
+        _ = payload.Event.BroadcasterLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterName.Should().Be("Streamer");
         _ = payload.Event!.CharityName.Should().Be("St. Jude");
+        _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.charity_campaign.donate (version 1) EventSub payload returns a populated <see cref="CharityDonate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelCharityCampaignDonate_ParsesDonateEvent()
@@ -783,9 +1113,9 @@ public sealed class EventSubPayloadTests
           "subscription": { "type": "channel.charity_campaign.donate", "version": "1" },
           "event": {
             "id": "charity-1",
-            "broadcaster_id": "1337",
-            "broadcaster_login": "streamer",
-            "broadcaster_name": "Streamer",
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
             "charity_name": "St. Jude",
             "charity_description": "Children Hospital",
             "user_id": "4242",
@@ -793,10 +1123,22 @@ public sealed class EventSubPayloadTests
             "user_name": "Donor"
           }
         }
+        
         """;
 
         EventPayload<CharityDonate> payload = DeserializePayload<CharityDonate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.charity_campaign.donate");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("charity-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.CharityName.Should().Be("St. Jude");
+        _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
         _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("donor");
         _ = payload.Event.UserName.Should().Be("Donor");
     }
 
@@ -804,6 +1146,9 @@ public sealed class EventSubPayloadTests
 
     #region Channel Chat Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.chat.clear (version 1) EventSub payload returns a populated <see cref="ChatClear"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelChatClear_ParsesClearEvent()
@@ -817,12 +1162,22 @@ public sealed class EventSubPayloadTests
             "broadcaster_user_name": "Streamer"
           }
         }
+        
         """;
 
         EventPayload<ChatClear> payload = DeserializePayload<ChatClear>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.chat.clear");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.chat.clear_user_messages (version 1) EventSub payload returns a populated <see cref="ChatClearUserMessages"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelChatClearUserMessages_ParsesClearUserMessagesEvent()
@@ -839,12 +1194,25 @@ public sealed class EventSubPayloadTests
             "target_user_name": "BadUser"
           }
         }
+        
         """;
 
         EventPayload<ChatClearUserMessages> payload = DeserializePayload<ChatClearUserMessages>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.chat.clear_user_messages");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.TargetUserId.Should().Be("4242");
+        _ = payload.Event.TargetUserLogin.Should().Be("baduser");
+        _ = payload.Event.TargetUserName.Should().Be("BadUser");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.chat.message (version 1) EventSub payload returns a populated <see cref="ChatMessage"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelChatMessage_ParsesMessageEvent()
@@ -863,14 +1231,27 @@ public sealed class EventSubPayloadTests
             "message": { "text": "Hello stream!" }
           }
         }
+        
         """;
 
         EventPayload<ChatMessage> payload = DeserializePayload<ChatMessage>(json);
-        _ = payload.Event!.MessageId.Should().Be("msg-123");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.chat.message");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.ChatterUserId.Should().Be("4242");
+        _ = payload.Event.ChatterUserLogin.Should().Be("chatter");
+        _ = payload.Event.ChatterUserName.Should().Be("Chatter");
+        _ = payload.Event!.MessageId.Should().Be("msg-123");
         _ = payload.Event.ChatMessage!.Text.Should().Be("Hello stream!");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.chat.message_delete (version 1) EventSub payload returns a populated <see cref="ChatMessageDelete"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelChatMessageDelete_ParsesMessageDeleteEvent()
@@ -888,13 +1269,26 @@ public sealed class EventSubPayloadTests
             "message_id": "deleted-msg-123"
           }
         }
+        
         """;
 
         EventPayload<ChatMessageDelete> payload = DeserializePayload<ChatMessageDelete>(json);
-        _ = payload.Event!.MessageId.Should().Be("deleted-msg-123");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.chat.message_delete");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.TargetUserId.Should().Be("4242");
+        _ = payload.Event.TargetUserLogin.Should().Be("baduser");
+        _ = payload.Event.TargetUserName.Should().Be("BadUser");
+        _ = payload.Event!.MessageId.Should().Be("deleted-msg-123");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.chat.notification (version 1) EventSub payload returns a populated <see cref="ChatNotification"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelChatNotification_ParsesNotificationEvent()
@@ -913,13 +1307,27 @@ public sealed class EventSubPayloadTests
             "system_message": "Subscribed at Tier 1"
           }
         }
+        
         """;
 
         EventPayload<ChatNotification> payload = DeserializePayload<ChatNotification>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.chat.notification");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.ChatterUserId.Should().Be("4242");
+        _ = payload.Event.ChatterUserLogin.Should().Be("chatter");
+        _ = payload.Event.ChatterUserName.Should().Be("Chatter");
         _ = payload.Event!.TypeOfNotice.Should().Be(ChatNoticeType.Sub);
         _ = payload.Event!.SystemMessage.Should().Be("Subscribed at Tier 1");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.chat.user_message_hold (version 1) EventSub payload returns a populated <see cref="ChatUserMessageHold"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelChatUserMessageHold_ParsesUserMessageHoldEvent()
@@ -937,13 +1345,26 @@ public sealed class EventSubPayloadTests
             "message_id": "held-msg-123"
           }
         }
+        
         """;
 
         EventPayload<ChatUserMessageHold> payload = DeserializePayload<ChatUserMessageHold>(json);
-        _ = payload.Event!.MessageId.Should().Be("held-msg-123");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.chat.user_message_hold");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("helduser");
+        _ = payload.Event.UserName.Should().Be("HeldUser");
+        _ = payload.Event!.MessageId.Should().Be("held-msg-123");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.chat.user_message_update (version 1) EventSub payload returns a populated <see cref="ChatUserMessageUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelChatUserMessageUpdate_ParsesUserMessageUpdateEvent()
@@ -962,13 +1383,27 @@ public sealed class EventSubPayloadTests
             "status": "approved"
           }
         }
+        
         """;
 
         EventPayload<ChatUserMessageUpdate> payload = DeserializePayload<ChatUserMessageUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.chat.user_message_update");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("helduser");
+        _ = payload.Event.UserName.Should().Be("HeldUser");
         _ = payload.Event!.MessageId.Should().Be("held-msg-123");
         _ = payload.Event.Status.Should().Be(ChatUserMessageUpdate.MessageStatus.Approved);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.chat_settings.update (version 1) EventSub payload returns a populated <see cref="ChatSettingsUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelChatSettingsUpdate_ParsesUpdateEvent()
@@ -988,17 +1423,32 @@ public sealed class EventSubPayloadTests
             "unique_chat_mode": false
           }
         }
+        
         """;
 
         EventPayload<ChatSettingsUpdate> payload = DeserializePayload<ChatSettingsUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.chat_settings.update");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.SlowMode.Should().BeTrue();
         _ = payload.Event.SlowModeWaitTimeSeconds.Should().Be(10);
+        _ = payload.Event.FollowerMode.Should().BeFalse();
+        _ = payload.Event.SubscriberMode.Should().BeFalse();
+        _ = payload.Event.EmoteMode.Should().BeFalse();
+        _ = payload.Event.UniqueChatMode.Should().BeFalse();
     }
 
     #endregion Channel Chat Payloads
 
     #region Channel Goal & PowerUp Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.custom_power_up_redemption.add (version 1) EventSub payload returns a populated <see cref="PowerUpAdd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelCustomPowerUpRedemptionAdd_ParsesAddEvent()
@@ -1016,13 +1466,26 @@ public sealed class EventSubPayloadTests
             "id": "powerup-123"
           }
         }
+        
         """;
 
         EventPayload<PowerUpAdd> payload = DeserializePayload<PowerUpAdd>(json);
-        _ = payload.Event!.Id.Should().Be("powerup-123");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.custom_power_up_redemption.add");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("poweruser");
+        _ = payload.Event.UserName.Should().Be("PowerUser");
+        _ = payload.Event!.Id.Should().Be("powerup-123");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.goal.begin (version 1) EventSub payload returns a populated <see cref="GoalBegin"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelGoalBegin_ParsesBeginEvent()
@@ -1041,13 +1504,27 @@ public sealed class EventSubPayloadTests
             "target_amount": 1000
           }
         }
+        
         """;
 
         EventPayload<GoalBegin> payload = DeserializePayload<GoalBegin>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.goal.begin");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("goal-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.GoalType.Should().Be(GoalTypeEnum.Follow);
+        _ = payload.Event.Description.Should().Be("Reach 1k followers");
+        _ = payload.Event.CurrentAmount.Should().Be(100);
         _ = payload.Event.TargetAmount.Should().Be(1000);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.goal.end (version 1) EventSub payload returns a populated <see cref="GoalEnd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelGoalEnd_ParsesEndEvent()
@@ -1067,13 +1544,28 @@ public sealed class EventSubPayloadTests
             "is_achieved": true
           }
         }
+        
         """;
 
         EventPayload<GoalEnd> payload = DeserializePayload<GoalEnd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.goal.end");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("goal-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.GoalType.Should().Be(GoalTypeEnum.Follow);
+        _ = payload.Event.Description.Should().Be("Reach 1k followers");
+        _ = payload.Event.CurrentAmount.Should().Be(1000);
+        _ = payload.Event.TargetAmount.Should().Be(1000);
         _ = payload.Event.IsAchieved.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.goal.progress (version 1) EventSub payload returns a populated <see cref="GoalProgress"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelGoalProgress_ParsesProgressEvent()
@@ -1092,9 +1584,20 @@ public sealed class EventSubPayloadTests
             "target_amount": 1000
           }
         }
+        
         """;
 
         EventPayload<GoalProgress> payload = DeserializePayload<GoalProgress>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.goal.progress");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("goal-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.GoalType.Should().Be(GoalTypeEnum.Follow);
+        _ = payload.Event.Description.Should().Be("Reach 1k followers");
         _ = payload.Event!.CurrentAmount.Should().Be(500);
         _ = payload.Event.TargetAmount.Should().Be(1000);
     }
@@ -1103,6 +1606,9 @@ public sealed class EventSubPayloadTests
 
     #region Channel Guest Star Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.guest_star_guest.update (version beta) EventSub payload returns a populated <see cref="GuestStarGuestUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelGuestStarGuestUpdate_ParsesUpdateEvent()
@@ -1122,14 +1628,28 @@ public sealed class EventSubPayloadTests
             "state": "live"
           }
         }
+        
         """;
 
         EventPayload<GuestStarGuestUpdate> payload = DeserializePayload<GuestStarGuestUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.guest_star_guest.update");
+        _ = payload.Subscription.Version.Should().Be("beta");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.SessionId.Should().Be("session-1");
         _ = payload.Event.GuestUserId.Should().Be("4242");
+        _ = payload.Event.GuestUserLogin.Should().Be("guest");
+        _ = payload.Event.GuestUserName.Should().Be("Guest");
+        _ = payload.Event.SlotId.Should().Be("1");
         _ = payload.Event.State.Should().Be("live");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.guest_star_session.begin (version beta) EventSub payload returns a populated <see cref="GuestStarSessionBegin"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelGuestStarSessionBegin_ParsesSessionBeginEvent()
@@ -1144,13 +1664,23 @@ public sealed class EventSubPayloadTests
             "session_id": "session-1"
           }
         }
+        
         """;
 
         EventPayload<GuestStarSessionBegin> payload = DeserializePayload<GuestStarSessionBegin>(json);
-        _ = payload.Event!.SessionId.Should().Be("session-1");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.guest_star_session.begin");
+        _ = payload.Subscription.Version.Should().Be("beta");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event!.SessionId.Should().Be("session-1");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.guest_star_session.end (version beta) EventSub payload returns a populated <see cref="GuestStarSessionEnd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelGuestStarSessionEnd_ParsesSessionEndEvent()
@@ -1165,12 +1695,23 @@ public sealed class EventSubPayloadTests
             "session_id": "session-1"
           }
         }
+        
         """;
 
         EventPayload<GuestStarSessionEnd> payload = DeserializePayload<GuestStarSessionEnd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.guest_star_session.end");
+        _ = payload.Subscription.Version.Should().Be("beta");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.SessionId.Should().Be("session-1");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.guest_star_settings.update (version beta) EventSub payload returns a populated <see cref="GuestStarSettingsUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelGuestStarSettingsUpdate_ParsesUpdateEvent()
@@ -1185,20 +1726,33 @@ public sealed class EventSubPayloadTests
             "is_moderator_send_live_enabled": true,
             "slot_count": 4,
             "is_browser_source_audio_enabled": true,
-            "layout": "tiled"
+            "group_layout": "tiled"
           }
         }
+        
         """;
 
         EventPayload<GuestStarSettingsUpdate> payload = DeserializePayload<GuestStarSettingsUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.guest_star_settings.update");
+        _ = payload.Subscription.Version.Should().Be("beta");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.IsModeratorSendLiveEnabled.Should().BeTrue();
         _ = payload.Event.SlotCount.Should().Be(4);
+        _ = payload.Event.IsBrowserSourceAudioEnabled.Should().BeTrue();
+        _ = payload.Event.GroupLayout.Should().Be("tiled");
     }
 
     #endregion Channel Guest Star Payloads
 
     #region Channel Hype Train Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.hype_train.begin (version 2) EventSub payload returns a populated <see cref="HypeTrainBegin"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelHypeTrainBegin_ParsesBeginEvent()
@@ -1217,14 +1771,27 @@ public sealed class EventSubPayloadTests
             "level": 1
           }
         }
+        
         """;
 
         EventPayload<HypeTrainBegin> payload = DeserializePayload<HypeTrainBegin>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.hype_train.begin");
+        _ = payload.Subscription.Version.Should().Be("2");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("ht-1");
-        _ = payload.Event.Level.Should().Be(1);
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Total.Should().Be(1000);
+        _ = payload.Event.Progress.Should().Be(500);
+        _ = payload.Event.Goal.Should().Be(1000);
+        _ = payload.Event.Level.Should().Be(1);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.hype_train.end (version 2) EventSub payload returns a populated <see cref="HypeTrainEnd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelHypeTrainEnd_ParsesEndEvent()
@@ -1241,14 +1808,25 @@ public sealed class EventSubPayloadTests
             "total": 2500
           }
         }
+        
         """;
 
         EventPayload<HypeTrainEnd> payload = DeserializePayload<HypeTrainEnd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.hype_train.end");
+        _ = payload.Subscription.Version.Should().Be("2");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("ht-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Level.Should().Be(2);
         _ = payload.Event.Total.Should().Be(2500);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.hype_train.progress (version 2) EventSub payload returns a populated <see cref="HypeTrainProgress"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelHypeTrainProgress_ParsesProgressEvent()
@@ -1267,17 +1845,31 @@ public sealed class EventSubPayloadTests
             "goal": 1000
           }
         }
+        
         """;
 
         EventPayload<HypeTrainProgress> payload = DeserializePayload<HypeTrainProgress>(json);
-        _ = payload.Event!.ProgressAmount.Should().Be(500);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.hype_train.progress");
+        _ = payload.Subscription.Version.Should().Be("2");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("ht-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.Level.Should().Be(2);
         _ = payload.Event!.Total.Should().Be(1500);
+        _ = payload.Event!.ProgressAmount.Should().Be(500);
+        _ = payload.Event.Goal.Should().Be(1000);
     }
 
     #endregion Channel Hype Train Payloads
 
     #region Channel Moderate & Moderator Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.moderate (version 2) EventSub payload returns a populated <see cref="ChannelModerate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelModerate_ParsesModerateEvent()
@@ -1295,13 +1887,26 @@ public sealed class EventSubPayloadTests
             "action": "ban"
           }
         }
+        
         """;
 
         EventPayload<ChannelModerate> payload = DeserializePayload<ChannelModerate>(json);
-        _ = payload.Event!.Action.Should().Be("ban");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.moderate");
+        _ = payload.Subscription.Version.Should().Be("2");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
+        _ = payload.Event!.Action.Should().Be("ban");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.moderator.add (version 1) EventSub payload returns a populated <see cref="ModeratorAdd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelModeratorAdd_ParsesAddEvent()
@@ -1318,13 +1923,25 @@ public sealed class EventSubPayloadTests
             "user_name": "NewMod"
           }
         }
+        
         """;
 
         EventPayload<ModeratorAdd> payload = DeserializePayload<ModeratorAdd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.moderator.add");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.UserId.Should().Be("9001");
+        _ = payload.Event.UserLogin.Should().Be("newmod");
         _ = payload.Event.UserName.Should().Be("NewMod");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.moderator.remove (version 1) EventSub payload returns a populated <see cref="ModeratorRemove"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelModeratorRemove_ParsesRemoveEvent()
@@ -1341,10 +1958,19 @@ public sealed class EventSubPayloadTests
             "user_name": "OldMod"
           }
         }
+        
         """;
 
         EventPayload<ModeratorRemove> payload = DeserializePayload<ModeratorRemove>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.moderator.remove");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.UserId.Should().Be("9001");
+        _ = payload.Event.UserLogin.Should().Be("oldmod");
         _ = payload.Event.UserName.Should().Be("OldMod");
     }
 
@@ -1352,6 +1978,9 @@ public sealed class EventSubPayloadTests
 
     #region Channel Poll Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.poll.begin (version 1) EventSub payload returns a populated <see cref="PollBegin"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPollBegin_ParsesBeginEvent()
@@ -1371,14 +2000,25 @@ public sealed class EventSubPayloadTests
             ]
           }
         }
+        
         """;
 
         EventPayload<PollBegin> payload = DeserializePayload<PollBegin>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.poll.begin");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("poll-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Title.Should().Be("Best Game?");
         _ = payload.Event.Choices.Should().HaveCount(2);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.poll.end (version 1) EventSub payload returns a populated <see cref="PollEnd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPollEnd_ParsesEndEvent()
@@ -1398,12 +2038,26 @@ public sealed class EventSubPayloadTests
             ]
           }
         }
+        
         """;
 
         EventPayload<PollEnd> payload = DeserializePayload<PollEnd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.poll.end");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("poll-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.Title.Should().Be("Best Game?");
         _ = payload.Event!.Status.Should().Be(PollStatusEnum.Completed);
+        _ = payload.Event.Choices.Should().HaveCount(1);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.poll.progress (version 1) EventSub payload returns a populated <see cref="PollProgress"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPollProgress_ParsesProgressEvent()
@@ -1422,9 +2076,19 @@ public sealed class EventSubPayloadTests
             ]
           }
         }
+        
         """;
 
         EventPayload<PollProgress> payload = DeserializePayload<PollProgress>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.poll.progress");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("poll-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.Title.Should().Be("Best Game?");
         _ = payload.Event!.Choices.Should().HaveCount(1);
     }
 
@@ -1432,6 +2096,9 @@ public sealed class EventSubPayloadTests
 
     #region Channel Prediction Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.prediction.begin (version 1) EventSub payload returns a populated <see cref="PredictionBegin"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPredictionBegin_ParsesBeginEvent()
@@ -1450,13 +2117,25 @@ public sealed class EventSubPayloadTests
             ]
           }
         }
+        
         """;
 
         EventPayload<PredictionBegin> payload = DeserializePayload<PredictionBegin>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.prediction.begin");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("pred-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Title.Should().Be("Will we win?");
+        _ = payload.Event.Outcomes.Should().HaveCount(1);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.prediction.end (version 1) EventSub payload returns a populated <see cref="PredictionEnd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPredictionEnd_ParsesEndEvent()
@@ -1477,13 +2156,27 @@ public sealed class EventSubPayloadTests
             ]
           }
         }
+        
         """;
 
         EventPayload<PredictionEnd> payload = DeserializePayload<PredictionEnd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.prediction.end");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("pred-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.Title.Should().Be("Will we win?");
         _ = payload.Event!.WinningOutcomeId.Should().Be("out-1");
         _ = payload.Event.Status.Should().Be(PredictionStatusEnum.Resolved);
+        _ = payload.Event.Outcomes.Should().HaveCount(1);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.prediction.lock (version 1) EventSub payload returns a populated <see cref="PredictionLock"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPredictionLock_ParsesLockEvent()
@@ -1502,12 +2195,25 @@ public sealed class EventSubPayloadTests
             ]
           }
         }
+        
         """;
 
         EventPayload<PredictionLock> payload = DeserializePayload<PredictionLock>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.prediction.lock");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("pred-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.Title.Should().Be("Will we win?");
+        _ = payload.Event.Outcomes.Should().HaveCount(1);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.prediction.progress (version 1) EventSub payload returns a populated <see cref="PredictionProgress"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelPredictionProgress_ParsesProgressEvent()
@@ -1526,16 +2232,29 @@ public sealed class EventSubPayloadTests
             ]
           }
         }
+        
         """;
 
         EventPayload<PredictionProgress> payload = DeserializePayload<PredictionProgress>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.prediction.progress");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("pred-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.Title.Should().Be("Will we win?");
+        _ = payload.Event.Outcomes.Should().HaveCount(1);
     }
 
     #endregion Channel Prediction Payloads
 
     #region Channel SharedChat & ShieldMode Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.shared_chat.begin (version 1) EventSub payload returns a populated <see cref="SharedChatBegin"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelSharedChatBegin_ParsesBeginEvent()
@@ -1553,13 +2272,26 @@ public sealed class EventSubPayloadTests
             "host_broadcaster_user_name": "Streamer"
           }
         }
+        
         """;
 
         EventPayload<SharedChatBegin> payload = DeserializePayload<SharedChatBegin>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.shared_chat.begin");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.SessionId.Should().Be("sc-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.HostBroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.HostBroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.HostBroadcasterUserName.Should().Be("Streamer");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.shared_chat.end (version 1) EventSub payload returns a populated <see cref="SharedChatEnd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelSharedChatEnd_ParsesEndEvent()
@@ -1577,12 +2309,26 @@ public sealed class EventSubPayloadTests
             "host_broadcaster_user_name": "Streamer"
           }
         }
+        
         """;
 
         EventPayload<SharedChatEnd> payload = DeserializePayload<SharedChatEnd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.shared_chat.end");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.SessionId.Should().Be("sc-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.HostBroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.HostBroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.HostBroadcasterUserName.Should().Be("Streamer");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.shared_chat.update (version 1) EventSub payload returns a populated <see cref="SharedChatUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelSharedChatUpdate_ParsesUpdateEvent()
@@ -1600,12 +2346,26 @@ public sealed class EventSubPayloadTests
             "host_broadcaster_user_name": "Streamer"
           }
         }
+        
         """;
 
         EventPayload<SharedChatUpdate> payload = DeserializePayload<SharedChatUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.shared_chat.update");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.SessionId.Should().Be("sc-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.HostBroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.HostBroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.HostBroadcasterUserName.Should().Be("Streamer");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.shield_mode.begin (version 1) EventSub payload returns a populated <see cref="ShieldModeBegin"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelShieldModeBegin_ParsesBeginEvent()
@@ -1622,13 +2382,25 @@ public sealed class EventSubPayloadTests
             "moderator_user_name": "Mod"
           }
         }
+        
         """;
 
         EventPayload<ShieldModeBegin> payload = DeserializePayload<ShieldModeBegin>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.shield_mode.begin");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.shield_mode.end (version 1) EventSub payload returns a populated <see cref="ShieldModeEnd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelShieldModeEnd_ParsesEndEvent()
@@ -1645,16 +2417,29 @@ public sealed class EventSubPayloadTests
             "moderator_user_name": "Mod"
           }
         }
+        
         """;
 
         EventPayload<ShieldModeEnd> payload = DeserializePayload<ShieldModeEnd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.shield_mode.end");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
     }
 
     #endregion Channel SharedChat & ShieldMode Payloads
 
     #region Channel Shoutout Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.shoutout.create (version 1) EventSub payload returns a populated <see cref="ShoutoutCreate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelShoutoutCreate_ParsesCreateEvent()
@@ -1675,13 +2460,29 @@ public sealed class EventSubPayloadTests
             "viewer_count": 100
           }
         }
+        
         """;
 
         EventPayload<ShoutoutCreate> payload = DeserializePayload<ShoutoutCreate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.shoutout.create");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
         _ = payload.Event!.ToBroadcasterUserId.Should().Be("2001");
+        _ = payload.Event.ToBroadcasterUserLogin.Should().Be("shouted");
+        _ = payload.Event.ToBroadcasterUserName.Should().Be("Shouted");
         _ = payload.Event.ViewerCount.Should().Be(100);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.shoutout.receive (version 1) EventSub payload returns a populated <see cref="ShoutoutReceive"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelShoutoutReceive_ParsesReceiveEvent()
@@ -1699,10 +2500,20 @@ public sealed class EventSubPayloadTests
             "viewer_count": 100
           }
         }
+        
         """;
 
         EventPayload<ShoutoutReceive> payload = DeserializePayload<ShoutoutReceive>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.shoutout.receive");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.FromBroadcasterUserId.Should().Be("2001");
+        _ = payload.Event.FromBroadcasterUserLogin.Should().Be("shouting");
+        _ = payload.Event.FromBroadcasterUserName.Should().Be("Shouting");
         _ = payload.Event.ViewerCount.Should().Be(100);
     }
 
@@ -1710,6 +2521,9 @@ public sealed class EventSubPayloadTests
 
     #region Channel Subscription Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.subscription.gift (version 1) EventSub payload returns a populated <see cref="SubscriptionGift"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelSubscriptionGift_ParsesGiftEvent()
@@ -1729,13 +2543,28 @@ public sealed class EventSubPayloadTests
             "is_anonymous": false
           }
         }
+        
         """;
 
         EventPayload<SubscriptionGift> payload = DeserializePayload<SubscriptionGift>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.subscription.gift");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("gifter");
+        _ = payload.Event.UserName.Should().Be("Gifter");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.Total.Should().Be(5);
         _ = payload.Event.Tier.Should().Be("1000");
+        _ = payload.Event.IsAnonymous.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.subscription.message (version 1) EventSub payload returns a populated <see cref="SubscriptionMessage"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelSubscriptionMessage_ParsesMessageEvent()
@@ -1756,13 +2585,29 @@ public sealed class EventSubPayloadTests
             "streak_months": 6
           }
         }
+        
         """;
 
         EventPayload<SubscriptionMessage> payload = DeserializePayload<SubscriptionMessage>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.subscription.message");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("subber");
+        _ = payload.Event.UserName.Should().Be("Subber");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.Tier.Should().Be("1000");
         _ = payload.Event!.CumulativeMonths.Should().Be(6);
+        _ = payload.Event.DurationMonths.Should().Be(1);
         _ = payload.Event.StreakMonths.Should().Be(6);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.subscription.end (version 1) EventSub payload returns a populated <see cref="SubscriptionEnd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelSubscriptionEnd_ParsesSubscriptionEndEvent()
@@ -1781,9 +2626,20 @@ public sealed class EventSubPayloadTests
             "is_gift": false
           }
         }
+        
         """;
 
         EventPayload<SubscriptionEnd> payload = DeserializePayload<SubscriptionEnd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.subscription.end");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("subber");
+        _ = payload.Event.UserName.Should().Be("Subber");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.Tier.Should().Be("1000");
         _ = payload.Event.IsGift.Should().BeFalse();
     }
@@ -1792,6 +2648,9 @@ public sealed class EventSubPayloadTests
 
     #region Channel SuspiciousUser & UnbanRequest Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.suspicious_user.message (version 1) EventSub payload returns a populated <see cref="SuspiciousUserMessage"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelSuspiciousUserMessage_ParsesMessageEvent()
@@ -1810,13 +2669,27 @@ public sealed class EventSubPayloadTests
             "message_id": "sus-1"
           }
         }
+        
         """;
 
         EventPayload<SuspiciousUserMessage> payload = DeserializePayload<SuspiciousUserMessage>(json);
-        _ = payload.Event!.MessageId.Should().Be("sus-1");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.suspicious_user.message");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("sususer");
+        _ = payload.Event.UserName.Should().Be("SusUser");
         _ = payload.Event.LowTrustStatus.Should().Be(LowTrustStatusEnum.ActiveMonitoring);
+        _ = payload.Event!.MessageId.Should().Be("sus-1");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.suspicious_user.update (version 1) EventSub payload returns a populated <see cref="SuspiciousUserUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelSuspiciousUserUpdate_ParsesUpdateEvent()
@@ -1837,12 +2710,29 @@ public sealed class EventSubPayloadTests
             "low_trust_status": "restricted"
           }
         }
+        
         """;
 
         EventPayload<SuspiciousUserUpdate> payload = DeserializePayload<SuspiciousUserUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.suspicious_user.update");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("sususer");
+        _ = payload.Event.UserName.Should().Be("SusUser");
         _ = payload.Event!.LowTrustStatus.Should().Be(LowTrustStatusEnum.Restricted);
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.unban_request.create (version 1) EventSub payload returns a populated <see cref="UnbanRequestCreate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelUnbanRequestCreate_ParsesCreateEvent()
@@ -1861,13 +2751,27 @@ public sealed class EventSubPayloadTests
             "text": "Please unban me"
           }
         }
+        
         """;
 
         EventPayload<UnbanRequestCreate> payload = DeserializePayload<UnbanRequestCreate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.unban_request.create");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("ub-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("banneduser");
+        _ = payload.Event.UserName.Should().Be("BannedUser");
         _ = payload.Event.Text.Should().Be("Please unban me");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.unban_request.resolve (version 1) EventSub payload returns a populated <see cref="UnbanRequestResolve"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelUnbanRequestResolve_ParsesResolveEvent()
@@ -1890,10 +2794,25 @@ public sealed class EventSubPayloadTests
             "status": "approved"
           }
         }
+        
         """;
 
         EventPayload<UnbanRequestResolve> payload = DeserializePayload<UnbanRequestResolve>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.unban_request.resolve");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("ub-1");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.ModeratorId.Should().Be("9001");
+        _ = payload.Event.ModeratorLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorName.Should().Be("Mod");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("banneduser");
+        _ = payload.Event.UserName.Should().Be("BannedUser");
+        _ = payload.Event.ResolutionText.Should().Be("Unbanned");
         _ = payload.Event.Status.Should().Be("approved");
     }
 
@@ -1901,6 +2820,9 @@ public sealed class EventSubPayloadTests
 
     #region Channel VIP & Warning Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a channel.vip.add (version 1) EventSub payload returns a populated <see cref="VipAdd"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelVipAdd_ParsesAddEvent()
@@ -1917,13 +2839,25 @@ public sealed class EventSubPayloadTests
             "user_name": "VipUser"
           }
         }
+        
         """;
 
         EventPayload<VipAdd> payload = DeserializePayload<VipAdd>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.vip.add");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("vipuser");
         _ = payload.Event.UserName.Should().Be("VipUser");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.vip.remove (version 1) EventSub payload returns a populated <see cref="VipRemove"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelVipRemove_ParsesRemoveEvent()
@@ -1940,13 +2874,25 @@ public sealed class EventSubPayloadTests
             "user_name": "ExVip"
           }
         }
+        
         """;
 
         EventPayload<VipRemove> payload = DeserializePayload<VipRemove>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.vip.remove");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("exvip");
         _ = payload.Event.UserName.Should().Be("ExVip");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.warning.acknowledge (version 1) EventSub payload returns a populated <see cref="WarningAcknowledge"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelWarningAcknowledge_ParsesAcknowledgeEvent()
@@ -1963,13 +2909,25 @@ public sealed class EventSubPayloadTests
             "user_name": "WarnedUser"
           }
         }
+        
         """;
 
         EventPayload<WarningAcknowledge> payload = DeserializePayload<WarningAcknowledge>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.warning.acknowledge");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("warneduser");
         _ = payload.Event.UserName.Should().Be("WarnedUser");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a channel.warning.send (version 1) EventSub payload returns a populated <see cref="WarningSend"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ChannelWarningSend_ParsesSendEvent()
@@ -1990,17 +2948,33 @@ public sealed class EventSubPayloadTests
             "reason": "Be nice"
           }
         }
+        
         """;
 
         EventPayload<WarningSend> payload = DeserializePayload<WarningSend>(json);
-        _ = payload.Event!.Reason.Should().Be("Be nice");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("channel.warning.send");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("warneduser");
+        _ = payload.Event.UserName.Should().Be("WarnedUser");
+        _ = payload.Event!.Reason.Should().Be("Be nice");
     }
 
     #endregion Channel VIP & Warning Payloads
 
     #region Conduit, Drop, Extension, Stream, User Payloads
 
+    /// <summary>
+    /// Verifies that deserializing a conduit.shard.disabled (version 1) EventSub payload returns a populated <see cref="ConduitShardDisabled"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ConduitShardDisabled_ParsesDisabledEvent()
@@ -2014,14 +2988,22 @@ public sealed class EventSubPayloadTests
             "status": "disabled"
           }
         }
+        
         """;
 
         EventPayload<ConduitShardDisabled> payload = DeserializePayload<ConduitShardDisabled>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("conduit.shard.disabled");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.ConduitId.Should().Be("conduit-1");
         _ = payload.Event.ShardId.Should().Be("0");
         _ = payload.Event.Status.Should().Be("disabled");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a drop.entitlement.grant (version 1) EventSub payload returns a populated <see cref="DropEntitlementGrant"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_DropEntitlementGrant_ParsesGrantEvent()
@@ -2033,7 +3015,7 @@ public sealed class EventSubPayloadTests
             "id": "grant-1",
             "data": [
               {
-                "id": "ent-1",
+                "entitlement_id": "ent-1",
                 "benefit_id": "b-1",
                 "user_id": "4242",
                 "user_name": "User",
@@ -2042,13 +3024,27 @@ public sealed class EventSubPayloadTests
             ]
           }
         }
+        
         """;
 
         EventPayload<DropEntitlementGrant> payload = DeserializePayload<DropEntitlementGrant>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("drop.entitlement.grant");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("grant-1");
         _ = payload.Event.Data.Should().HaveCount(1);
+        StreamActions.Twitch.EventSub.Drop.Entitlement.Objects.Entitlement entitlement = payload.Event.Data!.First();
+        _ = entitlement.EntitlementId.Should().Be("ent-1");
+        _ = entitlement.BenefitId.Should().Be("b-1");
+        _ = entitlement.UserId.Should().Be("4242");
+        _ = entitlement.UserName.Should().Be("User");
+        _ = entitlement.UserLogin.Should().Be("user");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a extension.bits_transaction.create (version 1) EventSub payload returns a populated <see cref="BitsTransactionCreate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_ExtensionBitsTransactionCreate_ParsesCreateEvent()
@@ -2067,20 +3063,38 @@ public sealed class EventSubPayloadTests
             "user_name": "Buyer",
             "product": {
               "sku": "item_1",
-              "cost": { "amount": 100, "type": "bits" },
+              "bits": 100,
               "in_development": false,
               "name": "Magic Item"
             }
           }
         }
+        
         """;
 
         EventPayload<BitsTransactionCreate> payload = DeserializePayload<BitsTransactionCreate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("extension.bits_transaction.create");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.Id.Should().Be("trans-1");
         _ = payload.Event.ExtensionClientId.Should().Be("ext-1");
-        _ = payload.Event.Product!.Name.Should().Be("Magic Item");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = payload.Event.UserId.Should().Be("4242");
+        _ = payload.Event.UserLogin.Should().Be("buyer");
+        _ = payload.Event.UserName.Should().Be("Buyer");
+        _ = payload.Event.Product.Should().NotBeNull();
+        _ = payload.Event.Product!.Sku.Should().Be("item_1");
+        _ = payload.Event.Product.Bits.Should().Be(100);
+        _ = payload.Event.Product.InDevelopment.Should().BeFalse();
+        _ = payload.Event.Product.Name.Should().Be("Magic Item");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a stream.offline (version 1) EventSub payload returns a populated <see cref="StreamOffline"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_StreamOffline_ParsesOfflineEvent()
@@ -2095,12 +3109,23 @@ public sealed class EventSubPayloadTests
             "broadcaster_user_name": "Streamer"
           }
         }
+        
         """;
 
         EventPayload<StreamOffline> payload = DeserializePayload<StreamOffline>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("stream.offline");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("stream-1");
         _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a stream.online (version 1) EventSub payload returns a populated <see cref="StreamOnline"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_StreamOnline_ParsesOnlineEvent()
@@ -2117,13 +3142,25 @@ public sealed class EventSubPayloadTests
             "started_at": "2023-01-01T00:00:00Z"
           }
         }
+        
         """;
 
         EventPayload<StreamOnline> payload = DeserializePayload<StreamOnline>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("stream.online");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Id.Should().Be("stream-1");
         _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.TypeOfStream.Should().Be(StreamOnline.StreamType.Live);
+        _ = payload.Event.StartedAt.Should().Be("2023-01-01T00:00:00Z");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a user.update (version 1) EventSub payload returns a populated <see cref="UserUpdate"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_UserUpdate_ParsesUpdateEvent()
@@ -2140,14 +3177,25 @@ public sealed class EventSubPayloadTests
             "description": "Awesome channel"
           }
         }
+        
         """;
 
         EventPayload<UserUpdate> payload = DeserializePayload<UserUpdate>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("user.update");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.UserId.Should().Be("1337");
+        _ = payload.Event.UserLogin.Should().Be("streamer");
+        _ = payload.Event.UserName.Should().Be("Streamer");
         _ = payload.Event.Email.Should().Be("user@example.com");
         _ = payload.Event.EmailVerified.Should().BeTrue();
+        _ = payload.Event.Description.Should().Be("Awesome channel");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a user.authorization.grant (version 1) EventSub payload returns a populated <see cref="UserAuthGrant"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_UserAuthorizationGrant_ParsesGrantEvent()
@@ -2162,13 +3210,23 @@ public sealed class EventSubPayloadTests
             "user_name": "Streamer"
           }
         }
+        
         """;
 
         EventPayload<UserAuthGrant> payload = DeserializePayload<UserAuthGrant>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("user.authorization.grant");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.ClientId.Should().Be("app-client-id");
         _ = payload.Event.UserId.Should().Be("1337");
+        _ = payload.Event.UserLogin.Should().Be("streamer");
+        _ = payload.Event.UserName.Should().Be("Streamer");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a user.authorization.revoke (version 1) EventSub payload returns a populated <see cref="UserAuthRevoke"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_UserAuthorizationRevoke_ParsesRevokeEvent()
@@ -2183,13 +3241,23 @@ public sealed class EventSubPayloadTests
             "user_name": "Streamer"
           }
         }
+        
         """;
 
         EventPayload<UserAuthRevoke> payload = DeserializePayload<UserAuthRevoke>(json);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("user.authorization.revoke");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event!.ClientId.Should().Be("app-client-id");
         _ = payload.Event.UserId.Should().Be("1337");
+        _ = payload.Event.UserLogin.Should().Be("streamer");
+        _ = payload.Event.UserName.Should().Be("Streamer");
     }
 
+    /// <summary>
+    /// Verifies that deserializing a user.whisper.message (version 1) EventSub payload returns a populated <see cref="UserWhisperMessage"/> event with all fields mapped.
+    /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
     public void Deserialize_UserWhisperMessage_ParsesMessageEvent()
@@ -2208,12 +3276,23 @@ public sealed class EventSubPayloadTests
             "whisper": { "text": "Secret message" }
           }
         }
+        
         """;
 
         EventPayload<UserWhisperMessage> payload = DeserializePayload<UserWhisperMessage>(json);
-        _ = payload.Event!.WhisperId.Should().Be("whisp-1");
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be("user.whisper.message");
+        _ = payload.Subscription.Version.Should().Be("1");
+        _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.FromUserId.Should().Be("4242");
+        _ = payload.Event.FromUserLogin.Should().Be("sender");
+        _ = payload.Event.FromUserName.Should().Be("Sender");
         _ = payload.Event.ToUserId.Should().Be("1337");
+        _ = payload.Event.ToUserLogin.Should().Be("recipient");
+        _ = payload.Event.ToUserName.Should().Be("Recipient");
+        _ = payload.Event!.WhisperId.Should().Be("whisp-1");
+        _ = payload.Event.Whisper.Should().NotBeNull();
+        _ = payload.Event.Whisper!.Text.Should().Be("Secret message");
     }
 
     #endregion Conduit, Drop, Extension, Stream, User Payloads
@@ -2223,7 +3302,7 @@ public sealed class EventSubPayloadTests
     #region Private Helper Methods
 
     /// <summary>
-    /// Deserializes a raw JSON string into an <see cref="EventPayload{TEventType}"/> and validates that the event payload is not null.
+    /// Deserializes a raw JSON string into an <see cref="EventPayload{TEventType}"/> and validates that the event payload and subscription are not null and match expected properties.
     /// </summary>
     /// <typeparam name="TEventType">The event subtype.</typeparam>
     /// <param name="json">The JSON payload string.</param>
@@ -2232,6 +3311,9 @@ public sealed class EventSubPayloadTests
     {
         EventPayload<TEventType>? payload = JsonSerializer.Deserialize<EventPayload<TEventType>>(json, TwitchApi.SerializerOptions);
         _ = payload.Should().NotBeNull();
+        _ = payload!.Subscription.Should().NotBeNull();
+        _ = payload.Subscription!.Type.Should().Be(TEventType.Type);
+        _ = payload.Subscription.Version.Should().Be(TEventType.Version);
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Should().BeOfType<TEventType>();
         return payload;

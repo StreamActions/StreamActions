@@ -160,6 +160,59 @@ public sealed class ConduitShardTests : IDisposable
         _ = request.Query["after"].ToString().Should().Be("cursor_prev");
     }
 
+    /// <summary>
+    /// Tests that <see cref="ConduitShard.GetConduitShards"/> omits status and after parameters when not provided, and properly maps websocket shard transport.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetConduitShards")]
+    public async Task GetConduitShards_WhenStatusAndAfterNull_OmitsThemFromQueryAndMapsWebsocketTransport()
+    {
+        Guid conduitId = Guid.Parse("bf17725e-3991-4d1a-9694-845b412a8069");
+        DateTime connectedAt = new(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+        DateTime disconnectedAt = new(2025, 1, 1, 11, 0, 0, DateTimeKind.Utc);
+
+        this._fixture.RegisterJsonResponse("GET", "/helix/eventsub/conduits/shards", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "1",
+                    status = "websocket_disconnected",
+                    transport = new
+                    {
+                        method = "websocket",
+                        session_id = "ws-session-123",
+                        connected_at = connectedAt,
+                        disconnected_at = disconnectedAt
+                    }
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<ConduitShard>? response = await ConduitShard.GetConduitShards(session, conduitId, status: null, after: null).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+
+        ConduitShard shard = response.Data[0];
+        _ = shard.Id.Should().Be("1");
+        _ = shard.Status.Should().Be(ConduitShard.ShardStatus.WebsocketDisconnected);
+        _ = shard.Transport.Should().NotBeNull();
+        _ = shard.Transport.Method.Should().Be(ConduitShardTransport.TransportMethod.Websocket);
+        _ = shard.Transport.SessionId.Should().Be("ws-session-123");
+        _ = shard.Transport.ConnectedAt.Should().Be(connectedAt);
+        _ = shard.Transport.DisconnectedAt.Should().Be(disconnectedAt);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["conduit_id"].ToString().Should().Be(conduitId.ToString());
+        _ = request.Query.ContainsKey("status").Should().BeFalse();
+        _ = request.Query.ContainsKey("after").Should().BeFalse();
+    }
+
     #endregion GetConduitShards
 
     #region UpdateConduitShards
@@ -406,6 +459,7 @@ public sealed class ConduitShardTests : IDisposable
         _ = shard.Status.Should().Be(ConduitShard.ShardStatus.Enabled);
         _ = shard.Transport.Should().NotBeNull();
         _ = shard.Transport.Method.Should().Be(ConduitShardTransport.TransportMethod.Webhook);
+        _ = shard.Transport.Callback.Should().Be("https://example.com/callback");
 
         _ = response.Errors.Should().NotBeNull();
         _ = response.Errors.Count.Should().Be(1);
@@ -420,6 +474,69 @@ public sealed class ConduitShardTests : IDisposable
         _ = request.Path.Should().Be("/helix/eventsub/conduits/shards");
         _ = request.Body.Should().Contain(conduitId.ToString());
         _ = request.Body.Should().Contain("\"id\":\"0\"");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ConduitShard.UpdateConduitShards"/> updates shards using websocket transport.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateConduitShards")]
+    public async Task UpdateConduitShards_WhenWebsocketTransport_SendsWebsocketMethodAndSessionIdInBody()
+    {
+        Guid conduitId = Guid.Parse("bf17725e-3991-4d1a-9694-845b412a8069");
+        this._fixture.RegisterJsonResponse("PATCH", "/helix/eventsub/conduits/shards", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "0",
+                    status = "enabled",
+                    transport = new
+                    {
+                        method = "websocket",
+                        session_id = "ws-session-1"
+                    }
+                }
+            },
+            errors = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ConduitShardUpdateParameters parameters = new()
+        {
+            ConduitId = conduitId,
+            Shards =
+            [
+                new()
+                {
+                    Id = "0",
+                    Transport = new()
+                    {
+                        Method = ConduitShardTransport.TransportMethod.Websocket,
+                        SessionId = "ws-session-1"
+                    }
+                }
+            ]
+        };
+
+        ConduitShardUpdateResponse? response = await ConduitShard.UpdateConduitShards(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+
+        ConduitShard shard = response.Data[0];
+        _ = shard.Id.Should().Be("0");
+        _ = shard.Status.Should().Be(ConduitShard.ShardStatus.Enabled);
+        _ = shard.Transport.Should().NotBeNull();
+        _ = shard.Transport.Method.Should().Be(ConduitShardTransport.TransportMethod.Websocket);
+        _ = shard.Transport.SessionId.Should().Be("ws-session-1");
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"method\":\"websocket\"");
+        _ = request.Body.Should().Contain("\"session_id\":\"ws-session-1\"");
     }
 
     #endregion UpdateConduitShards

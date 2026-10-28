@@ -183,29 +183,39 @@ public sealed class HypeTrainStatusTests : IDisposable
         _ = status.Current.Total.Should().Be(700);
         _ = status.Current.Progress.Should().Be(200);
         _ = status.Current.Goal.Should().Be(1000);
+        _ = status.Current.StartedAt.Should().Be(DateTime.Parse("2020-07-15T17:16:03.1710671Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
+        _ = status.Current.ExpiresAt.Should().Be(DateTime.Parse("2020-07-15T17:16:11.1710671Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
         _ = status.Current.Type.Should().Be(HypeTrainModel.HypeTrainType.GoldenKappa);
         _ = status.Current.IsSharedTrain.Should().BeTrue();
 
         _ = status.Current.TopContributions.Should().NotBeNull();
         _ = status.Current.TopContributions.Count.Should().Be(2);
         _ = status.Current.TopContributions[0].UserId.Should().Be("123");
+        _ = status.Current.TopContributions[0].UserLogin.Should().Be("pogchamp");
+        _ = status.Current.TopContributions[0].UserName.Should().Be("PogChamp");
         _ = status.Current.TopContributions[0].Type.Should().Be(HypeTrainContribution.HypeTrainContributionType.Bits);
         _ = status.Current.TopContributions[0].Total.Should().Be(50);
         _ = status.Current.TopContributions[1].UserId.Should().Be("456");
+        _ = status.Current.TopContributions[1].UserLogin.Should().Be("kappa");
+        _ = status.Current.TopContributions[1].UserName.Should().Be("Kappa");
         _ = status.Current.TopContributions[1].Type.Should().Be(HypeTrainContribution.HypeTrainContributionType.Subscription);
         _ = status.Current.TopContributions[1].Total.Should().Be(45);
 
         _ = status.Current.SharedTrainParticipants.Should().NotBeNull();
         _ = status.Current.SharedTrainParticipants.Count.Should().Be(1);
         _ = status.Current.SharedTrainParticipants[0].BroadcasterId.Should().Be("456");
+        _ = status.Current.SharedTrainParticipants[0].BroadcasterLogin.Should().Be("pogchamp");
+        _ = status.Current.SharedTrainParticipants[0].BroadcasterName.Should().Be("PogChamp");
 
         _ = status.AllTimeHigh.Should().NotBeNull();
         _ = status.AllTimeHigh.Level.Should().Be(6);
         _ = status.AllTimeHigh.Total.Should().Be(2850);
+        _ = status.AllTimeHigh.AchievedAt.Should().Be(DateTime.Parse("2020-04-24T20:12:21.0038022Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
 
         _ = status.SharedAllTimeHigh.Should().NotBeNull();
         _ = status.SharedAllTimeHigh.Level.Should().Be(16);
         _ = status.SharedAllTimeHigh.Total.Should().Be(23850);
+        _ = status.SharedAllTimeHigh.AchievedAt.Should().Be(DateTime.Parse("2020-04-27T20:12:21.0038022Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();

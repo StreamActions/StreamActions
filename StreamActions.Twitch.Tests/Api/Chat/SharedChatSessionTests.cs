@@ -99,8 +99,8 @@ public sealed class SharedChatSessionTests : IDisposable
     public async Task GetSharedChatSession_WhenCalledWithValidParameters_ReturnsSharedChatSession()
     {
         Guid sessionId = Guid.Parse("1f855e8f-79d3-4927-b50a-e57ae4268e21");
-        DateTime createdAt = DateTime.UtcNow.AddHours(-1);
-        DateTime updatedAt = DateTime.UtcNow;
+        DateTime createdAt = new(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        DateTime updatedAt = new(2025, 1, 1, 13, 0, 0, DateTimeKind.Utc);
 
         this._fixture.RegisterJsonResponse("GET", "/helix/shared_chat/session", new
         {
@@ -136,6 +136,8 @@ public sealed class SharedChatSessionTests : IDisposable
         _ = chatSession.Participants.Count.Should().Be(2);
         _ = chatSession.Participants[0].BroadcasterId.Should().Be("12345");
         _ = chatSession.Participants[1].BroadcasterId.Should().Be("67890");
+        _ = chatSession.CreatedAt.Should().Be(createdAt);
+        _ = chatSession.UpdatedAt.Should().Be(updatedAt);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();

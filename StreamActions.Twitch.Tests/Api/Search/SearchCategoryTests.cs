@@ -148,5 +148,48 @@ public sealed class SearchCategoryTests : IDisposable
         _ = request.QueryString.Should().Contain("after=afterCursor");
     }
 
+    /// <summary>
+    /// Tests that <see cref="SearchCategory.SearchCategories"/> omits optional query parameters when using default values.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SearchCategories")]
+    public async Task SearchCategories_WhenDefaultOptionalParameters_OmitsOptionalQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/search/categories", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<SearchCategory>? response = await SearchCategory.SearchCategories(session, "fortnite").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("query=fortnite");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SearchCategory.SearchCategories"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="first">The first count to test.</param>
+    /// <param name="expectedClamped">The expected clamped count.</param>
+    [Theory]
+    [Trait("Member", "SearchCategories")]
+    [InlineData(0, 1)]
+    [InlineData(-10, 1)]
+    [InlineData(150, 100)]
+    public async Task SearchCategories_WhenFirstOutOfRange_ClampsFirst(int first, int expectedClamped)
+    {
+        this._fixture.RegisterEndpoint("/helix/search/categories", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<SearchCategory>? response = await SearchCategory.SearchCategories(session, "fortnite", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedClamped}");
+    }
+
     #endregion SearchCategories
 }

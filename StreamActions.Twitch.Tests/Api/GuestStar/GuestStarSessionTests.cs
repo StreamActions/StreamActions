@@ -85,6 +85,28 @@ public sealed class GuestStarSessionTests : IDisposable
             .WithParameterName("broadcasterId");
     }
 
+    [Theory]
+    [Trait("Member", "GetGuestStarSession")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetGuestStarSession_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidModeratorId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadGuestStar);
+        Func<Task> action = async () => await GuestStarSession.GetGuestStarSession(session, "9321049", invalidModeratorId!).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    [Fact]
+    [Trait("Member", "GetGuestStarSession")]
+    public async Task GetGuestStarSession_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarSession.GetGuestStarSession(session, "9321049", "9321049").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
     [Fact]
     [Trait("Member", "GetGuestStarSession")]
     public async Task GetGuestStarSession_WhenScopeMissing_ThrowsTwitchScopeMissingException()
@@ -147,12 +169,18 @@ public sealed class GuestStarSessionTests : IDisposable
         _ = guest.SlotId.Should().Be("0");
         _ = guest.UserId.Should().Be("9321049");
         _ = guest.UserDisplayName.Should().Be("Cool_User");
+        _ = guest.UserLogin.Should().Be("cool_user");
         _ = guest.IsLive.Should().BeTrue();
         _ = guest.Volume.Should().Be(100);
+        _ = guest.AssignedAt.Should().Be(DateTime.Parse("2023-01-02T04:16:53.325Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
         _ = guest.AudioSettings.Should().NotBeNull();
+        _ = guest.AudioSettings.IsHostEnabled.Should().BeTrue();
+        _ = guest.AudioSettings.IsGuestEnabled.Should().BeTrue();
         _ = guest.AudioSettings.IsAvailable.Should().BeTrue();
         _ = guest.VideoSettings.Should().NotBeNull();
         _ = guest.VideoSettings.IsHostEnabled.Should().BeTrue();
+        _ = guest.VideoSettings.IsGuestEnabled.Should().BeTrue();
+        _ = guest.VideoSettings.IsAvailable.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -186,6 +214,15 @@ public sealed class GuestStarSessionTests : IDisposable
         Func<Task> action = async () => await GuestStarSession.CreateGuestStarSession(session, invalidBroadcasterId!).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("broadcasterId");
+    }
+
+    [Fact]
+    [Trait("Member", "CreateGuestStarSession")]
+    public async Task CreateGuestStarSession_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarSession.CreateGuestStarSession(session, "9321049").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -243,6 +280,25 @@ public sealed class GuestStarSessionTests : IDisposable
 
         GuestStarSession starSession = response.Data[0];
         _ = starSession.Id.Should().Be("2KFRQbFtpmfyD3IevNRnCzOPRJI");
+        _ = starSession.Guests.Should().NotBeNull();
+        _ = starSession.Guests.Count.Should().Be(1);
+
+        GuestStarGuest guest = starSession.Guests[0];
+        _ = guest.SlotId.Should().Be("0");
+        _ = guest.UserId.Should().Be("9321049");
+        _ = guest.UserDisplayName.Should().Be("Cool_User");
+        _ = guest.UserLogin.Should().Be("cool_user");
+        _ = guest.IsLive.Should().BeTrue();
+        _ = guest.Volume.Should().Be(100);
+        _ = guest.AssignedAt.Should().Be(DateTime.Parse("2023-01-02T04:16:53.325Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
+        _ = guest.AudioSettings.Should().NotBeNull();
+        _ = guest.AudioSettings.IsHostEnabled.Should().BeTrue();
+        _ = guest.AudioSettings.IsGuestEnabled.Should().BeTrue();
+        _ = guest.AudioSettings.IsAvailable.Should().BeTrue();
+        _ = guest.VideoSettings.Should().NotBeNull();
+        _ = guest.VideoSettings.IsHostEnabled.Should().BeTrue();
+        _ = guest.VideoSettings.IsGuestEnabled.Should().BeTrue();
+        _ = guest.VideoSettings.IsAvailable.Should().BeTrue();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -269,12 +325,43 @@ public sealed class GuestStarSessionTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    public async Task EndGuestStarSession_WhenBroadcasterIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidBroadcasterId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarSession.EndGuestStarSession(session, invalidBroadcasterId!, "session123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("broadcasterId");
+    }
+
+    [Theory]
+    [Trait("Member", "EndGuestStarSession")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public async Task EndGuestStarSession_WhenSessionIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSessionId)
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
         Func<Task> action = async () => await GuestStarSession.EndGuestStarSession(session, "9321049", invalidSessionId!).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("sessionId");
+    }
+
+    [Fact]
+    [Trait("Member", "EndGuestStarSession")]
+    public async Task EndGuestStarSession_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarSession.EndGuestStarSession(session, "9321049", "session123").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    [Fact]
+    [Trait("Member", "EndGuestStarSession")]
+    public async Task EndGuestStarSession_WhenScopeMissing_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmail);
+        Func<Task> action = async () => await GuestStarSession.EndGuestStarSession(session, "9321049", "session123").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -303,6 +390,8 @@ public sealed class GuestStarSessionTests : IDisposable
 
         GuestStarSession starSession = response.Data[0];
         _ = starSession.Id.Should().Be("2KFRQbFtpmfyD3IevNRnCzOPRJI");
+        _ = starSession.Guests.Should().NotBeNull();
+        _ = starSession.Guests.Should().BeEmpty();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();

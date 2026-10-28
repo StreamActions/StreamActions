@@ -62,6 +62,21 @@ public sealed class StreamMarkerTests : IDisposable
 
     #endregion IDisposable Implementation
 
+    #region Position
+
+    /// <summary>
+    /// Tests that <see cref="StreamMarker.Position"/> returns null when <see cref="StreamMarker.PositionSeconds"/> is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Position")]
+    public void Position_WhenPositionSecondsIsNull_ReturnsNull()
+    {
+        StreamMarker marker = new() { PositionSeconds = null };
+        _ = marker.Position.Should().BeNull();
+    }
+
+    #endregion Position
+
     #region CreateStreamMarker
 
     /// <summary>
@@ -88,6 +103,25 @@ public sealed class StreamMarkerTests : IDisposable
         Func<Task> action = async () => await StreamMarker.CreateStreamMarker(session, null!).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("parameters");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="StreamMarker.CreateStreamMarker"/> throws <see cref="ArgumentNullException"/> when UserId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidUserId">The invalid user ID to test.</param>
+    [Theory]
+    [Trait("Member", "CreateStreamMarker")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateStreamMarker_WhenUserIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidUserId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        CreateStreamMarkerParameters parameters = new() { UserId = invalidUserId, Description = "test" };
+
+        Func<Task> action = async () => await StreamMarker.CreateStreamMarker(session, parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("UserId");
     }
 
     /// <summary>
@@ -182,6 +216,40 @@ public sealed class StreamMarkerTests : IDisposable
         _ = request.Path.Should().Be("/helix/streams/markers");
         _ = request.Body.Should().Contain("\"user_id\":\"123\"");
         _ = request.Body.Should().Contain("\"description\":\"hello world\"");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="StreamMarker.CreateStreamMarker"/> omits description when null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateStreamMarker")]
+    public async Task CreateStreamMarker_WhenDescriptionIsNull_OmitsDescriptionFromBody()
+    {
+        this._fixture.RegisterEndpoint("/helix/streams/markers", HttpStatusCode.OK, @"{
+  ""data"": [
+    {
+      ""id"": ""106b80bd-88f3-4c10-994f-4d9e9b04f3bf"",
+      ""created_at"": ""2018-08-20T20:10:03Z"",
+      ""position_seconds"": 244,
+      ""description"": null
+    }
+  ]
+}");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        CreateStreamMarkerParameters parameters = new()
+        {
+            UserId = "123",
+            Description = null
+        };
+
+        ResponseData<StreamMarker>? response = await StreamMarker.CreateStreamMarker(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"user_id\":\"123\"");
+        _ = request.Body.Should().NotContain("\"description\"");
     }
 
     #endregion CreateStreamMarker
@@ -326,6 +394,9 @@ public sealed class StreamMarkerTests : IDisposable
         _ = markers[0].Description.Should().Be("cool moment");
         _ = markers[0].Url.Should().Be(new Uri("https://twitch.tv/videos/456?t=0h4m4s"));
 
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursorXYZ");
+
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request!.Method.Should().Be("GET");
@@ -333,6 +404,88 @@ public sealed class StreamMarkerTests : IDisposable
         _ = request.QueryString.Should().Contain("user_id=123");
         _ = request.QueryString.Should().Contain("first=20");
         _ = request.QueryString.Should().Contain("after=cursorXYZ");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UserMarkers.GetStreamMarkers"/> queries by video ID when specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetStreamMarkers")]
+    public async Task GetStreamMarkers_WhenCalledWithVideoId_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/streams/markers", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadBroadcast);
+        ResponseData<UserMarkers>? response = await UserMarkers.GetStreamMarkers(session, videoId: "video456").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("video_id=video456");
+        _ = request.QueryString.Should().NotContain("user_id=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UserMarkers.GetStreamMarkers"/> sends before cursor when specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetStreamMarkers")]
+    public async Task GetStreamMarkers_WhenBeforeSpecified_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/streams/markers", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadBroadcast);
+        ResponseData<UserMarkers>? response = await UserMarkers.GetStreamMarkers(session, userId: "123", before: "cursorBefore").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("before=cursorBefore");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UserMarkers.GetStreamMarkers"/> omits before and after when using default parameters.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetStreamMarkers")]
+    public async Task GetStreamMarkers_WhenDefaultOptionalParameters_OmitsOptionalQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/streams/markers", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadBroadcast);
+        ResponseData<UserMarkers>? response = await UserMarkers.GetStreamMarkers(session, userId: "123").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("user_id=123");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("before=");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="UserMarkers.GetStreamMarkers"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="first">The first count to test.</param>
+    /// <param name="expectedClamped">The expected clamped count.</param>
+    [Theory]
+    [Trait("Member", "GetStreamMarkers")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(150, 100)]
+    public async Task GetStreamMarkers_WhenFirstOutOfRange_ClampsFirst(int first, int expectedClamped)
+    {
+        this._fixture.RegisterEndpoint("/helix/streams/markers", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadBroadcast);
+        ResponseData<UserMarkers>? response = await UserMarkers.GetStreamMarkers(session, userId: "123", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedClamped}");
     }
 
     #endregion GetStreamMarkers

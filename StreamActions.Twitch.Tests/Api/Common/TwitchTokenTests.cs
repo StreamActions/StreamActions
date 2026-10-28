@@ -106,6 +106,27 @@ public class TwitchTokenTests
         _ = token.Expires.Should().BeCloseTo(response.Expires, TimeSpan.FromSeconds(2));
     }
 
+    /// <summary>
+    /// Tests that <see cref="TwitchToken.FromApiResponse(Token, TwitchToken.TokenType, string?, string?)"/> leaves UserId and Login null when omitted.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "FromApiResponse")]
+    public void FromApiResponse_WithoutUserIdAndLogin_LeavesUserIdAndLoginNull()
+    {
+        string accessToken = TestTokenFactory.CreateToken("BEARER");
+        Token response = new()
+        {
+            AccessToken = accessToken,
+            ExpiresIn = 3600
+        };
+
+        TwitchToken token = TwitchToken.FromApiResponse(response, TwitchToken.TokenType.App);
+
+        _ = token.OAuth.Should().Be(accessToken);
+        _ = token.UserId.Should().BeNull();
+        _ = token.Login.Should().BeNull();
+    }
+
     [Fact]
     [Trait("Member", "FromApiResponse")]
     public void FromApiResponse_WithOldToken_WhenResponseIsNull_ThrowsArgumentNullException()
@@ -280,6 +301,28 @@ public class TwitchTokenTests
     {
         TwitchToken token = TestTokenFactory.CreateUserToken([Scope.ChatRead]);
         _ = token.HasScope("chat:edit").Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchToken.HasScope(string)"/> returns false when scope name is unknown.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "HasScope")]
+    public void HasScope_WithString_WhenScopeUnknown_ReturnsFalse()
+    {
+        TwitchToken token = TestTokenFactory.CreateUserToken([Scope.ChatRead]);
+        _ = token.HasScope("unknown_scope_value").Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchToken.HasScope(string)"/> returns false when Scopes is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "HasScope")]
+    public void HasScope_WithString_WhenTokenScopesIsNull_ReturnsFalse()
+    {
+        TwitchToken token = new() { OAuth = TestTokenFactory.CreateToken("BEARER"), Scopes = null };
+        _ = token.HasScope("chat:read").Should().BeFalse();
     }
 
     [Fact]

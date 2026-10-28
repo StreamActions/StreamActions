@@ -157,6 +157,56 @@ public sealed class AutoModStatusTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="AutoModStatus.CheckAutoModStatus"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CheckAutoModStatus")]
+    public async Task CheckAutoModStatus_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModerationRead]
+            }
+        };
+
+        CheckAutoModStatusParameters parameters = new()
+        {
+            Data = [new() { MsgId = "123", MsgText = "Hello" }]
+        };
+        Func<Task> action = async () => await AutoModStatus.CheckAutoModStatus(session, "12345", parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="AutoModStatus.CheckAutoModStatus"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CheckAutoModStatus")]
+    public async Task CheckAutoModStatus_WhenAppToken_ReturnsStatusList()
+    {
+        const string json = "{\"data\":[{\"msg_id\":\"123\",\"is_permitted\":true}]}";
+        this._fixture.RegisterResponse("POST", "/helix/moderation/enforcements/status", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModerationRead);
+        CheckAutoModStatusParameters parameters = new()
+        {
+            Data = [new() { MsgId = "123", MsgText = "Hello" }]
+        };
+
+        ResponseData<AutoModStatus>? response = await AutoModStatus.CheckAutoModStatus(session, "12345", parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
     [Fact]
     [Trait("Member", "CheckAutoModStatus")]
     public async Task CheckAutoModStatus_WhenValidRequest_PostsAndReturnsStatusList()
@@ -197,6 +247,8 @@ public sealed class AutoModStatusTests : IDisposable
         _ = request.QueryString.Should().Contain("broadcaster_id=12345");
         _ = request.Body.Should().Contain("\"msg_id\":\"123\"");
         _ = request.Body.Should().Contain("\"msg_text\":\"Hello World!\"");
+        _ = request.Body.Should().Contain("\"msg_id\":\"393\"");
+        _ = request.Body.Should().Contain("\"msg_text\":\"Boooooo!\"");
     }
 
     #endregion CheckAutoModStatus
@@ -297,9 +349,71 @@ public sealed class AutoModStatusTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="AutoModStatus.ManageHeldAutoModMessage"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "ManageHeldAutoModMessage")]
-    public async Task ManageHeldAutoModMessage_WhenValidRequest_PostsAndReturnsNoContent()
+    public async Task ManageHeldAutoModMessage_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModeratorManageAutomod]
+            }
+        };
+
+        ManageHeldAutoModMessageParameters parameters = new()
+        {
+            UserId = "9327994",
+            MsgId = "836013710",
+            Action = ManageHeldAutoModMessageParameters.AutoModActions.Allow
+        };
+        Func<Task> action = async () => await AutoModStatus.ManageHeldAutoModMessage(session, parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="AutoModStatus.ManageHeldAutoModMessage"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ManageHeldAutoModMessage")]
+    public async Task ManageHeldAutoModMessage_WhenAppToken_PostsAndReturnsNoContent()
+    {
+        this._fixture.RegisterStatusCode("POST", "/helix/moderation/automod/message", StatusCodes.Status204NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorManageAutomod);
+        ManageHeldAutoModMessageParameters parameters = new()
+        {
+            UserId = "9327994",
+            MsgId = "836013710",
+            Action = ManageHeldAutoModMessageParameters.AutoModActions.Allow
+        };
+
+        JsonApiResponse? response = await AutoModStatus.ManageHeldAutoModMessage(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="AutoModStatus.ManageHeldAutoModMessage"/> successfully posts allow or deny actions.
+    /// </para>
+    /// </summary>
+    /// <param name="action">The action to perform.</param>
+    /// <param name="expectedActionString">The expected serialized action string in request body.</param>
+    [Theory]
+    [Trait("Member", "ManageHeldAutoModMessage")]
+    [InlineData(ManageHeldAutoModMessageParameters.AutoModActions.Allow, "ALLOW")]
+    [InlineData(ManageHeldAutoModMessageParameters.AutoModActions.Deny, "DENY")]
+    public async Task ManageHeldAutoModMessage_WhenValidRequest_PostsAndReturnsNoContent(ManageHeldAutoModMessageParameters.AutoModActions action, string expectedActionString)
     {
         this._fixture.RegisterStatusCode("POST", "/helix/moderation/automod/message", StatusCodes.Status204NoContent);
 
@@ -308,7 +422,7 @@ public sealed class AutoModStatusTests : IDisposable
         {
             UserId = "9327994",
             MsgId = "836013710",
-            Action = ManageHeldAutoModMessageParameters.AutoModActions.Allow
+            Action = action
         };
 
         JsonApiResponse? response = await AutoModStatus.ManageHeldAutoModMessage(session, parameters).ConfigureAwait(true);
@@ -323,7 +437,7 @@ public sealed class AutoModStatusTests : IDisposable
         _ = request.Path.Should().Be("/helix/moderation/automod/message");
         _ = request.Body.Should().Contain("\"user_id\":\"9327994\"");
         _ = request.Body.Should().Contain("\"msg_id\":\"836013710\"");
-        _ = request.Body.Should().Contain("\"action\":\"ALLOW\"");
+        _ = request.Body.Should().Contain($"\"action\":\"{expectedActionString}\"");
     }
 
     #endregion ManageHeldAutoModMessage

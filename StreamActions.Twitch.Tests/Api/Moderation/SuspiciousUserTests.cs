@@ -20,6 +20,7 @@ using StreamActions.Twitch.Api.Moderation;
 using StreamActions.Twitch.Api.Moderation.Objects;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
+using System.Globalization;
 using System.Net;
 
 namespace StreamActions.Twitch.Tests.Api.Moderation;
@@ -222,7 +223,7 @@ public sealed class SuspiciousUserTests : IDisposable
     [InlineData(SuspiciousUser.SuspiciousStatuses.ActiveMonitoring)]
     public async Task AddSuspiciousStatus_WhenValidRequest_PostsStatusAndReturnsResult(SuspiciousUser.SuspiciousStatuses status)
     {
-        const string json = "{\"data\":[{\"broadcaster_id\":\"1234\",\"moderator_id\":\"5678\",\"user_id\":\"6789\",\"status\":\"RESTRICTED\",\"types\":[\"MANUALLY_ADDED\"],\"updated_at\":\"2023-01-01T00:00:00Z\"}]}";
+        const string json = "{\"data\":[{\"broadcaster_id\":\"1234\",\"moderator_id\":\"5678\",\"user_id\":\"6789\",\"status\":\"RESTRICTED\",\"types\":[\"MANUALLY_ADDED\",\"DETECTED_BAN_EVADER\",\"DETECTED_SUS_CHATTER\",\"BANNED_IN_SHARED_CHANNEL\"],\"updated_at\":\"2023-01-01T00:00:00Z\"}]}";
         this._fixture.RegisterResponse("POST", "/helix/moderation/suspicious_users", json);
 
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageSuspiciousUsers);
@@ -245,8 +246,14 @@ public sealed class SuspiciousUserTests : IDisposable
         _ = user.ModeratorId.Should().Be("5678");
         _ = user.UserId.Should().Be("6789");
         _ = user.Status.Should().Be(SuspiciousUser.SuspiciousStatuses.Restricted);
+        _ = user.UpdatedAt.Should().Be(DateTime.Parse("2023-01-01T00:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = user.Types.Should().NotBeNull();
-        _ = user.Types.Should().Contain(SuspiciousUser.SuspiciousUserTypes.ManuallyAdded);
+        _ = user.Types.Should().HaveCount(4);
+        _ = user.Types.Should().ContainInOrder(
+            SuspiciousUser.SuspiciousUserTypes.ManuallyAdded,
+            SuspiciousUser.SuspiciousUserTypes.DetectedBanEvader,
+            SuspiciousUser.SuspiciousUserTypes.DetectedSusChatter,
+            SuspiciousUser.SuspiciousUserTypes.BannedInSharedChannel);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -255,6 +262,35 @@ public sealed class SuspiciousUserTests : IDisposable
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
         _ = request.Body.Should().Contain("\"user_id\":\"6789\"");
+        string expectedStatus = status == SuspiciousUser.SuspiciousStatuses.Restricted ? "RESTRICTED" : "ACTIVE_MONITORING";
+        _ = request.Body.Should().Contain($"\"status\":\"{expectedStatus}\"");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Verifies that <see cref="SuspiciousUser.AddSuspiciousStatus(StreamActions.Twitch.Api.Common.TwitchSession, string, string, AddSuspiciousStatusParameters)"/>
+    /// succeeds when using an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AddSuspiciousStatus")]
+    public async Task AddSuspiciousStatus_WhenAppToken_PostsStatusAndReturnsResult()
+    {
+        const string json = "{\"data\":[{\"broadcaster_id\":\"1234\",\"moderator_id\":\"5678\",\"user_id\":\"6789\",\"status\":\"RESTRICTED\",\"types\":[\"MANUALLY_ADDED\"],\"updated_at\":\"2023-01-01T00:00:00Z\"}]}";
+        this._fixture.RegisterResponse("POST", "/helix/moderation/suspicious_users", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        AddSuspiciousStatusParameters parameters = new()
+        {
+            UserId = "6789",
+            Status = SuspiciousUser.SuspiciousStatuses.Restricted
+        };
+
+        ResponseData<SuspiciousUser>? response = await SuspiciousUser.AddSuspiciousStatus(session, "1234", "5678", parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
     }
 
     #endregion AddSuspiciousStatus
@@ -309,6 +345,29 @@ public sealed class SuspiciousUserTests : IDisposable
             .WithParameterName("userId");
     }
 
+    /// <summary>
+    /// <para>
+    /// Verifies that <see cref="SuspiciousUser.RemoveSuspiciousStatus(StreamActions.Twitch.Api.Common.TwitchSession, string, string, string)"/>
+    /// throws an <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RemoveSuspiciousStatus")]
+    public async Task RemoveSuspiciousStatus_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModeratorManageSuspiciousUsers]
+            }
+        };
+
+        Func<Task> action = async () => await SuspiciousUser.RemoveSuspiciousStatus(session, "1234", "5678", "6789").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
     [Fact]
     [Trait("Member", "RemoveSuspiciousStatus")]
     public async Task RemoveSuspiciousStatus_WhenScopeMissing_ThrowsTwitchScopeMissingException()
@@ -335,7 +394,12 @@ public sealed class SuspiciousUserTests : IDisposable
         _ = response.Data.Should().HaveCount(1);
 
         SuspiciousUser user = response.Data[0];
+        _ = user.BroadcasterId.Should().Be("1234");
+        _ = user.ModeratorId.Should().Be("5678");
+        _ = user.UserId.Should().Be("6789");
         _ = user.Status.Should().Be(SuspiciousUser.SuspiciousStatuses.NoTreatment);
+        _ = user.Types.Should().BeEmpty();
+        _ = user.UpdatedAt.Should().Be(DateTime.Parse("2023-01-01T00:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -344,6 +408,27 @@ public sealed class SuspiciousUserTests : IDisposable
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
         _ = request.QueryString.Should().Contain("user_id=6789");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Verifies that <see cref="SuspiciousUser.RemoveSuspiciousStatus(StreamActions.Twitch.Api.Common.TwitchSession, string, string, string)"/>
+    /// succeeds when using an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RemoveSuspiciousStatus")]
+    public async Task RemoveSuspiciousStatus_WhenAppToken_DeletesStatusAndReturnsResult()
+    {
+        const string json = "{\"data\":[{\"broadcaster_id\":\"1234\",\"moderator_id\":\"5678\",\"user_id\":\"6789\",\"status\":\"NO_TREATMENT\",\"types\":[],\"updated_at\":\"2023-01-01T00:00:00Z\"}]}";
+        this._fixture.RegisterResponse("DELETE", "/helix/moderation/suspicious_users", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<SuspiciousUser>? response = await SuspiciousUser.RemoveSuspiciousStatus(session, "1234", "5678", "6789").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
     }
 
     #endregion RemoveSuspiciousStatus

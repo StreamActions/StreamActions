@@ -19,6 +19,7 @@
 using StreamActions.Twitch.Api.Extensions;
 using StreamActions.Twitch.Api.Extensions.Objects;
 using StreamActions.Twitch.Tests.Infrastructure;
+using System.Globalization;
 
 namespace StreamActions.Twitch.Tests.Api.Extensions;
 
@@ -163,7 +164,7 @@ public sealed class ExtensionTransactionTests : IDisposable
 
         ExtensionTransaction transaction = response.Data[0];
         _ = transaction.Id.Should().Be("74c52265-e214-48a6-91b9-23b6014e8041");
-        _ = transaction.Timestamp.Should().Be(DateTime.Parse("2019-01-28T04:15:53.325Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
+        _ = transaction.Timestamp.Should().Be(DateTime.Parse("2019-01-28T04:15:53.325Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = transaction.BroadcasterId.Should().Be("439964613");
         _ = transaction.BroadcasterLogin.Should().Be("chikuseuma");
         _ = transaction.BroadcasterName.Should().Be("chikuseuma");
@@ -180,7 +181,11 @@ public sealed class ExtensionTransactionTests : IDisposable
         _ = transaction.ProductData.Cost.Type.Should().Be(ExtensionProductCost.ExtensionProductCostType.Bits);
         _ = transaction.ProductData.InDevelopment.Should().BeFalse();
         _ = transaction.ProductData.DisplayName.Should().Be("Test Product 100");
+        _ = transaction.ProductData.Expiration.Should().Be(DateTime.Parse("2021-05-18T09:10:13.397Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = transaction.ProductData.Broadcast.Should().BeFalse();
+
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursorString");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -189,6 +194,64 @@ public sealed class ExtensionTransactionTests : IDisposable
         _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
         _ = request.QueryString.Should().Contain("id=74c52265-e214-48a6-91b9-23b6014e8041");
         _ = request.QueryString.Should().Contain("first=20");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionTransaction.GetExtensionTransactions"/> omits id and includes after when id is null.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetExtensionTransactions")]
+    public async Task GetExtensionTransactions_WhenIdNullAndAfterProvided_OmitsIdAndIncludesAfter()
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/extensions/transactions", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<ExtensionTransaction>? response = await ExtensionTransaction.GetExtensionTransactions(session, "uo6dggojyb8d6soh92zknwmi5ej1q2", id: null, after: "cursor123").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
+        _ = request.QueryString.Should().Contain("after=cursor123");
+        _ = request.Query.ContainsKey("id").Should().BeFalse();
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionTransaction.GetExtensionTransactions"/> clamps first between 1 and 100.
+    /// </para>
+    /// </summary>
+    /// <param name="first">The first parameter to test.</param>
+    /// <param name="expectedFirst">The expected clamped first value in the query string.</param>
+    [Theory]
+    [Trait("Member", "GetExtensionTransactions")]
+    [InlineData(0, 1)]
+    [InlineData(150, 100)]
+    public async Task GetExtensionTransactions_WhenFirstOutOfRange_ClampsFirst(int first, int expectedFirst)
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/extensions/transactions", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<ExtensionTransaction>? response = await ExtensionTransaction.GetExtensionTransactions(session, "uo6dggojyb8d6soh92zknwmi5ej1q2", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
     }
 
     #endregion GetExtensionTransactions

@@ -17,6 +17,8 @@
  */
 
 using StreamActions.Twitch.Api.EventSub;
+using StreamActions.Twitch.Api.EventSub.Conditions;
+using StreamActions.Twitch.Api.EventSub.Objects;
 using StreamActions.Twitch.EventSub.Channel;
 using StreamActions.Twitch.EventSub.Common;
 using StreamActions.Twitch.Tests.Infrastructure;
@@ -85,6 +87,9 @@ public sealed class EventSubWebsocketTests : IDisposable
             .WithParameterName("keepaliveTimeoutSeconds");
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ConnectWebsocketAsync(int?, CancellationToken, Uri?)"/> connects successfully and requests /ws without keepalive timeout.
+    /// </summary>
     [Fact]
     [Trait("Member", "ConnectWebsocketAsync")]
     public async Task ConnectWebsocketAsync_WithoutKeepaliveTimeout_ConnectsSuccessfully()
@@ -93,11 +98,16 @@ public sealed class EventSubWebsocketTests : IDisposable
         using ClientWebSocket ws = await EventSubService.ConnectWebsocketAsync(cancellationToken: TestContext.Current.CancellationToken, uri: wsUri).ConfigureAwait(true);
 
         _ = ws.State.Should().Be(WebSocketState.Open);
+        _ = this._fixture.LastRequest.Should().NotBeNull();
+        _ = this._fixture.LastRequest!.Path.Should().Be("/ws");
         _ = (this._fixture.LastRequest?.QueryString.Contains("keepalive_timeout_seconds", StringComparison.OrdinalIgnoreCase) ?? false).Should().BeFalse();
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ConnectWebsocketAsync(int?, CancellationToken, Uri?)"/> includes the keepalive timeout query parameter and requests /ws.
+    /// </summary>
     [Fact]
     [Trait("Member", "ConnectWebsocketAsync")]
     public async Task ConnectWebsocketAsync_WithValidKeepaliveTimeout_SendsQueryParameter()
@@ -107,6 +117,7 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         _ = ws.State.Should().Be(WebSocketState.Open);
         _ = this._fixture.LastRequest.Should().NotBeNull();
+        _ = this._fixture.LastRequest!.Path.Should().Be("/ws");
         _ = this._fixture.LastRequest.QueryString.Should().Contain("keepalive_timeout_seconds=30");
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -125,6 +136,9 @@ public sealed class EventSubWebsocketTests : IDisposable
             .WithParameterName("socket");
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns a welcome session with metadata and session details.
+    /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
     public async Task ReceiveWebsocketMessageAsync_WhenSessionWelcomeMessage_ReturnsParsedWelcomeSession()
@@ -161,22 +175,30 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         _ = result.Should().NotBeNull();
         _ = result.IsDuplicate.Should().BeFalse();
+        _ = result.CloseCode.Should().BeNull();
+        _ = result.Exception.Should().BeNull();
         _ = result.Event.Should().NotBeNull();
         _ = result.Event.Metadata.Should().NotBeNull();
+        _ = result.Event.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
         _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.SessionWelcome);
+        _ = result.Event.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Session.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Session.Id.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
+        _ = eventSubEvent!.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload!.Session.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session!.Id.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
         _ = eventSubEvent.Payload.Session.Status.Should().Be(EventSubSession.ConnectionStatus.Connected);
         _ = eventSubEvent.Payload.Session.KeepaliveTimeoutSeconds.Should().Be(10);
         _ = eventSubEvent.Payload.Session.ConnectedAt.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = eventSubEvent.Payload.Session.ReconnectUrl.Should().BeNull();
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns session keepalive metadata.
+    /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
     public async Task ReceiveWebsocketMessageAsync_WhenSessionKeepaliveMessage_ReturnsKeepaliveMetadata()
@@ -205,13 +227,20 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         _ = result.Should().NotBeNull();
         _ = result.IsDuplicate.Should().BeFalse();
+        _ = result.CloseCode.Should().BeNull();
+        _ = result.Exception.Should().BeNull();
         _ = result.Event.Should().NotBeNull();
         _ = result.Event.Metadata.Should().NotBeNull();
+        _ = result.Event.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
         _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.SessionKeepAlive);
+        _ = result.Event.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T14:57:01.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns reconnect session metadata and reconnect URL.
+    /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
     public async Task ReceiveWebsocketMessageAsync_WhenSessionReconnectMessage_ReturnsReconnectSessionWithUrl()
@@ -250,18 +279,26 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.IsDuplicate.Should().BeFalse();
         _ = result.Event.Should().NotBeNull();
         _ = result.Event.Metadata.Should().NotBeNull();
+        _ = result.Event.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
         _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.SessionReconnect);
+        _ = result.Event.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T14:58:01.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Session.Should().NotBeNull();
+        _ = eventSubEvent!.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload!.Session.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session!.Id.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
         _ = eventSubEvent.Payload.Session.Status.Should().Be(EventSubSession.ConnectionStatus.Reconnecting);
+        _ = eventSubEvent.Payload.Session.KeepaliveTimeoutSeconds.Should().Be(10);
+        _ = eventSubEvent.Payload.Session.ConnectedAt.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = eventSubEvent.Payload.Session.ReconnectUrl.Should().Be(new Uri("wss://eventsub.wss.twitch.tv/ws?reconnect=true"));
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns a typed notification follow event.
+    /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
     public async Task ReceiveWebsocketMessageAsync_WhenNotificationMessage_ReturnsTypedFollowEvent()
@@ -323,13 +360,33 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         EventSubEvent<Follow>? followEvent = result.Event as EventSubEvent<Follow>;
         _ = followEvent.Should().NotBeNull();
-        _ = followEvent.Metadata.Should().NotBeNull();
+        _ = followEvent!.Metadata.Should().NotBeNull();
+        _ = followEvent.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
         _ = followEvent.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Notification);
+        _ = followEvent.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T14:59:01.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = followEvent.Metadata.SubscriptionType.Should().Be("channel.follow");
+        _ = followEvent.Metadata.SubscriptionVersion.Should().Be("2");
+
         _ = followEvent.Payload.Should().NotBeNull();
-        _ = followEvent.Payload.Subscription.Should().NotBeNull();
+        _ = followEvent.Payload!.Subscription.Should().NotBeNull();
+        _ = followEvent.Payload.Subscription!.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
+        _ = followEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.Enabled);
         _ = followEvent.Payload.Subscription.Type.Should().Be("channel.follow");
+        _ = followEvent.Payload.Subscription.Version.Should().Be("2");
+        _ = followEvent.Payload.Subscription.Cost.Should().Be(0);
+
+        BroadcasterAndModeratorUserIdCondition? condition = followEvent.Payload.Subscription.Condition as BroadcasterAndModeratorUserIdCondition;
+        _ = condition.Should().NotBeNull();
+        _ = condition!.BroadcasterUserId.Should().Be("1337");
+        _ = condition.ModeratorUserId.Should().Be("1337");
+
+        _ = followEvent.Payload.Subscription.Transport.Should().NotBeNull();
+        _ = followEvent.Payload.Subscription.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Websocket);
+        _ = followEvent.Payload.Subscription.Transport.SessionId.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
+        _ = followEvent.Payload.Subscription.CreatedAt.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+
         _ = followEvent.Payload.Event.Should().NotBeNull();
-        _ = followEvent.Payload.Event.UserId.Should().Be("1234");
+        _ = followEvent.Payload.Event!.UserId.Should().Be("1234");
         _ = followEvent.Payload.Event.UserLogin.Should().Be("cool_user");
         _ = followEvent.Payload.Event.UserName.Should().Be("Cool_User");
         _ = followEvent.Payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -340,6 +397,9 @@ public sealed class EventSubWebsocketTests : IDisposable
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns a revocation subscription event.
+    /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
     public async Task ReceiveWebsocketMessageAsync_WhenRevocationMessage_ReturnsRevocationSubscription()
@@ -389,13 +449,30 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.IsDuplicate.Should().BeFalse();
         _ = result.Event.Should().NotBeNull();
         _ = result.Event.Metadata.Should().NotBeNull();
+        _ = result.Event.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
         _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Revocation);
+        _ = result.Event.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T15:00:01.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = result.Event.Metadata.SubscriptionType.Should().Be("channel.follow");
+        _ = result.Event.Metadata.SubscriptionVersion.Should().Be("2");
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Subscription.Should().NotBeNull();
+        _ = eventSubEvent!.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload!.Subscription.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription!.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
         _ = eventSubEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.AuthorizationRevoked);
+        _ = eventSubEvent.Payload.Subscription.Type.Should().Be("channel.follow");
+        _ = eventSubEvent.Payload.Subscription.Version.Should().Be("2");
+        _ = eventSubEvent.Payload.Subscription.Cost.Should().Be(0);
+
+        BroadcasterAndModeratorUserIdCondition? revocationCondition = eventSubEvent.Payload.Subscription.Condition as BroadcasterAndModeratorUserIdCondition;
+        _ = revocationCondition.Should().NotBeNull();
+        _ = revocationCondition!.BroadcasterUserId.Should().Be("1337");
+
+        _ = eventSubEvent.Payload.Subscription.Transport.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Websocket);
+        _ = eventSubEvent.Payload.Subscription.Transport.SessionId.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
+        _ = eventSubEvent.Payload.Subscription.CreatedAt.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
@@ -523,5 +600,77 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = ws.CloseStatus.Should().Be((WebSocketCloseStatus)4000);
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> returns a null event when a notification message contains an unknown subscription type.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ReceiveWebsocketMessageAsync")]
+    public async Task ReceiveWebsocketMessageAsync_WhenUnknownSubscriptionType_ReturnsNullEvent()
+    {
+        string messageId = Guid.NewGuid().ToString();
+        string notificationJson = $$"""
+        {
+          "metadata": {
+            "message_id": "{{messageId}}",
+            "message_type": "notification",
+            "message_timestamp": "2023-07-19T14:59:01.616329Z",
+            "subscription_type": "unknown.subscription.type",
+            "subscription_version": "1"
+          },
+          "payload": {
+            "subscription": {
+              "id": "f1c2a387-161a-49f9-a165-0f21d7a4e1c4",
+              "status": "enabled",
+              "type": "unknown.subscription.type",
+              "version": "1",
+              "cost": 0,
+              "transport": {
+                "method": "websocket",
+                "session_id": "AQoQILLtwP2YTI6stDYQgILv-gEg-x"
+              },
+              "created_at": "2023-07-19T14:56:51.616329Z"
+            },
+            "event": {}
+          }
+        }
+        """;
+
+        this._fixture.QueueWebSocketAction(async (webSocket, httpContext) =>
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(notificationJson);
+            await webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, TestContext.Current.CancellationToken).ConfigureAwait(false);
+        });
+
+        Uri wsUri = new($"{this._fixture.BaseUrl.Replace("http://", "ws://", StringComparison.OrdinalIgnoreCase)}/ws");
+        using ClientWebSocket ws = await EventSubService.ConnectWebsocketAsync(cancellationToken: TestContext.Current.CancellationToken, uri: wsUri).ConfigureAwait(true);
+        EventSubWebsocketResult result = await EventSubService.ReceiveWebsocketMessageAsync(ws, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        _ = result.Should().NotBeNull();
+        _ = result.IsDuplicate.Should().BeFalse();
+        _ = result.Event.Should().BeNull();
+
+        await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> captures and returns any exception thrown during WebSocket receive.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ReceiveWebsocketMessageAsync")]
+    public async Task ReceiveWebsocketMessageAsync_WhenSocketThrowsException_ReturnsCapturedException()
+    {
+        Uri wsUri = new($"{this._fixture.BaseUrl.Replace("http://", "ws://", StringComparison.OrdinalIgnoreCase)}/ws");
+        using ClientWebSocket ws = await EventSubService.ConnectWebsocketAsync(cancellationToken: TestContext.Current.CancellationToken, uri: wsUri).ConfigureAwait(true);
+        ws.Abort();
+
+        EventSubWebsocketResult result = await EventSubService.ReceiveWebsocketMessageAsync(ws, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        _ = result.Should().NotBeNull();
+        _ = result.Exception.Should().NotBeNull();
+        _ = result.Exception.Should().BeAssignableTo<Exception>();
+        _ = result.Event.Should().BeNull();
+    }
+
     #endregion ReceiveWebsocketMessageAsync
 }
+

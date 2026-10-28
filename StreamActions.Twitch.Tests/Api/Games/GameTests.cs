@@ -102,6 +102,11 @@ public sealed class GameTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Game.GetGames"/> sends a GET request and returns game data.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "GetGames")]
     public async Task GetGames_WhenValidRequest_SendsGetAndReturnsGames()
@@ -143,6 +148,91 @@ public sealed class GameTests : IDisposable
         _ = request.QueryString.Should().Contain("igdb_id=1905");
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Game.GetGames"/> sends only id parameters when only game IDs are provided.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetGames")]
+    public async Task GetGames_WhenOnlyGameIdsProvided_SendsGetWithOnlyIdParams()
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/games", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Game>? response = await Game.GetGames(session, gameIds: ["33214", "493057"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("id=33214");
+        _ = request.QueryString.Should().Contain("id=493057");
+        _ = request.QueryString.Should().NotContain("name=");
+        _ = request.QueryString.Should().NotContain("igdb_id=");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Game.GetGames"/> sends only name parameters when only game names are provided.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetGames")]
+    public async Task GetGames_WhenOnlyGameNamesProvided_SendsGetWithOnlyNameParams()
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/games", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Game>? response = await Game.GetGames(session, gameNames: ["Fortnite"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("name=Fortnite");
+        _ = request.QueryString.Should().NotContain("id=");
+        _ = request.QueryString.Should().NotContain("igdb_id=");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Game.GetGames"/> sends only igdb_id parameters when only IGDB IDs are provided.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetGames")]
+    public async Task GetGames_WhenOnlyIgdbIdsProvided_SendsGetWithOnlyIgdbIdParams()
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/games", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Game>? response = await Game.GetGames(session, igdbIds: ["1905"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("igdb_id=1905");
+        _ = request.Query.ContainsKey("id").Should().BeFalse();
+        _ = request.QueryString.Should().NotContain("name=");
+    }
+
     #endregion GetGames
 
     #region GetTopGames
@@ -165,6 +255,11 @@ public sealed class GameTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Game.GetTopGames"/> sends a GET request and returns top games with pagination.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "GetTopGames")]
     public async Task GetTopGames_WhenValidRequest_SendsGetAndReturnsTopGames()
@@ -197,6 +292,11 @@ public sealed class GameTests : IDisposable
         Game game = response.Data[0];
         _ = game.Id.Should().Be("493057");
         _ = game.Name.Should().Be("PUBG: BATTLEGROUNDS");
+        _ = game.BoxArtUrl.Should().Be(new Uri("https://static-cdn.jtvnw.net/ttv-boxart/493057-{width}x{height}.jpg"));
+        _ = game.IgdbId.Should().Be("27789");
+
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("eyJiIjpudWxsLCJhIjp7Ik9mZnNldCI6MjB9fQ==");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -205,6 +305,91 @@ public sealed class GameTests : IDisposable
         _ = request.QueryString.Should().Contain("first=20");
         _ = request.QueryString.Should().Contain("after=after_cursor");
         _ = request.QueryString.Should().Contain("before=before_cursor");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Game.GetTopGames"/> omits after and before parameters when omitted.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetTopGames")]
+    public async Task GetTopGames_WhenDefaultOptionalParameters_OmitsAfterAndBeforeAndDefaultsFirstTo20()
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/games/top", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Game>? response = await Game.GetTopGames(session).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("after=");
+        _ = request.QueryString.Should().NotContain("before=");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Game.GetTopGames"/> includes before parameter when specified.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetTopGames")]
+    public async Task GetTopGames_WhenBeforeProvided_IncludesBeforeInQueryString()
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/games/top", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Game>? response = await Game.GetTopGames(session, before: "beforeCursor").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("before=beforeCursor");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Game.GetTopGames"/> clamps first between 1 and 100.
+    /// </para>
+    /// </summary>
+    /// <param name="first">The first parameter to test.</param>
+    /// <param name="expectedFirst">The expected clamped first value in the query string.</param>
+    [Theory]
+    [Trait("Member", "GetTopGames")]
+    [InlineData(0, 1)]
+    [InlineData(150, 100)]
+    public async Task GetTopGames_WhenFirstOutOfRange_ClampsFirst(int first, int expectedFirst)
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/games/top", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Game>? response = await Game.GetTopGames(session, first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
     }
 
     #endregion GetTopGames

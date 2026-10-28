@@ -172,7 +172,59 @@ public sealed class LeaderboardTests : IDisposable
         _ = request.QueryString.Should().Contain("count=10");
         _ = request.QueryString.Should().Contain("period=week");
         _ = request.QueryString.Should().Contain("user_id=158010205");
+        _ = request.QueryString.Should().Contain("started_at=");
+        _ = request.Query["started_at"].ToString().Should().Be("2018-02-05T00:00:00Z");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Leaderboard.GetBitsLeaderboard"/> uses default parameters when optional parameters are omitted.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBitsLeaderboard")]
+    public async Task GetBitsLeaderboard_WhenDefaultParameters_IncludesDefaultsAndOmitsOptionals()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/bits/leaderboard", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.BitsRead);
+        ResponseData<Leaderboard>? response = await Leaderboard.GetBitsLeaderboard(session).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("count=10");
+        _ = request.QueryString.Should().Contain("period=all");
+        _ = request.QueryString.Should().NotContain("started_at");
+        _ = request.QueryString.Should().NotContain("user_id");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Leaderboard.GetBitsLeaderboard"/> clamps the count parameter between 1 and 100.
+    /// </summary>
+    /// <param name="inputCount">The input count.</param>
+    /// <param name="expectedCount">The expected clamped count in the query string.</param>
+    [Theory]
+    [Trait("Member", "GetBitsLeaderboard")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(150, 100)]
+    public async Task GetBitsLeaderboard_WhenCountOutOfRange_ClampsCount(int inputCount, int expectedCount)
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/bits/leaderboard", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.BitsRead);
+        _ = await Leaderboard.GetBitsLeaderboard(session, count: inputCount).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"count={expectedCount}");
     }
 
     #endregion GetBitsLeaderboard
 }
+

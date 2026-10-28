@@ -17,6 +17,9 @@
  */
 
 using StreamActions.Twitch.Api.Chat;
+using StreamActions.Twitch.Api.Chat.Objects;
+using StreamActions.Twitch.Api.Common;
+using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
@@ -162,6 +165,27 @@ public sealed class SendChatTests : IDisposable
     }
 
     /// <summary>
+    /// Tests that <see cref="SendChat.SendChatMessage"/> throws <see cref="ArgumentNullException"/> when ReplyParentMessageId is whitespace.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendChatMessage")]
+    public async Task SendChatMessage_WhenReplyParentMessageIdIsWhitespace_ThrowsArgumentNullException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserWriteChat);
+        SendChatParameters parameters = new()
+        {
+            BroadcasterId = "123",
+            SenderId = "456",
+            Message = "hello",
+            ReplyParentMessageId = "   "
+        };
+
+        Func<Task> action = async () => await SendChat.SendChatMessage(session, parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("ReplyParentMessageId");
+    }
+
+    /// <summary>
     /// Tests that <see cref="SendChat.SendChatMessage"/> throws <see cref="ArgumentOutOfRangeException"/> when Pin is combined with ReplyParentMessageId.
     /// </summary>
     [Fact]
@@ -184,6 +208,28 @@ public sealed class SendChatTests : IDisposable
     }
 
     /// <summary>
+    /// Tests that <see cref="SendChat.SendChatMessage"/> throws <see cref="ArgumentOutOfRangeException"/> when Pin is true and ForSourceOnly is not null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendChatMessage")]
+    public async Task SendChatMessage_WhenPinIsTrueAndForSourceOnlyNotNull_ThrowsArgumentOutOfRangeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.UserWriteChat, Scope.ModeratorManageChatMessages);
+        SendChatParameters parameters = new()
+        {
+            BroadcasterId = "123",
+            SenderId = "456",
+            Message = "hello",
+            Pin = true,
+            ForSourceOnly = true
+        };
+
+        Func<Task> action = async () => await SendChat.SendChatMessage(session, parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
+            .WithParameterName("Pin");
+    }
+
+    /// <summary>
     /// Tests that <see cref="SendChat.SendChatMessage"/> throws <see cref="TwitchScopeMissingException"/> when required scope is missing.
     /// </summary>
     [Fact]
@@ -196,6 +242,26 @@ public sealed class SendChatTests : IDisposable
             BroadcasterId = "123",
             SenderId = "456",
             Message = "hello"
+        };
+
+        Func<Task> action = async () => await SendChat.SendChatMessage(session, parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SendChat.SendChatMessage"/> throws <see cref="TwitchScopeMissingException"/> when Pin is true and ModeratorManageChatMessages scope is missing.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendChatMessage")]
+    public async Task SendChatMessage_WhenPinIsTrueAndMissingModeratorManageChatMessagesScope_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserWriteChat);
+        SendChatParameters parameters = new()
+        {
+            BroadcasterId = "123",
+            SenderId = "456",
+            Message = "hello",
+            Pin = true
         };
 
         Func<Task> action = async () => await SendChat.SendChatMessage(session, parameters).ConfigureAwait(true);
@@ -251,6 +317,152 @@ public sealed class SendChatTests : IDisposable
     }
 
     /// <summary>
+    /// Tests that <see cref="SendChat.SendChatMessage"/> maps drop reason and includes reply parent message ID in the request body when message is dropped.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendChatMessage")]
+    public async Task SendChatMessage_WhenMessageNotSent_MapsDropReasonAndSendsReplyParentMessageId()
+    {
+        this._fixture.RegisterJsonResponse("POST", "/helix/chat/messages", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    message_id = (string?)null,
+                    is_sent = false,
+                    drop_reason = new
+                    {
+                        code = "msg_banned",
+                        message = "The sender is banned from chat."
+                    }
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserWriteChat);
+        SendChatParameters parameters = new()
+        {
+            BroadcasterId = "12345",
+            SenderId = "67890",
+            Message = "Hello from test!",
+            ReplyParentMessageId = "parent123"
+        };
+
+        ResponseData<SendChat>? response = await SendChat.SendChatMessage(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+
+        SendChat result = response.Data[0];
+        _ = result.MessageId.Should().BeNull();
+        _ = result.IsSent.Should().BeFalse();
+        _ = result.DropReason.Should().NotBeNull();
+        _ = result.DropReason!.Code.Should().Be("msg_banned");
+        _ = result.DropReason.Message.Should().Be("The sender is banned from chat.");
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"reply_parent_message_id\":\"parent123\"");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SendChat.SendChatMessage"/> sends pin in the request body when Pin is true.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendChatMessage")]
+    public async Task SendChatMessage_WhenPinIsTrue_SendsPinInBody()
+    {
+        this._fixture.RegisterJsonResponse("POST", "/helix/chat/messages", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    message_id = "msg101",
+                    is_sent = true
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserWriteChat, Scope.ModeratorManageChatMessages);
+        SendChatParameters parameters = new()
+        {
+            BroadcasterId = "12345",
+            SenderId = "67890",
+            Message = "Pinned hello!",
+            Pin = true
+        };
+
+        ResponseData<SendChat>? response = await SendChat.SendChatMessage(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data[0].MessageId.Should().Be("msg101");
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"pin\":true");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SendChat.SendChatMessage"/> sends for_source_only in the request body when using an app token and ForSourceOnly is true.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendChatMessage")]
+    public async Task SendChatMessage_WhenAppTokenAndForSourceOnlyIsTrue_SendsForSourceOnlyInBody()
+    {
+        this._fixture.RegisterJsonResponse("POST", "/helix/chat/messages", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    message_id = "msg202",
+                    is_sent = true
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.UserWriteChat);
+        SendChatParameters parameters = new()
+        {
+            BroadcasterId = "12345",
+            SenderId = "67890",
+            Message = "Source only msg",
+            ForSourceOnly = true
+        };
+
+        ResponseData<SendChat>? response = await SendChat.SendChatMessage(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data[0].MessageId.Should().Be("msg202");
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"for_source_only\":true");
+    }
+
+    #endregion SendChatMessage
+
+    #region ConvertMessageToSlashMe
+
+    /// <summary>
+    /// Tests that <see cref="SendChatParameters.ConvertMessageToSlashMe"/> throws <see cref="ArgumentNullException"/> when message is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ConvertMessageToSlashMe")]
+    public void ConvertMessageToSlashMe_WhenMessageIsNull_ThrowsArgumentNullException()
+    {
+        Action action = () => SendChatParameters.ConvertMessageToSlashMe(null!);
+        _ = action.Should().Throw<ArgumentNullException>()
+            .WithParameterName("message");
+    }
+
+    /// <summary>
     /// Tests that <see cref="SendChatParameters.ConvertMessageToSlashMe"/> converts a message into a slash-me format.
     /// </summary>
     [Fact]
@@ -264,5 +476,5 @@ public sealed class SendChatTests : IDisposable
         _ = convertedWithPrefix.Should().Be("\u0001ACTION jumps\u0001");
     }
 
-    #endregion SendChatMessage
+    #endregion ConvertMessageToSlashMe
 }

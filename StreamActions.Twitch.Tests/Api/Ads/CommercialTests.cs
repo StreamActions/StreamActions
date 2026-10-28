@@ -177,5 +177,65 @@ public sealed class CommercialTests : IDisposable
         _ = request.Body.Should().Contain("\"length\":60");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Commercial.StartCommercial"/> clamps the length between 1 and 180.
+    /// </summary>
+    /// <param name="inputLength">The input length.</param>
+    /// <param name="expectedLength">The expected clamped length in the request body.</param>
+    [Theory]
+    [Trait("Member", "StartCommercial")]
+    [InlineData(0, 1)]
+    [InlineData(-10, 1)]
+    [InlineData(200, 180)]
+    public async Task StartCommercial_WhenLengthOutOfRange_ClampsLength(int inputLength, int expectedLength)
+    {
+        this._fixture.RegisterJsonResponse("POST", "/helix/channels/commercial", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    length = expectedLength,
+                    message = "",
+                    retry_after = 480
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelEditCommercial);
+        StartCommercialParameters parameters = new() { BroadcasterId = "141981764", Length = inputLength };
+        _ = await Commercial.StartCommercial(session, parameters).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain($"\"length\":{expectedLength}");
+    }
+
     #endregion StartCommercial
+
+    #region Properties
+
+    /// <summary>
+    /// Tests that <see cref="Commercial.RetryAfter"/> returns <see langword="null"/> when <see cref="Commercial.RetryAfterSeconds"/> is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RetryAfter")]
+    public void RetryAfter_WhenRetryAfterSecondsIsNull_ReturnsNull()
+    {
+        Commercial commercial = new() { RetryAfterSeconds = null };
+        _ = commercial.RetryAfter.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Commercial.RetryAfterDateTime"/> returns <see langword="null"/> when <see cref="Commercial.RetryAfterSeconds"/> is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RetryAfterDateTime")]
+    public void RetryAfterDateTime_WhenRetryAfterSecondsIsNull_ReturnsNull()
+    {
+        Commercial commercial = new() { RetryAfterSeconds = null };
+        _ = commercial.RetryAfterDateTime.Should().BeNull();
+    }
+
+    #endregion Properties
 }

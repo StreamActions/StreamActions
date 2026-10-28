@@ -36,6 +36,7 @@ public sealed record UpdateExtensionBitsProductParameters
     /// An object that contains the product's cost information.
     /// </summary>
     [JsonPropertyName("cost")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ExtensionProductCost? Cost { get; init; }
 
     /// <summary>
@@ -48,18 +49,21 @@ public sealed record UpdateExtensionBitsProductParameters
     /// A Boolean value that indicates whether the product is in development.
     /// </summary>
     [JsonPropertyName("in_development")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? InDevelopment { get; init; }
 
     /// <summary>
     /// The date and time, in RFC3339 format, when the product expires. If not set, the product does not expire.
     /// </summary>
     [JsonPropertyName("expiration")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? Expiration { get; init; }
 
     /// <summary>
     /// A Boolean value that determines whether Bits product purchase events are broadcast to all instances of the extension on a channel.
     /// </summary>
     [JsonPropertyName("is_broadcast")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsBroadcast { get; init; }
 }
 

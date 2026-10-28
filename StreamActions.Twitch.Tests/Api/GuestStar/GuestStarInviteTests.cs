@@ -86,6 +86,41 @@ public sealed class GuestStarInviteTests : IDisposable
             .WithParameterName("broadcasterId");
     }
 
+    [Theory]
+    [Trait("Member", "GetGuestStarInvites")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetGuestStarInvites_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidModeratorId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadGuestStar);
+        Func<Task> action = async () => await GuestStarInvite.GetGuestStarInvites(session, "9321049", invalidModeratorId!, "session123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    [Theory]
+    [Trait("Member", "GetGuestStarInvites")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetGuestStarInvites_WhenSessionIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSessionId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadGuestStar);
+        Func<Task> action = async () => await GuestStarInvite.GetGuestStarInvites(session, "9321049", "9321049", invalidSessionId!).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("sessionId");
+    }
+
+    [Fact]
+    [Trait("Member", "GetGuestStarInvites")]
+    public async Task GetGuestStarInvites_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarInvite.GetGuestStarInvites(session, "9321049", "9321049", "session123").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
     [Fact]
     [Trait("Member", "GetGuestStarInvites")]
     public async Task GetGuestStarInvites_WhenScopeMissing_ThrowsTwitchScopeMissingException()
@@ -160,12 +195,69 @@ public sealed class GuestStarInviteTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    public async Task SendGuestStarInvite_WhenBroadcasterIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidBroadcasterId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarInvite.SendGuestStarInvite(session, invalidBroadcasterId!, "9321049", "session123", "144601104").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("broadcasterId");
+    }
+
+    [Theory]
+    [Trait("Member", "SendGuestStarInvite")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task SendGuestStarInvite_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidModeratorId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarInvite.SendGuestStarInvite(session, "9321049", invalidModeratorId!, "session123", "144601104").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    [Theory]
+    [Trait("Member", "SendGuestStarInvite")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task SendGuestStarInvite_WhenSessionIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSessionId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarInvite.SendGuestStarInvite(session, "9321049", "9321049", invalidSessionId!, "144601104").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("sessionId");
+    }
+
+    [Theory]
+    [Trait("Member", "SendGuestStarInvite")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public async Task SendGuestStarInvite_WhenGuestIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidGuestId)
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
         Func<Task> action = async () => await GuestStarInvite.SendGuestStarInvite(session, "9321049", "9321049", "session123", invalidGuestId!).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("guestId");
+    }
+
+    [Fact]
+    [Trait("Member", "SendGuestStarInvite")]
+    public async Task SendGuestStarInvite_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarInvite.SendGuestStarInvite(session, "9321049", "9321049", "session123", "144601104").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    [Fact]
+    [Trait("Member", "SendGuestStarInvite")]
+    public async Task SendGuestStarInvite_WhenScopeMissing_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmail);
+        Func<Task> action = async () => await GuestStarInvite.SendGuestStarInvite(session, "9321049", "9321049", "session123", "144601104").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -186,6 +278,8 @@ public sealed class GuestStarInviteTests : IDisposable
         _ = request.Method.Should().Be("POST");
         _ = request.Path.Should().Be("/helix/guest_star/invites");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
+        _ = request.QueryString.Should().Contain("moderator_id=9321049");
+        _ = request.QueryString.Should().Contain("session_id=session123");
         _ = request.QueryString.Should().Contain("guest_id=144601104");
     }
 
@@ -200,6 +294,76 @@ public sealed class GuestStarInviteTests : IDisposable
         Func<Task> action = async () => await GuestStarInvite.DeleteGuestStarInvite(null!, "9321049", "9321049", "session123", "144601104").ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("session");
+    }
+
+    [Theory]
+    [Trait("Member", "DeleteGuestStarInvite")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DeleteGuestStarInvite_WhenBroadcasterIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidBroadcasterId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarInvite.DeleteGuestStarInvite(session, invalidBroadcasterId!, "9321049", "session123", "144601104").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("broadcasterId");
+    }
+
+    [Theory]
+    [Trait("Member", "DeleteGuestStarInvite")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DeleteGuestStarInvite_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidModeratorId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarInvite.DeleteGuestStarInvite(session, "9321049", invalidModeratorId!, "session123", "144601104").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    [Theory]
+    [Trait("Member", "DeleteGuestStarInvite")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DeleteGuestStarInvite_WhenSessionIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSessionId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarInvite.DeleteGuestStarInvite(session, "9321049", "9321049", invalidSessionId!, "144601104").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("sessionId");
+    }
+
+    [Theory]
+    [Trait("Member", "DeleteGuestStarInvite")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DeleteGuestStarInvite_WhenGuestIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidGuestId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarInvite.DeleteGuestStarInvite(session, "9321049", "9321049", "session123", invalidGuestId!).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("guestId");
+    }
+
+    [Fact]
+    [Trait("Member", "DeleteGuestStarInvite")]
+    public async Task DeleteGuestStarInvite_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarInvite.DeleteGuestStarInvite(session, "9321049", "9321049", "session123", "144601104").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    [Fact]
+    [Trait("Member", "DeleteGuestStarInvite")]
+    public async Task DeleteGuestStarInvite_WhenScopeMissing_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmail);
+        Func<Task> action = async () => await GuestStarInvite.DeleteGuestStarInvite(session, "9321049", "9321049", "session123", "144601104").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -220,6 +384,8 @@ public sealed class GuestStarInviteTests : IDisposable
         _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/guest_star/invites");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
+        _ = request.QueryString.Should().Contain("moderator_id=9321049");
+        _ = request.QueryString.Should().Contain("session_id=session123");
         _ = request.QueryString.Should().Contain("guest_id=144601104");
     }
 

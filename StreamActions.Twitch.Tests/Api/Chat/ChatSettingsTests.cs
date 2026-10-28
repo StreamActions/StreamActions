@@ -161,6 +161,79 @@ public sealed class ChatSettingsTests : IDisposable
         _ = request.Query["moderator_id"].ToString().Should().Be("67890");
     }
 
+    /// <summary>
+    /// Tests that <see cref="ChatSettings.GetChatSettings"/> omits moderator_id from query string when moderatorId is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetChatSettings")]
+    public async Task GetChatSettings_WhenModeratorIdIsNull_OmitsModeratorIdFromQuery()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/chat/settings", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    broadcaster_id = "12345",
+                    slow_mode = false,
+                    slow_mode_wait_time = (int?)null,
+                    follower_mode = false,
+                    follower_mode_duration = (int?)null,
+                    subscriber_mode = false,
+                    emote_mode = false,
+                    unique_chat_mode = false,
+                    non_moderator_chat_delay = false,
+                    non_moderator_chat_delay_duration = (int?)null
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorReadChatSettings);
+        ResponseData<ChatSettings>? response = await ChatSettings.GetChatSettings(session, "12345").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().NotContain("moderator_id");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChatSettings.GetChatSettings"/> succeeds when session has ModeratorManageChatSettings scope.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetChatSettings")]
+    public async Task GetChatSettings_WhenCalledWithModeratorManageChatSettingsScope_ReturnsChatSettings()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/chat/settings", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    broadcaster_id = "12345",
+                    slow_mode = false,
+                    slow_mode_wait_time = (int?)null,
+                    follower_mode = false,
+                    follower_mode_duration = (int?)null,
+                    subscriber_mode = false,
+                    emote_mode = false,
+                    unique_chat_mode = false,
+                    non_moderator_chat_delay = false,
+                    non_moderator_chat_delay_duration = (int?)null
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatSettings);
+        ResponseData<ChatSettings>? response = await ChatSettings.GetChatSettings(session, "12345").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Data.Should().NotBeNull();
+    }
+
     #endregion GetChatSettings
 
     #region UpdateChatSettings
@@ -257,13 +330,13 @@ public sealed class ChatSettingsTests : IDisposable
                     moderator_id = "67890",
                     slow_mode = true,
                     slow_mode_wait_time = 10,
-                    follower_mode = false,
-                    follower_mode_duration = (int?)null,
-                    subscriber_mode = false,
-                    emote_mode = false,
-                    unique_chat_mode = false,
-                    non_moderator_chat_delay = false,
-                    non_moderator_chat_delay_duration = (int?)null
+                    follower_mode = true,
+                    follower_mode_duration = 15,
+                    subscriber_mode = true,
+                    emote_mode = true,
+                    unique_chat_mode = true,
+                    non_moderator_chat_delay = true,
+                    non_moderator_chat_delay_duration = 2
                 }
             }
         });
@@ -271,8 +344,15 @@ public sealed class ChatSettingsTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatSettings);
         ChatSettings updateRequest = new()
         {
+            EmoteMode = true,
+            FollowerMode = true,
+            FollowerModeDuration = 15,
+            NonModeratorChatDelay = true,
+            NonModeratorChatDelayDuration = 2,
             SlowMode = true,
-            SlowModeWaitTime = 10
+            SlowModeWaitTime = 10,
+            SubscriberMode = true,
+            UniqueChatMode = true
         };
 
         ResponseData<ChatSettings>? response = await ChatSettings.UpdateChatSettings(session, "12345", "67890", updateRequest).ConfigureAwait(true);
@@ -283,9 +363,17 @@ public sealed class ChatSettingsTests : IDisposable
         _ = response.Data.Count.Should().Be(1);
 
         ChatSettings updated = response.Data[0];
+        _ = updated.BroadcasterId.Should().Be("12345");
+        _ = updated.ModeratorId.Should().Be("67890");
         _ = updated.SlowMode.Should().BeTrue();
         _ = updated.SlowModeWaitTime.Should().Be(10);
-        _ = updated.FollowerMode.Should().BeFalse();
+        _ = updated.FollowerMode.Should().BeTrue();
+        _ = updated.FollowerModeDuration.Should().Be(15);
+        _ = updated.SubscriberMode.Should().BeTrue();
+        _ = updated.EmoteMode.Should().BeTrue();
+        _ = updated.UniqueChatMode.Should().BeTrue();
+        _ = updated.NonModeratorChatDelay.Should().BeTrue();
+        _ = updated.NonModeratorChatDelayDuration.Should().Be(2);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -293,8 +381,17 @@ public sealed class ChatSettingsTests : IDisposable
         _ = request.Path.Should().Be("/helix/chat/settings");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["moderator_id"].ToString().Should().Be("67890");
+        _ = request.Body.Should().Contain("\"emote_mode\":true");
+        _ = request.Body.Should().Contain("\"follower_mode\":true");
+        _ = request.Body.Should().Contain("\"follower_mode_duration\":15");
+        _ = request.Body.Should().Contain("\"non_moderator_chat_delay\":true");
+        _ = request.Body.Should().Contain("\"non_moderator_chat_delay_duration\":2");
         _ = request.Body.Should().Contain("\"slow_mode\":true");
         _ = request.Body.Should().Contain("\"slow_mode_wait_time\":10");
+        _ = request.Body.Should().Contain("\"subscriber_mode\":true");
+        _ = request.Body.Should().Contain("\"unique_chat_mode\":true");
+        _ = request.Body.Should().NotContain("\"broadcaster_id\"");
+        _ = request.Body.Should().NotContain("\"moderator_id\"");
     }
 
     #endregion UpdateChatSettings

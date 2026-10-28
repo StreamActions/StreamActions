@@ -207,7 +207,7 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
         });
 
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadRedemptions);
-        ResponseData<ChannelPointsReward>? response = await ChannelPointsRedemption.GetCustomRewardRedemption(
+        ResponseData<ChannelPointsRedemption>? response = await ChannelPointsRedemption.GetCustomRewardRedemption(
             session,
             "274637212",
             rewardGuid,
@@ -217,12 +217,99 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Count.Should().Be(1);
 
+        ChannelPointsRedemption redemption = response.Data[0];
+        _ = redemption.BroadcasterId.Should().Be("274637212");
+        _ = redemption.BroadcasterName.Should().Be("torpedo09");
+        _ = redemption.BroadcasterLogin.Should().Be("torpedo09");
+        _ = redemption.Id.Should().Be(redemptionGuid);
+        _ = redemption.UserId.Should().Be("274637212");
+        _ = redemption.UserName.Should().Be("torpedo09");
+        _ = redemption.UserLogin.Should().Be("torpedo09");
+        _ = redemption.UserInput.Should().Be(string.Empty);
+        _ = redemption.Status.Should().Be(ChannelPointsRedemption.RedemptionStatus.Canceled);
+        _ = redemption.RedeemedAt.Should().Be(redeemedAt);
+        _ = redemption.Reward.Should().NotBeNull();
+        _ = redemption.Reward.Id.Should().Be(rewardGuid);
+        _ = redemption.Reward.Title.Should().Be("game analysis");
+        _ = redemption.Reward.Prompt.Should().Be(string.Empty);
+        _ = redemption.Reward.Cost.Should().Be(50000);
+
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/channel_points/custom_rewards/redemptions");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.QueryString.Should().Contain($"reward_id={rewardGuid:D}");
+        _ = request.QueryString.Should().Contain("status=CANCELED");
+        _ = request.QueryString.Should().Contain("sort=OLDEST");
+        _ = request.QueryString.Should().Contain("first=20");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelPointsRedemption.GetCustomRewardRedemption"/> when id collection is provided includes id, sort, after and omits status and first.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetCustomRewardRedemption")]
+    public async Task GetCustomRewardRedemption_WhenIdProvided_IncludesIdSortAfterAndOmitsStatusAndFirst()
+    {
+        Guid rewardGuid = Guid.NewGuid();
+        Guid guid1 = Guid.NewGuid();
+        Guid guid2 = Guid.NewGuid();
+
+        this._fixture.RegisterJsonResponse("GET", "/helix/channel_points/custom_rewards/redemptions", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageRedemptions);
+        ResponseData<ChannelPointsRedemption>? response = await ChannelPointsRedemption.GetCustomRewardRedemption(
+            session,
+            "274637212",
+            rewardGuid,
+            id: [guid1, guid2],
+            sort: ChannelPointsRedemption.RedemptionSort.Newest,
+            after: "cursor123").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"id={guid1:D}");
+        _ = request.QueryString.Should().Contain($"id={guid2:D}");
+        _ = request.QueryString.Should().Contain("sort=NEWEST");
+        _ = request.QueryString.Should().Contain("after=cursor123");
+        _ = request.QueryString.Should().NotContain("status");
+        _ = request.QueryString.Should().NotContain("first");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelPointsRedemption.GetCustomRewardRedemption"/> clamps the first parameter between 1 and 50.
+    /// </summary>
+    /// <param name="inputFirst">The input first value.</param>
+    /// <param name="expectedFirst">The expected clamped first value in the query string.</param>
+    [Theory]
+    [Trait("Member", "GetCustomRewardRedemption")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(75, 50)]
+    public async Task GetCustomRewardRedemption_WhenFirstOutOfRange_ClampsFirst(int inputFirst, int expectedFirst)
+    {
+        Guid rewardGuid = Guid.NewGuid();
+
+        this._fixture.RegisterJsonResponse("GET", "/helix/channel_points/custom_rewards/redemptions", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadRedemptions);
+        _ = await ChannelPointsRedemption.GetCustomRewardRedemption(
+            session,
+            "274637212",
+            rewardGuid,
+            first: inputFirst).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
     }
 
     #endregion GetCustomRewardRedemption
@@ -344,14 +431,22 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="ChannelPointsRedemption.UpdateRedemptionStatus"/> sends a PATCH request and returns updated redemption data.
+    /// Tests that <see cref="ChannelPointsRedemption.UpdateRedemptionStatus"/> sends a PATCH request and returns updated redemption data for both statuses.
     /// </summary>
-    [Fact]
+    /// <param name="status">The redemption status to update to.</param>
+    /// <param name="statusString">The expected status string in the request body and response.</param>
+    [Theory]
     [Trait("Member", "UpdateRedemptionStatus")]
-    public async Task UpdateRedemptionStatus_WhenValidParameters_PatchesRedemptionAndReturnsUpdatedRedemptions()
+    [InlineData(ChannelPointsRedemption.RedemptionStatus.Fulfilled, "FULFILLED")]
+    [InlineData(ChannelPointsRedemption.RedemptionStatus.Canceled, "CANCELED")]
+    public async Task UpdateRedemptionStatus_WhenValidParameters_PatchesRedemptionAndReturnsUpdatedRedemptions(
+        ChannelPointsRedemption.RedemptionStatus status,
+        string statusString)
     {
         Guid rewardGuid = Guid.Parse("92af127c-7326-4483-a52b-b0da0be61c01");
-        Guid redemptionGuid = Guid.Parse("17fa2df1-ad76-4804-bfa5-a40ef63efe63");
+        Guid redemptionGuid1 = Guid.Parse("17fa2df1-ad76-4804-bfa5-a40ef63efe63");
+        Guid redemptionGuid2 = Guid.Parse("27fa2df1-ad76-4804-bfa5-a40ef63efe64");
+        DateTime redeemedAt = new(2020, 7, 1, 18, 37, 32, DateTimeKind.Utc);
 
         this._fixture.RegisterJsonResponse("PATCH", "/helix/channel_points/custom_rewards/redemptions", new
         {
@@ -362,17 +457,29 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
                     broadcaster_name = "torpedo09",
                     broadcaster_login = "torpedo09",
                     broadcaster_id = "274637212",
-                    id = redemptionGuid,
-                    status = "FULFILLED"
+                    id = redemptionGuid1,
+                    user_id = "274637212",
+                    user_name = "torpedo09",
+                    user_login = "torpedo09",
+                    user_input = "test input",
+                    status = statusString,
+                    redeemed_at = redeemedAt,
+                    reward = new
+                    {
+                        id = rewardGuid,
+                        title = "game analysis",
+                        prompt = "enter game",
+                        cost = 50000
+                    }
                 }
             }
         });
 
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageRedemptions);
-        ChannelPointsRedemptionUpdateParameters parameters = new() { Status = ChannelPointsRedemption.RedemptionStatus.Fulfilled };
-        ResponseData<ChannelPointsReward>? response = await ChannelPointsRedemption.UpdateRedemptionStatus(
+        ChannelPointsRedemptionUpdateParameters parameters = new() { Status = status };
+        ResponseData<ChannelPointsRedemption>? response = await ChannelPointsRedemption.UpdateRedemptionStatus(
             session,
-            [redemptionGuid],
+            [redemptionGuid1, redemptionGuid2],
             "274637212",
             rewardGuid,
             parameters).ConfigureAwait(true);
@@ -381,14 +488,32 @@ public sealed class ChannelPointsRedemptionTests : IDisposable
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Count.Should().Be(1);
 
+        ChannelPointsRedemption redemption = response.Data[0];
+        _ = redemption.BroadcasterId.Should().Be("274637212");
+        _ = redemption.BroadcasterName.Should().Be("torpedo09");
+        _ = redemption.BroadcasterLogin.Should().Be("torpedo09");
+        _ = redemption.Id.Should().Be(redemptionGuid1);
+        _ = redemption.UserId.Should().Be("274637212");
+        _ = redemption.UserName.Should().Be("torpedo09");
+        _ = redemption.UserLogin.Should().Be("torpedo09");
+        _ = redemption.UserInput.Should().Be("test input");
+        _ = redemption.Status.Should().Be(status);
+        _ = redemption.RedeemedAt.Should().Be(redeemedAt);
+        _ = redemption.Reward.Should().NotBeNull();
+        _ = redemption.Reward.Id.Should().Be(rewardGuid);
+        _ = redemption.Reward.Title.Should().Be("game analysis");
+        _ = redemption.Reward.Prompt.Should().Be("enter game");
+        _ = redemption.Reward.Cost.Should().Be(50000);
+
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/channel_points/custom_rewards/redemptions");
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.QueryString.Should().Contain($"reward_id={rewardGuid:D}");
-        _ = request.QueryString.Should().Contain($"id={redemptionGuid:D}");
-        _ = request.Body.Should().Contain("\"status\":\"FULFILLED\"");
+        _ = request.QueryString.Should().Contain($"id={redemptionGuid1:D}");
+        _ = request.QueryString.Should().Contain($"id={redemptionGuid2:D}");
+        _ = request.Body.Should().Contain($"\"status\":\"{statusString}\"");
     }
 
     #endregion UpdateRedemptionStatus

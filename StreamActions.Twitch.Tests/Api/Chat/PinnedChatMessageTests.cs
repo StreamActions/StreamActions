@@ -18,6 +18,7 @@
 
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Chat;
+using StreamActions.Twitch.Api.Chat.Objects;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
@@ -129,8 +130,9 @@ public sealed class PinnedChatMessageTests : IDisposable
     [Trait("Member", "GetPinnedChatMessages")]
     public async Task GetPinnedChatMessages_WhenCalledWithValidParameters_ReturnsPinnedMessages()
     {
-        DateTime startsAt = DateTime.UtcNow;
+        DateTime startsAt = new(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         DateTime endsAt = startsAt.AddSeconds(60);
+        DateTime updatedAt = startsAt.AddSeconds(10);
 
         this._fixture.RegisterJsonResponse("GET", "/helix/chat/pins", new
         {
@@ -148,11 +150,19 @@ public sealed class PinnedChatMessageTests : IDisposable
                     pinned_by_user_name = "Mod",
                     message = new
                     {
-                        text = "Important announcement!"
+                        text = "Important announcement!",
+                        fragments = new[]
+                        {
+                            new
+                            {
+                                type = "text",
+                                text = "Important announcement!"
+                            }
+                        }
                     },
                     starts_at = startsAt,
                     ends_at = endsAt,
-                    updated_at = startsAt
+                    updated_at = updatedAt
                 }
             }
         });
@@ -170,9 +180,19 @@ public sealed class PinnedChatMessageTests : IDisposable
         _ = pin.BroadcasterId.Should().Be("12345");
         _ = pin.SenderUserId.Should().Be("22222");
         _ = pin.SenderUserLogin.Should().Be("sender");
+        _ = pin.SenderUserName.Should().Be("Sender");
         _ = pin.PinnedByUserId.Should().Be("67890");
+        _ = pin.PinnedByUserLogin.Should().Be("mod");
+        _ = pin.PinnedByUserName.Should().Be("Mod");
         _ = pin.Message.Should().NotBeNull();
-        _ = pin.Message.Text.Should().Be("Important announcement!");
+        _ = pin.Message!.Text.Should().Be("Important announcement!");
+        _ = pin.Message.Fragments.Should().NotBeNull();
+        _ = pin.Message.Fragments!.Count.Should().Be(1);
+        _ = pin.Message.Fragments[0].Type.Should().Be(PinnedChatMessageFragment.FragmentTypes.Text);
+        _ = pin.Message.Fragments[0].Text.Should().Be("Important announcement!");
+        _ = pin.StartsAt.Should().Be(startsAt);
+        _ = pin.EndsAt.Should().Be(endsAt);
+        _ = pin.UpdatedAt.Should().Be(updatedAt);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -199,6 +219,40 @@ public sealed class PinnedChatMessageTests : IDisposable
     }
 
     /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.PinChatMessage"/> throws <see cref="ArgumentNullException"/> when broadcasterId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidId">The invalid broadcaster ID.</param>
+    [Theory]
+    [Trait("Member", "PinChatMessage")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task PinChatMessage_WhenBroadcasterIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        Func<Task> action = async () => await PinnedChatMessage.PinChatMessage(session, invalidId!, "67890", "msg123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("broadcasterId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.PinChatMessage"/> throws <see cref="ArgumentNullException"/> when moderatorId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidId">The invalid moderator ID.</param>
+    [Theory]
+    [Trait("Member", "PinChatMessage")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task PinChatMessage_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        Func<Task> action = async () => await PinnedChatMessage.PinChatMessage(session, "12345", invalidId!, "msg123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    /// <summary>
     /// Tests that <see cref="PinnedChatMessage.PinChatMessage"/> throws <see cref="ArgumentNullException"/> when messageId is null or whitespace.
     /// </summary>
     /// <param name="invalidId">The invalid message ID.</param>
@@ -213,6 +267,18 @@ public sealed class PinnedChatMessageTests : IDisposable
         Func<Task> action = async () => await PinnedChatMessage.PinChatMessage(session, "12345", "67890", invalidId!).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("messageId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.PinChatMessage"/> throws <see cref="TwitchScopeMissingException"/> when required scope is missing.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "PinChatMessage")]
+    public async Task PinChatMessage_WhenSessionMissingScope_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChatRead);
+        Func<Task> action = async () => await PinnedChatMessage.PinChatMessage(session, "12345", "67890", "msg123").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
     /// <summary>
@@ -240,6 +306,47 @@ public sealed class PinnedChatMessageTests : IDisposable
         _ = request.Query["duration_seconds"].ToString().Should().Be("60");
     }
 
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.PinChatMessage"/> uses 30 seconds when duration is omitted.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "PinChatMessage")]
+    public async Task PinChatMessage_WhenDurationDefault_SendsDuration30()
+    {
+        this._fixture.RegisterStatusCode("PUT", "/helix/chat/pins", HttpStatusCode.NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        JsonApiResponse? response = await PinnedChatMessage.PinChatMessage(session, "12345", "67890", "msg123").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["duration_seconds"].ToString().Should().Be("30");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.PinChatMessage"/> clamps the durationSeconds parameter between 30 and 1800.
+    /// </summary>
+    /// <param name="inputDuration">The input duration value.</param>
+    /// <param name="expectedDuration">The expected clamped duration value.</param>
+    [Theory]
+    [Trait("Member", "PinChatMessage")]
+    [InlineData(10, "30")]
+    [InlineData(0, "30")]
+    [InlineData(2000, "1800")]
+    public async Task PinChatMessage_WhenDurationIsOutOfRange_ClampsDurationParameter(int inputDuration, string expectedDuration)
+    {
+        this._fixture.RegisterStatusCode("PUT", "/helix/chat/pins", HttpStatusCode.NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        JsonApiResponse? response = await PinnedChatMessage.PinChatMessage(session, "12345", "67890", "msg123", durationSeconds: inputDuration).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["duration_seconds"].ToString().Should().Be(expectedDuration);
+    }
+
     #endregion PinChatMessage
 
     #region UnpinChatMessage
@@ -254,6 +361,69 @@ public sealed class PinnedChatMessageTests : IDisposable
         Func<Task> action = async () => await PinnedChatMessage.UnpinChatMessage(null!, "12345", "67890", "msg123").ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("session");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UnpinChatMessage"/> throws <see cref="ArgumentNullException"/> when broadcasterId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidId">The invalid broadcaster ID.</param>
+    [Theory]
+    [Trait("Member", "UnpinChatMessage")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UnpinChatMessage_WhenBroadcasterIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        Func<Task> action = async () => await PinnedChatMessage.UnpinChatMessage(session, invalidId!, "67890", "msg123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("broadcasterId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UnpinChatMessage"/> throws <see cref="ArgumentNullException"/> when moderatorId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidId">The invalid moderator ID.</param>
+    [Theory]
+    [Trait("Member", "UnpinChatMessage")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UnpinChatMessage_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        Func<Task> action = async () => await PinnedChatMessage.UnpinChatMessage(session, "12345", invalidId!, "msg123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UnpinChatMessage"/> throws <see cref="ArgumentNullException"/> when messageId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidId">The invalid message ID.</param>
+    [Theory]
+    [Trait("Member", "UnpinChatMessage")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UnpinChatMessage_WhenMessageIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        Func<Task> action = async () => await PinnedChatMessage.UnpinChatMessage(session, "12345", "67890", invalidId!).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("messageId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UnpinChatMessage"/> throws <see cref="TwitchScopeMissingException"/> when required scope is missing.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UnpinChatMessage")]
+    public async Task UnpinChatMessage_WhenSessionMissingScope_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChatRead);
+        Func<Task> action = async () => await PinnedChatMessage.UnpinChatMessage(session, "12345", "67890", "msg123").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
     /// <summary>
@@ -281,4 +451,131 @@ public sealed class PinnedChatMessageTests : IDisposable
     }
 
     #endregion UnpinChatMessage
+
+    #region UpdatePinnedChatMessage
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UpdatePinnedChatMessage"/> throws <see cref="ArgumentNullException"/> when session is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdatePinnedChatMessage")]
+    public async Task UpdatePinnedChatMessage_WhenSessionIsNull_ThrowsArgumentNullException()
+    {
+        Func<Task> action = async () => await PinnedChatMessage.UpdatePinnedChatMessage(null!, "12345", "67890", "msg123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("session");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UpdatePinnedChatMessage"/> throws <see cref="ArgumentNullException"/> when broadcasterId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidId">The invalid broadcaster ID.</param>
+    [Theory]
+    [Trait("Member", "UpdatePinnedChatMessage")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdatePinnedChatMessage_WhenBroadcasterIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        Func<Task> action = async () => await PinnedChatMessage.UpdatePinnedChatMessage(session, invalidId!, "67890", "msg123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("broadcasterId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UpdatePinnedChatMessage"/> throws <see cref="ArgumentNullException"/> when moderatorId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidId">The invalid moderator ID.</param>
+    [Theory]
+    [Trait("Member", "UpdatePinnedChatMessage")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdatePinnedChatMessage_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        Func<Task> action = async () => await PinnedChatMessage.UpdatePinnedChatMessage(session, "12345", invalidId!, "msg123").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UpdatePinnedChatMessage"/> throws <see cref="ArgumentNullException"/> when messageId is null or whitespace.
+    /// </summary>
+    /// <param name="invalidId">The invalid message ID.</param>
+    [Theory]
+    [Trait("Member", "UpdatePinnedChatMessage")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdatePinnedChatMessage_WhenMessageIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        Func<Task> action = async () => await PinnedChatMessage.UpdatePinnedChatMessage(session, "12345", "67890", invalidId!).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("messageId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UpdatePinnedChatMessage"/> throws <see cref="TwitchScopeMissingException"/> when required scope is missing.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdatePinnedChatMessage")]
+    public async Task UpdatePinnedChatMessage_WhenSessionMissingScope_ThrowsTwitchScopeMissingException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChatRead);
+        Func<Task> action = async () => await PinnedChatMessage.UpdatePinnedChatMessage(session, "12345", "67890", "msg123").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UpdatePinnedChatMessage"/> sends PATCH request and returns 204 No Content.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdatePinnedChatMessage")]
+    public async Task UpdatePinnedChatMessage_WhenCalledWithValidParameters_SendsPatchRequest()
+    {
+        this._fixture.RegisterStatusCode("PATCH", "/helix/chat/pins", HttpStatusCode.NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        JsonApiResponse? response = await PinnedChatMessage.UpdatePinnedChatMessage(session, "12345", "67890", "msg123", durationSeconds: 60).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("PATCH");
+        _ = request.Path.Should().Be("/helix/chat/pins");
+        _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
+        _ = request.Query["moderator_id"].ToString().Should().Be("67890");
+        _ = request.Query["message_id"].ToString().Should().Be("msg123");
+        _ = request.Query["duration_seconds"].ToString().Should().Be("60");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="PinnedChatMessage.UpdatePinnedChatMessage"/> clamps the durationSeconds parameter between 30 and 1800.
+    /// </summary>
+    /// <param name="inputDuration">The input duration value.</param>
+    /// <param name="expectedDuration">The expected clamped duration value.</param>
+    [Theory]
+    [Trait("Member", "UpdatePinnedChatMessage")]
+    [InlineData(10, "30")]
+    [InlineData(0, "30")]
+    [InlineData(2000, "1800")]
+    public async Task UpdatePinnedChatMessage_WhenDurationIsOutOfRange_ClampsDurationParameter(int inputDuration, string expectedDuration)
+    {
+        this._fixture.RegisterStatusCode("PATCH", "/helix/chat/pins", HttpStatusCode.NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        JsonApiResponse? response = await PinnedChatMessage.UpdatePinnedChatMessage(session, "12345", "67890", "msg123", durationSeconds: inputDuration).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["duration_seconds"].ToString().Should().Be(expectedDuration);
+    }
+
+    #endregion UpdatePinnedChatMessage
 }

@@ -110,11 +110,118 @@ public sealed class BlockedTermTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BlockedTerm.GetBlockedTerms"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBlockedTerms")]
+    public async Task GetBlockedTerms_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModeratorReadBlockedTerms]
+            }
+        };
+
+        Func<Task> action = async () => await BlockedTerm.GetBlockedTerms(session, "1234", "5678").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BlockedTerm.GetBlockedTerms"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBlockedTerms")]
+    public async Task GetBlockedTerms_WhenAppToken_ReturnsBlockedTerms()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/blocked_terms", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorReadBlockedTerms);
+        ResponseData<BlockedTerm>? response = await BlockedTerm.GetBlockedTerms(session, "1234", "5678").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BlockedTerm.GetBlockedTerms"/> succeeds with <see cref="Scope.ModeratorManageBlockedTerms"/>.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBlockedTerms")]
+    public async Task GetBlockedTerms_WhenManageScope_ReturnsBlockedTerms()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/blocked_terms", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageBlockedTerms);
+        ResponseData<BlockedTerm>? response = await BlockedTerm.GetBlockedTerms(session, "1234", "5678").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BlockedTerm.GetBlockedTerms"/> uses default parameters and omits optional after from query string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBlockedTerms")]
+    public async Task GetBlockedTerms_WhenDefaultParameters_OmitsAfterFromQueryString()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/blocked_terms", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorReadBlockedTerms);
+        _ = await BlockedTerm.GetBlockedTerms(session, "1234", "5678").ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=1234");
+        _ = request.QueryString.Should().Contain("moderator_id=5678");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("after");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BlockedTerm.GetBlockedTerms"/> clamps first between 1 and 100.
+    /// </para>
+    /// </summary>
+    /// <param name="first">The input first value.</param>
+    /// <param name="expectedFirst">The expected clamped first value.</param>
+    [Theory]
+    [Trait("Member", "GetBlockedTerms")]
+    [InlineData(0, "1")]
+    [InlineData(200, "100")]
+    public async Task GetBlockedTerms_WhenFirstOutOfRange_ClampsFirst(int first, string expectedFirst)
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/blocked_terms", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorReadBlockedTerms);
+        _ = await BlockedTerm.GetBlockedTerms(session, "1234", "5678", first: first).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
+    }
+
     [Fact]
     [Trait("Member", "GetBlockedTerms")]
     public async Task GetBlockedTerms_WhenValidRequest_ReturnsBlockedTerms()
     {
-        const string json = "{\"data\":[{\"broadcaster_id\":\"1234\",\"moderator_id\":\"5678\",\"id\":\"520e4d4e-0cda-49c7-821e-e5ef4f88c2f2\",\"text\":\"A phrase Im not fond of\",\"created_at\":\"2021-09-29T19:45:37Z\",\"updated_at\":\"2021-09-29T19:45:37Z\",\"expires_at\":null}],\"pagination\":{\"cursor\":\"eyJiIjpudWxsLCJhIjp7IkN1cnNvciI6I\"}}";
+        const string json = "{\"data\":[{\"broadcaster_id\":\"1234\",\"moderator_id\":\"5678\",\"id\":\"520e4d4e-0cda-49c7-821e-e5ef4f88c2f2\",\"text\":\"A phrase Im not fond of\",\"created_at\":\"2021-09-29T19:45:37Z\",\"updated_at\":\"2021-09-29T19:45:37Z\",\"expires_at\":\"2021-09-30T19:45:37Z\"}],\"pagination\":{\"cursor\":\"eyJiIjpudWxsLCJhIjp7IkN1cnNvciI6I\"}}";
         this._fixture.RegisterResponse("GET", "/helix/moderation/blocked_terms", json);
 
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorReadBlockedTerms);
@@ -126,6 +233,7 @@ public sealed class BlockedTermTests : IDisposable
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(1);
         _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("eyJiIjpudWxsLCJhIjp7IkN1cnNvciI6I");
 
         BlockedTerm term = response.Data[0];
         _ = term.BroadcasterId.Should().Be("1234");
@@ -134,7 +242,7 @@ public sealed class BlockedTermTests : IDisposable
         _ = term.Text.Should().Be("A phrase Im not fond of");
         _ = term.CreatedAt.Should().Be(DateTime.Parse("2021-09-29T19:45:37Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = term.UpdatedAt.Should().Be(DateTime.Parse("2021-09-29T19:45:37Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
-        _ = term.ExpiresAt.Should().BeNull();
+        _ = term.ExpiresAt.Should().Be(DateTime.Parse("2021-09-30T19:45:37Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -149,6 +257,49 @@ public sealed class BlockedTermTests : IDisposable
     #endregion GetBlockedTerms
 
     #region AddBlockedTerm
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BlockedTerm.AddBlockedTerm"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AddBlockedTerm")]
+    public async Task AddBlockedTerm_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModeratorManageBlockedTerms]
+            }
+        };
+
+        AddBlockedTermParameters parameters = new() { Text = "hate speech" };
+        Func<Task> action = async () => await BlockedTerm.AddBlockedTerm(session, "1234", "5678", parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BlockedTerm.AddBlockedTerm"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AddBlockedTerm")]
+    public async Task AddBlockedTerm_WhenAppToken_PostsAndReturnsCreatedTerm()
+    {
+        const string json = "{\"data\":[{\"broadcaster_id\":\"1234\",\"moderator_id\":\"5678\",\"id\":\"c9fc79b8-0f63-4ef7-9d38-efd811e74ac2\",\"text\":\"hate speech\",\"created_at\":\"2021-09-29T19:45:37Z\",\"updated_at\":\"2021-09-29T19:45:37Z\",\"expires_at\":null}]}";
+        this._fixture.RegisterResponse("POST", "/helix/moderation/blocked_terms", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorManageBlockedTerms);
+        AddBlockedTermParameters parameters = new() { Text = "hate speech" };
+        ResponseData<BlockedTerm>? response = await BlockedTerm.AddBlockedTerm(session, "1234", "5678", parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
 
     [Fact]
     [Trait("Member", "AddBlockedTerm")]
@@ -266,6 +417,9 @@ public sealed class BlockedTermTests : IDisposable
         _ = term.ModeratorId.Should().Be("5678");
         _ = term.Id.Should().Be("c9fc79b8-0f63-4ef7-9d38-efd811e74ac2");
         _ = term.Text.Should().Be("hate speech");
+        _ = term.CreatedAt.Should().Be(DateTime.Parse("2021-09-29T19:45:37Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = term.UpdatedAt.Should().Be(DateTime.Parse("2021-09-29T19:45:37Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = term.ExpiresAt.Should().BeNull();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -279,6 +433,46 @@ public sealed class BlockedTermTests : IDisposable
     #endregion AddBlockedTerm
 
     #region RemoveBlockedTerm
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BlockedTerm.RemoveBlockedTerm"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RemoveBlockedTerm")]
+    public async Task RemoveBlockedTerm_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModeratorManageBlockedTerms]
+            }
+        };
+
+        Func<Task> action = async () => await BlockedTerm.RemoveBlockedTerm(session, "1234", "5678", "term_id").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BlockedTerm.RemoveBlockedTerm"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RemoveBlockedTerm")]
+    public async Task RemoveBlockedTerm_WhenAppToken_DeletesAndReturnsNoContent()
+    {
+        this._fixture.RegisterStatusCode("DELETE", "/helix/moderation/blocked_terms", StatusCodes.Status204NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorManageBlockedTerms);
+        JsonApiResponse? response = await BlockedTerm.RemoveBlockedTerm(session, "1234", "5678", "c9fc79b8-0f63-4ef7-9d38-efd811e74ac2").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+    }
 
     [Fact]
     [Trait("Member", "RemoveBlockedTerm")]

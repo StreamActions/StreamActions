@@ -17,6 +17,8 @@
  */
 
 using StreamActions.Twitch.Api.EventSub;
+using StreamActions.Twitch.Api.EventSub.Conditions;
+using StreamActions.Twitch.Api.EventSub.Objects;
 using StreamActions.Twitch.EventSub.Channel;
 using StreamActions.Twitch.EventSub.Common;
 using StreamActions.Twitch.Tests.Infrastructure;
@@ -90,6 +92,9 @@ public sealed class EventSubWebhookTests : IDisposable
             .WithParameterName("secret");
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> returns a 200 OK status with the challenge string body when processing a verification request.
+    /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
     public async Task ProcessWebhook_WhenVerificationDirectCall_ReturnsOkWithChallengeBody()
@@ -110,12 +115,16 @@ public sealed class EventSubWebhookTests : IDisposable
 
         _ = result.Should().NotBeNull();
         _ = result.IsVerified.Should().BeTrue();
+        _ = result.IsDuplicate.Should().BeNull();
         _ = result.StatusCode.Should().Be(StatusCodes.Status200OK);
         _ = result.ContentType.Should().Be("text/plain");
         _ = result.Body.Should().Be(challenge);
         _ = result.Event.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> over HTTP returns a 200 OK response with the challenge string.
+    /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
     public async Task ProcessWebhook_WhenVerificationHttpPost_ReturnsOkWithChallengeBody()
@@ -143,6 +152,9 @@ public sealed class EventSubWebhookTests : IDisposable
         _ = responseBody.Should().Be(challenge);
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> parses and returns a typed notification event with full metadata and subscription information.
+    /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
     public async Task ProcessWebhook_WhenNotificationDirectCall_ReturnsAcceptedWithParsedEvent()
@@ -194,15 +206,46 @@ public sealed class EventSubWebhookTests : IDisposable
         _ = result.IsVerified.Should().BeTrue();
         _ = result.IsDuplicate.Should().BeFalse();
         _ = result.StatusCode.Should().Be(StatusCodes.Status202Accepted);
+        _ = result.ContentType.Should().BeNull();
+        _ = result.Body.Should().BeNull();
         _ = result.Event.Should().NotBeNull();
         _ = result.Event.Should().BeOfType<EventSubEvent<Follow>>();
 
         EventSubEvent<Follow>? followEvent = result.Event as EventSubEvent<Follow>;
         _ = followEvent.Should().NotBeNull();
+        _ = followEvent!.Metadata.Should().NotBeNull();
+        _ = followEvent.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
+        _ = followEvent.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Notification);
+        _ = followEvent.Metadata.MessageTimestamp.Should().Be(DateTime.Parse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = followEvent.Metadata.SubscriptionType.Should().Be("channel.follow");
+        _ = followEvent.Metadata.SubscriptionVersion.Should().Be("2");
+
         _ = followEvent.Payload.Should().NotBeNull();
+        _ = followEvent.Payload!.Subscription.Should().NotBeNull();
+        _ = followEvent.Payload.Subscription!.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
+        _ = followEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.Enabled);
+        _ = followEvent.Payload.Subscription.Type.Should().Be("channel.follow");
+        _ = followEvent.Payload.Subscription.Version.Should().Be("2");
+        _ = followEvent.Payload.Subscription.Cost.Should().Be(0);
+
+        BroadcasterAndModeratorUserIdCondition? condition = followEvent.Payload.Subscription.Condition as BroadcasterAndModeratorUserIdCondition;
+        _ = condition.Should().NotBeNull();
+        _ = condition!.BroadcasterUserId.Should().Be("1337");
+        _ = condition.ModeratorUserId.Should().Be("1337");
+
+        _ = followEvent.Payload.Subscription.Transport.Should().NotBeNull();
+        _ = followEvent.Payload.Subscription.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
+        _ = followEvent.Payload.Subscription.Transport.Callback.Should().Be("https://example.com/webhooks/callback");
+        _ = followEvent.Payload.Subscription.CreatedAt.Should().Be(DateTime.Parse("2023-04-11T10:11:12.123Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+
         _ = followEvent.Payload.Event.Should().NotBeNull();
-        _ = followEvent.Payload.Event.UserId.Should().Be("1234");
+        _ = followEvent.Payload.Event!.UserId.Should().Be("1234");
+        _ = followEvent.Payload.Event.UserLogin.Should().Be("cool_user");
+        _ = followEvent.Payload.Event.UserName.Should().Be("Cool_User");
         _ = followEvent.Payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = followEvent.Payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = followEvent.Payload.Event.BroadcasterUserName.Should().Be("Streamer");
+        _ = followEvent.Payload.Event.FollowedAt.Should().Be(DateTime.Parse("2023-07-19T14:59:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
     }
 
     [Fact]
@@ -257,6 +300,9 @@ public sealed class EventSubWebhookTests : IDisposable
         _ = response.StatusCode.Should().Be(HttpStatusCode.Accepted);
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> parses and returns a revocation event with metadata and subscription details.
+    /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
     public async Task ProcessWebhook_WhenRevocationDirectCall_ReturnsAcceptedWithSubscription()
@@ -303,9 +349,84 @@ public sealed class EventSubWebhookTests : IDisposable
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
+        _ = eventSubEvent!.Metadata.Should().NotBeNull();
+        _ = eventSubEvent.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
+        _ = eventSubEvent.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Revocation);
+        _ = eventSubEvent.Metadata.MessageTimestamp.Should().Be(DateTime.Parse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = eventSubEvent.Metadata.SubscriptionType.Should().Be("channel.follow");
+        _ = eventSubEvent.Metadata.SubscriptionVersion.Should().Be("2");
+
         _ = eventSubEvent.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Subscription.Should().NotBeNull();
+        _ = eventSubEvent.Payload!.Subscription.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription!.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
         _ = eventSubEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.AuthorizationRevoked);
+        _ = eventSubEvent.Payload.Subscription.Type.Should().Be("channel.follow");
+        _ = eventSubEvent.Payload.Subscription.Version.Should().Be("2");
+        _ = eventSubEvent.Payload.Subscription.Cost.Should().Be(0);
+
+        BroadcasterAndModeratorUserIdCondition? condition = eventSubEvent.Payload.Subscription.Condition as BroadcasterAndModeratorUserIdCondition;
+        _ = condition.Should().NotBeNull();
+        _ = condition!.BroadcasterUserId.Should().Be("1337");
+
+        _ = eventSubEvent.Payload.Subscription.Transport.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
+        _ = eventSubEvent.Payload.Subscription.Transport.Callback.Should().Be("https://example.com/webhooks/callback");
+        _ = eventSubEvent.Payload.Subscription.CreatedAt.Should().Be(DateTime.Parse("2023-04-11T10:11:12.123Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> returns 403 Forbidden when the message timestamp header is invalid or cannot be parsed.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public async Task ProcessWebhook_WhenInvalidTimestampHeader_ReturnsForbidden()
+    {
+        string messageId = Guid.NewGuid().ToString();
+        string timestamp = "not-a-valid-timestamp";
+        string body = """{"subscription":{"id":"sub-1","type":"channel.follow","version":"2"}}""";
+
+        DefaultHttpContext context = CreateWebhookHttpContext(
+            this._fixture.WebhookSecret,
+            messageId,
+            timestamp,
+            "notification",
+            body,
+            subscriptionType: "channel.follow",
+            subscriptionVersion: "2");
+
+        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+
+        _ = result.Should().NotBeNull();
+        _ = result.IsVerified.Should().BeFalse();
+        _ = result.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> returns 202 Accepted with a null event when the subscription type is unrecognized.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public async Task ProcessWebhook_WhenUnrecognizedSubscriptionType_ReturnsAcceptedWithNullEvent()
+    {
+        string messageId = Guid.NewGuid().ToString();
+        string timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        string body = """{"subscription":{"id":"sub-1","type":"unknown.event.type","version":"1"}}""";
+
+        DefaultHttpContext context = CreateWebhookHttpContext(
+            this._fixture.WebhookSecret,
+            messageId,
+            timestamp,
+            "notification",
+            body,
+            subscriptionType: "unknown.event.type",
+            subscriptionVersion: "1");
+
+        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+
+        _ = result.Should().NotBeNull();
+        _ = result.IsVerified.Should().BeTrue();
+        _ = result.StatusCode.Should().Be(StatusCodes.Status202Accepted);
+        _ = result.Event.Should().BeNull();
     }
 
     [Fact]

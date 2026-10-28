@@ -168,6 +168,10 @@ public sealed class EmoteTests : IDisposable
         _ = emote.Format.Should().Contain(Emote.Formats.Static);
         _ = emote.Scale.Should().Contain(Emote.Scales.Small);
         _ = emote.ThemeMode.Should().Contain(Emote.ThemeModes.Light);
+        _ = emote.Images.Should().NotBeNull();
+        _ = emote.Images!.Url1X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3001/static/light/1.0"));
+        _ = emote.Images.Url2X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3001/static/light/2.0"));
+        _ = emote.Images.Url4X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3001/static/light/3.0"));
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -226,9 +230,20 @@ public sealed class EmoteTests : IDisposable
 
         _ = response.Should().NotBeNull();
         _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Template.Should().Be("https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}");
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Count.Should().Be(1);
-        _ = response.Data[0].Name.Should().Be("Kappa");
+
+        Emote emote = response.Data[0];
+        _ = emote.Id.Should().Be("25");
+        _ = emote.Name.Should().Be("Kappa");
+        _ = emote.Images.Should().NotBeNull();
+        _ = emote.Images!.Url1X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/25/static/light/1.0"));
+        _ = emote.Images.Url2X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/25/static/light/2.0"));
+        _ = emote.Images.Url4X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/25/static/light/3.0"));
+        _ = emote.Format.Should().Contain(Emote.Formats.Static);
+        _ = emote.Scale.Should().Contain(Emote.Scales.Small);
+        _ = emote.ThemeMode.Should().Contain(Emote.ThemeModes.Light);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -298,8 +313,14 @@ public sealed class EmoteTests : IDisposable
                 {
                     id = "3002",
                     name = "coolEmote",
+                    images = new
+                    {
+                        url_1x = "https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/1.0",
+                        url_2x = "https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/2.0",
+                        url_4x = "https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/3.0"
+                    },
                     emote_type = "subscriptions",
-                    emote_set_id = "1234",
+                    emote_set_id = "301590448",
                     owner_id = "9876",
                     format = _staticFormats,
                     scale = _singleScale,
@@ -310,19 +331,34 @@ public sealed class EmoteTests : IDisposable
         });
 
         using TwitchSession session = TestTokenFactory.CreateUserSession();
-        EmoteResponse? response = await Emote.GetEmoteSets(session, ["1234"]).ConfigureAwait(true);
+        EmoteResponse? response = await Emote.GetEmoteSets(session, ["301590448", "301590449"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
         _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Template.Should().Be("https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}");
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Count.Should().Be(1);
-        _ = response.Data[0].OwnerId.Should().Be("9876");
+
+        Emote emote = response.Data[0];
+        _ = emote.Id.Should().Be("3002");
+        _ = emote.Name.Should().Be("coolEmote");
+        _ = emote.Images.Should().NotBeNull();
+        _ = emote.Images!.Url1X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/1.0"));
+        _ = emote.Images.Url2X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/2.0"));
+        _ = emote.Images.Url4X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/3.0"));
+        _ = emote.EmoteType.Should().Be(Emote.EmoteTypes.Subscriptions);
+        _ = emote.EmoteSetId.Should().Be("301590448");
+        _ = emote.OwnerId.Should().Be("9876");
+        _ = emote.Format.Should().Contain(Emote.Formats.Static);
+        _ = emote.Scale.Should().Contain(Emote.Scales.Small);
+        _ = emote.ThemeMode.Should().Contain(Emote.ThemeModes.Light);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/emotes/set");
-        _ = request.Query["emote_set_id"].ToString().Should().Be("1234");
+        _ = request.Query["emote_set_id"].ToString().Should().Contain("301590448");
+        _ = request.Query["emote_set_id"].ToString().Should().Contain("301590449");
     }
 
     #endregion GetEmoteSets
@@ -405,7 +441,11 @@ public sealed class EmoteTests : IDisposable
                     theme_mode = _lightThemeMode
                 }
             },
-            template = "https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}"
+            template = "https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}",
+            pagination = new
+            {
+                cursor = "cursor123"
+            }
         });
 
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmotes);
@@ -413,8 +453,21 @@ public sealed class EmoteTests : IDisposable
 
         _ = response.Should().NotBeNull();
         _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Template.Should().Be("https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}");
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Count.Should().Be(1);
+
+        Emote emote = response.Data[0];
+        _ = emote.Id.Should().Be("4001");
+        _ = emote.Name.Should().Be("followerEmote");
+        _ = emote.EmoteType.Should().Be(Emote.EmoteTypes.Follower);
+        _ = emote.EmoteSetId.Should().Be("5555");
+        _ = emote.OwnerId.Should().Be("12345");
+        _ = emote.Format.Should().Contain(Emote.Formats.Static);
+        _ = emote.Scale.Should().Contain(Emote.Scales.Small);
+        _ = emote.ThemeMode.Should().Contain(Emote.ThemeModes.Light);
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursor123");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -423,6 +476,32 @@ public sealed class EmoteTests : IDisposable
         _ = request.Query["user_id"].ToString().Should().Be("9999");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["after"].ToString().Should().Be("page2");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Emote.GetUserEmotes"/> omits broadcaster_id and after from query string when default parameters are used.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetUserEmotes")]
+    public async Task GetUserEmotes_WhenCalledWithDefaultParameters_OmitsBroadcasterIdAndAfterFromQuery()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/chat/emotes/user", new
+        {
+            data = Array.Empty<object>(),
+            template = "https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}"
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmotes);
+        EmoteResponse? response = await Emote.GetUserEmotes(session, "9999").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["user_id"].ToString().Should().Be("9999");
+        _ = request.QueryString.Should().NotContain("broadcaster_id");
+        _ = request.QueryString.Should().NotContain("after");
     }
 
     #endregion GetUserEmotes

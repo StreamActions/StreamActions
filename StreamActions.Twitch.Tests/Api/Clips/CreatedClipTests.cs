@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Twitch.Api.Clips;
+using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
@@ -161,6 +162,50 @@ public sealed class CreatedClipTests : IDisposable
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["title"].ToString().Should().Be("Awesome Clip");
         _ = request.Query["duration"].ToString().Should().Be("30");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="CreatedClip.CreateClip"/> throws <see cref="TokenTypeException"/> when called with an app token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateClip")]
+    public async Task CreateClip_WhenCalledWithAppToken_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ClipsEdit);
+        Func<Task> action = async () => await CreatedClip.CreateClip(session, "12345").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="CreatedClip.CreateClip"/> omits title and duration from query string when not specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateClip")]
+    public async Task CreateClip_WhenTitleAndDurationOmitted_OmitsThemFromQueryString()
+    {
+        this._fixture.RegisterJsonResponse("POST", "/helix/clips", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "clip123",
+                    edit_url = "https://clips.twitch.tv/clip123/edit"
+                }
+            }
+        }, HttpStatusCode.Accepted);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ClipsEdit);
+        ResponseData<CreatedClip>? response = await CreatedClip.CreateClip(session, "12345", title: null, duration: null).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.Accepted);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
+        _ = request.Query.ContainsKey("title").Should().BeFalse();
+        _ = request.Query.ContainsKey("duration").Should().BeFalse();
     }
 
     #endregion CreateClip
@@ -319,6 +364,88 @@ public sealed class CreatedClipTests : IDisposable
         _ = request.Query["vod_offset"].ToString().Should().Be("120");
         _ = request.Query["title"].ToString().Should().Be("My Vod Clip");
         _ = request.Query["duration"].ToString().Should().Be("45");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="CreatedClip.CreateClipFromVod"/> omits duration from query string when null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateClipFromVod")]
+    public async Task CreateClipFromVod_WhenDurationIsNull_OmitsDurationFromQueryString()
+    {
+        this._fixture.RegisterJsonResponse("POST", "/helix/videos/clips", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "vodclip111",
+                    edit_url = "https://clips.twitch.tv/vodclip111/edit"
+                }
+            }
+        }, HttpStatusCode.Accepted);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageClips);
+        ResponseData<CreatedClip>? response = await CreatedClip.CreateClipFromVod(session, "12345", "67890", "99999", 120, "My Vod Clip", duration: null).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.Accepted);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query.ContainsKey("duration").Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="CreatedClip.CreateClipFromVod"/> succeeds when called with ChannelManageClips scope.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateClipFromVod")]
+    public async Task CreateClipFromVod_WhenCalledWithChannelManageClipsScope_ReturnsCreatedClip()
+    {
+        this._fixture.RegisterJsonResponse("POST", "/helix/videos/clips", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "vodclip222",
+                    edit_url = "https://clips.twitch.tv/vodclip222/edit"
+                }
+            }
+        }, HttpStatusCode.Accepted);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageClips);
+        ResponseData<CreatedClip>? response = await CreatedClip.CreateClipFromVod(session, "12345", "67890", "99999", 120, "My Vod Clip").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.Accepted);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="CreatedClip.CreateClipFromVod"/> succeeds when called with an app token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateClipFromVod")]
+    public async Task CreateClipFromVod_WhenCalledWithAppToken_ReturnsCreatedClip()
+    {
+        this._fixture.RegisterJsonResponse("POST", "/helix/videos/clips", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "vodclip333",
+                    edit_url = "https://clips.twitch.tv/vodclip333/edit"
+                }
+            }
+        }, HttpStatusCode.Accepted);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ChannelManageClips);
+        ResponseData<CreatedClip>? response = await CreatedClip.CreateClipFromVod(session, "12345", "67890", "99999", 120, "My Vod Clip").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.Accepted);
     }
 
     #endregion CreateClipFromVod

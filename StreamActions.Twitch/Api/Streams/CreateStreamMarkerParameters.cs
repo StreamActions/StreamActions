@@ -35,5 +35,6 @@ public sealed record CreateStreamMarkerParameters
     /// A short description of the marker to help the user remember why they marked the location. The maximum length of the description is 140 characters.
     /// </summary>
     [JsonPropertyName("description")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Description { get; init; }
 }

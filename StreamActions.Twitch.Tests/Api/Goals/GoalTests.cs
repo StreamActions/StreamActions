@@ -151,5 +151,50 @@ public sealed class GoalTests : IDisposable
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="Goal.GetCreatorGoals(TwitchSession, string)"/> correctly deserializes each <see cref="Goal.GoalType"/> value.
+    /// </summary>
+    /// <param name="typeString">The serialized type string returned by the API.</param>
+    /// <param name="expectedType">The expected deserialized <see cref="Goal.GoalType"/> value.</param>
+    [Theory]
+    [Trait("Member", "GetCreatorGoals")]
+    [InlineData("follower", Goal.GoalType.Follower)]
+    [InlineData("subscription", Goal.GoalType.Subscription)]
+    [InlineData("subscription_count", Goal.GoalType.SubscriptionCount)]
+    [InlineData("new_subscription", Goal.GoalType.NewSubscription)]
+    [InlineData("new_subscription_count", Goal.GoalType.NewSubscriptionCount)]
+    [InlineData("new_bit", Goal.GoalType.NewBit)]
+    [InlineData("new_cheerer", Goal.GoalType.NewCheerer)]
+    public async Task GetCreatorGoals_WhenDifferentGoalTypesReturned_DeserializesCorrectly(string typeString, Goal.GoalType expectedType)
+    {
+        string jsonResponse = $$"""
+        {
+          "data": [
+            {
+              "id": "1woowvbkiNv8BRxEWSqmQz6Zk92",
+              "broadcaster_id": "141981764",
+              "broadcaster_name": "TwitchDev",
+              "broadcaster_login": "twitchdev",
+              "type": "{{typeString}}",
+              "description": "Follow goal for Helix testing",
+              "current_amount": 27062,
+              "target_amount": 30000,
+              "created_at": "2021-08-16T17:22:23Z"
+            }
+          ]
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/goals", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadGoals);
+        ResponseData<Goal>? response = await Goal.GetCreatorGoals(session, "141981764").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+        _ = response.Data[0].Type.Should().Be(expectedType);
+    }
+
     #endregion GetCreatorGoals
 }

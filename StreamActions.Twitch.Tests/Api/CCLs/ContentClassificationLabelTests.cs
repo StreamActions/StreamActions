@@ -109,10 +109,11 @@ public sealed class ContentClassificationLabelTests : IDisposable
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/content_classification_labels");
+        _ = request.QueryString.Should().NotContain("locale");
     }
 
     /// <summary>
-    /// Tests that <see cref="ContentClassificationLabel.GetContentClassificationLabels"/> includes the locale query parameter when provided.
+    /// Tests that <see cref="ContentClassificationLabel.GetContentClassificationLabels"/> includes the locale query parameter when provided and succeeds with a user token.
     /// </summary>
     [Fact]
     [Trait("Member", "GetContentClassificationLabels")]
@@ -120,13 +121,28 @@ public sealed class ContentClassificationLabelTests : IDisposable
     {
         this._fixture.RegisterJsonResponse("GET", "/helix/content_classification_labels", new
         {
-            data = Array.Empty<object>()
+            data = new[]
+            {
+                new
+                {
+                    id = "DrugsIntoxication",
+                    description = "Drugs or intoxication content",
+                    name = "Drugs and Intoxication"
+                }
+            }
         });
 
-        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
         ResponseData<ContentClassificationLabel>? response = await ContentClassificationLabel.GetContentClassificationLabels(session, "en-US").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+
+        ContentClassificationLabel label = response.Data[0];
+        _ = label.Id.Should().Be("DrugsIntoxication");
+        _ = label.Description.Should().Be("Drugs or intoxication content");
+        _ = label.Name.Should().Be("Drugs and Intoxication");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -137,3 +153,4 @@ public sealed class ContentClassificationLabelTests : IDisposable
 
     #endregion GetContentClassificationLabels
 }
+

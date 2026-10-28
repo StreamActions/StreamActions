@@ -74,6 +74,9 @@ public sealed class TokenTests : IDisposable
 
     #region AuthorizeOAuth
 
+    /// <summary>
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?)"/> throws an <see cref="ArgumentNullException"/> when the authorization code is null or whitespace.
+    /// </summary>
     [Theory]
     [Trait("Member", "AuthorizeOAuth")]
     [InlineData(null)]
@@ -86,6 +89,9 @@ public sealed class TokenTests : IDisposable
             .WithParameterName("code");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?)"/> throws an <see cref="ArgumentNullException"/> when the redirect URI is null.
+    /// </summary>
     [Fact]
     [Trait("Member", "AuthorizeOAuth")]
     public async Task AuthorizeOAuth_WhenRedirectUriIsNull_ThrowsArgumentNullException()
@@ -95,6 +101,9 @@ public sealed class TokenTests : IDisposable
             .WithParameterName("redirectUri");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?)"/> posts the authorization code, credentials, and redirect URI, and parses the returned token.
+    /// </summary>
     [Fact]
     [Trait("Member", "AuthorizeOAuth")]
     public async Task AuthorizeOAuth_WhenValidRequest_PostsCorrectFormAndReturnsToken()
@@ -128,12 +137,17 @@ public sealed class TokenTests : IDisposable
         _ = request.Body.Should().Contain("grant_type=authorization_code");
         _ = request.Body.Should().Contain("code=test_auth_code");
         _ = request.Body.Should().Contain($"client_id={this._fixture.ClientId}");
+        _ = request.Body.Should().Contain($"client_secret={this._fixture.ClientSecret}");
+        _ = request.Body.Should().Contain("redirect_uri=http%3A%2F%2Flocalhost%3A3000");
     }
 
     #endregion AuthorizeOAuth
 
     #region AuthorizeApp
 
+    /// <summary>
+    /// Tests that <see cref="Token.AuthorizeApp(string?)"/> posts client credentials and parses the returned application token.
+    /// </summary>
     [Fact]
     [Trait("Member", "AuthorizeApp")]
     public async Task AuthorizeApp_WhenValidRequest_PostsClientCredentialsAndReturnsToken()
@@ -152,18 +166,25 @@ public sealed class TokenTests : IDisposable
         _ = token.AccessToken.Should().Be(expectedBearer);
         _ = token.ExpiresIn.Should().Be(5011271);
         _ = token.TokenType.Should().Be("bearer");
+        _ = token.Expires.Should().BeCloseTo(DateTime.UtcNow.AddSeconds(5011271), TimeSpan.FromSeconds(5));
+        _ = token.RefreshToken.Should().BeNull();
+        _ = token.Scopes.Should().BeNull();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("POST");
         _ = request.Body.Should().Contain("grant_type=client_credentials");
         _ = request.Body.Should().Contain($"client_id={this._fixture.ClientId}");
+        _ = request.Body.Should().Contain($"client_secret={this._fixture.ClientSecret}");
     }
 
     #endregion AuthorizeApp
 
     #region RefreshOAuth
 
+    /// <summary>
+    /// Tests that <see cref="Token.RefreshOAuth(TwitchSession, string?)"/> throws an <see cref="ArgumentNullException"/> when the session is null.
+    /// </summary>
     [Fact]
     [Trait("Member", "RefreshOAuth")]
     public async Task RefreshOAuth_WhenSessionIsNull_ThrowsArgumentNullException()
@@ -173,6 +194,9 @@ public sealed class TokenTests : IDisposable
             .WithParameterName("session");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Token.RefreshOAuth(TwitchSession, string?)"/> throws a <see cref="TokenTypeException"/> when the session token is not a user token.
+    /// </summary>
     [Fact]
     [Trait("Member", "RefreshOAuth")]
     public async Task RefreshOAuth_WhenSessionIsNotUserToken_ThrowsTokenTypeException()
@@ -182,6 +206,9 @@ public sealed class TokenTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="Token.RefreshOAuth(TwitchSession, string?)"/> throws an <see cref="InvalidOperationException"/> when the refresh token is empty.
+    /// </summary>
     [Fact]
     [Trait("Member", "RefreshOAuth")]
     public async Task RefreshOAuth_WhenRefreshTokenIsEmpty_ThrowsInvalidOperationException()
@@ -201,6 +228,9 @@ public sealed class TokenTests : IDisposable
             .WithMessage("Refresh is not a valid refresh token");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Token.RefreshOAuth(TwitchSession, string?)"/> posts the refresh token and returns a newly refreshed token.
+    /// </summary>
     [Fact]
     [Trait("Member", "RefreshOAuth")]
     public async Task RefreshOAuth_WhenValidRequest_PostsRefreshTokenAndReturnsNewToken()
@@ -210,7 +240,7 @@ public sealed class TokenTests : IDisposable
         this._fixture.RegisterJsonResponse("POST", "/oauth2/token", new
         {
             access_token = newBearer,
-            expires_in = 15583,
+            expires_in = 14000,
             refresh_token = newRefresh,
             scope = _refreshScopes,
             token_type = "bearer"
@@ -224,19 +254,28 @@ public sealed class TokenTests : IDisposable
         _ = token.Should().NotBeNull();
         _ = token!.AccessToken.Should().Be(newBearer);
         _ = token.RefreshToken.Should().Be(newRefresh);
-        _ = token.ExpiresIn.Should().Be(15583);
+        _ = token.ExpiresIn.Should().Be(14000);
+        _ = token.TokenType.Should().Be("bearer");
+        _ = token.Scopes.Should().NotBeNull();
+        _ = token.Scopes!.Select(s => s.Name).Should().BeEquivalentTo(_refreshScopes);
+        _ = token.Expires.Should().BeCloseTo(DateTime.UtcNow.AddSeconds(14000), TimeSpan.FromSeconds(10));
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request!.Method.Should().Be("POST");
         _ = request.Body.Should().Contain("grant_type=refresh_token");
         _ = request.Body.Should().Contain($"refresh_token={originalRefresh}");
+        _ = request.Body.Should().Contain($"client_id={this._fixture.ClientId}");
+        _ = request.Body.Should().Contain($"client_secret={this._fixture.ClientSecret}");
     }
 
     #endregion RefreshOAuth
 
     #region RevokeOAuth
 
+    /// <summary>
+    /// Tests that <see cref="Token.RevokeOAuth(TwitchSession, string)"/> throws an <see cref="ArgumentNullException"/> when the session is null.
+    /// </summary>
     [Fact]
     [Trait("Member", "RevokeOAuth")]
     public async Task RevokeOAuth_WhenSessionIsNull_ThrowsArgumentNullException()
@@ -246,6 +285,9 @@ public sealed class TokenTests : IDisposable
             .WithParameterName("session");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Token.RevokeOAuth(TwitchSession, string)"/> throws a <see cref="TokenTypeException"/> when the session token is not a user token.
+    /// </summary>
     [Fact]
     [Trait("Member", "RevokeOAuth")]
     public async Task RevokeOAuth_WhenSessionIsNotUserToken_ThrowsTokenTypeException()
@@ -255,6 +297,28 @@ public sealed class TokenTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="Token.RevokeOAuth(TwitchSession, string)"/> throws an <see cref="InvalidOperationException"/> when the session OAuth token is null or whitespace.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RevokeOAuth")]
+    public async Task RevokeOAuth_WhenOAuthIsNullOrWhitespace_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User
+            }
+        };
+
+        Func<Task> action = async () => await Token.RevokeOAuth(session).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.RevokeOAuth(TwitchSession, string)"/> posts the token and client ID and returns a successful response.
+    /// </summary>
     [Fact]
     [Trait("Member", "RevokeOAuth")]
     public async Task RevokeOAuth_WhenValidRequest_PostsTokenAndReturnsResponse()
@@ -284,6 +348,9 @@ public sealed class TokenTests : IDisposable
 
     #region GetJwtTokenAsync
 
+    /// <summary>
+    /// Tests that <see cref="Token.GetJwtTokenAsync"/> returns null when the ID token is null.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetJwtTokenAsync")]
     public async Task GetJwtTokenAsync_WhenIdTokenIsNull_ReturnsNull()
@@ -293,6 +360,9 @@ public sealed class TokenTests : IDisposable
         _ = jwt.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="Token.GetJwtTokenAsync"/> returns null when the ID token string is invalid.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetJwtTokenAsync")]
     public async Task GetJwtTokenAsync_WhenIdTokenIsInvalid_ReturnsNull()
@@ -302,6 +372,9 @@ public sealed class TokenTests : IDisposable
         _ = jwt.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="Token.GetJwtTokenAsync"/> validates and returns the parsed <see cref="JsonWebToken"/> when signed.
+    /// </summary>
     [Fact]
     [Trait("Member", "GetJwtTokenAsync")]
     public async Task GetJwtTokenAsync_WhenIdTokenIsSignedByFixture_ValidatesAndReturnsJsonWebToken()
@@ -323,6 +396,9 @@ public sealed class TokenTests : IDisposable
 
     #region SetOpenIdConnectConfigurationUrl
 
+    /// <summary>
+    /// Tests that <see cref="Token.SetOpenIdConnectConfigurationUrl(string)"/> successfully updates the OpenID Connect configuration URL.
+    /// </summary>
     [Fact]
     [Trait("Member", "SetOpenIdConnectConfigurationUrl")]
     public void SetOpenIdConnectConfigurationUrl_WhenCalled_UpdatesConfigurationLazyInstance()

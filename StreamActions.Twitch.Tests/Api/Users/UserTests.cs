@@ -156,6 +156,63 @@ public sealed class UserTests : IDisposable
         _ = request.QueryString.Should().Contain("login=twitchdev");
     }
 
+    /// <summary>
+    /// Tests that <see cref="User.GetUsers"/> omits id and login query parameters when neither is specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetUsers")]
+    public async Task GetUsers_WhenNoIdsAndNoLoginsSpecified_OmitsIdAndLoginFromQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/users", HttpStatusCode.OK, @"{ ""data"": [] }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<User>? response = await User.GetUsers(session).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().NotContain("id=");
+        _ = request.QueryString.Should().NotContain("login=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="User.GetUsers"/> includes only id query parameters when only ids are specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetUsers")]
+    public async Task GetUsers_WhenOnlyIdsSpecified_IncludesOnlyIdInQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/users", HttpStatusCode.OK, @"{ ""data"": [] }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<User>? response = await User.GetUsers(session, ids: ["141981764"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("id=141981764");
+        _ = request.QueryString.Should().NotContain("login=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="User.GetUsers"/> includes only login query parameters when only logins are specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetUsers")]
+    public async Task GetUsers_WhenOnlyLoginsSpecified_IncludesOnlyLoginInQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/users", HttpStatusCode.OK, @"{ ""data"": [] }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<User>? response = await User.GetUsers(session, logins: ["twitchdev"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("login=twitchdev");
+        _ = request.QueryString.Should().NotContain("id=");
+    }
+
     #endregion GetUsers
 
     #region UpdateUser
@@ -224,14 +281,18 @@ public sealed class UserTests : IDisposable
       ""id"": ""141981764"",
       ""login"": ""twitchdev"",
       ""display_name"": ""TwitchDev"",
-      ""type"": """",
+      ""type"": ""staff"",
       ""broadcaster_type"": ""partner"",
-      ""description"": ""new description""
+      ""description"": ""new description"",
+      ""profile_image_url"": ""https://static-cdn.jtvnw.net/jtv_user_pictures/8a6381c7-d0c0-4576-b17c-30f9d6add47f-profile_image-300x300.png"",
+      ""offline_image_url"": ""https://static-cdn.jtvnw.net/jtv_user_pictures/3f13ab61-ec78-4fe6-8481-8682cb3b0ac2-channel_offline_image-1920x1080.png"",
+      ""created_at"": ""2016-12-14T20:32:28Z"",
+      ""email"": ""not-real@email.com""
     }
   ]
 }");
 
-        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserEdit);
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserEdit, Scope.UserReadEmail);
         ResponseData<User>? response = await User.UpdateUser(session, "new description").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
@@ -241,13 +302,39 @@ public sealed class UserTests : IDisposable
 
         User user = response.Data[0];
         _ = user.Id.Should().Be("141981764");
+        _ = user.Login.Should().Be("twitchdev");
+        _ = user.DisplayName.Should().Be("TwitchDev");
+        _ = user.Type.Should().Be(User.UserType.Staff);
+        _ = user.BroadcasterType.Should().Be(User.UserBroadcasterType.Partner);
         _ = user.Description.Should().Be("new description");
+        _ = user.ProfileImageUrl.Should().Be(new Uri("https://static-cdn.jtvnw.net/jtv_user_pictures/8a6381c7-d0c0-4576-b17c-30f9d6add47f-profile_image-300x300.png"));
+        _ = user.OfflineImageUrl.Should().Be(new Uri("https://static-cdn.jtvnw.net/jtv_user_pictures/3f13ab61-ec78-4fe6-8481-8682cb3b0ac2-channel_offline_image-1920x1080.png"));
+        _ = user.CreatedAt.Should().Be(DateTime.Parse("2016-12-14T20:32:28Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = user.Email.Should().Be("not-real@email.com");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/users");
         _ = request.QueryString.Should().Contain("description=new%20description");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="User.UpdateUser"/> omits description query parameter when description is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateUser")]
+    public async Task UpdateUser_WhenDescriptionIsNull_OmitsDescriptionFromQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/users", HttpStatusCode.OK, @"{ ""data"": [] }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserEdit);
+        ResponseData<User>? response = await User.UpdateUser(session, null).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().NotContain("description=");
     }
 
     #endregion UpdateUser

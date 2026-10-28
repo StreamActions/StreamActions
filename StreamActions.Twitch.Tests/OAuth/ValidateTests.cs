@@ -67,6 +67,9 @@ public sealed class ValidateTests : IDisposable
 
     #region ValidateOAuth
 
+    /// <summary>
+    /// Tests that <see cref="Validate.ValidateOAuth(TwitchSession, string)"/> throws an <see cref="ArgumentNullException"/> when the session is null.
+    /// </summary>
     [Fact]
     [Trait("Member", "ValidateOAuth")]
     public async Task ValidateOAuth_WhenSessionIsNull_ThrowsArgumentNullException()
@@ -76,6 +79,9 @@ public sealed class ValidateTests : IDisposable
             .WithParameterName("session");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Validate.ValidateOAuth(TwitchSession, string)"/> sends the authorization header and returns a populated validate object when the token is valid.
+    /// </summary>
     [Fact]
     [Trait("Member", "ValidateOAuth")]
     public async Task ValidateOAuth_WhenTokenIsValid_SendsAuthorizationHeaderAndReturnsValidateObject()
@@ -105,9 +111,13 @@ public sealed class ValidateTests : IDisposable
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request!.Method.Should().Be("GET");
+        _ = request.Path.Should().Be("/oauth2/validate");
         _ = request.Headers.Authorization.ToString().Should().Be($"Bearer {tokenString}");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Validate.ValidateOAuth(TwitchSession, string)"/> returns error details and null fields when the token is invalid.
+    /// </summary>
     [Fact]
     [Trait("Member", "ValidateOAuth")]
     public async Task ValidateOAuth_WhenTokenIsInvalid_ReturnsErrorDetails()
@@ -123,10 +133,48 @@ public sealed class ValidateTests : IDisposable
         Validate? result = await Validate.ValidateOAuth(session, $"{this._fixture.BaseUrl}/oauth2/validate").ConfigureAwait(true);
 
         _ = result.Should().NotBeNull();
-        _ = result.Status.Should().Be(HttpStatusCode.Unauthorized);
+        _ = result!.Status.Should().Be(HttpStatusCode.Unauthorized);
         _ = result.Message.Should().Be("invalid access token");
         _ = result.ClientId.Should().BeNull();
+        _ = result.Login.Should().BeNull();
+        _ = result.UserId.Should().BeNull();
+        _ = result.ExpiresIn.Should().Be(0);
+        _ = result.Scopes.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Validate.ValidateOAuth(TwitchSession, string)"/> returns a valid validate object with null scopes when validating an app token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ValidateOAuth")]
+    public async Task ValidateOAuth_WhenAppTokenIsValid_ReturnsValidateObjectWithNullScopes()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/oauth2/validate", new
+        {
+            client_id = "wbmytr93xzw8zbg0p1izqyzzc5mbiz",
+            expires_in = 5520838
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        string tokenString = session.Token!.OAuth!;
+
+        Validate? result = await Validate.ValidateOAuth(session, $"{this._fixture.BaseUrl}/oauth2/validate").ConfigureAwait(true);
+
+        _ = result.Should().NotBeNull();
+        _ = result!.ClientId.Should().Be("wbmytr93xzw8zbg0p1izqyzzc5mbiz");
+        _ = result.Login.Should().BeNull();
+        _ = result.UserId.Should().BeNull();
+        _ = result.ExpiresIn.Should().Be(5520838);
+        _ = result.Scopes.Should().BeNull();
+        _ = result.Expires.Should().BeCloseTo(DateTime.UtcNow.AddSeconds(5520838), TimeSpan.FromSeconds(5));
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request!.Method.Should().Be("GET");
+        _ = request.Path.Should().Be("/oauth2/validate");
+        _ = request.Headers.Authorization.ToString().Should().Be($"Bearer {tokenString}");
     }
 
     #endregion ValidateOAuth
 }
+

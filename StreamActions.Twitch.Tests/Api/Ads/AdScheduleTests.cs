@@ -154,6 +154,66 @@ public sealed class AdScheduleTests : IDisposable
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }
 
+    /// <summary>
+    /// Tests that <see cref="AdSchedule.GetAdSchedule"/> succeeds when authorized with an app token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetAdSchedule")]
+    public async Task GetAdSchedule_WhenAppTokenProvided_ReturnsAdSchedule()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/channels/ads", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    snooze_count = 1,
+                    duration = 60
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ChannelReadAds);
+        ResponseData<AdSchedule>? response = await AdSchedule.GetAdSchedule(session, "141981764").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="AdSchedule.GetAdSchedule"/> handles null next_ad_at and last_ad_at timestamps.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetAdSchedule")]
+    public async Task GetAdSchedule_WhenTimestampsAreNull_ReturnsAdScheduleWithNullTimestamps()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/channels/ads", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    next_ad_at = (DateTime?)null,
+                    last_ad_at = (DateTime?)null,
+                    duration = 30,
+                    preroll_free_time = 0,
+                    snooze_count = 0,
+                    snooze_refresh_at = (DateTime?)null
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadAds);
+        ResponseData<AdSchedule>? response = await AdSchedule.GetAdSchedule(session, "141981764").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+        _ = response.Data[0].NextAdAt.Should().BeNull();
+        _ = response.Data[0].LastAdAt.Should().BeNull();
+    }
+
     #endregion GetAdSchedule
 
     #region SnoozeNextAd
@@ -233,6 +293,11 @@ public sealed class AdScheduleTests : IDisposable
         _ = schedule.SnoozeCount.Should().Be(1);
         _ = schedule.NextAdAt.Should().Be(nextAd);
         _ = schedule.SnoozeRefreshAt.Should().Be(refreshAt);
+        _ = schedule.DurationSeconds.Should().BeNull();
+        _ = schedule.Duration.Should().BeNull();
+        _ = schedule.LastAdAt.Should().BeNull();
+        _ = schedule.PrerollFreeTimeSeconds.Should().BeNull();
+        _ = schedule.PrerollFreeTime.Should().BeNull();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -241,5 +306,57 @@ public sealed class AdScheduleTests : IDisposable
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
     }
 
+    /// <summary>
+    /// Tests that <see cref="AdSchedule.SnoozeNextAd"/> succeeds when authorized with an app token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SnoozeNextAd")]
+    public async Task SnoozeNextAd_WhenAppTokenProvided_PostsRequestAndReturnsAdSchedule()
+    {
+        this._fixture.RegisterJsonResponse("POST", "/helix/channels/ads/schedule/snooze", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    snooze_count = 1
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ChannelManageAds);
+        ResponseData<AdSchedule>? response = await AdSchedule.SnoozeNextAd(session, "141981764").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+    }
+
     #endregion SnoozeNextAd
+
+    #region Properties
+
+    /// <summary>
+    /// Tests that <see cref="AdSchedule.Duration"/> returns <see langword="null"/> when <see cref="AdSchedule.DurationSeconds"/> is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Duration")]
+    public void Duration_WhenDurationSecondsIsNull_ReturnsNull()
+    {
+        AdSchedule schedule = new() { DurationSeconds = null };
+        _ = schedule.Duration.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="AdSchedule.PrerollFreeTime"/> returns <see langword="null"/> when <see cref="AdSchedule.PrerollFreeTimeSeconds"/> is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "PrerollFreeTime")]
+    public void PrerollFreeTime_WhenPrerollFreeTimeSecondsIsNull_ReturnsNull()
+    {
+        AdSchedule schedule = new() { PrerollFreeTimeSeconds = null };
+        _ = schedule.PrerollFreeTime.Should().BeNull();
+    }
+
+    #endregion Properties
 }

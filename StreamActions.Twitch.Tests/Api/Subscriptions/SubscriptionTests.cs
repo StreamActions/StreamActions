@@ -223,6 +223,9 @@ public sealed class SubscriptionTests : IDisposable
         _ = sub.UserName.Should().Be("twitchgaming");
         _ = sub.UserLogin.Should().Be("twitchgaming");
 
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursorSub");
+
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");
@@ -230,6 +233,90 @@ public sealed class SubscriptionTests : IDisposable
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("first=20");
         _ = request.QueryString.Should().Contain("after=cursorAfter");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Subscription.GetBroadcasterSubscriptions"/> filters by user ID when specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBroadcasterSubscriptions")]
+    public async Task GetBroadcasterSubscriptions_WhenUserIdSpecified_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/subscriptions", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {}, ""total"": 0, ""points"": 0 }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadSubscriptions);
+        SubscriptionResponse? response = await Subscription.GetBroadcasterSubscriptions(session, "141981764", userId: ["u1", "u2"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
+        _ = request.QueryString.Should().Contain("user_id=u1");
+        _ = request.QueryString.Should().Contain("user_id=u2");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Subscription.GetBroadcasterSubscriptions"/> sends before cursor when specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBroadcasterSubscriptions")]
+    public async Task GetBroadcasterSubscriptions_WhenBeforeSpecified_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/subscriptions", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {}, ""total"": 0, ""points"": 0 }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadSubscriptions);
+        SubscriptionResponse? response = await Subscription.GetBroadcasterSubscriptions(session, "141981764", before: "cursorBefore").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("before=cursorBefore");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Subscription.GetBroadcasterSubscriptions"/> omits optional query parameters when using default values.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBroadcasterSubscriptions")]
+    public async Task GetBroadcasterSubscriptions_WhenDefaultOptionalParameters_OmitsOptionalQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/subscriptions", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {}, ""total"": 0, ""points"": 0 }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadSubscriptions);
+        SubscriptionResponse? response = await Subscription.GetBroadcasterSubscriptions(session, "141981764").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("user_id=");
+        _ = request.QueryString.Should().NotContain("before=");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Subscription.GetBroadcasterSubscriptions"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="first">The first count to test.</param>
+    /// <param name="expectedClamped">The expected clamped count.</param>
+    [Theory]
+    [Trait("Member", "GetBroadcasterSubscriptions")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(150, 100)]
+    public async Task GetBroadcasterSubscriptions_WhenFirstOutOfRange_ClampsFirst(int first, int expectedClamped)
+    {
+        this._fixture.RegisterEndpoint("/helix/subscriptions", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {}, ""total"": 0, ""points"": 0 }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadSubscriptions);
+        SubscriptionResponse? response = await Subscription.GetBroadcasterSubscriptions(session, "141981764", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedClamped}");
     }
 
     #endregion GetBroadcasterSubscriptions
@@ -346,6 +433,47 @@ public sealed class SubscriptionTests : IDisposable
         _ = request.Path.Should().Be("/helix/subscriptions/user");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
         _ = request.QueryString.Should().Contain("user_id=527115020");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Subscription.CheckUserSubscription"/> returns gifter information when subscription is a gift.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CheckUserSubscription")]
+    public async Task CheckUserSubscription_WhenSubscriptionIsGift_ReturnsGifterInformation()
+    {
+        this._fixture.RegisterEndpoint("/helix/subscriptions/user", HttpStatusCode.OK, @"{
+  ""data"": [
+    {
+      ""broadcaster_id"": ""141981764"",
+      ""broadcaster_login"": ""twitchdev"",
+      ""broadcaster_name"": ""TwitchDev"",
+      ""gifter_id"": ""12826"",
+      ""gifter_login"": ""twitch"",
+      ""gifter_name"": ""Twitch"",
+      ""is_gift"": true,
+      ""tier"": 1000
+    }
+  ]
+}");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadSubscriptions);
+        SubscriptionResponse? response = await Subscription.CheckUserSubscription(session, "141981764", "527115020").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+
+        Subscription sub = response.Data[0];
+        _ = sub.BroadcasterId.Should().Be("141981764");
+        _ = sub.BroadcasterLogin.Should().Be("twitchdev");
+        _ = sub.BroadcasterName.Should().Be("TwitchDev");
+        _ = sub.IsGift.Should().BeTrue();
+        _ = sub.GifterId.Should().Be("12826");
+        _ = sub.GifterLogin.Should().Be("twitch");
+        _ = sub.GifterName.Should().Be("Twitch");
+        _ = sub.Tier.Should().Be(Subscription.SubscriptionTier.Tier1);
     }
 
     #endregion CheckUserSubscription

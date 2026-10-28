@@ -115,6 +115,180 @@ public sealed class BannedUserTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BannedUser.GetBannedUsers"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBannedUsers")]
+    public async Task GetBannedUsers_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModerationRead]
+            }
+        };
+
+        Func<Task> action = async () => await BannedUser.GetBannedUsers(session, "1234").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BannedUser.GetBannedUsers"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBannedUsers")]
+    public async Task GetBannedUsers_WhenAppToken_ReturnsBannedUsers()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/banned", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModerationRead);
+        ResponseData<BannedUser>? response = await BannedUser.GetBannedUsers(session, "1234").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BannedUser.GetBannedUsers"/> includes multiple user IDs in query parameters.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBannedUsers")]
+    public async Task GetBannedUsers_WhenMultipleUserIds_IncludesAllInQueryString()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/banned", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModerationRead);
+        _ = await BannedUser.GetBannedUsers(session, "1234", ["111", "222"]).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("user_id=111");
+        _ = request.QueryString.Should().Contain("user_id=222");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BannedUser.GetBannedUsers"/> includes the before cursor in query parameters.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBannedUsers")]
+    public async Task GetBannedUsers_WhenBeforeCursorProvided_IncludesBeforeInQueryString()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/banned", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModerationRead);
+        _ = await BannedUser.GetBannedUsers(session, "1234", before: "cursor_before").ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("before=cursor_before");
+        _ = request.QueryString.Should().NotContain("after");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BannedUser.GetBannedUsers"/> uses default parameters and omits optional parameters from the query string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBannedUsers")]
+    public async Task GetBannedUsers_WhenDefaultParameters_OmitsOptionalQueryParameters()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/banned", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModerationRead);
+        _ = await BannedUser.GetBannedUsers(session, "1234").ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=1234");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("user_id");
+        _ = request.QueryString.Should().NotContain("after");
+        _ = request.QueryString.Should().NotContain("before");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BannedUser.GetBannedUsers"/> clamps the first parameter between 1 and 100.
+    /// </para>
+    /// </summary>
+    /// <param name="first">The input value for first.</param>
+    /// <param name="expectedFirst">The expected clamped first value in query string.</param>
+    [Theory]
+    [Trait("Member", "GetBannedUsers")]
+    [InlineData(0, "1")]
+    [InlineData(101, "100")]
+    public async Task GetBannedUsers_WhenFirstOutOfRange_ClampsFirst(int first, string expectedFirst)
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/banned", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModerationRead);
+        _ = await BannedUser.GetBannedUsers(session, "1234", first: first).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BannedUser.GetBannedUsers"/> succeeds with alternative scopes.
+    /// </para>
+    /// </summary>
+    /// <param name="scopeName">The name of the alternative scope.</param>
+    [Theory]
+    [Trait("Member", "GetBannedUsers")]
+    [InlineData("moderator:manage:banned_users")]
+    [InlineData("moderator:read:banned_users")]
+    public async Task GetBannedUsers_WhenAlternativeScopes_ReturnsBannedUsers(string scopeName)
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/banned", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.Scopes[scopeName]);
+        ResponseData<BannedUser>? response = await BannedUser.GetBannedUsers(session, "1234").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BannedUser.GetBannedUsers"/> deserializes permanent bans with a null ExpiresAt.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetBannedUsers")]
+    public async Task GetBannedUsers_WhenPermanentBan_DeserializesNullExpiresAt()
+    {
+        const string json = "{\"data\":[{\"user_id\":\"423374343\",\"user_login\":\"glowillig\",\"user_name\":\"glowillig\",\"expires_at\":null,\"created_at\":\"2022-03-15T01:30:28Z\",\"reason\":\"Permanent ban.\",\"moderator_id\":\"141981764\",\"moderator_login\":\"twitchdev\",\"moderator_name\":\"TwitchDev\"}],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/banned", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModerationRead);
+        ResponseData<BannedUser>? response = await BannedUser.GetBannedUsers(session, "1234").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Should().HaveCount(1);
+        _ = response.Data[0].ExpiresAt.Should().BeNull();
+    }
+
     [Fact]
     [Trait("Member", "GetBannedUsers")]
     public async Task GetBannedUsers_WhenValidRequest_GetsBannedUsersList()

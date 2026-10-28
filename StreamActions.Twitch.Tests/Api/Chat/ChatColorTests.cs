@@ -153,6 +153,9 @@ public sealed class ChatColorTests : IDisposable
         _ = color1.Color.Should().Be(Color.FromArgb(0, 0, 255));
 
         ChatColor color2 = response.Data[1];
+        _ = color2.UserId.Should().Be("22222");
+        _ = color2.UserName.Should().Be("UserTwo");
+        _ = color2.UserLogin.Should().Be("usertwo");
         _ = color2.ColorString.Should().BeEmpty();
         _ = color2.Color.Should().BeNull();
 
@@ -161,6 +164,7 @@ public sealed class ChatColorTests : IDisposable
         _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/chat/color");
         _ = request.Query["user_id"].ToString().Should().Contain("11111");
+        _ = request.Query["user_id"].ToString().Should().Contain("22222");
     }
 
     #endregion GetUserChatColor
@@ -291,7 +295,21 @@ public sealed class ChatColorTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
+        _ = request.Query["user_id"].ToString().Should().Be("12345");
         _ = request.Query["color"].ToString().Should().Be("#1E90FF");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChatColor.UpdateUserChatColor"/> throws <see cref="ArgumentNullException"/> when color is an invalid enum value.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateUserChatColor")]
+    public async Task UpdateUserChatColor_WhenColorIsInvalidEnum_ThrowsArgumentNullException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserManageChatColor);
+        Func<Task> action = async () => await ChatColor.UpdateUserChatColor(session, "12345", (ChatColor.NamedColor)999).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("color");
     }
 
     #endregion UpdateUserChatColor

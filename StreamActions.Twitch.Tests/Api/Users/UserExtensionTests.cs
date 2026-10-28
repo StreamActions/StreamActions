@@ -102,9 +102,12 @@ public sealed class UserExtensionTests : IDisposable
     /// <summary>
     /// Tests that <see cref="UserExtension.GetUserExtensions"/> returns extensions on a successful response.
     /// </summary>
-    [Fact]
+    /// <param name="scopeName">The valid scope name to authorize the request.</param>
+    [Theory]
     [Trait("Member", "GetUserExtensions")]
-    public async Task GetUserExtensions_WhenRequestSucceeds_ReturnsExtensions()
+    [InlineData("user:read:broadcast")]
+    [InlineData("user:edit:broadcast")]
+    public async Task GetUserExtensions_WhenRequestSucceeds_ReturnsExtensions(string scopeName)
     {
         this._fixture.RegisterEndpoint("/helix/users/extensions/list", HttpStatusCode.OK, @"{
   ""data"": [
@@ -114,13 +117,16 @@ public sealed class UserExtensionTests : IDisposable
       ""name"": ""SoundAlerts"",
       ""can_activate"": true,
       ""type"": [
-        ""panel""
+        ""panel"",
+        ""component"",
+        ""mobile"",
+        ""overlay""
       ]
     }
   ]
 }");
 
-        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadBroadcast);
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.Scopes[scopeName]);
         ResponseData<UserExtension>? response = await UserExtension.GetUserExtensions(session).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
@@ -134,7 +140,11 @@ public sealed class UserExtensionTests : IDisposable
         _ = ext.Name.Should().Be("SoundAlerts");
         _ = ext.CanActivate.Should().BeTrue();
         _ = ext.Type.Should().NotBeNull();
-        _ = ext.Type.Should().Contain(UserExtension.UserExtensionTypes.Panel);
+        _ = ext.Type.Should().Equal(
+            UserExtension.UserExtensionTypes.Panel,
+            UserExtension.UserExtensionTypes.Component,
+            UserExtension.UserExtensionTypes.Mobile,
+            UserExtension.UserExtensionTypes.Overlay);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();

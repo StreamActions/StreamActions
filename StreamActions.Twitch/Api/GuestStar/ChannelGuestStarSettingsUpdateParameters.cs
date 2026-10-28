@@ -29,30 +29,35 @@ public sealed record ChannelGuestStarSettingsUpdateParameters
     /// Flag determining if Guest Star moderators have access to control whether a guest is live once assigned to a slot.
     /// </summary>
     [JsonPropertyName("is_moderator_send_live_enabled")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsModeratorSendLiveEnabled { get; init; }
 
     /// <summary>
     /// Number of slots the Guest Star call interface will allow the host to add to a call. Required to be between 1 and 6.
     /// </summary>
     [JsonPropertyName("slot_count")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? SlotCount { get; init; }
 
     /// <summary>
     /// Flag determining if Browser Sources subscribed to sessions on this channel should output audio.
     /// </summary>
     [JsonPropertyName("is_browser_source_audio_enabled")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsBrowserSourceAudioEnabled { get; init; }
 
     /// <summary>
     /// This setting determines how the guests within a session should be laid out within the browser source.
     /// </summary>
     [JsonPropertyName("group_layout")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ChannelGuestStarSettings.GuestStarGroupLayout? GroupLayout { get; init; }
 
     /// <summary>
-    /// Flag determining if Guest Star should regenerate the auth token associated with the channel’s browser sources.
+    /// Flag determining if Guest Star should regenerate the auth token associated with the channel's browser sources.
     /// </summary>
     [JsonPropertyName("regenerate_browser_sources")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? RegenerateBrowserSources { get; init; }
 }
 

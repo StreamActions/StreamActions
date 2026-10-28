@@ -108,6 +108,14 @@ public sealed class IngestServerTests : IDisposable
         string? resolvedUrl = server.UrlTemplate?.Replace("{stream_key}", "live_12345_abcdef", StringComparison.Ordinal);
         _ = resolvedUrl.Should().Be("rtmp://atl.contribute.video.net/app/live_12345_abcdef");
 
+        IngestServer secondServer = response.Ingests[1];
+        _ = secondServer.Id.Should().Be(1);
+        _ = secondServer.Availability.Should().Be(1.0f);
+        _ = secondServer.IsDefault.Should().BeFalse();
+        _ = secondServer.Name.Should().Be("US East: Ashburn, VA (5)");
+        _ = secondServer.UrlTemplate.Should().Be("rtmp://iad05.contribute.video.net/app/{stream_key}");
+        _ = secondServer.Priority.Should().Be(1);
+
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");

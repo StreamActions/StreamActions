@@ -168,7 +168,7 @@ public sealed record ChannelPointsRedemption
     /// <param name="sort">The order to sort redemptions by.</param>
     /// <param name="after">The cursor used to get the next page of results.</param>
     /// <param name="first">The maximum number of redemptions to return per page in the response. Maximum: 50. Default: 20.</param>
-    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsRedemption"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="rewardId"/> is <see cref="Guid.Empty"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> is defined and has more than 50 elements; <paramref name="status"/> or <paramref name="sort"/> are not valid values of their respective enums.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
@@ -207,7 +207,7 @@ public sealed record ChannelPointsRedemption
     /// </list>
     /// </para>
     /// </remarks>
-    public static async Task<ResponseData<ChannelPointsReward>?> GetCustomRewardRedemption(TwitchSession session, string broadcasterId, Guid rewardId, RedemptionStatus status = RedemptionStatus.Unfulfilled, IEnumerable<Guid>? id = null, RedemptionSort sort = RedemptionSort.Oldest, string? after = null, int first = 20)
+    public static async Task<ResponseData<ChannelPointsRedemption>?> GetCustomRewardRedemption(TwitchSession session, string broadcasterId, Guid rewardId, RedemptionStatus status = RedemptionStatus.Unfulfilled, IEnumerable<Guid>? id = null, RedemptionSort sort = RedemptionSort.Oldest, string? after = null, int first = 20)
     {
         if (session is null)
         {
@@ -271,7 +271,7 @@ public sealed record ChannelPointsRedemption
 
         Uri uri = Util.BuildUri(new("/channel_points/custom_rewards/redemptions", UriKind.Relative), queryParams);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<ResponseData<ChannelPointsReward>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<ChannelPointsRedemption>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -282,7 +282,7 @@ public sealed record ChannelPointsRedemption
     /// <param name="broadcasterId">The ID of the broadcaster that's updating the redemption.</param>
     /// <param name="rewardId">The ID that identifies the reward that's been redeemed.</param>
     /// <param name="parameters">The parameters describing the new state of the redemptions.</param>
-    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsReward"/> containing the response.</returns>
+    /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelPointsRedemption"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace; <paramref name="rewardId"/> is <see cref="Guid.Empty"/>; <paramref name="id"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="id"/> has more than 50 elements; <see cref="ChannelPointsRedemptionUpdateParameters.Status"/> is not <see cref="RedemptionStatus.Fulfilled"/> or <see cref="RedemptionStatus.Canceled"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
@@ -322,7 +322,7 @@ public sealed record ChannelPointsRedemption
     /// </para>
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional.")]
-    public static async Task<ResponseData<ChannelPointsReward>?> UpdateRedemptionStatus(TwitchSession session, IEnumerable<Guid> id, string broadcasterId, Guid rewardId, ChannelPointsRedemptionUpdateParameters parameters)
+    public static async Task<ResponseData<ChannelPointsRedemption>?> UpdateRedemptionStatus(TwitchSession session, IEnumerable<Guid> id, string broadcasterId, Guid rewardId, ChannelPointsRedemptionUpdateParameters parameters)
     {
         if (session is null)
         {
@@ -374,6 +374,6 @@ public sealed record ChannelPointsRedemption
         Uri uri = Util.BuildUri(new("/channel_points/custom_rewards/redemptions", UriKind.Relative), queryParams);
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<ResponseData<ChannelPointsReward>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<ResponseData<ChannelPointsRedemption>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

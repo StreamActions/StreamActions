@@ -239,6 +239,73 @@ public sealed class TwitchStreamTests : IDisposable
         _ = request.QueryString.Should().Contain("after=afterCursor");
     }
 
+    /// <summary>
+    /// Tests that <see cref="TwitchStream.GetStreams"/> omits optional query parameters when using default values.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetStreams")]
+    public async Task GetStreams_WhenDefaultOptionalParameters_OmitsOptionalQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/streams", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<TwitchStream>? response = await TwitchStream.GetStreams(session).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("user_id=");
+        _ = request.QueryString.Should().NotContain("user_login=");
+        _ = request.QueryString.Should().NotContain("game_id=");
+        _ = request.QueryString.Should().NotContain("type=");
+        _ = request.QueryString.Should().NotContain("language=");
+        _ = request.QueryString.Should().NotContain("before=");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchStream.GetStreams"/> sends before cursor when specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetStreams")]
+    public async Task GetStreams_WhenBeforeSpecified_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/streams", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<TwitchStream>? response = await TwitchStream.GetStreams(session, before: "cursorBefore").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("before=cursorBefore");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchStream.GetStreams"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="first">The first count to test.</param>
+    /// <param name="expectedClamped">The expected clamped count.</param>
+    [Theory]
+    [Trait("Member", "GetStreams")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(150, 100)]
+    public async Task GetStreams_WhenFirstOutOfRange_ClampsFirst(int first, int expectedClamped)
+    {
+        this._fixture.RegisterEndpoint("/helix/streams", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<TwitchStream>? response = await TwitchStream.GetStreams(session, first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedClamped}");
+    }
+
     #endregion GetStreams
 
     #region GetFollowedStreams
@@ -338,6 +405,21 @@ public sealed class TwitchStreamTests : IDisposable
         TwitchStream stream = response.Data[0];
         _ = stream.Id.Should().Be("26007494656");
         _ = stream.UserId.Should().Be("23161357");
+        _ = stream.UserLogin.Should().Be("lirik");
+        _ = stream.UserName.Should().Be("LIRIK");
+        _ = stream.GameId.Should().Be("417752");
+        _ = stream.GameName.Should().Be("Talk Shows & Podcasts");
+        _ = stream.Type.Should().Be(TwitchStream.StreamTypes.Live);
+        _ = stream.Title.Should().Be("Hey Guys - What Did I Miss?");
+        _ = stream.ViewerCount.Should().Be(3257);
+        _ = stream.StartedAt.Should().Be(DateTime.Parse("2021-03-10T15:04:21Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = stream.Language.Should().Be("en");
+        _ = stream.ThumbnailUrl.Should().Be(new Uri("https://static-cdn.jtvnw.net/previews-ttv/live_user_lirik-{width}x{height}.jpg"));
+        _ = stream.Tags.Should().Contain("English");
+        _ = stream.IsMature.Should().BeFalse();
+
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursorFollowed");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -346,6 +428,29 @@ public sealed class TwitchStreamTests : IDisposable
         _ = request.QueryString.Should().Contain("user_id=141981764");
         _ = request.QueryString.Should().Contain("first=100");
         _ = request.QueryString.Should().Contain("after=cursorAfter");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchStream.GetFollowedStreams"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="first">The first count to test.</param>
+    /// <param name="expectedClamped">The expected clamped count.</param>
+    [Theory]
+    [Trait("Member", "GetFollowedStreams")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(150, 100)]
+    public async Task GetFollowedStreams_WhenFirstOutOfRange_ClampsFirst(int first, int expectedClamped)
+    {
+        this._fixture.RegisterEndpoint("/helix/streams/followed", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadFollows);
+        ResponseData<TwitchStream>? response = await TwitchStream.GetFollowedStreams(session, "141981764", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedClamped}");
     }
 
     #endregion GetFollowedStreams

@@ -193,6 +193,114 @@ public sealed class BanTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Ban.BanUser"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "BanUser")]
+    public async Task BanUser_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModeratorManageBannedUsers]
+            }
+        };
+
+        BanUserParameters parameters = new()
+        {
+            Data = new() { UserId = "9876" }
+        };
+        Func<Task> action = async () => await Ban.BanUser(session, "1234", "5678", parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Ban.BanUser"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "BanUser")]
+    public async Task BanUser_WhenAppToken_BansUser()
+    {
+        const string json = "{\"data\":[{\"broadcaster_id\":\"1234\",\"moderator_id\":\"5678\",\"user_id\":\"9876\",\"created_at\":\"2022-03-15T01:30:28Z\",\"end_time\":\"2022-03-15T02:00:28Z\"}]}";
+        this._fixture.RegisterResponse("POST", "/helix/moderation/bans", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorManageBannedUsers);
+        BanUserParameters parameters = new()
+        {
+            Data = new() { UserId = "9876" }
+        };
+
+        ResponseData<Ban>? response = await Ban.BanUser(session, "1234", "5678", parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="BanUserData.Duration"/> returns null when <see cref="BanUserData.DurationSeconds"/> is null.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "BanUser")]
+    public void BanUserData_WhenDurationSecondsIsNull_DurationReturnsNull()
+    {
+        BanUserData data = new() { UserId = "9876", DurationSeconds = null };
+        _ = data.Duration.Should().BeNull();
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Ban.BanUser"/> correctly posts a permanent ban and omits duration and reason from the request body.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "BanUser")]
+    public async Task BanUser_WhenPermanentBan_OmitsDurationAndReasonAndReturnsBanWithNullEndTime()
+    {
+        const string json = "{\"data\":[{\"broadcaster_id\":\"1234\",\"moderator_id\":\"5678\",\"user_id\":\"9876\",\"created_at\":\"2022-03-15T01:30:28Z\",\"end_time\":null}]}";
+        this._fixture.RegisterResponse("POST", "/helix/moderation/bans", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageBannedUsers);
+        BanUserParameters parameters = new()
+        {
+            Data = new()
+            {
+                UserId = "9876",
+                DurationSeconds = null,
+                Reason = null
+            }
+        };
+
+        ResponseData<Ban>? response = await Ban.BanUser(session, "1234", "5678", parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Should().HaveCount(1);
+
+        Ban ban = response.Data[0];
+        _ = ban.BroadcasterId.Should().Be("1234");
+        _ = ban.ModeratorId.Should().Be("5678");
+        _ = ban.UserId.Should().Be("9876");
+        _ = ban.CreatedAt.Should().Be(DateTime.Parse("2022-03-15T01:30:28Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
+        _ = ban.EndTime.Should().BeNull();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"user_id\":\"9876\"");
+        _ = request.Body.Should().Contain("\"duration\":null");
+        _ = request.Body.Should().Contain("\"reason\":null");
+    }
+
     [Fact]
     [Trait("Member", "BanUser")]
     public async Task BanUser_WhenValidRequest_PostsAndReturnsBanResponse()
@@ -298,6 +406,46 @@ public sealed class BanTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.BitsRead);
         Func<Task> action = async () => await Ban.UnbanUser(session, "1234", "5678", "9876").ConfigureAwait(true);
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Ban.UnbanUser"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UnbanUser")]
+    public async Task UnbanUser_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModeratorManageBannedUsers]
+            }
+        };
+
+        Func<Task> action = async () => await Ban.UnbanUser(session, "1234", "5678", "9876").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Ban.UnbanUser"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UnbanUser")]
+    public async Task UnbanUser_WhenAppToken_UnbansUser()
+    {
+        this._fixture.RegisterStatusCode("DELETE", "/helix/moderation/bans", StatusCodes.Status204NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorManageBannedUsers);
+        JsonApiResponse? response = await Ban.UnbanUser(session, "1234", "5678", "9876").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
     }
 
     [Fact]

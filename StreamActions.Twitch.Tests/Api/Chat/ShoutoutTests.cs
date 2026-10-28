@@ -164,5 +164,30 @@ public sealed class ShoutoutTests : IDisposable
         _ = request.Query["moderator_id"].ToString().Should().Be("11111");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Shoutout.SendShoutout"/> succeeds when called with an app token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendShoutout")]
+    public async Task SendShoutout_WhenCalledWithAppToken_SendsPostRequestAndReturnsSuccess()
+    {
+        this._fixture.RegisterStatusCode("POST", "/helix/chat/shoutouts", HttpStatusCode.NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorManageShoutouts);
+        JsonApiResponse? response = await Shoutout.SendShoutout(session, "12345", "67890", "11111").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("POST");
+        _ = request.Path.Should().Be("/helix/chat/shoutouts");
+        _ = request.Query["from_broadcaster_id"].ToString().Should().Be("12345");
+        _ = request.Query["to_broadcaster_id"].ToString().Should().Be("67890");
+        _ = request.Query["moderator_id"].ToString().Should().Be("11111");
+    }
+
     #endregion SendShoutout
 }

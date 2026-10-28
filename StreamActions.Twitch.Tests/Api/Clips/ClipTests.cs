@@ -141,13 +141,147 @@ public sealed class ClipTests : IDisposable
     }
 
     /// <summary>
+    /// Tests that <see cref="Clip.GetClips"/> throws <see cref="ArgumentNullException"/> when endedAt is specified without startedAt.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetClips")]
+    public async Task GetClips_WhenEndedAtSpecifiedWithoutStartedAt_ThrowsArgumentNullException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        Func<Task> action = async () => await Clip.GetClips(session, broadcasterId: "123", endedAt: DateTime.UtcNow).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("startedAt,endedAt");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Clip.GetClips"/> throws <see cref="ArgumentOutOfRangeException"/> when id is mixed with broadcasterId or gameId.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetClips")]
+    public async Task GetClips_WhenIdMixedWithBroadcasterOrGame_ThrowsArgumentOutOfRangeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        Func<Task> action1 = async () => await Clip.GetClips(session, broadcasterId: "123", id: ["c1"]).ConfigureAwait(true);
+        _ = (await action1.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
+            .WithParameterName("id,broadcasterId,gameId");
+
+        Func<Task> action2 = async () => await Clip.GetClips(session, gameId: "456", id: ["c1"]).ConfigureAwait(true);
+        _ = (await action2.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
+            .WithParameterName("id,broadcasterId,gameId");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Clip.GetClips"/> clamps first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="inputFirst">The requested first count.</param>
+    /// <param name="expectedFirst">The expected clamped query value.</param>
+    [Theory]
+    [Trait("Member", "GetClips")]
+    [InlineData(-5, "1")]
+    [InlineData(0, "1")]
+    [InlineData(101, "100")]
+    [InlineData(500, "100")]
+    public async Task GetClips_WhenFirstOutOfRange_ClampsFirstParameter(int inputFirst, string expectedFirst)
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/clips", new { data = Array.Empty<object>() });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        _ = await Clip.GetClips(session, broadcasterId: "12345", first: inputFirst).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["first"].ToString().Should().Be(expectedFirst);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Clip.GetClips"/> queries by game ID with date range, after cursor, and isFeatured.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetClips")]
+    public async Task GetClips_WhenCalledWithGameIdAndFilters_SendsExpectedQueryParams()
+    {
+        DateTime startedAt = new(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime endedAt = new(2025, 1, 8, 0, 0, 0, DateTimeKind.Utc);
+
+        this._fixture.RegisterJsonResponse("GET", "/helix/clips", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "GameClip1",
+                    game_id = "54321",
+                    is_featured = false
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        ResponseData<Clip>? response = await Clip.GetClips(session, gameId: "54321", startedAt: startedAt, endedAt: endedAt, first: 50, after: "cursor123", isFeatured: false).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+        _ = response.Data[0].Id.Should().Be("GameClip1");
+        _ = response.Data[0].GameId.Should().Be("54321");
+        _ = response.Data[0].IsFeatured.Should().BeFalse();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("GET");
+        _ = request.Path.Should().Be("/helix/clips");
+        _ = request.Query["game_id"].ToString().Should().Be("54321");
+        _ = request.Query["first"].ToString().Should().Be("50");
+        _ = request.Query["after"].ToString().Should().Be("cursor123");
+        _ = request.Query["is_featured"].ToString().Should().Be("false");
+        _ = request.Query["started_at"].ToString().Should().NotBeNullOrEmpty();
+        _ = request.Query["ended_at"].ToString().Should().NotBeNullOrEmpty();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Clip.GetClips"/> queries by multiple IDs and omits pagination parameters.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetClips")]
+    public async Task GetClips_WhenCalledWithClipIds_SendsClipIdsAndOmitsPaginationParams()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/clips", new
+        {
+            data = new[]
+            {
+                new { id = "clipA" },
+                new { id = "clipB" }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        ResponseData<Clip>? response = await Clip.GetClips(session, id: ["clipA", "clipB"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(2);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("GET");
+        _ = request.Path.Should().Be("/helix/clips");
+        _ = request.Query["id"].ToString().Should().Contain("clipA");
+        _ = request.Query["id"].ToString().Should().Contain("clipB");
+        _ = request.Query.ContainsKey("first").Should().BeFalse();
+        _ = request.Query.ContainsKey("started_at").Should().BeFalse();
+        _ = request.Query.ContainsKey("ended_at").Should().BeFalse();
+        _ = request.Query.ContainsKey("after").Should().BeFalse();
+        _ = request.Query.ContainsKey("before").Should().BeFalse();
+    }
+
+    /// <summary>
     /// Tests that <see cref="Clip.GetClips"/> retrieves clips and maps properties including calculated Duration.
     /// </summary>
     [Fact]
     [Trait("Member", "GetClips")]
     public async Task GetClips_WhenCalledWithValidParameters_ReturnsClips()
     {
-        DateTime createdAt = DateTime.UtcNow.AddDays(-2);
+        DateTime createdAt = new(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
         this._fixture.RegisterJsonResponse("GET", "/helix/clips", new
         {
@@ -197,6 +331,7 @@ public sealed class ClipTests : IDisposable
         _ = clip.Language.Should().Be("en");
         _ = clip.Title.Should().Be("Amazing Gameplay Moment");
         _ = clip.ViewCount.Should().Be(1500);
+        _ = clip.CreatedAt.Should().Be(createdAt);
         _ = clip.ThumbnailUrl.Should().Be(new Uri("https://clips-media-assets2.twitch.tv/RandomClipId-preview-480x272.jpg"));
         _ = clip.DurationSeconds.Should().Be(30.5f);
         _ = clip.Duration.Should().Be(TimeSpan.FromSeconds(30.5));
@@ -209,7 +344,23 @@ public sealed class ClipTests : IDisposable
         _ = request.Path.Should().Be("/helix/clips");
         _ = request.Query["broadcaster_id"].ToString().Should().Be("12345");
         _ = request.Query["is_featured"].ToString().Should().Be("true");
+        _ = request.Query["first"].ToString().Should().Be("20");
     }
 
     #endregion GetClips
+
+    #region Duration
+
+    /// <summary>
+    /// Tests that <see cref="Clip.Duration"/> returns null when DurationSeconds is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Duration")]
+    public void Duration_WhenDurationSecondsIsNull_ReturnsNull()
+    {
+        Clip clip = new() { DurationSeconds = null };
+        _ = clip.Duration.Should().BeNull();
+    }
+
+    #endregion Duration
 }

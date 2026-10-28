@@ -291,6 +291,7 @@ public sealed class WarningTests : IDisposable
         _ = request.Path.Should().Be("/helix/moderation/warnings");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
+        _ = request.Body.Should().Contain("\"data\":");
         _ = request.Body.Should().Contain("\"user_id\":\"9876\"");
         _ = request.Body.Should().Contain("\"reason\":\"Please follow chat rules\"");
     }
@@ -315,8 +316,26 @@ public sealed class WarningTests : IDisposable
         ResponseData<Warning>? response = await Warning.WarnChatUser(session, "1234", "5678", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data[0].Reason.Should().Be("Warned via bot");
+        _ = response.Data.Should().HaveCount(1);
+
+        Warning item = response.Data[0];
+        _ = item.BroadcasterId.Should().Be("1234");
+        _ = item.ModeratorId.Should().Be("5678");
+        _ = item.UserId.Should().Be("9876");
+        _ = item.Reason.Should().Be("Warned via bot");
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("POST");
+        _ = request.Path.Should().Be("/helix/moderation/warnings");
+        _ = request.QueryString.Should().Contain("broadcaster_id=1234");
+        _ = request.QueryString.Should().Contain("moderator_id=5678");
+        _ = request.Body.Should().Contain("\"data\":");
+        _ = request.Body.Should().Contain("\"user_id\":\"9876\"");
+        _ = request.Body.Should().Contain("\"reason\":\"Warned via bot\"");
     }
 
     #endregion WarnChatUser

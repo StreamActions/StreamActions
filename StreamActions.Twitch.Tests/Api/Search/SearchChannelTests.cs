@@ -165,5 +165,49 @@ public sealed class SearchChannelTests : IDisposable
         _ = request.QueryString.Should().Contain("after=afterCursor");
     }
 
+    /// <summary>
+    /// Tests that <see cref="SearchChannel.SearchChannels"/> omits optional query parameters when using default values.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SearchChannels")]
+    public async Task SearchChannels_WhenDefaultOptionalParameters_OmitsOptionalQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/search/channels", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<SearchChannel>? response = await SearchChannel.SearchChannels(session, "loserfruit").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("query=loserfruit");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("live_only=");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="SearchChannel.SearchChannels"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="first">The first count to test.</param>
+    /// <param name="expectedClamped">The expected clamped count.</param>
+    [Theory]
+    [Trait("Member", "SearchChannels")]
+    [InlineData(0, 1)]
+    [InlineData(-10, 1)]
+    [InlineData(150, 100)]
+    public async Task SearchChannels_WhenFirstOutOfRange_ClampsFirst(int first, int expectedClamped)
+    {
+        this._fixture.RegisterEndpoint("/helix/search/channels", HttpStatusCode.OK, @"{ ""data"": [], ""pagination"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<SearchChannel>? response = await SearchChannel.SearchChannels(session, "loserfruit", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedClamped}");
+    }
+
     #endregion SearchChannels
 }

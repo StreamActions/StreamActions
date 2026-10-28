@@ -140,6 +140,15 @@ public sealed class GuestStarSlotTests : IDisposable
 
     [Fact]
     [Trait("Member", "AssignGuestStarSlot")]
+    public async Task AssignGuestStarSlot_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarSlot.AssignGuestStarSlot(session, "9321049", "9321049", "session123", "144601104", "1").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    [Fact]
+    [Trait("Member", "AssignGuestStarSlot")]
     public async Task AssignGuestStarSlot_WhenScopeMissing_ThrowsTwitchScopeMissingException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmail);
@@ -202,12 +211,47 @@ public sealed class GuestStarSlotTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    public async Task UpdateGuestStarSlot_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidModeratorId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarSlot.UpdateGuestStarSlot(session, "9321049", invalidModeratorId!, "session123", "1").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    [Theory]
+    [Trait("Member", "UpdateGuestStarSlot")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateGuestStarSlot_WhenSessionIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSessionId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarSlot.UpdateGuestStarSlot(session, "9321049", "9321049", invalidSessionId!, "1").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("sessionId");
+    }
+
+    [Theory]
+    [Trait("Member", "UpdateGuestStarSlot")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public async Task UpdateGuestStarSlot_WhenSourceSlotIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSourceSlotId)
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
         Func<Task> action = async () => await GuestStarSlot.UpdateGuestStarSlot(session, "9321049", "9321049", "session123", invalidSourceSlotId!).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("sourceSlotId");
+    }
+
+    [Fact]
+    [Trait("Member", "UpdateGuestStarSlot")]
+    public async Task UpdateGuestStarSlot_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarSlot.UpdateGuestStarSlot(session, "9321049", "9321049", "session123", "1").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -243,6 +287,28 @@ public sealed class GuestStarSlotTests : IDisposable
         _ = request.QueryString.Should().Contain("destination_slot_id=2");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="GuestStarSlot.UpdateGuestStarSlot(TwitchSession, string, string, string, string, string?)"/>
+    /// omits destination_slot_id from the query string when it is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateGuestStarSlot")]
+    public async Task UpdateGuestStarSlot_WhenDestinationSlotIdIsNull_OmitsDestinationSlotIdFromQueryString()
+    {
+        this._fixture.RegisterStatusCode("PATCH", "/helix/guest_star/slot", StatusCodes.Status204NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageGuestStar);
+        JsonApiResponse? response = await GuestStarSlot.UpdateGuestStarSlot(session, "9321049", "9321049", "session123", "1", destinationSlotId: null).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("source_slot_id=1");
+        _ = request.QueryString.Should().NotContain("destination_slot_id");
+    }
+
     #endregion UpdateGuestStarSlot
 
     #region DeleteGuestStarSlot
@@ -274,12 +340,60 @@ public sealed class GuestStarSlotTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    public async Task DeleteGuestStarSlot_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidModeratorId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarSlot.DeleteGuestStarSlot(session, "9321049", invalidModeratorId!, "session123", "144601104", "1").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    [Theory]
+    [Trait("Member", "DeleteGuestStarSlot")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DeleteGuestStarSlot_WhenSessionIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSessionId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarSlot.DeleteGuestStarSlot(session, "9321049", "9321049", invalidSessionId!, "144601104", "1").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("sessionId");
+    }
+
+    [Theory]
+    [Trait("Member", "DeleteGuestStarSlot")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public async Task DeleteGuestStarSlot_WhenGuestIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidGuestId)
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
         Func<Task> action = async () => await GuestStarSlot.DeleteGuestStarSlot(session, "9321049", "9321049", "session123", invalidGuestId!, "1").ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("guestId");
+    }
+
+    [Theory]
+    [Trait("Member", "DeleteGuestStarSlot")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DeleteGuestStarSlot_WhenSlotIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSlotId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarSlot.DeleteGuestStarSlot(session, "9321049", "9321049", "session123", "144601104", invalidSlotId!).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("slotId");
+    }
+
+    [Fact]
+    [Trait("Member", "DeleteGuestStarSlot")]
+    public async Task DeleteGuestStarSlot_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarSlot.DeleteGuestStarSlot(session, "9321049", "9321049", "session123", "144601104", "1").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -316,6 +430,28 @@ public sealed class GuestStarSlotTests : IDisposable
         _ = request.QueryString.Should().Contain("should_reinvite_guest=true");
     }
 
+    /// <summary>
+    /// Verifies that <see cref="GuestStarSlot.DeleteGuestStarSlot(TwitchSession, string, string, string, string, string, bool?)"/>
+    /// omits should_reinvite_guest from the query string when it is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeleteGuestStarSlot")]
+    public async Task DeleteGuestStarSlot_WhenShouldReinviteGuestIsNull_OmitsShouldReinviteGuestFromQueryString()
+    {
+        this._fixture.RegisterStatusCode("DELETE", "/helix/guest_star/slot", StatusCodes.Status204NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        JsonApiResponse? response = await GuestStarSlot.DeleteGuestStarSlot(session, "9321049", "9321049", "session123", "144601104", "1", shouldReinviteGuest: null).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("slot_id=1");
+        _ = request.QueryString.Should().NotContain("should_reinvite_guest");
+    }
+
     #endregion DeleteGuestStarSlot
 
     #region UpdateGuestStarSlotSettings
@@ -347,12 +483,47 @@ public sealed class GuestStarSlotTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    public async Task UpdateGuestStarSlotSettings_WhenModeratorIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidModeratorId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarSlot.UpdateGuestStarSlotSettings(session, "9321049", invalidModeratorId!, "session123", "1").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("moderatorId");
+    }
+
+    [Theory]
+    [Trait("Member", "UpdateGuestStarSlotSettings")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task UpdateGuestStarSlotSettings_WhenSessionIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSessionId)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        Func<Task> action = async () => await GuestStarSlot.UpdateGuestStarSlotSettings(session, "9321049", "9321049", invalidSessionId!, "1").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("sessionId");
+    }
+
+    [Theory]
+    [Trait("Member", "UpdateGuestStarSlotSettings")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     public async Task UpdateGuestStarSlotSettings_WhenSlotIdIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSlotId)
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
         Func<Task> action = async () => await GuestStarSlot.UpdateGuestStarSlotSettings(session, "9321049", "9321049", "session123", invalidSlotId!).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("slotId");
+    }
+
+    [Fact]
+    [Trait("Member", "UpdateGuestStarSlotSettings")]
+    public async Task UpdateGuestStarSlotSettings_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await GuestStarSlot.UpdateGuestStarSlotSettings(session, "9321049", "9321049", "session123", "1").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -398,6 +569,40 @@ public sealed class GuestStarSlotTests : IDisposable
         _ = request.QueryString.Should().Contain("is_video_enabled=false");
         _ = request.QueryString.Should().Contain("is_live=true");
         _ = request.QueryString.Should().Contain("volume=80");
+    }
+
+    /// <summary>
+    /// Verifies that <see cref="GuestStarSlot.UpdateGuestStarSlotSettings(TwitchSession, string, string, string, string, bool?, bool?, bool?, int?)"/>
+    /// omits optional parameters from the query string when they are null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateGuestStarSlotSettings")]
+    public async Task UpdateGuestStarSlotSettings_WhenOptionalParametersAreNull_OmitsOptionalParametersFromQueryString()
+    {
+        this._fixture.RegisterStatusCode("PATCH", "/helix/guest_star/slot_settings", StatusCodes.Status204NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        JsonApiResponse? response = await GuestStarSlot.UpdateGuestStarSlotSettings(
+            session,
+            "9321049",
+            "9321049",
+            "session123",
+            "1",
+            isAudioEnabled: null,
+            isVideoEnabled: null,
+            isLive: null,
+            volume: null).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("slot_id=1");
+        _ = request.QueryString.Should().NotContain("is_audio_enabled");
+        _ = request.QueryString.Should().NotContain("is_video_enabled");
+        _ = request.QueryString.Should().NotContain("is_live");
+        _ = request.QueryString.Should().NotContain("volume");
     }
 
     #endregion UpdateGuestStarSlotSettings

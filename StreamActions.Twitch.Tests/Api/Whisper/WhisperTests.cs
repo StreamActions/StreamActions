@@ -106,6 +106,27 @@ public sealed class WhisperTests : IDisposable
     }
 
     /// <summary>
+    /// Tests that <see cref="WhisperApi.SendWhisper"/> throws <see cref="InvalidOperationException"/> when token has empty OAuth.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendWhisper")]
+    public async Task SendWhisper_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.UserManageWhispers]
+            }
+        };
+        WhisperApi message = new() { Message = "hello" };
+
+        Func<Task> action = async () => await WhisperApi.SendWhisper(session, "141981764", "527115020", message).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
     /// Tests that <see cref="WhisperApi.SendWhisper"/> throws <see cref="ArgumentNullException"/> when fromUserId is null or whitespace.
     /// </summary>
     /// <param name="invalidFromUserId">The invalid sender user ID.</param>

@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Twitch.Api.Charity;
+using StreamActions.Twitch.Api.Charity.Objects;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 
@@ -172,11 +173,13 @@ public sealed class CharityCampaignTests : IDisposable
         _ = campaign.CurrentAmount.Should().NotBeNull();
         _ = campaign.CurrentAmount.Value.Should().Be(86000L);
         _ = campaign.CurrentAmount.DecimalPlaces.Should().Be(2);
+        _ = campaign.CurrentAmount.DecimalValue.Should().Be(860.00m);
         _ = campaign.CurrentAmount.Currency.Should().Be("USD");
 
         _ = campaign.TargetAmount.Should().NotBeNull();
         _ = campaign.TargetAmount.Value.Should().Be(1500000L);
         _ = campaign.TargetAmount.DecimalPlaces.Should().Be(2);
+        _ = campaign.TargetAmount.DecimalValue.Should().Be(15000.00m);
         _ = campaign.TargetAmount.Currency.Should().Be("USD");
 
         RecordedRequest? request = this._fixture.LastRequest;
@@ -187,4 +190,41 @@ public sealed class CharityCampaignTests : IDisposable
     }
 
     #endregion GetCharityCampaigns
+
+    #region Properties
+
+    /// <summary>
+    /// Tests that <see cref="CharityAmount.DecimalValue"/> returns null when Value or DecimalPlaces is null.
+    /// </summary>
+    /// <param name="value">The monetary value.</param>
+    /// <param name="decimalPlaces">The decimal places.</param>
+    [Theory]
+    [Trait("Member", "DecimalValue")]
+    [InlineData(null, 2)]
+    [InlineData(100L, null)]
+    [InlineData(null, null)]
+    public void DecimalValue_WhenValueOrDecimalPlacesIsNull_ReturnsNull(long? value, int? decimalPlaces)
+    {
+        CharityAmount amount = new() { Value = value, DecimalPlaces = decimalPlaces };
+        _ = amount.DecimalValue.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="CharityAmount.DecimalValue"/> correctly calculates the decimal amount from minor units.
+    /// </summary>
+    /// <param name="value">The minor units value.</param>
+    /// <param name="decimalPlaces">The decimal places.</param>
+    /// <param name="expectedDecimal">The expected decimal amount.</param>
+    [Theory]
+    [Trait("Member", "DecimalValue")]
+    [InlineData(86000L, 2, 860.00)]
+    [InlineData(1500000L, 2, 15000.00)]
+    [InlineData(500L, 2, 5.00)]
+    public void DecimalValue_WhenValuesProvided_CalculatesCorrectDecimal(long value, int decimalPlaces, double expectedDecimal)
+    {
+        CharityAmount amount = new() { Value = value, DecimalPlaces = decimalPlaces };
+        _ = amount.DecimalValue.Should().Be((decimal)expectedDecimal);
+    }
+
+    #endregion Properties
 }

@@ -218,7 +218,12 @@ public sealed class ChatBadgeTests : IDisposable
         ChatBadgeVersion version = badge.Versions[0];
         _ = version.Id.Should().Be("1");
         _ = version.ImageUrl1x.Should().Be(new Uri("https://static-cdn.jtvnw.net/badges/v1/vip-1.png"));
+        _ = version.ImageUrl2x.Should().Be(new Uri("https://static-cdn.jtvnw.net/badges/v1/vip-2.png"));
+        _ = version.ImageUrl4x.Should().Be(new Uri("https://static-cdn.jtvnw.net/badges/v1/vip-4.png"));
         _ = version.Title.Should().Be("VIP");
+        _ = version.Description.Should().Be("VIP badge");
+        _ = version.ClickAction.Should().BeNull();
+        _ = version.ClickUrl.Should().BeNull();
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();

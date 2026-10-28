@@ -18,6 +18,7 @@
 
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Channels;
+using StreamActions.Twitch.Api.Channels.Objects;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
@@ -143,7 +144,7 @@ public sealed class ChannelTests : IDisposable
         });
 
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        ResponseData<Channel>? response = await Channel.GetChannelInformation(session, ["141981764"]).ConfigureAwait(true);
+        ResponseData<Channel>? response = await Channel.GetChannelInformation(session, ["141981764", "999999"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
         _ = response.Data.Should().NotBeNull();
@@ -160,13 +161,15 @@ public sealed class ChannelTests : IDisposable
         _ = channel.Delay.Should().Be(0);
         _ = channel.IsBrandedContent.Should().BeFalse();
         _ = channel.Tags.Should().ContainSingle().Which.Should().Be("DevsInTheKnow");
-        _ = channel.ContentClassificationLabels.Should().HaveCount(2);
+        _ = channel.ContentClassificationLabels.Should().NotBeNull();
+        _ = channel.ContentClassificationLabels.Should().ContainInOrder(ContentClassificationLabel.LabelId.Gambling, ContentClassificationLabel.LabelId.DrugsIntoxication);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/channels");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
+        _ = request.QueryString.Should().Contain("broadcaster_id=999999");
     }
 
     #endregion GetChannelInformation
@@ -273,7 +276,7 @@ public sealed class ChannelTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="Channel.ModifyChannelInformation"/> sends a PATCH request and returns 204 No Content.
+    /// Tests that <see cref="Channel.ModifyChannelInformation"/> sends a PATCH request with all properties and returns 204 No Content.
     /// </summary>
     [Fact]
     [Trait("Member", "ModifyChannelInformation")]
@@ -284,9 +287,13 @@ public sealed class ChannelTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
         ModifyChannelParameters parameters = new()
         {
-            Title = "Updated Stream Title",
+            GameId = "509670",
             BroadcasterLanguage = "en",
-            GameId = "509670"
+            Title = "Updated Stream Title",
+            Delay = 60,
+            Tags = ["DevsInTheKnow"],
+            ContentClassificationLabels = [new() { Id = ContentClassificationLabel.LabelId.Gambling, IsEnabled = true }],
+            IsBrandedContent = false
         };
 
         JsonApiResponse? response = await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
@@ -299,7 +306,156 @@ public sealed class ChannelTests : IDisposable
         _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/channels");
         _ = request.QueryString.Should().Contain("broadcaster_id=141981764");
+        _ = request.Body.Should().Contain("\"game_id\":\"509670\"");
+        _ = request.Body.Should().Contain("\"broadcaster_language\":\"en\"");
         _ = request.Body.Should().Contain("\"title\":\"Updated Stream Title\"");
+        _ = request.Body.Should().Contain("\"delay\":60");
+        _ = request.Body.Should().Contain("\"tags\":[\"DevsInTheKnow\"]");
+        _ = request.Body.Should().Contain("\"id\":\"Gambling\"");
+        _ = request.Body.Should().Contain("\"is_enabled\":true");
+        _ = request.Body.Should().Contain("\"is_branded_content\":false");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Channel.ModifyChannelInformation"/> omits null properties from the request body when only a single property is set.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ModifyChannelInformation")]
+    public async Task ModifyChannelInformation_WhenOnlySinglePropertySet_OmitsOtherFieldsFromBody()
+    {
+        this._fixture.RegisterStatusCode("PATCH", "/helix/channels", (int)HttpStatusCode.NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        ModifyChannelParameters parameters = new() { Title = "Only Title" };
+
+        JsonApiResponse? response = await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"title\":\"Only Title\"");
+        _ = request.Body.Should().NotContain("game_id");
+        _ = request.Body.Should().NotContain("broadcaster_language");
+        _ = request.Body.Should().NotContain("delay");
+        _ = request.Body.Should().NotContain("tags");
+        _ = request.Body.Should().NotContain("content_classification_labels");
+        _ = request.Body.Should().NotContain("is_branded_content");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Channel.ModifyChannelInformation"/> clamps the delay parameter between 0 and 900.
+    /// </summary>
+    /// <param name="inputDelay">The input delay to test.</param>
+    /// <param name="expectedDelay">The expected clamped delay.</param>
+    [Theory]
+    [Trait("Member", "ModifyChannelInformation")]
+    [InlineData(-10, 0)]
+    [InlineData(-1, 0)]
+    [InlineData(901, 900)]
+    [InlineData(1200, 900)]
+    public async Task ModifyChannelInformation_WhenDelayOutOfRange_ClampsDelay(int inputDelay, int expectedDelay)
+    {
+        this._fixture.RegisterStatusCode("PATCH", "/helix/channels", (int)HttpStatusCode.NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        ModifyChannelParameters parameters = new() { Delay = inputDelay };
+        _ = await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain($"\"delay\":{expectedDelay}");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Channel.ModifyChannelInformation"/> throws <see cref="ArgumentNullException"/> when a tag is null, empty, or whitespace.
+    /// </summary>
+    /// <param name="invalidTag">The invalid tag to test.</param>
+    [Theory]
+    [Trait("Member", "ModifyChannelInformation")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task ModifyChannelInformation_WhenTagIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidTag)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        ModifyChannelParameters parameters = new() { Tags = [invalidTag!] };
+        Func<Task> action = async () => await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("Tags");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Channel.ModifyChannelInformation"/> throws <see cref="ArgumentOutOfRangeException"/> when a tag contains whitespace or special characters.
+    /// </summary>
+    /// <param name="invalidTag">The invalid tag containing whitespace or special characters.</param>
+    [Theory]
+    [Trait("Member", "ModifyChannelInformation")]
+    [InlineData("Tag With Space")]
+    [InlineData("Tag#Special")]
+    [InlineData("Tag!")]
+    public async Task ModifyChannelInformation_WhenTagContainsInvalidCharacters_ThrowsArgumentOutOfRangeException(string invalidTag)
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        ModifyChannelParameters parameters = new() { Tags = [invalidTag] };
+        Func<Task> action = async () => await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
+            .WithParameterName("Tags");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Channel.ModifyChannelInformation"/> throws <see cref="ArgumentOutOfRangeException"/> when a tag exceeds 25 characters.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ModifyChannelInformation")]
+    public async Task ModifyChannelInformation_WhenTagExceeds25Characters_ThrowsArgumentOutOfRangeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        ModifyChannelParameters parameters = new() { Tags = [new string('a', 26)] };
+        Func<Task> action = async () => await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentOutOfRangeException>().ConfigureAwait(true))
+            .WithParameterName("Tags");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Channel.ModifyChannelInformation"/> throws <see cref="ArgumentNullException"/> when a content classification label element is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ModifyChannelInformation")]
+    public async Task ModifyChannelInformation_WhenContentClassificationLabelElementIsNull_ThrowsArgumentNullException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        ModifyChannelParameters parameters = new() { ContentClassificationLabels = [null!] };
+        Func<Task> action = async () => await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("ContentClassificationLabels");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Channel.ModifyChannelInformation"/> throws <see cref="ArgumentNullException"/> when a content classification label has a null Id.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ModifyChannelInformation")]
+    public async Task ModifyChannelInformation_WhenContentClassificationLabelIdIsNull_ThrowsArgumentNullException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        ModifyChannelParameters parameters = new() { ContentClassificationLabels = [new() { Id = null, IsEnabled = true }] };
+        Func<Task> action = async () => await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("Id");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Channel.ModifyChannelInformation"/> throws <see cref="ArgumentNullException"/> when a content classification label has a null IsEnabled.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ModifyChannelInformation")]
+    public async Task ModifyChannelInformation_WhenContentClassificationLabelIsEnabledIsNull_ThrowsArgumentNullException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageBroadcast);
+        ModifyChannelParameters parameters = new() { ContentClassificationLabels = [new() { Id = ContentClassificationLabel.LabelId.Gambling, IsEnabled = null }] };
+        Func<Task> action = async () => await Channel.ModifyChannelInformation(session, "141981764", parameters).ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("IsEnabled");
     }
 
     #endregion ModifyChannelInformation

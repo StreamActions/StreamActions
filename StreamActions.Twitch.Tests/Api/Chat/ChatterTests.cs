@@ -172,5 +172,58 @@ public sealed class ChatterTests : IDisposable
         _ = request.Query["after"].ToString().Should().Be("cursor123");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Chatter.GetChatters"/> with default parameters sets first to 100 and omits after from query string.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetChatters")]
+    public async Task GetChatters_WhenCalledWithDefaultParameters_SetsDefaultFirstAndOmitsAfter()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/chat/chatters", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorReadChatters);
+        ResponseData<Chatter>? response = await Chatter.GetChatters(session, "12345", "67890").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["first"].ToString().Should().Be("100");
+        _ = request.QueryString.Should().NotContain("after");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Chatter.GetChatters"/> clamps the first parameter between 1 and 1000.
+    /// </summary>
+    /// <param name="inputFirst">The input first value.</param>
+    /// <param name="expectedFirst">The expected clamped first value.</param>
+    [Theory]
+    [Trait("Member", "GetChatters")]
+    [InlineData(0, "1")]
+    [InlineData(-10, "1")]
+    [InlineData(1001, "1000")]
+    [InlineData(5000, "1000")]
+    public async Task GetChatters_WhenFirstIsOutOfRange_ClampsFirstParameter(int inputFirst, string expectedFirst)
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/chat/chatters", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorReadChatters);
+        ResponseData<Chatter>? response = await Chatter.GetChatters(session, "12345", "67890", first: inputFirst).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["first"].ToString().Should().Be(expectedFirst);
+    }
+
     #endregion GetChatters
 }

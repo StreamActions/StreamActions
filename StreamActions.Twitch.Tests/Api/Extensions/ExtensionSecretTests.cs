@@ -19,6 +19,7 @@
 using StreamActions.Twitch.Api.Extensions;
 using StreamActions.Twitch.Api.Extensions.Objects;
 using StreamActions.Twitch.Tests.Infrastructure;
+using System.Globalization;
 
 namespace StreamActions.Twitch.Tests.Api.Extensions;
 
@@ -175,6 +176,11 @@ public sealed class ExtensionSecretTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionSecret.CreateExtensionSecret"/> sends a POST request with specified delay and returns newly created secrets.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "CreateExtensionSecret")]
     public async Task CreateExtensionSecret_WhenValidRequest_SendsPostAndReturnsNewSecret()
@@ -214,7 +220,16 @@ public sealed class ExtensionSecretTests : IDisposable
         _ = secret.FormatVersion.Should().Be(1);
         _ = secret.Secrets.Should().NotBeNull();
         _ = secret.Secrets.Count.Should().Be(2);
-        _ = secret.Secrets[1].Content.Should().Be("new-secret");
+
+        ExtensionSecretData oldSecret = secret.Secrets[0];
+        _ = oldSecret.Content.Should().Be("old-secret");
+        _ = oldSecret.ActiveAt.Should().Be(DateTime.Parse("2021-03-29T06:58:40.858343Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = oldSecret.ExpiresAt.Should().Be(DateTime.Parse("2021-04-22T05:21:54.992616Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+
+        ExtensionSecretData newSecret = secret.Secrets[1];
+        _ = newSecret.Content.Should().Be("new-secret");
+        _ = newSecret.ActiveAt.Should().Be(DateTime.Parse("2021-04-22T04:16:54.996365Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = newSecret.ExpiresAt.Should().Be(DateTime.Parse("2121-03-29T04:16:54.996365Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -222,6 +237,37 @@ public sealed class ExtensionSecretTests : IDisposable
         _ = request.Path.Should().Be("/helix/extensions/jwt/secrets");
         _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
         _ = request.QueryString.Should().Contain("delay=600");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionSecret.CreateExtensionSecret"/> uses the default delay of 300 when delay parameter is omitted.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateExtensionSecret")]
+    public async Task CreateExtensionSecret_WhenDelayOmitted_UsesDefaultDelay300()
+    {
+        const string jsonResponse = """
+        {
+          "data": [
+            {
+              "format_version": 1,
+              "secrets": []
+            }
+          ]
+        }
+        """;
+
+        this._fixture.RegisterResponse("POST", "/helix/extensions/jwt/secrets", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateJwtSession();
+        ResponseData<ExtensionSecret>? response = await ExtensionSecret.CreateExtensionSecret(session, "uo6dggojyb8d6soh92zknwmi5ej1q2").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("delay=300");
     }
 
     #endregion CreateExtensionSecret

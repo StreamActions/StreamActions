@@ -194,5 +194,104 @@ public sealed class ClipDownloadTests : IDisposable
         _ = request.Query["clip_id"].ToString().Should().Be("1234");
     }
 
+    /// <summary>
+    /// Tests that <see cref="ClipDownload.GetClipsDownload"/> sends multiple clip IDs in the query string.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetClipsDownload")]
+    public async Task GetClipsDownload_WhenCalledWithMultipleClipIds_SendsAllIdsInQuery()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/clips/downloads", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    clip_id = "clip1",
+                    landscape_download_url = "https://clips-media-assets.twitch.tv/clip1.mp4",
+                    portrait_download_url = (string?)null
+                },
+                new
+                {
+                    clip_id = "clip2",
+                    landscape_download_url = "https://clips-media-assets.twitch.tv/clip2.mp4",
+                    portrait_download_url = (string?)"https://clips-media-assets.twitch.tv/clip2_p.mp4"
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageClips);
+        ResponseData<ClipDownload>? response = await ClipDownload.GetClipsDownload(session, "12345", "67890", ["clip1", "clip2"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(2);
+        _ = response.Data[0].ClipId.Should().Be("clip1");
+        _ = response.Data[0].LandscapeDownloadUrl.Should().Be(new Uri("https://clips-media-assets.twitch.tv/clip1.mp4"));
+        _ = response.Data[0].PortraitDownloadUrl.Should().BeNull();
+        _ = response.Data[1].ClipId.Should().Be("clip2");
+        _ = response.Data[1].LandscapeDownloadUrl.Should().Be(new Uri("https://clips-media-assets.twitch.tv/clip2.mp4"));
+        _ = response.Data[1].PortraitDownloadUrl.Should().Be(new Uri("https://clips-media-assets.twitch.tv/clip2_p.mp4"));
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["clip_id"].ToString().Should().Contain("clip1");
+        _ = request.Query["clip_id"].ToString().Should().Contain("clip2");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ClipDownload.GetClipsDownload"/> succeeds when using the EditorManageClips scope.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetClipsDownload")]
+    public async Task GetClipsDownload_WhenCalledWithEditorManageClipsScope_ReturnsClipDownloads()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/clips/downloads", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    clip_id = "1234",
+                    landscape_download_url = "https://clips-media-assets.twitch.tv/1234.mp4",
+                    portrait_download_url = (string?)null
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.EditorManageClips);
+        ResponseData<ClipDownload>? response = await ClipDownload.GetClipsDownload(session, "12345", "67890", ["1234"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ClipDownload.GetClipsDownload"/> succeeds when called with an app token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetClipsDownload")]
+    public async Task GetClipsDownload_WhenCalledWithAppToken_ReturnsClipDownloads()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/clips/downloads", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    clip_id = "1234",
+                    landscape_download_url = "https://clips-media-assets.twitch.tv/1234.mp4",
+                    portrait_download_url = (string?)null
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ChannelManageClips);
+        ResponseData<ClipDownload>? response = await ClipDownload.GetClipsDownload(session, "12345", "67890", ["1234"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
     #endregion GetClipsDownload
 }

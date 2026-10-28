@@ -130,6 +130,71 @@ public sealed class ChatMessageTests : IDisposable
         _ = request.QueryString.Should().Contain("message_id=abc-123-def");
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ChatMessage.DeleteChatMessages"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeleteChatMessages")]
+    public async Task DeleteChatMessages_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModeratorManageChatMessages]
+            }
+        };
+
+        Func<Task> action = async () => await ChatMessage.DeleteChatMessages(session, "1234", "5678").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ChatMessage.DeleteChatMessages"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeleteChatMessages")]
+    public async Task DeleteChatMessages_WhenAppToken_DeletesMessages()
+    {
+        this._fixture.RegisterStatusCode("DELETE", "/helix/moderation/chat", StatusCodes.Status204NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorManageChatMessages);
+        JsonApiResponse? response = await ChatMessage.DeleteChatMessages(session, "11111", "44444").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ChatMessage.DeleteChatMessages"/> omits message_id from query parameters when messageId is whitespace.
+    /// </para>
+    /// </summary>
+    /// <param name="whitespaceMessageId">The whitespace message ID to test.</param>
+    [Theory]
+    [Trait("Member", "DeleteChatMessages")]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task DeleteChatMessages_WhenMessageIdIsWhitespace_OmitsMessageIdFromQueryString(string whitespaceMessageId)
+    {
+        this._fixture.RegisterStatusCode("DELETE", "/helix/moderation/chat", StatusCodes.Status204NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageChatMessages);
+        JsonApiResponse? response = await ChatMessage.DeleteChatMessages(session, "11111", "44444", whitespaceMessageId).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().NotContain("message_id");
+    }
+
     [Fact]
     [Trait("Member", "DeleteChatMessages")]
     public async Task DeleteChatMessages_WhenMessageIdNotProvided_DeletesAllMessages()

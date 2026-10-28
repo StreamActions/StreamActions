@@ -137,17 +137,24 @@ public sealed class UserAuthorizationTests : IDisposable
         ""user:read:email""
       ],
       ""has_authorized"": true
+    },
+    {
+      ""user_id"": ""999999"",
+      ""user_name"": ""OtherUser"",
+      ""user_login"": ""otheruser"",
+      ""scopes"": [],
+      ""has_authorized"": false
     }
   ]
 }");
 
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        ResponseData<UserAuthorization>? response = await UserAuthorization.GetAuthorizationByUser(session, ["141981764"]).ConfigureAwait(true);
+        ResponseData<UserAuthorization>? response = await UserAuthorization.GetAuthorizationByUser(session, ["141981764", "999999"]).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
         _ = response.Status.Should().Be(HttpStatusCode.OK);
         _ = response.Data.Should().NotBeNull();
-        _ = response.Data.Count.Should().Be(1);
+        _ = response.Data.Count.Should().Be(2);
 
         UserAuthorization auth = response.Data[0];
         _ = auth.UserId.Should().Be("141981764");
@@ -157,11 +164,20 @@ public sealed class UserAuthorizationTests : IDisposable
         _ = auth.Scopes.Should().Contain(Scope.UserReadEmail);
         _ = auth.HasAuthorized.Should().BeTrue();
 
+        UserAuthorization auth2 = response.Data[1];
+        _ = auth2.UserId.Should().Be("999999");
+        _ = auth2.UserName.Should().Be("OtherUser");
+        _ = auth2.UserLogin.Should().Be("otheruser");
+        _ = auth2.Scopes.Should().NotBeNull();
+        _ = auth2.Scopes.Should().BeEmpty();
+        _ = auth2.HasAuthorized.Should().BeFalse();
+
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/authorization/users");
         _ = request.QueryString.Should().Contain("user_id=141981764");
+        _ = request.QueryString.Should().Contain("user_id=999999");
     }
 
     #endregion GetAuthorizationByUser

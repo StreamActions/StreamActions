@@ -63,6 +63,47 @@ public sealed class VideoTests : IDisposable
 
     #endregion IDisposable Implementation
 
+    #region Duration
+
+    /// <summary>
+    /// Tests that <see cref="Video.Duration"/> returns null when <see cref="Video.DurationString"/> is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Duration")]
+    public void Duration_WhenDurationStringIsNull_ReturnsNull()
+    {
+        Video video = new() { DurationString = null };
+        _ = video.Duration.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="MutedVideoSegment.Duration"/> returns null when <see cref="MutedVideoSegment.DurationSeconds"/> is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Duration")]
+    public void MutedVideoSegment_Duration_WhenDurationSecondsIsNull_ReturnsNull()
+    {
+        MutedVideoSegment segment = new() { DurationSeconds = null };
+        _ = segment.Duration.Should().BeNull();
+    }
+
+    #endregion Duration
+
+    #region Offset
+
+    /// <summary>
+    /// Tests that <see cref="MutedVideoSegment.Offset"/> returns null when <see cref="MutedVideoSegment.OffsetSeconds"/> is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Offset")]
+    public void Offset_WhenOffsetSecondsIsNull_ReturnsNull()
+    {
+        MutedVideoSegment segment = new() { OffsetSeconds = null };
+        _ = segment.Offset.Should().BeNull();
+    }
+
+    #endregion Offset
+
     #region GetVideos
 
     /// <summary>
@@ -180,11 +221,21 @@ public sealed class VideoTests : IDisposable
       ]
     }
   ],
-  ""pagination"": {}
+  ""pagination"": {
+    ""cursor"": ""cursor123""
+  }
 }");
 
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        ResponseData<Video>? response = await Video.GetVideos(session, userId: "141981764", first: 20).ConfigureAwait(true);
+        ResponseData<Video>? response = await Video.GetVideos(
+            session,
+            userId: "141981764",
+            language: "en",
+            period: Video.VideoPeriod.Week,
+            sort: Video.VideoSort.Trending,
+            type: Video.VideoType.Highlight,
+            first: 20,
+            after: "cursor123").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
         _ = response.Status.Should().Be(HttpStatusCode.OK);
@@ -218,12 +269,108 @@ public sealed class VideoTests : IDisposable
         _ = muted[0].OffsetSeconds.Should().Be(120);
         _ = muted[0].Offset.Should().Be(TimeSpan.FromSeconds(120));
 
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursor123");
+
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
         _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/helix/videos");
         _ = request.QueryString.Should().Contain("user_id=141981764");
         _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().Contain("language=en");
+        _ = request.QueryString.Should().Contain("period=week");
+        _ = request.QueryString.Should().Contain("sort=trending");
+        _ = request.QueryString.Should().Contain("type=highlight");
+        _ = request.QueryString.Should().Contain("after=cursor123");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Video.GetVideos"/> queries by multiple video IDs when specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetVideos")]
+    public async Task GetVideos_WhenCalledWithMultipleIds_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/videos", HttpStatusCode.OK, @"{ ""data"": [] }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Video>? response = await Video.GetVideos(session, id: ["vid1", "vid2"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("id=vid1");
+        _ = request.QueryString.Should().Contain("id=vid2");
+        _ = request.QueryString.Should().NotContain("user_id=");
+        _ = request.QueryString.Should().NotContain("game_id=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Video.GetVideos"/> queries by game ID with default optional parameters.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetVideos")]
+    public async Task GetVideos_WhenCalledWithGameIdAndDefaultParameters_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/videos", HttpStatusCode.OK, @"{ ""data"": [] }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Video>? response = await Video.GetVideos(session, gameId: "509670").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("game_id=509670");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().Contain("period=all");
+        _ = request.QueryString.Should().Contain("sort=time");
+        _ = request.QueryString.Should().Contain("type=all");
+        _ = request.QueryString.Should().NotContain("language=");
+        _ = request.QueryString.Should().NotContain("before=");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Video.GetVideos"/> sends before cursor when querying by game ID.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetVideos")]
+    public async Task GetVideos_WhenBeforeSpecified_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/videos", HttpStatusCode.OK, @"{ ""data"": [] }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Video>? response = await Video.GetVideos(session, gameId: "509670", before: "cursorBefore").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("before=cursorBefore");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Video.GetVideos"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="first">The first count to test.</param>
+    /// <param name="expectedClamped">The expected clamped count.</param>
+    [Theory]
+    [Trait("Member", "GetVideos")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(150, 100)]
+    public async Task GetVideos_WhenFirstOutOfRange_ClampsFirst(int first, int expectedClamped)
+    {
+        this._fixture.RegisterEndpoint("/helix/videos", HttpStatusCode.OK, @"{ ""data"": [] }");
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<Video>? response = await Video.GetVideos(session, gameId: "509670", first: first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedClamped}");
     }
 
     #endregion GetVideos
@@ -325,6 +472,27 @@ public sealed class VideoTests : IDisposable
         _ = request.Method.Should().Be("DELETE");
         _ = request.Path.Should().Be("/helix/videos");
         _ = request.QueryString.Should().Contain("id=335921245");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Video.DeleteVideos"/> sends multiple ID parameters when multiple IDs are provided.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeleteVideos")]
+    public async Task DeleteVideos_WhenMultipleIdsProvided_SendsExpectedQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/videos", HttpStatusCode.OK, @"{ ""data"": [""v1"", ""v2""] }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageVideos);
+        ResponseData<string>? response = await Video.DeleteVideos(session, ["v1", "v2"]).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("DELETE");
+        _ = request.Path.Should().Be("/helix/videos");
+        _ = request.QueryString.Should().Contain("id=v1");
+        _ = request.QueryString.Should().Contain("id=v2");
     }
 
     #endregion DeleteVideos

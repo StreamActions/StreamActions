@@ -19,6 +19,7 @@
 using StreamActions.Twitch.Api.Extensions;
 using StreamActions.Twitch.Api.Extensions.Objects;
 using StreamActions.Twitch.Tests.Infrastructure;
+using System.Globalization;
 
 namespace StreamActions.Twitch.Tests.Api.Extensions;
 
@@ -80,6 +81,12 @@ public sealed class ExtensionBitsProductTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionBitsProduct.GetExtensionBitsProducts"/> retrieves a list of Bits products.
+    /// </para>
+    /// </summary>
+    /// <param name="shouldIncludeAll">Whether to include all products.</param>
     [Theory]
     [Trait("Member", "GetExtensionBitsProducts")]
     [InlineData(false)]
@@ -98,7 +105,8 @@ public sealed class ExtensionBitsProductTests : IDisposable
               "inDevelopment": true,
               "displayName": "Rusty Crate 2",
               "expiration": "2021-05-18T09:10:13.397Z",
-              "broadcast": false
+              "broadcast": false,
+              "domain": "twitch.ext.uo6dggojyb8d6soh92zknwmi5ej1q2"
             }
           ]
         }
@@ -120,8 +128,9 @@ public sealed class ExtensionBitsProductTests : IDisposable
         _ = product.Cost.Type.Should().Be(ExtensionProductCost.ExtensionProductCostType.Bits);
         _ = product.InDevelopment.Should().BeTrue();
         _ = product.DisplayName.Should().Be("Rusty Crate 2");
-        _ = product.Expiration.Should().Be(DateTime.Parse("2021-05-18T09:10:13.397Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
+        _ = product.Expiration.Should().Be(DateTime.Parse("2021-05-18T09:10:13.397Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = product.Broadcast.Should().BeFalse();
+        _ = product.Domain.Should().Be("twitch.ext.uo6dggojyb8d6soh92zknwmi5ej1q2");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -129,7 +138,33 @@ public sealed class ExtensionBitsProductTests : IDisposable
         _ = request.Path.Should().Be("/helix/bits/extensions");
         _ = shouldIncludeAll
             ? request.QueryString.Should().Contain("should_include_all=true")
-            : request.QueryString.Should().NotContain("should_include_all=true");
+            : request.QueryString.Should().NotContain("should_include_all");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionBitsProduct.GetExtensionBitsProducts"/> omits should_include_all when the parameter is omitted.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetExtensionBitsProducts")]
+    public async Task GetExtensionBitsProducts_WhenShouldIncludeAllOmitted_OmitsQueryParameter()
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/bits/extensions", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<ExtensionProductData>? response = await ExtensionBitsProduct.GetExtensionBitsProducts(session).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().NotContain("should_include_all");
     }
 
     #endregion GetExtensionBitsProducts
@@ -176,6 +211,11 @@ public sealed class ExtensionBitsProductTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionBitsProduct.UpdateExtensionBitsProduct"/> sends a PUT request with all fields and returns the updated product.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "UpdateExtensionBitsProduct")]
     public async Task UpdateExtensionBitsProduct_WhenValidRequest_SendsPutAndReturnsUpdatedProduct()
@@ -192,7 +232,8 @@ public sealed class ExtensionBitsProductTests : IDisposable
               "inDevelopment": true,
               "displayName": "Rusty Crate 2",
               "expiration": "2021-05-18T09:10:13.397Z",
-              "broadcast": true
+              "broadcast": true,
+              "domain": "twitch.ext.uo6dggojyb8d6soh92zknwmi5ej1q2"
             }
           ]
         }
@@ -211,7 +252,7 @@ public sealed class ExtensionBitsProductTests : IDisposable
             InDevelopment = true,
             DisplayName = "Rusty Crate 2",
             IsBroadcast = true,
-            Expiration = DateTime.Parse("2021-05-18T09:10:13.397Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal)
+            Expiration = DateTime.Parse("2021-05-18T09:10:13.397Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal)
         };
 
         using TwitchSession session = TestTokenFactory.CreateAppSession();
@@ -223,8 +264,14 @@ public sealed class ExtensionBitsProductTests : IDisposable
 
         ExtensionProductData product = response.Data[0];
         _ = product.Sku.Should().Be("1010");
+        _ = product.Cost.Should().NotBeNull();
+        _ = product.Cost.Amount.Should().Be(990);
+        _ = product.Cost.Type.Should().Be(ExtensionProductCost.ExtensionProductCostType.Bits);
         _ = product.DisplayName.Should().Be("Rusty Crate 2");
+        _ = product.InDevelopment.Should().BeTrue();
+        _ = product.Expiration.Should().Be(DateTime.Parse("2021-05-18T09:10:13.397Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = product.Broadcast.Should().BeTrue();
+        _ = product.Domain.Should().Be("twitch.ext.uo6dggojyb8d6soh92zknwmi5ej1q2");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -232,6 +279,58 @@ public sealed class ExtensionBitsProductTests : IDisposable
         _ = request.Path.Should().Be("/helix/bits/extensions");
         _ = request.Body.Should().Contain("\"sku\":\"1010\"");
         _ = request.Body.Should().Contain("\"display_name\":\"Rusty Crate 2\"");
+        _ = request.Body.Should().Contain("\"cost\":");
+        _ = request.Body.Should().Contain("\"amount\":990");
+        _ = request.Body.Should().Contain("\"type\":\"bits\"");
+        _ = request.Body.Should().Contain("\"in_development\":true");
+        _ = request.Body.Should().Contain("\"expiration\":");
+        _ = request.Body.Should().Contain("\"is_broadcast\":true");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionBitsProduct.UpdateExtensionBitsProduct"/> omits optional null fields from the request body.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateExtensionBitsProduct")]
+    public async Task UpdateExtensionBitsProduct_WhenOptionalFieldsNull_OmitsOptionalFieldsInBody()
+    {
+        const string jsonResponse = """
+        {
+          "data": [
+            {
+              "sku": "1010",
+              "displayName": "Rusty Crate 2"
+            }
+          ]
+        }
+        """;
+
+        this._fixture.RegisterResponse("PUT", "/helix/bits/extensions", jsonResponse);
+
+        UpdateExtensionBitsProductParameters parameters = new()
+        {
+            Sku = "1010",
+            DisplayName = "Rusty Crate 2",
+            Expiration = null,
+            InDevelopment = null,
+            IsBroadcast = null
+        };
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<ExtensionProductData>? response = await ExtensionBitsProduct.UpdateExtensionBitsProduct(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("PUT");
+        _ = request.Path.Should().Be("/helix/bits/extensions");
+        _ = request.Body.Should().Contain("\"sku\":\"1010\"");
+        _ = request.Body.Should().Contain("\"display_name\":\"Rusty Crate 2\"");
+        _ = request.Body.Should().NotContain("expiration");
+        _ = request.Body.Should().NotContain("in_development");
+        _ = request.Body.Should().NotContain("is_broadcast");
     }
 
     #endregion UpdateExtensionBitsProduct

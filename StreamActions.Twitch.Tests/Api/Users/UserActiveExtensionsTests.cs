@@ -167,6 +167,24 @@ public sealed class UserActiveExtensionsTests : IDisposable
         _ = request.QueryString.Should().Contain("user_id=141981764");
     }
 
+    /// <summary>
+    /// Tests that <see cref="UserActiveExtensions.GetUserActiveExtensions"/> omits user_id from query parameters when userId is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetUserActiveExtensions")]
+    public async Task GetUserActiveExtensions_WhenUserIdIsNull_OmitsUserIdFromQueryParameters()
+    {
+        this._fixture.RegisterEndpoint("/helix/users/extensions", HttpStatusCode.OK, @"{ ""data"": {} }");
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        ResponseDataObject<UserActiveExtensions>? response = await UserActiveExtensions.GetUserActiveExtensions(session).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().NotContain("user_id=");
+    }
+
     #endregion GetUserActiveExtensions
 
     #region UpdateUserExtensions
@@ -255,8 +273,28 @@ public sealed class UserActiveExtensionsTests : IDisposable
                     ["1"] = new UserActiveExtension
                     {
                         Active = true,
-                        Id = "upl85usdumiojfu",
+                        Id = "ext1",
                         Version = "0.0.1"
+                    }
+                },
+                Overlay = new Dictionary<string, UserActiveExtension>
+                {
+                    ["1"] = new UserActiveExtension
+                    {
+                        Active = true,
+                        Id = "ext1",
+                        Version = "0.0.1"
+                    }
+                },
+                Component = new Dictionary<string, UserActiveComponentExtension>
+                {
+                    ["1"] = new UserActiveComponentExtension
+                    {
+                        Active = true,
+                        Id = "ext1",
+                        Version = "0.0.1",
+                        X = 10,
+                        Y = 20
                     }
                 }
             }
@@ -275,6 +313,12 @@ public sealed class UserActiveExtensionsTests : IDisposable
         _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/users/extensions");
         _ = request.Body.Should().Contain("\"data\"");
+        _ = request.Body.Should().Contain("\"panel\"");
+        _ = request.Body.Should().Contain("\"overlay\"");
+        _ = request.Body.Should().Contain("\"component\"");
+        _ = request.Body.Should().Contain("\"id\":\"ext1\"");
+        _ = request.Body.Should().Contain("\"x\":10");
+        _ = request.Body.Should().Contain("\"y\":20");
     }
 
     #endregion UpdateUserExtensions

@@ -125,6 +125,11 @@ public sealed class ExtensionRequiredConfigurationTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionRequiredConfiguration.SetExtensionRequiredConfiguration"/> sends a PUT request and returns success.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "SetExtensionRequiredConfiguration")]
     public async Task SetExtensionRequiredConfiguration_WhenValidRequest_SendsPutAndReturnsSuccess()
@@ -152,6 +157,7 @@ public sealed class ExtensionRequiredConfigurationTests : IDisposable
         _ = request.QueryString.Should().Contain("broadcaster_id=274637212");
         _ = request.Body.Should().Contain("\"required_configuration\":\"RCS\"");
         _ = request.Body.Should().Contain("\"extension_id\":\"uo6dggojyb8d6soh92zknwmi5ej1q2\"");
+        _ = request.Body.Should().Contain("\"extension_version\":\"0.0.1\"");
     }
 
     #endregion SetExtensionRequiredConfiguration

@@ -164,6 +164,79 @@ public sealed class DropEntitlementTests : IDisposable
         _ = request.Query["after"].ToString().Should().Be("cursor_prev");
     }
 
+    /// <summary>
+    /// Tests that <see cref="DropEntitlement.GetDropsEntitlements"/> uses default first value of 20 and omits optional filter query parameters when not specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetDropsEntitlements")]
+    public async Task GetDropsEntitlements_WhenCalledWithDefaultParameters_SendsDefaultFirstAndOmitsOptionalFilters()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/entitlements/drops", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<DropEntitlement>? response = await DropEntitlement.GetDropsEntitlements(session).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["first"].ToString().Should().Be("20");
+        _ = request.Query.ContainsKey("id").Should().BeFalse();
+        _ = request.Query.ContainsKey("user_id").Should().BeFalse();
+        _ = request.Query.ContainsKey("game_id").Should().BeFalse();
+        _ = request.Query.ContainsKey("fulfillment_status").Should().BeFalse();
+        _ = request.Query.ContainsKey("after").Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DropEntitlement.GetDropsEntitlements"/> clamps the first parameter between 1 and 1000.
+    /// </summary>
+    /// <param name="inputFirst">The requested first value.</param>
+    /// <param name="expectedFirst">The expected clamped query value.</param>
+    [Theory]
+    [Trait("Member", "GetDropsEntitlements")]
+    [InlineData(-10, "1")]
+    [InlineData(0, "1")]
+    [InlineData(1001, "1000")]
+    [InlineData(5000, "1000")]
+    public async Task GetDropsEntitlements_WhenFirstOutOfRange_ClampsFirstParameter(int inputFirst, string expectedFirst)
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/entitlements/drops", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        _ = await DropEntitlement.GetDropsEntitlements(session, first: inputFirst).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["first"].ToString().Should().Be(expectedFirst);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DropEntitlement.GetDropsEntitlements"/> succeeds when called with a user session.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetDropsEntitlements")]
+    public async Task GetDropsEntitlements_WhenCalledWithUserSession_ReturnsDropEntitlements()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/entitlements/drops", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        ResponseData<DropEntitlement>? response = await DropEntitlement.GetDropsEntitlements(session).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
     #endregion GetDropsEntitlements
 
     #region UpdateDropsEntitlements
@@ -244,6 +317,47 @@ public sealed class DropEntitlementTests : IDisposable
         _ = request.Path.Should().Be("/helix/entitlements/drops");
         _ = request.Body.Should().Contain("\"fulfillment_status\":\"FULFILLED\"");
         _ = request.Body.Should().Contain("\"entitlement_ids\":[\"entitlement123\"]");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="DropEntitlement.UpdateDropsEntitlements"/> properly deserializes all status enum values.
+    /// </summary>
+    /// <param name="statusString">The API status string in the response.</param>
+    /// <param name="expectedStatus">The expected deserialized enum value.</param>
+    [Theory]
+    [Trait("Member", "UpdateDropsEntitlements")]
+    [InlineData("SUCCESS", UpdateDropsEntitlementsStatus.Statuses.Success)]
+    [InlineData("INVALID_ID", UpdateDropsEntitlementsStatus.Statuses.InvalidId)]
+    [InlineData("NOT_FOUND", UpdateDropsEntitlementsStatus.Statuses.NotFound)]
+    [InlineData("UNAUTHORIZED", UpdateDropsEntitlementsStatus.Statuses.Unauthorized)]
+    [InlineData("UPDATE_FAILED", UpdateDropsEntitlementsStatus.Statuses.UpdateFailed)]
+    public async Task UpdateDropsEntitlements_WhenResponseContainsDifferentStatuses_DeserializesAllEnumValues(string statusString, UpdateDropsEntitlementsStatus.Statuses expectedStatus)
+    {
+        this._fixture.RegisterJsonResponse("PATCH", "/helix/entitlements/drops", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    status = statusString,
+                    ids = _sampleEntitlementIds
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        UpdateDropsEntitlementsParameters parameters = new()
+        {
+            EntitlementIds = ["entitlement123"],
+            FulfillmentStatus = DropEntitlement.FulfillmentStatuses.Fulfilled
+        };
+
+        ResponseData<UpdateDropsEntitlementsStatus>? response = await DropEntitlement.UpdateDropsEntitlements(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+        _ = response.Data[0].Status.Should().Be(expectedStatus);
     }
 
     #endregion UpdateDropsEntitlements

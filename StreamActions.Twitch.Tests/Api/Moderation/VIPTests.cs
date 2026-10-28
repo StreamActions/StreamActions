@@ -159,11 +159,18 @@ public sealed class VIPTests : IDisposable
         _ = response.IsSuccessStatusCode.Should().BeTrue();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data.Should().HaveCount(2);
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursor123");
 
         VIP item = response.Data[0];
         _ = item.UserId.Should().Be("111");
         _ = item.UserLogin.Should().Be("vip1");
         _ = item.UserName.Should().Be("VIP1");
+
+        VIP item2 = response.Data[1];
+        _ = item2.UserId.Should().Be("222");
+        _ = item2.UserLogin.Should().Be("vip2");
+        _ = item2.UserName.Should().Be("VIP2");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -174,6 +181,55 @@ public sealed class VIPTests : IDisposable
         _ = request.QueryString.Should().Contain("user_id=222");
         _ = request.QueryString.Should().Contain("first=50");
         _ = request.QueryString.Should().Contain("after=cursor123");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Verifies that <see cref="VIP.GetVIPs(StreamActions.Twitch.Api.Common.TwitchSession, string, System.Collections.Generic.IEnumerable{string}?, int, string?)"/>
+    /// omits optional parameters from the query string when using default values.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetVIPs")]
+    public async Task GetVIPs_WhenDefaultOptionalParameters_OmitsOptionalQueryParameters()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/channels/vips", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadVips);
+        _ = await VIP.GetVIPs(session, "1234").ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=1234");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("user_id=");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Verifies that <see cref="VIP.GetVIPs(StreamActions.Twitch.Api.Common.TwitchSession, string, System.Collections.Generic.IEnumerable{string}?, int, string?)"/>
+    /// clamps the first parameter to the valid range [1, 100].
+    /// </para>
+    /// </summary>
+    /// <param name="inputFirst">The input first count.</param>
+    /// <param name="expectedFirst">The expected clamped first count in query string.</param>
+    [Theory]
+    [Trait("Member", "GetVIPs")]
+    [InlineData(0, 1)]
+    [InlineData(101, 100)]
+    public async Task GetVIPs_WhenFirstOutOfRange_ClampsFirst(int inputFirst, int expectedFirst)
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/channels/vips", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadVips);
+        _ = await VIP.GetVIPs(session, "1234", first: inputFirst).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
     }
 
     [Fact]
@@ -236,6 +292,29 @@ public sealed class VIPTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ChannelManageVips);
         Func<Task> action = async () => await VIP.AddChannelVIP(session, "1234", "5678").ConfigureAwait(true);
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Verifies that <see cref="VIP.AddChannelVIP(StreamActions.Twitch.Api.Common.TwitchSession, string, string)"/>
+    /// throws an <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AddChannelVIP")]
+    public async Task AddChannelVIP_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ChannelManageVips]
+            }
+        };
+
+        Func<Task> action = async () => await VIP.AddChannelVIP(session, "1234", "5678").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
     }
 
     [Fact]
@@ -314,6 +393,29 @@ public sealed class VIPTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ChannelManageVips);
         Func<Task> action = async () => await VIP.RemoveChannelVIP(session, "1234", "5678").ConfigureAwait(true);
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Verifies that <see cref="VIP.RemoveChannelVIP(StreamActions.Twitch.Api.Common.TwitchSession, string, string)"/>
+    /// throws an <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RemoveChannelVIP")]
+    public async Task RemoveChannelVIP_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ChannelManageVips]
+            }
+        };
+
+        Func<Task> action = async () => await VIP.RemoveChannelVIP(session, "1234", "5678").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
     }
 
     [Fact]

@@ -239,6 +239,30 @@ public class TwitchSessionTests
         _ = action.Should().NotThrow();
     }
 
+    /// <summary>
+    /// Tests that <see cref="TwitchSession.RequireUserOrAppToken"/> does not throw when scopes is empty.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RequireUserOrAppToken")]
+    public void RequireUserOrAppToken_WhenScopesIsEmpty_DoesNotThrow()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        Action action = () => session.RequireUserOrAppToken([]);
+        _ = action.Should().NotThrow();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchSession.RequireUserOrAppToken"/> does not throw when scopes is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RequireUserOrAppToken")]
+    public void RequireUserOrAppToken_WhenScopesIsNull_DoesNotThrow()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        Action action = () => session.RequireUserOrAppToken((Scope?[])null!);
+        _ = action.Should().NotThrow();
+    }
+
     #endregion RequireUserOrAppToken
 
     #region RequireUserToken
@@ -305,6 +329,18 @@ public class TwitchSessionTests
     {
         using TwitchSession session = new() { Token = new TwitchToken { Type = TwitchToken.TokenType.User, OAuth = TestTokenFactory.CreateToken("BEARER") } };
         Action action = () => session.RequireUserToken(Scope.ChatRead);
+        _ = action.Should().NotThrow();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchSession.RequireUserToken"/> does not throw when scopes is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RequireUserToken")]
+    public void RequireUserToken_WhenScopesIsNull_DoesNotThrow()
+    {
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        Action action = () => session.RequireUserToken((Scope?[])null!);
         _ = action.Should().NotThrow();
     }
 

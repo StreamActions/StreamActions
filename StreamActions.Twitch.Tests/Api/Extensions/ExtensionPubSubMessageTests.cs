@@ -105,6 +105,11 @@ public sealed class ExtensionPubSubMessageTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionPubSubMessage.SendExtensionPubSubMessage"/> sends a POST request and returns success.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "SendExtensionPubSubMessage")]
     public async Task SendExtensionPubSubMessage_WhenValidRequest_SendsPostAndReturnsSuccess()
@@ -131,6 +136,42 @@ public sealed class ExtensionPubSubMessageTests : IDisposable
         _ = request.Path.Should().Be("/helix/extensions/pubsub");
         _ = request.Body.Should().Contain("\"message\":\"hello world!\"");
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"141981764\"");
+        _ = request.Body.Should().Contain("\"target\":[\"broadcast\"]");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionPubSubMessage.SendExtensionPubSubMessage"/> serializes is_global_broadcast and omits broadcaster_id when broadcasting globally.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendExtensionPubSubMessage")]
+    public async Task SendExtensionPubSubMessage_WhenGlobalBroadcast_IncludesIsGlobalBroadcastAndOmitsBroadcasterId()
+    {
+        this._fixture.RegisterStatusCode("POST", "/helix/extensions/pubsub", StatusCodes.Status204NoContent);
+
+        SendExtensionPubSubMessageParameters parameters = new()
+        {
+            Message = "hello world!",
+            IsGlobalBroadcast = true,
+            BroadcasterId = null,
+            Target = ["global"]
+        };
+
+        using TwitchSession session = TestTokenFactory.CreateJwtSession();
+        JsonApiResponse? response = await ExtensionPubSubMessage.SendExtensionPubSubMessage(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("POST");
+        _ = request.Path.Should().Be("/helix/extensions/pubsub");
+        _ = request.Body.Should().Contain("\"message\":\"hello world!\"");
+        _ = request.Body.Should().Contain("\"is_global_broadcast\":true");
+        _ = request.Body.Should().NotContain("broadcaster_id");
     }
 
     #endregion SendExtensionPubSubMessage

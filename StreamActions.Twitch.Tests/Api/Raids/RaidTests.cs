@@ -197,6 +197,26 @@ public sealed class RaidTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Tests that <see cref="Raid.CancelARaid"/> throws <see cref="InvalidOperationException"/> when token has empty OAuth.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CancelARaid")]
+    public async Task CancelARaid_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ChannelManageRaids]
+            }
+        };
+
+        Func<Task> action = async () => await Raid.CancelARaid(session, "1234").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
     [Fact]
     [Trait("Member", "CancelARaid")]
     public async Task CancelARaid_WhenScopeMissing_ThrowsTwitchScopeMissingException()

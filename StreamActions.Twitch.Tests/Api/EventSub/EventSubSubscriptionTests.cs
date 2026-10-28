@@ -114,6 +114,10 @@ public sealed class EventSubSubscriptionTests : IDisposable
                     status = "enabled",
                     type = "channel.update",
                     version = "2",
+                    condition = new
+                    {
+                        broadcaster_user_id = "12345"
+                    },
                     created_at = createdAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
                     cost = 1,
                     transport = new
@@ -147,6 +151,9 @@ public sealed class EventSubSubscriptionTests : IDisposable
         _ = sub.Version.Should().Be("2");
         _ = sub.CreatedAt.Should().Be(createdAt);
         _ = sub.Cost.Should().Be(1);
+        _ = sub.Condition.Should().BeOfType<BroadcasterUserIdCondition>();
+        BroadcasterUserIdCondition condition = (BroadcasterUserIdCondition)sub.Condition!;
+        _ = condition.BroadcasterUserId.Should().Be("12345");
         _ = sub.Transport.Should().NotBeNull();
         _ = sub.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
         _ = sub.Transport.Callback.Should().Be("https://example.com/callback");
@@ -157,6 +164,115 @@ public sealed class EventSubSubscriptionTests : IDisposable
         _ = request.Path.Should().Be("/helix/eventsub/subscriptions");
         _ = request.Query["status"].ToString().Should().Be("enabled");
         _ = request.Query["after"].ToString().Should().Be("cursor_prev");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubSubscription.GetEventSubSubscriptions"/> omits filter query parameters when no filter is provided.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetEventSubSubscriptions")]
+    public async Task GetEventSubSubscriptions_WhenCalledWithNoFilters_OmitsFilterQueryParams()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/eventsub/subscriptions", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<EventSubSubscription>? response = await EventSubSubscription.GetEventSubSubscriptions(session).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query.ContainsKey("status").Should().BeFalse();
+        _ = request.Query.ContainsKey("type").Should().BeFalse();
+        _ = request.Query.ContainsKey("user_id").Should().BeFalse();
+        _ = request.Query.ContainsKey("subscription_id").Should().BeFalse();
+        _ = request.Query.ContainsKey("conduit_id").Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubSubscription.GetEventSubSubscriptions"/> sends type query parameter when filtered by type.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetEventSubSubscriptions")]
+    public async Task GetEventSubSubscriptions_WhenFilteredByType_SendsTypeQueryParam()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/eventsub/subscriptions", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        _ = await EventSubSubscription.GetEventSubSubscriptions(session, type: "channel.update").ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["type"].ToString().Should().Be("channel.update");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubSubscription.GetEventSubSubscriptions"/> sends user_id query parameter when filtered by user ID.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetEventSubSubscriptions")]
+    public async Task GetEventSubSubscriptions_WhenFilteredByUserId_SendsUserIdQueryParam()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/eventsub/subscriptions", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        _ = await EventSubSubscription.GetEventSubSubscriptions(session, userId: "user123").ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["user_id"].ToString().Should().Be("user123");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubSubscription.GetEventSubSubscriptions"/> sends subscription_id query parameter when filtered by subscription ID.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetEventSubSubscriptions")]
+    public async Task GetEventSubSubscriptions_WhenFilteredBySubscriptionId_SendsSubscriptionIdQueryParam()
+    {
+        Guid subscriptionId = Guid.Parse("f1c2a3b4-5678-90ab-cdef-1234567890ab");
+        this._fixture.RegisterJsonResponse("GET", "/helix/eventsub/subscriptions", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        _ = await EventSubSubscription.GetEventSubSubscriptions(session, subscriptionId: subscriptionId).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["subscription_id"].ToString().Should().Be(subscriptionId.ToString());
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubSubscription.GetEventSubSubscriptions"/> sends conduit_id query parameter when filtered by conduit ID.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetEventSubSubscriptions")]
+    public async Task GetEventSubSubscriptions_WhenFilteredByConduitId_SendsConduitIdQueryParam()
+    {
+        Guid conduitId = Guid.Parse("bf17725e-3991-4d1a-9694-845b412a8069");
+        this._fixture.RegisterJsonResponse("GET", "/helix/eventsub/subscriptions", new
+        {
+            data = Array.Empty<object>()
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        _ = await EventSubSubscription.GetEventSubSubscriptions(session, conduitId: conduitId).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["conduit_id"].ToString().Should().Be(conduitId.ToString());
     }
 
     #endregion GetEventSubSubscriptions
@@ -434,6 +550,10 @@ public sealed class EventSubSubscriptionTests : IDisposable
                     status = "webhook_callback_verification_pending",
                     type = "channel.update",
                     version = "2",
+                    condition = new
+                    {
+                        broadcaster_user_id = "12345"
+                    },
                     created_at = createdAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
                     cost = 1,
                     transport = new
@@ -473,6 +593,12 @@ public sealed class EventSubSubscriptionTests : IDisposable
         _ = sub.Version.Should().Be("2");
         _ = sub.CreatedAt.Should().Be(createdAt);
         _ = sub.Cost.Should().Be(1);
+        _ = sub.Condition.Should().BeOfType<BroadcasterUserIdCondition>();
+        BroadcasterUserIdCondition condition = (BroadcasterUserIdCondition)sub.Condition!;
+        _ = condition.BroadcasterUserId.Should().Be("12345");
+        _ = sub.Transport.Should().NotBeNull();
+        _ = sub.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
+        _ = sub.Transport.Callback.Should().Be("https://example.com/callback");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -481,6 +607,142 @@ public sealed class EventSubSubscriptionTests : IDisposable
         _ = request.Body.Should().Contain("\"type\":\"channel.update\"");
         _ = request.Body.Should().Contain("\"version\":\"2\"");
         _ = request.Body.Should().Contain("\"broadcaster_user_id\":\"12345\"");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubSubscription.CreateEventSubSubscription"/> creates a websocket subscription with a user session.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateEventSubSubscription")]
+    public async Task CreateEventSubSubscription_WhenWebsocketTransport_SendsWebsocketTransportAndReturnsSubscription()
+    {
+        Guid subId = Guid.Parse("f1c2a3b4-5678-90ab-cdef-1234567890ab");
+        DateTime createdAt = new(2023, 5, 20, 10, 0, 0, DateTimeKind.Utc);
+        DateTime connectedAt = new(2023, 5, 20, 10, 0, 1, DateTimeKind.Utc);
+
+        this._fixture.RegisterJsonResponse("POST", "/helix/eventsub/subscriptions", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = subId.ToString(),
+                    status = "enabled",
+                    type = "channel.update",
+                    version = "2",
+                    condition = new
+                    {
+                        broadcaster_user_id = "12345"
+                    },
+                    created_at = createdAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+                    cost = 0,
+                    transport = new
+                    {
+                        method = "websocket",
+                        session_id = "ws-1",
+                        connected_at = connectedAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)
+                    }
+                }
+            }
+        }, HttpStatusCode.Accepted);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession();
+        EventSubSubscriptionCreationParameters parameters = new()
+        {
+            Type = "channel.update",
+            Version = "2",
+            Condition = new BroadcasterUserIdCondition { BroadcasterUserId = "12345" },
+            Transport = new()
+            {
+                Method = EventSubTransport.TransportMethod.Websocket,
+                SessionId = "ws-1"
+            }
+        };
+
+        ResponseData<EventSubSubscription>? response = await EventSubSubscription.CreateEventSubSubscription(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.Accepted);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+
+        EventSubSubscription sub = response.Data[0];
+        _ = sub.Transport.Should().NotBeNull();
+        _ = sub.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Websocket);
+        _ = sub.Transport.SessionId.Should().Be("ws-1");
+        _ = sub.Transport.ConnectedAt.Should().Be(connectedAt);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"method\":\"websocket\"");
+        _ = request.Body.Should().Contain("\"session_id\":\"ws-1\"");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubSubscription.CreateEventSubSubscription"/> creates a conduit subscription with an app session.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateEventSubSubscription")]
+    public async Task CreateEventSubSubscription_WhenConduitTransport_SendsConduitTransportAndReturnsSubscription()
+    {
+        Guid subId = Guid.Parse("f1c2a3b4-5678-90ab-cdef-1234567890ab");
+        Guid conduitId = Guid.Parse("bf17725e-3991-4d1a-9694-845b412a8069");
+        DateTime createdAt = new(2023, 5, 20, 10, 0, 0, DateTimeKind.Utc);
+
+        this._fixture.RegisterJsonResponse("POST", "/helix/eventsub/subscriptions", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = subId.ToString(),
+                    status = "enabled",
+                    type = "channel.update",
+                    version = "2",
+                    condition = new
+                    {
+                        broadcaster_user_id = "12345"
+                    },
+                    created_at = createdAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+                    cost = 0,
+                    transport = new
+                    {
+                        method = "conduit",
+                        conduit_id = conduitId
+                    }
+                }
+            }
+        }, HttpStatusCode.Accepted);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        EventSubSubscriptionCreationParameters parameters = new()
+        {
+            Type = "channel.update",
+            Version = "2",
+            Condition = new BroadcasterUserIdCondition { BroadcasterUserId = "12345" },
+            Transport = new()
+            {
+                Method = EventSubTransport.TransportMethod.Conduit,
+                ConduitId = conduitId
+            }
+        };
+
+        ResponseData<EventSubSubscription>? response = await EventSubSubscription.CreateEventSubSubscription(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.Accepted);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+
+        EventSubSubscription sub = response.Data[0];
+        _ = sub.Transport.Should().NotBeNull();
+        _ = sub.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Conduit);
+        _ = sub.Transport.ConduitId.Should().Be(conduitId);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"method\":\"conduit\"");
+        _ = request.Body.Should().Contain(conduitId.ToString());
     }
 
     #endregion CreateEventSubSubscription

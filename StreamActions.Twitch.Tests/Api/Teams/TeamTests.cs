@@ -19,6 +19,7 @@
 using StreamActions.Twitch.Api.Teams;
 using StreamActions.Twitch.Api.Teams.Objects;
 using StreamActions.Twitch.Tests.Infrastructure;
+using System.Globalization;
 using System.Net;
 
 namespace StreamActions.Twitch.Tests.Api.Teams;
@@ -232,6 +233,11 @@ public sealed class TeamTests : IDisposable
       ""team_name"": ""staff"",
       ""team_display_name"": ""Twitch Staff"",
       ""info"": ""Staff team"",
+      ""background_image_url"": ""https://static-cdn.jtvnw.net/jtv_user_pictures/team-background.png"",
+      ""banner"": ""https://static-cdn.jtvnw.net/jtv_user_pictures/team-banner.png"",
+      ""created_at"": ""2019-02-11T12:00:00Z"",
+      ""updated_at"": ""2020-11-10T15:00:00Z"",
+      ""thumbnail_url"": ""https://static-cdn.jtvnw.net/jtv_user_pictures/team-logo.png"",
       ""users"": [
         {
           ""user_id"": ""141981764"",
@@ -254,6 +260,13 @@ public sealed class TeamTests : IDisposable
         Team team = response.Data[0];
         _ = team.Id.Should().Be("1");
         _ = team.TeamName.Should().Be("staff");
+        _ = team.TeamDisplayName.Should().Be("Twitch Staff");
+        _ = team.Info.Should().Be("Staff team");
+        _ = team.BackgroundImageUrl.Should().Be(new Uri("https://static-cdn.jtvnw.net/jtv_user_pictures/team-background.png"));
+        _ = team.Banner.Should().Be(new Uri("https://static-cdn.jtvnw.net/jtv_user_pictures/team-banner.png"));
+        _ = team.CreatedAt.Should().Be(DateTime.Parse("2019-02-11T12:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = team.UpdatedAt.Should().Be(DateTime.Parse("2020-11-10T15:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = team.ThumbnailUrl.Should().Be(new Uri("https://static-cdn.jtvnw.net/jtv_user_pictures/team-logo.png"));
         _ = team.Users.Should().NotBeNull();
         _ = team.Users.Count.Should().Be(1);
 
@@ -281,7 +294,20 @@ public sealed class TeamTests : IDisposable
     {
       ""id"": ""1"",
       ""team_name"": ""staff"",
-      ""team_display_name"": ""Twitch Staff""
+      ""team_display_name"": ""Twitch Staff"",
+      ""info"": ""Staff team"",
+      ""background_image_url"": ""https://static-cdn.jtvnw.net/jtv_user_pictures/team-background.png"",
+      ""banner"": ""https://static-cdn.jtvnw.net/jtv_user_pictures/team-banner.png"",
+      ""created_at"": ""2019-02-11T12:00:00Z"",
+      ""updated_at"": ""2020-11-10T15:00:00Z"",
+      ""thumbnail_url"": ""https://static-cdn.jtvnw.net/jtv_user_pictures/team-logo.png"",
+      ""users"": [
+        {
+          ""user_id"": ""141981764"",
+          ""user_login"": ""twitchdev"",
+          ""user_name"": ""TwitchDev""
+        }
+      ]
     }
   ]
 }");
@@ -291,6 +317,26 @@ public sealed class TeamTests : IDisposable
 
         _ = response.Should().NotBeNull();
         _ = response.Status.Should().Be(HttpStatusCode.OK);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+
+        Team team = response.Data[0];
+        _ = team.Id.Should().Be("1");
+        _ = team.TeamName.Should().Be("staff");
+        _ = team.TeamDisplayName.Should().Be("Twitch Staff");
+        _ = team.Info.Should().Be("Staff team");
+        _ = team.BackgroundImageUrl.Should().Be(new Uri("https://static-cdn.jtvnw.net/jtv_user_pictures/team-background.png"));
+        _ = team.Banner.Should().Be(new Uri("https://static-cdn.jtvnw.net/jtv_user_pictures/team-banner.png"));
+        _ = team.CreatedAt.Should().Be(DateTime.Parse("2019-02-11T12:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = team.UpdatedAt.Should().Be(DateTime.Parse("2020-11-10T15:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+        _ = team.ThumbnailUrl.Should().Be(new Uri("https://static-cdn.jtvnw.net/jtv_user_pictures/team-logo.png"));
+        _ = team.Users.Should().NotBeNull();
+        _ = team.Users.Count.Should().Be(1);
+
+        TeamMember member = team.Users[0];
+        _ = member.UserId.Should().Be("141981764");
+        _ = member.UserLogin.Should().Be("twitchdev");
+        _ = member.UserName.Should().Be("TwitchDev");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();

@@ -159,6 +159,7 @@ public sealed class CharityDonationTests : IDisposable
         _ = donation.Amount.Should().NotBeNull();
         _ = donation.Amount.Value.Should().Be(500L);
         _ = donation.Amount.DecimalPlaces.Should().Be(2);
+        _ = donation.Amount.DecimalValue.Should().Be(5.00m);
         _ = donation.Amount.Currency.Should().Be("USD");
 
         RecordedRequest? request = this._fixture.LastRequest;
@@ -167,6 +168,76 @@ public sealed class CharityDonationTests : IDisposable
         _ = request.Path.Should().Be("/helix/charity/donations");
         _ = request.QueryString.Should().Contain("broadcaster_id=123456");
         _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="CharityDonation.GetCharityCampaignDonations"/> includes after parameter in query and returns pagination cursor.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetCharityCampaignDonations")]
+    public async Task GetCharityCampaignDonations_WhenAfterProvided_IncludesAfterInQueryAndReturnsCursor()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/charity/donations", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "a1b2c3",
+                    campaign_id = "123-abc-456-def",
+                    user_id = "5678",
+                    user_login = "cool_user",
+                    user_name = "Cool_User",
+                    amount = new
+                    {
+                        value = 500L,
+                        decimal_places = 2,
+                        currency = "USD"
+                    }
+                }
+            },
+            pagination = new { cursor = "cursorNext" }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadCharity);
+        ResponseData<CharityDonation>? response = await CharityDonation.GetCharityCampaignDonations(session, "123456", after: "cursor123").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursorNext");
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=123456");
+        _ = request.QueryString.Should().Contain("after=cursor123");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="CharityDonation.GetCharityCampaignDonations"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="inputFirst">The input first value.</param>
+    /// <param name="expectedFirst">The expected clamped first value.</param>
+    [Theory]
+    [Trait("Member", "GetCharityCampaignDonations")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(101, 100)]
+    [InlineData(250, 100)]
+    public async Task GetCharityCampaignDonations_WhenFirstOutOfRange_ClampsFirst(int inputFirst, int expectedFirst)
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/charity/donations", new
+        {
+            data = Array.Empty<object>(),
+            pagination = new { }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelReadCharity);
+        _ = await CharityDonation.GetCharityCampaignDonations(session, "123456", first: inputFirst).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
     }
 
     #endregion GetCharityCampaignDonations

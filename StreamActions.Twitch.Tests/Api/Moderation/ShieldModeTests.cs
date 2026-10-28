@@ -171,6 +171,10 @@ public sealed class ShieldModeTests : IDisposable
         _ = response.Should().NotBeNull();
         _ = response.Data.Should().NotBeNull();
         _ = response.Data[0].IsActive.Should().BeFalse();
+        _ = response.Data[0].ModeratorId.Should().Be("");
+        _ = response.Data[0].ModeratorLogin.Should().Be("");
+        _ = response.Data[0].ModeratorName.Should().Be("");
+        _ = response.Data[0].LastActivatedAt.Should().Be(DateTime.Parse("1970-01-01T00:00:00Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
     }
 
     #endregion GetShieldModeStatus
@@ -246,15 +250,66 @@ public sealed class ShieldModeTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ShieldMode.UpdateShieldModeStatus"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "UpdateShieldModeStatus")]
-    public async Task UpdateShieldModeStatus_WhenValidRequest_PutsStatusAndReturnsUpdated()
+    public async Task UpdateShieldModeStatus_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
     {
-        const string json = "{\"data\":[{\"is_active\":false,\"moderator_id\":\"98765\",\"moderator_login\":\"simplysimple\",\"moderator_name\":\"SimplySimple\",\"last_activated_at\":\"2022-07-26T17:16:03.123Z\"}]}";
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModeratorManageShieldMode]
+            }
+        };
+
+        ShieldModeUpdateParameters parameters = new() { IsActive = true };
+        Func<Task> action = async () => await ShieldMode.UpdateShieldModeStatus(session, "1234", "5678", parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ShieldMode.UpdateShieldModeStatus"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateShieldModeStatus")]
+    public async Task UpdateShieldModeStatus_WhenAppToken_ReturnsUpdatedStatus()
+    {
+        const string json = "{\"data\":[{\"is_active\":true,\"moderator_id\":\"98765\",\"moderator_login\":\"simplysimple\",\"moderator_name\":\"SimplySimple\",\"last_activated_at\":\"2022-07-26T17:16:03.123Z\"}]}";
+        this._fixture.RegisterResponse("PUT", "/helix/moderation/shield_mode", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorManageShieldMode);
+        ShieldModeUpdateParameters parameters = new() { IsActive = true };
+        ResponseData<ShieldMode>? response = await ShieldMode.UpdateShieldModeStatus(session, "1234", "5678", parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ShieldMode.UpdateShieldModeStatus"/> puts status and returns updated result.
+    /// </para>
+    /// </summary>
+    /// <param name="isActive">The desired Shield Mode active state.</param>
+    [Theory]
+    [Trait("Member", "UpdateShieldModeStatus")]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UpdateShieldModeStatus_WhenValidRequest_PutsStatusAndReturnsUpdated(bool isActive)
+    {
+        string json = $"{{\"data\":[{{\"is_active\":{(isActive ? "true" : "false")},\"moderator_id\":\"98765\",\"moderator_login\":\"simplysimple\",\"moderator_name\":\"SimplySimple\",\"last_activated_at\":\"2022-07-26T17:16:03.123Z\"}}]}}";
         this._fixture.RegisterResponse("PUT", "/helix/moderation/shield_mode", json);
 
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageShieldMode);
-        ShieldModeUpdateParameters parameters = new() { IsActive = false };
+        ShieldModeUpdateParameters parameters = new() { IsActive = isActive };
         ResponseData<ShieldMode>? response = await ShieldMode.UpdateShieldModeStatus(session, "1234", "5678", parameters).ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
@@ -264,8 +319,11 @@ public sealed class ShieldModeTests : IDisposable
         _ = response.Data.Should().HaveCount(1);
 
         ShieldMode item = response.Data[0];
-        _ = item.IsActive.Should().BeFalse();
+        _ = item.IsActive.Should().Be(isActive);
         _ = item.ModeratorId.Should().Be("98765");
+        _ = item.ModeratorLogin.Should().Be("simplysimple");
+        _ = item.ModeratorName.Should().Be("SimplySimple");
+        _ = item.LastActivatedAt.Should().Be(DateTime.Parse("2022-07-26T17:16:03.123Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -273,7 +331,7 @@ public sealed class ShieldModeTests : IDisposable
         _ = request.Path.Should().Be("/helix/moderation/shield_mode");
         _ = request.QueryString.Should().Contain("broadcaster_id=1234");
         _ = request.QueryString.Should().Contain("moderator_id=5678");
-        _ = request.Body.Should().Contain("\"is_active\":false");
+        _ = request.Body.Should().Contain($"\"is_active\":{(isActive ? "true" : "false")}");
     }
 
     #endregion UpdateShieldModeStatus

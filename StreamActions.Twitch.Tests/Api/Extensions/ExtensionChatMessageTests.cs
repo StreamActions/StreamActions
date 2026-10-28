@@ -125,6 +125,11 @@ public sealed class ExtensionChatMessageTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionChatMessage.SendExtensionChatMessage"/> sends a valid POST request and returns success.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "SendExtensionChatMessage")]
     public async Task SendExtensionChatMessage_WhenValidRequest_PostsMessageAndReturnsSuccess()
@@ -152,6 +157,7 @@ public sealed class ExtensionChatMessageTests : IDisposable
         _ = request.QueryString.Should().Contain("broadcaster_id=237757755");
         _ = request.Body.Should().Contain("\"text\":\"Hello\"");
         _ = request.Body.Should().Contain("\"extension_id\":\"uo6dggojyb8d6soh92zknwmi5ej1q2\"");
+        _ = request.Body.Should().Contain("\"extension_version\":\"0.0.9\"");
     }
 
     #endregion SendExtensionChatMessage

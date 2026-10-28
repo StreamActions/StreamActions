@@ -117,6 +117,137 @@ public sealed class ModeratorTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Moderator.GetModerators"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetModerators")]
+    public async Task GetModerators_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ModerationRead]
+            }
+        };
+
+        Func<Task> action = async () => await Moderator.GetModerators(session, "1234").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Moderator.GetModerators"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetModerators")]
+    public async Task GetModerators_WhenAppToken_ReturnsModerators()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/moderators", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModerationRead);
+        ResponseData<Moderator>? response = await Moderator.GetModerators(session, "1234").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Moderator.GetModerators"/> includes multiple user IDs in query parameters.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetModerators")]
+    public async Task GetModerators_WhenMultipleUserIds_IncludesAllInQueryString()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/moderators", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModerationRead);
+        _ = await Moderator.GetModerators(session, "1234", ["111", "222"]).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("user_id=111");
+        _ = request.QueryString.Should().Contain("user_id=222");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Moderator.GetModerators"/> uses default optional parameters and omits optional parameters from the query string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetModerators")]
+    public async Task GetModerators_WhenDefaultOptionalParameters_OmitsOptionalParametersFromQueryString()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/moderators", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModerationRead);
+        _ = await Moderator.GetModerators(session, "1234").ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=1234");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("user_id");
+        _ = request.QueryString.Should().NotContain("after");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Moderator.GetModerators"/> clamps first between 1 and 100.
+    /// </para>
+    /// </summary>
+    /// <param name="first">The input first value.</param>
+    /// <param name="expectedFirst">The expected clamped first value in query string.</param>
+    [Theory]
+    [Trait("Member", "GetModerators")]
+    [InlineData(0, "1")]
+    [InlineData(200, "100")]
+    public async Task GetModerators_WhenFirstOutOfRange_ClampsFirst(int first, string expectedFirst)
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/moderators", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModerationRead);
+        _ = await Moderator.GetModerators(session, "1234", first: first).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Moderator.GetModerators"/> succeeds with alternative scopes.
+    /// </para>
+    /// </summary>
+    /// <param name="scopeName">The name of the alternative scope.</param>
+    [Theory]
+    [Trait("Member", "GetModerators")]
+    [InlineData("channel:manage:moderators")]
+    [InlineData("moderator:read:moderators")]
+    public async Task GetModerators_WhenAlternativeScopes_ReturnsModerators(string scopeName)
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/moderators", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.Scopes[scopeName]);
+        ResponseData<Moderator>? response = await Moderator.GetModerators(session, "1234").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
     [Fact]
     [Trait("Member", "GetModerators")]
     public async Task GetModerators_WhenValidRequest_ReturnsModeratorsList()
@@ -207,6 +338,28 @@ public sealed class ModeratorTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Moderator.AddChannelModerator"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AddChannelModerator")]
+    public async Task AddChannelModerator_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ChannelManageModerators]
+            }
+        };
+
+        Func<Task> action = async () => await Moderator.AddChannelModerator(session, "11111", "44444").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
     [Fact]
     [Trait("Member", "AddChannelModerator")]
     public async Task AddChannelModerator_WhenValidRequest_PostsAndReturnsNoContent()
@@ -283,6 +436,28 @@ public sealed class ModeratorTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.BitsRead);
         Func<Task> action = async () => await Moderator.RemoveChannelModerator(session, "11111", "44444").ConfigureAwait(true);
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="Moderator.RemoveChannelModerator"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RemoveChannelModerator")]
+    public async Task RemoveChannelModerator_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.ChannelManageModerators]
+            }
+        };
+
+        Func<Task> action = async () => await Moderator.RemoveChannelModerator(session, "11111", "44444").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
     }
 
     [Fact]

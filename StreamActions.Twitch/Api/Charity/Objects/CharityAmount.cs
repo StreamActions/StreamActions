@@ -40,6 +40,12 @@ public sealed record CharityAmount
     public int? DecimalPlaces { get; init; }
 
     /// <summary>
+    /// The monetary amount translated from minor units to major units.
+    /// </summary>
+    [JsonIgnore]
+    public decimal? DecimalValue => this.Value.HasValue && this.DecimalPlaces.HasValue ? this.Value.Value / (decimal)Math.Pow(10, this.DecimalPlaces.Value) : null;
+
+    /// <summary>
     /// The ISO-4217 three-letter currency code that identifies the type of currency in value.
     /// </summary>
     [JsonPropertyName("currency")]

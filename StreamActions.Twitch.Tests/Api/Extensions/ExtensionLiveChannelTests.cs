@@ -92,6 +92,11 @@ public sealed class ExtensionLiveChannelTests : IDisposable
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionLiveChannel.GetExtensionLiveChannels"/> sends a valid GET request and returns live channels.
+    /// </para>
+    /// </summary>
     [Fact]
     [Trait("Member", "GetExtensionLiveChannels")]
     public async Task GetExtensionLiveChannels_WhenValidRequest_SendsGetAndReturnsChannels()
@@ -134,7 +139,17 @@ public sealed class ExtensionLiveChannelTests : IDisposable
         _ = first.BroadcasterName.Should().Be("swoosh_xii");
         _ = first.GameName.Should().Be("Tom Clancy's Rainbow Six Siege");
         _ = first.GameId.Should().Be("460630");
-        _ = first.Title.Should().Contain("ITA/ENG");
+        _ = first.Title.Should().Be("[PS4] ITA/ENG UNRANKED CHILLIN' (SUB 1/15) - !instagram !donation !sens !team !youtube");
+
+        ExtensionLiveChannel second = response.Data[1];
+        _ = second.BroadcasterId.Should().Be("264525686");
+        _ = second.BroadcasterName.Should().Be("gaddem_");
+        _ = second.GameName.Should().Be("For Honor");
+        _ = second.GameId.Should().Be("490382");
+        _ = second.Title.Should().Be("any Ktzchen ? - 680 Rep + > Kompetitive Kitten");
+
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursor123");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -143,6 +158,63 @@ public sealed class ExtensionLiveChannelTests : IDisposable
         _ = request.QueryString.Should().Contain("extension_id=uo6dggojyb8d6soh92zknwmi5ej1q2");
         _ = request.QueryString.Should().Contain("first=20");
         _ = request.QueryString.Should().Contain("after=after_cursor");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionLiveChannel.GetExtensionLiveChannels"/> uses default optional parameters when omitted.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetExtensionLiveChannels")]
+    public async Task GetExtensionLiveChannels_WhenDefaultOptionalParameters_OmitsAfterAndDefaultsFirstTo20()
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/extensions/live", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<ExtensionLiveChannel>? response = await ExtensionLiveChannel.GetExtensionLiveChannels(session, "uo6dggojyb8d6soh92zknwmi5ej1q2").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("after");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ExtensionLiveChannel.GetExtensionLiveChannels"/> clamps the first parameter between 1 and 100.
+    /// </para>
+    /// </summary>
+    /// <param name="first">The first parameter to test.</param>
+    /// <param name="expectedFirst">The expected clamped first value in the query string.</param>
+    [Theory]
+    [Trait("Member", "GetExtensionLiveChannels")]
+    [InlineData(0, 1)]
+    [InlineData(150, 100)]
+    public async Task GetExtensionLiveChannels_WhenFirstOutOfRange_ClampsFirst(int first, int expectedFirst)
+    {
+        const string jsonResponse = """
+        {
+          "data": []
+        }
+        """;
+
+        this._fixture.RegisterResponse("GET", "/helix/extensions/live", jsonResponse);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<ExtensionLiveChannel>? response = await ExtensionLiveChannel.GetExtensionLiveChannels(session, "uo6dggojyb8d6soh92zknwmi5ej1q2", first).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
     }
 
     #endregion GetExtensionLiveChannels

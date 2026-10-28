@@ -101,6 +101,15 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
 
     [Fact]
     [Trait("Member", "GetChannelGuestStarSettings")]
+    public async Task GetChannelGuestStarSettings_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await ChannelGuestStarSettings.GetChannelGuestStarSettings(session, "9321049", "9321049").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    [Fact]
+    [Trait("Member", "GetChannelGuestStarSettings")]
     public async Task GetChannelGuestStarSettings_WhenScopeMissing_ThrowsTwitchScopeMissingException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmail);
@@ -199,6 +208,20 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
 
     [Fact]
     [Trait("Member", "UpdateChannelGuestStarSettings")]
+    public async Task UpdateChannelGuestStarSettings_WhenSessionTokenIsNotUser_ThrowsTokenTypeException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ChannelGuestStarSettingsUpdateParameters parameters = new()
+        {
+            SlotCount = 4
+        };
+
+        Func<Task> action = async () => await ChannelGuestStarSettings.UpdateChannelGuestStarSettings(session, "9321049", parameters).ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    [Fact]
+    [Trait("Member", "UpdateChannelGuestStarSettings")]
     public async Task UpdateChannelGuestStarSettings_WhenScopeMissing_ThrowsTwitchScopeMissingException()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadEmail);
@@ -238,8 +261,41 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
         _ = request.Method.Should().Be("PUT");
         _ = request.Path.Should().Be("/helix/guest_star/channel_settings");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
+        _ = request.Body.Should().Contain("\"is_moderator_send_live_enabled\":true");
         _ = request.Body.Should().Contain("\"slot_count\":4");
+        _ = request.Body.Should().Contain("\"is_browser_source_audio_enabled\":true");
         _ = request.Body.Should().Contain("\"group_layout\":\"TILED_LAYOUT\"");
+        _ = request.Body.Should().Contain("\"regenerate_browser_sources\":false");
+    }
+
+    /// <summary>
+    /// Verifies that <see cref="ChannelGuestStarSettings.UpdateChannelGuestStarSettings(TwitchSession, string, ChannelGuestStarSettingsUpdateParameters)"/>
+    /// omits null optional parameters from the request body.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "UpdateChannelGuestStarSettings")]
+    public async Task UpdateChannelGuestStarSettings_WhenOptionalParametersAreNull_OmitsNullFieldsFromBody()
+    {
+        this._fixture.RegisterStatusCode("PUT", "/helix/guest_star/channel_settings", StatusCodes.Status204NoContent);
+
+        ChannelGuestStarSettingsUpdateParameters parameters = new()
+        {
+            SlotCount = 4
+        };
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChannelManageGuestStar);
+        JsonApiResponse? response = await ChannelGuestStarSettings.UpdateChannelGuestStarSettings(session, "9321049", parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.IsSuccessStatusCode.Should().BeTrue();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"slot_count\":4");
+        _ = request.Body.Should().NotContain("is_moderator_send_live_enabled");
+        _ = request.Body.Should().NotContain("is_browser_source_audio_enabled");
+        _ = request.Body.Should().NotContain("group_layout");
+        _ = request.Body.Should().NotContain("regenerate_browser_sources");
     }
 
     #endregion UpdateChannelGuestStarSettings

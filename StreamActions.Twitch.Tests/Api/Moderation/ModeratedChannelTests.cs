@@ -94,6 +94,93 @@ public sealed class ModeratedChannelTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ModeratedChannel.GetModeratedChannels"/> throws <see cref="InvalidOperationException"/> when the token has an empty OAuth string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetModeratedChannels")]
+    public async Task GetModeratedChannels_WhenTokenHasEmptyOAuth_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                Scopes = [Scope.UserReadModeratedChannels]
+            }
+        };
+
+        Func<Task> action = async () => await ModeratedChannel.GetModeratedChannels(session, "931931").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ModeratedChannel.GetModeratedChannels"/> succeeds with an App token.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetModeratedChannels")]
+    public async Task GetModeratedChannels_WhenAppToken_ReturnsChannelsList()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/channels", json);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.UserReadModeratedChannels);
+        ResponseData<ModeratedChannel>? response = await ModeratedChannel.GetModeratedChannels(session, "931931").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ModeratedChannel.GetModeratedChannels"/> uses default optional parameters and omits after from the query string.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetModeratedChannels")]
+    public async Task GetModeratedChannels_WhenDefaultOptionalParameters_OmitsAfterFromQueryString()
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/channels", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadModeratedChannels);
+        _ = await ModeratedChannel.GetModeratedChannels(session, "931931").ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("user_id=931931");
+        _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("after");
+    }
+
+    /// <summary>
+    /// <para>
+    /// Tests that <see cref="ModeratedChannel.GetModeratedChannels"/> clamps first between 1 and 100.
+    /// </para>
+    /// </summary>
+    /// <param name="first">The input first value.</param>
+    /// <param name="expectedFirst">The expected clamped first value in query string.</param>
+    [Theory]
+    [Trait("Member", "GetModeratedChannels")]
+    [InlineData(0, "1")]
+    [InlineData(200, "100")]
+    public async Task GetModeratedChannels_WhenFirstOutOfRange_ClampsFirst(int first, string expectedFirst)
+    {
+        const string json = "{\"data\":[],\"pagination\":{}}";
+        this._fixture.RegisterResponse("GET", "/helix/moderation/channels", json);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.UserReadModeratedChannels);
+        _ = await ModeratedChannel.GetModeratedChannels(session, "931931", first: first).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
+    }
+
     [Fact]
     [Trait("Member", "GetModeratedChannels")]
     public async Task GetModeratedChannels_WhenValidRequest_ReturnsChannelsList()

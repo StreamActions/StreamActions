@@ -22,6 +22,7 @@ using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -79,7 +80,19 @@ public sealed record StreamMarker
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="parameters">The parameters for creating the stream marker.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="StreamMarker"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// <para>
+    /// <paramref name="session"/> is <see langword="null"/>.
+    /// </para>
+    /// <para>-or-</para>
+    /// <para>
+    /// <paramref name="parameters"/> is <see langword="null"/>.
+    /// </para>
+    /// <para>-or-</para>
+    /// <para>
+    /// <see cref="CreateStreamMarkerParameters.UserId"/> is <see langword="null"/> or whitespace.
+    /// </para>
+    /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if the description is too long (maximum 140 characters).</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
@@ -114,6 +127,7 @@ public sealed record StreamMarker
     /// </list>
     /// </para>
     /// </remarks>
+    [SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<StreamMarker>?> CreateStreamMarker(TwitchSession session, CreateStreamMarkerParameters parameters)
     {
         if (session is null)
@@ -124,6 +138,11 @@ public sealed record StreamMarker
         if (parameters is null)
         {
             throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+        }
+
+        if (string.IsNullOrWhiteSpace(parameters.UserId))
+        {
+            throw new ArgumentNullException(nameof(parameters.UserId)).Log(TwitchApi.GetLogger());
         }
 
         if (parameters.Description?.Length > 140)

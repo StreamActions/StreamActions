@@ -199,5 +199,58 @@ public sealed class AnnouncementTests : IDisposable
         _ = request.Body.Should().Contain("\"color\":\"blue\"");
     }
 
+    /// <summary>
+    /// Tests that <see cref="Announcement.SendChatAnnouncement"/> omits the color property from the request body when color is null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendChatAnnouncement")]
+    public async Task SendChatAnnouncement_WhenColorIsNull_OmitsColorFromBody()
+    {
+        this._fixture.RegisterStatusCode("POST", "/helix/chat/announcements", HttpStatusCode.NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorManageAnnouncements);
+        Announcement announcement = new()
+        {
+            Message = "Hello without color"
+        };
+
+        JsonApiResponse? response = await Announcement.SendChatAnnouncement(session, "12345", "67890", announcement).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"message\":\"Hello without color\"");
+        _ = request.Body.Should().NotContain("\"color\"");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Announcement.SendChatAnnouncement"/> submits for_source_only when using an app token.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "SendChatAnnouncement")]
+    public async Task SendChatAnnouncement_WhenAppTokenAndForSourceOnlyIsTrue_SendsForSourceOnlyInBody()
+    {
+        this._fixture.RegisterStatusCode("POST", "/helix/chat/announcements", HttpStatusCode.NoContent);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession(Scope.ModeratorManageAnnouncements);
+        Announcement announcement = new()
+        {
+            Message = "App announcement",
+            ForSourceOnly = true
+        };
+
+        JsonApiResponse? response = await Announcement.SendChatAnnouncement(session, "12345", "67890", announcement).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Status.Should().Be(HttpStatusCode.NoContent);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"for_source_only\":true");
+        _ = request.Body.Should().Contain("\"message\":\"App announcement\"");
+    }
+
     #endregion SendChatAnnouncement
 }

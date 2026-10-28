@@ -41,6 +41,7 @@ public sealed record SetExtensionConfigurationSegmentParameters
     /// The ID of the broadcaster that installed the extension. Include this field only if the segment is set to developer or broadcaster.
     /// </summary>
     [JsonPropertyName("broadcaster_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? BroadcasterId { get; init; }
 
     /// <summary>
@@ -50,9 +51,10 @@ public sealed record SetExtensionConfigurationSegmentParameters
     public string? Content { get; init; }
 
     /// <summary>
-    /// The version number that identifies this definition of the segment’s data. If not specified, the latest definition is updated.
+    /// The version number that identifies this definition of the segment's data. If not specified, the latest definition is updated.
     /// </summary>
     [JsonPropertyName("version")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Version { get; init; }
 }
 

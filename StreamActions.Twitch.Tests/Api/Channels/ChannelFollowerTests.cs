@@ -174,6 +174,73 @@ public sealed class ChannelFollowerTests : IDisposable
         _ = request.Path.Should().Be("/helix/channels/followers");
         _ = request.QueryString.Should().Contain("broadcaster_id=123456");
         _ = request.QueryString.Should().Contain("first=20");
+        _ = request.QueryString.Should().NotContain("user_id=");
+        _ = request.QueryString.Should().NotContain("after=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelFollower.GetChannelFollowers"/> includes user_id and after query parameters and parses cursor when provided.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetChannelFollowers")]
+    public async Task GetChannelFollowers_WhenUserIdAndAfterProvided_IncludesInQueryAndReturnsCursor()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/channels/followers", new
+        {
+            total = 1,
+            data = new[]
+            {
+                new
+                {
+                    user_id = "654321",
+                    user_name = "BasketWeaver101",
+                    user_login = "basketweaver101",
+                    followed_at = new DateTime(2022, 5, 24, 22, 22, 8, DateTimeKind.Utc)
+                }
+            },
+            pagination = new { cursor = "cursorNext" }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorReadFollowers);
+        ResponseData<ChannelFollower>? response = await ChannelFollower.GetChannelFollowers(session, "123456", userId: "654321", after: "cursor123").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Pagination.Should().NotBeNull();
+        _ = response.Pagination.Cursor.Should().Be("cursorNext");
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain("broadcaster_id=123456");
+        _ = request.QueryString.Should().Contain("user_id=654321");
+        _ = request.QueryString.Should().Contain("after=cursor123");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelFollower.GetChannelFollowers"/> clamps the first parameter between 1 and 100.
+    /// </summary>
+    /// <param name="inputFirst">The input first value.</param>
+    /// <param name="expectedFirst">The expected clamped first value.</param>
+    [Theory]
+    [Trait("Member", "GetChannelFollowers")]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(101, 100)]
+    [InlineData(250, 100)]
+    public async Task GetChannelFollowers_WhenFirstOutOfRange_ClampsFirst(int inputFirst, int expectedFirst)
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/channels/followers", new
+        {
+            total = 0,
+            data = Array.Empty<object>(),
+            pagination = new { }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ModeratorReadFollowers);
+        _ = await ChannelFollower.GetChannelFollowers(session, "123456", first: inputFirst).ConfigureAwait(true);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.QueryString.Should().Contain($"first={expectedFirst}");
     }
 
     #endregion GetChannelFollowers
