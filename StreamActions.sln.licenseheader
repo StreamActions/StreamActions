@@ -17,7 +17,7 @@ extensions: .cs .js .css
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-extensions: .html
+extensions: .html .md
 <!--
 /*
  * This file is part of StreamActions.
@@ -57,7 +57,7 @@ extensions: .cshtml
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  *@
 
-extensions: .ps1
+extensions: .ps1 .yml .yaml
 #
 # This file is part of StreamActions.
 # Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -97,7 +97,7 @@ extensions: .py
 #
 
 extensions: .sh
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # This file is part of StreamActions.
 # Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
