@@ -1,5 +1,5 @@
 # AGENTS.md
-This file contains instructions for Generative AI Agents when creating or editing files in this folder, or any sub-folder therein, including, but not limited to: Jules, Copilot, etc
+This file contains instructions for Generative AI Agents when creating or editing files in this folder, or any sub-folder therein
 
 ## Common rules for `.cs` files
 - Use `StreamActions.Twitch/Api/Games/Game.cs` and `StreamActions.Twitch/Api/ChannelPoints/ChannelPointsRedemption.cs` as style references
@@ -10,7 +10,6 @@ This file contains instructions for Generative AI Agents when creating or editin
 - If scopes are required, specify the first potential scope as the first parameter to `session.RequireToken`
 - If scopes are required and an alternate scope is available, specify the alternate potential scope as the second parameter to `session.RequireToken`
 - If scopes are required, the XMLDoc must also specify the `TwitchScopeMissingException` that would be thrown by `session.RequireToken` in the same style as `GetCustomRewardRedemption` in `StreamActions.Twitch/Api/ChannelPoints/ChannelPointsRedemption.cs`, even if it is not explicitly thrown
-- Remove the `/helix` prefix from the beginning of the Uri, as `TwitchAPI.PerformHttpRequest` already prepends it
 - When a method contains both the `before` and `after` parameters, they are mutually exclusive and should throw `InvalidOperationException` when both specified. Use the same format and message as `GetVideos` in `StreamActions.Twitch/Api/Videos/Video.cs`
 - Inline the `requestUri` parameter in the call to `TwitchAPI.PerformHttpRequest`
 - If a method has a parameter named `first`, set it to be not null with a default value based on the API documentation

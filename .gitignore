@@ -399,4 +399,6 @@ FodyWeavers.xsd
 *.sln.iml
 
 # Agents
-.agents/
+.agents/local-config-path.txt
+.agents/scratch/
+.agents/reports/
