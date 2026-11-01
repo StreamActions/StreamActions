@@ -62,6 +62,33 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Common.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamActions.Twitch.Tests", "StreamActions.Twitch.Tests\StreamActions.Twitch.Tests.csproj", "{4F3D8BD1-B7C4-40D6-88E1-976B16778694}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".agents", ".agents", "{4C41B3BD-4B7D-42C4-8BC6-51026DFEE4F5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "agents", "agents", "{F18D305E-8320-42B4-9C5D-1A9A54EE02D2}"
+	ProjectSection(SolutionItems) = preProject
+		.agents\agents\deep-debugger.md = .agents\agents\deep-debugger.md
+		.agents\agents\flash-researcher.md = .agents\agents\flash-researcher.md
+		.agents\agents\orchestrator.md = .agents\agents\orchestrator.md
+		.agents\agents\performance-auditor.md = .agents\agents\performance-auditor.md
+		.agents\agents\rapid-coder.md = .agents\agents\rapid-coder.md
+		.agents\agents\security-auditor.md = .agents\agents\security-auditor.md
+		.agents\agents\triage-sweeper.md = .agents\agents\triage-sweeper.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "rules", "rules", "{362E8EAC-B1ED-4359-B4F9-9E08E06BC31A}"
+	ProjectSection(SolutionItems) = preProject
+		.agents\rules\00-global-discipline.md = .agents\rules\00-global-discipline.md
+		.agents\rules\05-sandbox-execution.md = .agents\rules\05-sandbox-execution.md
+		.agents\rules\10-csharp-dotnet.md = .agents\rules\10-csharp-dotnet.md
+		.agents\rules\20-python-uv.md = .agents\rules\20-python-uv.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "skills", "skills", "{2321DE2B-1873-4A90-98BC-1E3DB3A4CDAA}"
+	ProjectSection(SolutionItems) = preProject
+		.agents\skills\dotnet-build-verify\SKILL.md = .agents\skills\dotnet-build-verify\SKILL.md
+		.agents\skills\sync-command-permissions\SKILL.md = .agents\skills\sync-command-permissions\SKILL.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,6 +124,10 @@ Global
 		{1DD9B026-7091-40A7-A894-30AB112B0BAB} = {053F4217-0F28-42B3-82C0-9DF0A45FC07B}
 		{6B032988-4562-4B7D-9C3B-4126CAB7814A} = {053F4217-0F28-42B3-82C0-9DF0A45FC07B}
 		{DFA13A5D-5227-47A7-B628-A16CE70BF14E} = {053F4217-0F28-42B3-82C0-9DF0A45FC07B}
+		{4C41B3BD-4B7D-42C4-8BC6-51026DFEE4F5} = {FACD7079-AFA7-4323-8616-47C32618F81B}
+		{F18D305E-8320-42B4-9C5D-1A9A54EE02D2} = {4C41B3BD-4B7D-42C4-8BC6-51026DFEE4F5}
+		{362E8EAC-B1ED-4359-B4F9-9E08E06BC31A} = {4C41B3BD-4B7D-42C4-8BC6-51026DFEE4F5}
+		{2321DE2B-1873-4A90-98BC-1E3DB3A4CDAA} = {4C41B3BD-4B7D-42C4-8BC6-51026DFEE4F5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D82579FF-6BEE-4F68-B17C-C4635780B6AF}
