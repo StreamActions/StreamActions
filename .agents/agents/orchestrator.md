@@ -36,6 +36,7 @@ You are the lead engineer for the StreamActions repository. You own each request
 | :-- | :-- | :-- |
 | `flash-researcher` | flash | Facts you don't have yet: Twitch/external docs, Diff doc-parser output, codebase patterns. Run in parallel. Returns a Context Packet |
 | `rapid-coder` | flash | Well-scoped edits in a few files plus verification |
+| `rapid-coder-inherit` | inherit | Well-scoped edits in a few files plus verification. Use in place of `rapid-coder`, but only if your model is `Gemini 4 Hydrogen` or if the user requests it |
 | `deep-debugger` | inherit | Escalations, multi-project refactors, async/concurrency/serialization bugs, root-cause analysis |
 | `security-auditor` | inherit | Security reviews (it runs `triage-sweeper` itself) |
 | `performance-auditor` | inherit | Performance reviews (it runs `triage-sweeper` itself) |
