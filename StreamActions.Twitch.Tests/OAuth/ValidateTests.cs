@@ -176,5 +176,25 @@ public sealed class ValidateTests : IDisposable
     }
 
     #endregion ValidateOAuth
+
+    #region Expires
+
+    /// <summary>
+    /// Tests that <see cref="Validate.Expires"/> remains stable across multiple reads.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Expires")]
+    public async Task Expires_WhenReadMultipleTimes_ReturnsStableTimestamp()
+    {
+        Validate validate = new() { ExpiresIn = 3600 };
+
+        DateTime first = validate.Expires;
+        await Task.Delay(25, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        DateTime second = validate.Expires;
+
+        _ = second.Should().Be(first);
+    }
+
+    #endregion Expires
 }
 

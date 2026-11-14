@@ -93,7 +93,7 @@ public sealed class EventSubWebhookTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> returns a 200 OK status with the challenge string body when processing a verification request.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> returns a 200 OK status with the challenge string body when processing a verification request.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -123,7 +123,7 @@ public sealed class EventSubWebhookTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> over HTTP returns a 200 OK response with the challenge string.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> over HTTP returns a 200 OK response with the challenge string.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -153,7 +153,7 @@ public sealed class EventSubWebhookTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> parses and returns a typed notification event with full metadata and subscription information.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> parses and returns a typed notification event with full metadata and subscription information.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -301,7 +301,7 @@ public sealed class EventSubWebhookTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> parses and returns a revocation event with metadata and subscription details.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> parses and returns a revocation event with metadata and subscription details.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -375,7 +375,7 @@ public sealed class EventSubWebhookTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> returns 403 Forbidden when the message timestamp header is invalid or cannot be parsed.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> returns 403 Forbidden when the message timestamp header is invalid or cannot be parsed.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -402,7 +402,7 @@ public sealed class EventSubWebhookTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string)"/> returns 202 Accepted with a null event when the subscription type is unrecognized.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> returns 202 Accepted with a null event when the subscription type is unrecognized.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -748,6 +748,85 @@ public sealed class EventSubWebhookTests : IDisposable
         HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public async Task ProcessWebhook_WhenTimestampExceedsMaxAgeUnderFakeTimeProvider_ReturnsForbidden()
+    {
+        TestTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        string messageId = Guid.NewGuid().ToString();
+        DateTime messageTime = timeProvider.GetUtcNow().UtcDateTime;
+        string timestamp = messageTime.ToString("o", CultureInfo.InvariantCulture);
+        const string body = """{"challenge":"pogchamp-challenge"}""";
+
+        timeProvider.Advance(TimeSpan.FromMinutes(9));
+        DefaultHttpContext validContext = CreateWebhookHttpContext(
+            this._fixture.WebhookSecret,
+            messageId,
+            timestamp,
+            "webhook_callback_verification",
+            body);
+
+        EventSubWebhookResult validResult = await EventSubService.ProcessWebhook(validContext.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
+        _ = validResult.StatusCode.Should().Be(StatusCodes.Status200OK);
+        _ = validResult.IsVerified.Should().BeTrue();
+
+        timeProvider.Advance(TimeSpan.FromMinutes(2));
+        DefaultHttpContext expiredContext = CreateWebhookHttpContext(
+            this._fixture.WebhookSecret,
+            messageId,
+            timestamp,
+            "webhook_callback_verification",
+            body);
+
+        EventSubWebhookResult expiredResult = await EventSubService.ProcessWebhook(expiredContext.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
+        _ = expiredResult.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        _ = expiredResult.IsVerified.Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public async Task ProcessWebhook_WhenMessageIdPrunedAfterMaxAgeUnderFakeTimeProvider_IsNoLongerDuplicate()
+    {
+        TestTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        string messageId = Guid.NewGuid().ToString();
+        const string body = "{}";
+
+        string timestamp1 = timeProvider.GetUtcNow().UtcDateTime.ToString("o", CultureInfo.InvariantCulture);
+        DefaultHttpContext context1 = CreateWebhookHttpContext(
+            this._fixture.WebhookSecret,
+            messageId,
+            timestamp1,
+            "notification",
+            body);
+
+        EventSubWebhookResult firstResult = await EventSubService.ProcessWebhook(context1.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
+        _ = firstResult.IsDuplicate.Should().BeFalse();
+
+        timeProvider.Advance(TimeSpan.FromMinutes(5));
+        string timestamp2 = timeProvider.GetUtcNow().UtcDateTime.ToString("o", CultureInfo.InvariantCulture);
+        DefaultHttpContext context2 = CreateWebhookHttpContext(
+            this._fixture.WebhookSecret,
+            messageId,
+            timestamp2,
+            "notification",
+            body);
+
+        EventSubWebhookResult duplicateResult = await EventSubService.ProcessWebhook(context2.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
+        _ = duplicateResult.IsDuplicate.Should().BeTrue();
+
+        timeProvider.Advance(TimeSpan.FromMinutes(6));
+        string timestamp3 = timeProvider.GetUtcNow().UtcDateTime.ToString("o", CultureInfo.InvariantCulture);
+        DefaultHttpContext context3 = CreateWebhookHttpContext(
+            this._fixture.WebhookSecret,
+            messageId,
+            timestamp3,
+            "notification",
+            body);
+
+        EventSubWebhookResult afterPruneResult = await EventSubService.ProcessWebhook(context3.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
+        _ = afterPruneResult.IsDuplicate.Should().BeFalse();
     }
 
     #endregion ProcessWebhook

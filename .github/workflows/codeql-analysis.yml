@@ -19,7 +19,7 @@ jobs:
       actions: read
       contents: read
       security-events: write
-    if: github.actor != 'dependabot'
+    if: github.actor != 'dependabot[bot]'
     strategy:
       fail-fast: false
       matrix:
@@ -39,7 +39,7 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL

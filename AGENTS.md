@@ -28,12 +28,12 @@ This file contains instructions for Generative AI Agents
 
 - The project name is the root namespace and the project folder name. Sub-folders map to sub-namespaces
 - Projects may contain `Usings.cs` (project-wide `global using` directives) and `GlobalSuppressions.cs` (assembly-level `SuppressMessage` attributes)
-- All projects target `net9.0` and must stay forward-compatible with .NET 10 and later
+- All projects target `net10.0` and must stay forward-compatible with .NET 11 and later
 - Each test project is named `<Project>.Tests` and is granted `InternalsVisibleTo` by the project under test
 
 ## Python tooling (uv)
 - Each Python folder is an independent `uv` project with its own `pyproject.toml` and `uv.lock` (Python >= 3.13)
-- `/Diff`: Twitch documentation parsers. `DocParserFinder.py` discovers `[DocParser(...)]` attributes in `.cs` files, and `.github/workflows/update-issues.yml` runs the matching parser in `Diff/parsers/` to keep tracking issues up to date
+- `/Diff`: Platform documentation parsers (`BaseParser.py` is 100% website-agnostic; platform parsers live in `Diff/parsers/<platform>/`, e.g., `Diff/parsers/twitch/`). `DocParserFinder.py` discovers `[DocParser(...)]` attributes in `.cs` files, and `.github/workflows/update-issues.yml` runs the matching parser in `Diff/parsers/` to keep tracking issues up to date
 - `/TldRegexUpdater`: generates the TLD portion of the chat link-detection regex from the IANA TLD list
 
 ## CI

@@ -311,7 +311,7 @@ All members must follow _Microsoft.Naming_, defined in the Microsoft .NET Framew
 
 ### Required Tools
 To work on StreamActions, the following tools are required:
-* ASP.NET 9.0 Runtime/SDK
+* ASP.NET 10.0 Runtime/SDK
 * Git
     * Configured to use GPG if setup
 * A GitHub account linked to your git commit email address
@@ -324,7 +324,7 @@ To work on StreamActions, the following tools are required:
 If you are working on StreamActions from a Windows 11 or later environment, the following tools are recommended to achieve the requirements above:
 * [Visual Studio 2026](https://visualstudio.microsoft.com/) (Any edition)
     * Workload: _ASP.NET and web development_ 
-        * Individual Component: _.NET 9.0 Runtime_
+        * Individual Component: _.NET 10.0 Runtime_
     * Workload: _Python development_ (If testing/running Python scripts)
     * Individual Component: _Git for Windows_ (If not being installed separately)
     * The extensions listed in the next section
@@ -333,7 +333,7 @@ If you are working on StreamActions from a Windows 11 or later environment, the 
 * [Git for Windows](https://git-scm.com/) (If not installed from the Visual Studio Installer)
     * Configured to use GPG if Gpg4win is setup
 
-NOTE: If you are using Visual Studio, you must use 2022 or later to access the ASP.NET 9.0 Runtime/SDK.
+NOTE: If you are using Visual Studio, you must use 2026 or later to access the ASP.NET 10.0 Runtime/SDK.
 
 ### Recommended Extensions
 We have included a _StreamActions.vsext_ file which contains direct references to the below extensions for easy installation. Just install [Extension Manager 2022](https://marketplace.visualstudio.com/items?itemName=Loop8ack.ExtensionManager2022), restart Visual Studio, and then use the _Extensions > Import and Export Extensions > Import Extensions..._ menu option to import it. The dialog will allow you to select which extensions you want to use. This makes it easy to keep up as our extension set evolves, as you can simply re-run the action to import new extensions.

@@ -320,7 +320,7 @@ public sealed record Prediction
             throw new ArgumentNullException(nameof(parameters.PredictionWindowSeconds)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Outcomes is null || !parameters.Outcomes.Any())
+        if (parameters.Outcomes is null || parameters.Outcomes.Count == 0)
         {
             throw new ArgumentNullException(nameof(parameters.Outcomes)).Log(TwitchApi.GetLogger());
         }

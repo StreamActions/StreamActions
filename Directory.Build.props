@@ -5,6 +5,7 @@
     <AnalysisLevelStyle>latest-all</AnalysisLevelStyle>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 </Project>
 

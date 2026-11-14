@@ -23,6 +23,7 @@ using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.EventSub.Common;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Collections.Specialized;
@@ -39,11 +40,10 @@ namespace StreamActions.Twitch.EventSub;
 /// <summary>
 /// Handles processing of messages for EventSub, including creating websocket connections and processing webhooks.
 /// </summary>
-[DocParser("EventSub Subscription Types", 57, "https://dev.twitch.tv/docs/eventsub/eventsub-subscription-types/", "TwitchEventSubSubscriptionTypesParser")]
-[DocParser("EventSub Fields", 57, "https://dev.twitch.tv/docs/eventsub/eventsub-reference/", "TwitchEventSubReferenceParser")]
-[DocParser("EventSub WebSocket Messages", 57, "https://dev.twitch.tv/docs/eventsub/websocket-reference/", "TwitchEventSubWebSocketMessagesParser")]
-[DocParser("EventSub Webhook Handling", 57, "https://dev.twitch.tv/docs/eventsub/handling-webhook-events/", "TwitchGenericDocumentationParser")]
-[DocParser("EventSub Websocket Handling", 57, "https://dev.twitch.tv/docs/eventsub/handling-websocket-events/", "TwitchGenericDocumentationParser")]
+[DocParser("EventSub Fields", 57, "https://dev.twitch.tv/docs/eventsub/reference/", "twitch/TwitchEventSubReferenceParser")]
+[DocParser("EventSub WebSocket Messages", 57, "https://dev.twitch.tv/docs/eventsub/websocket-reference/", "twitch/TwitchEventSubWebSocketMessagesParser")]
+[DocParser("EventSub Webhook Handling", 57, "https://dev.twitch.tv/docs/eventsub/handling-webhook-events/", "twitch/TwitchGenericDocumentationParser")]
+[DocParser("EventSub Websocket Handling", 57, "https://dev.twitch.tv/docs/eventsub/handling-websocket-events/", "twitch/TwitchGenericDocumentationParser")]
 public sealed class EventSub
 {
     /// <summary>
@@ -157,7 +157,18 @@ public sealed class EventSub
     /// <summary>
     /// A cache mapping EventSub subscription types to deserialization factory delegates.
     /// </summary>
-    private static readonly FrozenDictionary<string, Func<byte[], EventMetadata, IEventSubEvent>> _subscriptionTypeCache = BuildSubscriptionTypeCache();
+    private static readonly FrozenDictionary<string, SubscriptionDeserializer> _subscriptionTypeCache = BuildSubscriptionTypeCache();
+
+    /// <summary>
+    /// Encapsulates deserialization delegates and payload type metadata for an EventSub subscription type.
+    /// </summary>
+    /// <param name="FromBytes">Delegate to deserialize from raw UTF-8 bytes.</param>
+    /// <param name="PayloadType">The concrete <see cref="EventPayload{TEventType}"/> type.</param>
+    /// <param name="WrapPayload">Delegate to wrap a deserialized payload object into an <see cref="IEventSubEvent"/>.</param>
+    private readonly record struct SubscriptionDeserializer(
+        Func<byte[], EventMetadata, IEventSubEvent> FromBytes,
+        Type PayloadType,
+        Func<object?, EventMetadata, IEventSubEvent> WrapPayload);
 
     #endregion Private Fields
 
@@ -168,6 +179,7 @@ public sealed class EventSub
     /// </summary>
     /// <param name="request">The incoming HTTP request representing the webhook message.</param>
     /// <param name="secret">The secret string configured for the EventSub subscription to verify message signatures.</param>
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> used for timestamp and replay-window checks, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
     /// <returns>An <see cref="EventSubWebhookResult"/> containing the processing results and appropriate HTTP response information.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="request"/> is <see langword="null"/>; or <paramref name="secret"/> is <see langword="null"/> or whitespace.</exception>
     /// <remarks>
@@ -187,7 +199,7 @@ public sealed class EventSub
     /// Duplicate detection is maintained in-memory per process (not shared across multiple server instances) with a 10-minute window.
     /// </para>
     /// </remarks>
-    public static async Task<EventSubWebhookResult> ProcessWebhook(HttpRequest request, string secret)
+    public static async Task<EventSubWebhookResult> ProcessWebhook(HttpRequest request, string secret, TimeProvider? timeProvider = null)
     {
         if (request is null)
         {
@@ -198,6 +210,8 @@ public sealed class EventSub
         {
             throw new ArgumentNullException(nameof(secret)).Log(TwitchApi.GetLogger());
         }
+
+        TimeProvider effectiveTimeProvider = timeProvider ?? TimeProvider.System;
 
         using MemoryStream memoryStream = new();
         await request.Body.CopyToAsync(memoryStream).ConfigureAwait(false);
@@ -231,7 +245,8 @@ public sealed class EventSub
             };
         }
 
-        if (DateTime.UtcNow - parsedTimestamp > _messageMaxAge)
+        DateTime utcNow = effectiveTimeProvider.GetUtcNow().UtcDateTime;
+        if (utcNow - parsedTimestamp > _messageMaxAge)
         {
             return new()
             {
@@ -276,9 +291,9 @@ public sealed class EventSub
             };
         }
 
-        PruneSeenMessages();
+        PruneSeenMessages(effectiveTimeProvider);
 
-        if (!_seenMessageIds.TryAdd(messageId, DateTime.UtcNow))
+        if (!_seenMessageIds.TryAdd(messageId, utcNow))
         {
             return new()
             {
@@ -307,9 +322,9 @@ public sealed class EventSub
 
         IEventSubEvent? eventData = null;
         if (!string.IsNullOrWhiteSpace(subscriptionType) &&
-            _subscriptionTypeCache.TryGetValue(subscriptionType, out Func<byte[], EventMetadata, IEventSubEvent>? factory))
+            _subscriptionTypeCache.TryGetValue(subscriptionType, out SubscriptionDeserializer deserializer))
         {
-            eventData = factory(bodyBytes, metadata);
+            eventData = deserializer.FromBytes(bodyBytes, metadata);
         }
 
         return new()
@@ -370,6 +385,7 @@ public sealed class EventSub
     /// </summary>
     /// <param name="socket">The WebSocket connection from which to receive the message.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous receive operation.</param>
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> used for replay-window and cache-pruning checks, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
     /// <returns>An <see cref="EventSubWebsocketResult"/> containing the received event, close code, or exception information.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="socket"/> is <see langword="null"/>.</exception>
     /// <remarks>
@@ -381,28 +397,29 @@ public sealed class EventSub
     /// </para>
     /// </remarks>
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Socket exceptions are intentionally caught and returned in the result record.")]
-    public static async Task<EventSubWebsocketResult> ReceiveWebsocketMessageAsync(WebSocket socket, CancellationToken cancellationToken = default)
+    [SuppressMessage("Design", "CA1068:CancellationToken parameters must come last", Justification = "The timeProvider parameter is placed last as it is only intended to be overridden for testing purposes.")]
+    public static async Task<EventSubWebsocketResult> ReceiveWebsocketMessageAsync(WebSocket socket, CancellationToken cancellationToken = default, TimeProvider? timeProvider = null)
     {
         if (socket is null)
         {
             throw new ArgumentNullException(nameof(socket)).Log(TwitchApi.GetLogger());
         }
 
-        byte[] buffer = new byte[4096];
-        using MemoryStream memoryStream = new();
-        WebSocketReceiveResult receiveResult;
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(4096);
+        ArrayBufferWriter<byte> bufferWriter = new();
+        ValueWebSocketReceiveResult receiveResult;
 
         try
         {
             do
             {
-                receiveResult = await socket.ReceiveAsync(new(buffer), cancellationToken).ConfigureAwait(false);
+                receiveResult = await socket.ReceiveAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
                 if (receiveResult.MessageType == WebSocketMessageType.Close)
                 {
                     break;
                 }
 
-                await memoryStream.WriteAsync(buffer.AsMemory(0, receiveResult.Count), cancellationToken).ConfigureAwait(false);
+                bufferWriter.Write(buffer.AsSpan(0, receiveResult.Count));
             }
             while (!receiveResult.EndOfMessage);
         }
@@ -413,10 +430,14 @@ public sealed class EventSub
                 Exception = ex
             };
         }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
 
         if (receiveResult.MessageType == WebSocketMessageType.Close)
         {
-            WebSocketCloseStatus? closeStatus = receiveResult.CloseStatus ?? socket.CloseStatus;
+            WebSocketCloseStatus? closeStatus = socket.CloseStatus;
             CloseCodes closeCode = closeStatus.HasValue && Enum.IsDefined(typeof(CloseCodes), (int)closeStatus.Value)
                 ? (CloseCodes)(int)closeStatus.Value
                 : CloseCodes.None;
@@ -427,8 +448,7 @@ public sealed class EventSub
             };
         }
 
-        byte[] messageBytes = memoryStream.ToArray();
-        if (messageBytes.Length == 0)
+        if (bufferWriter.WrittenCount == 0)
         {
             return new()
             {
@@ -437,7 +457,7 @@ public sealed class EventSub
             };
         }
 
-        using JsonDocument document = JsonDocument.Parse(messageBytes);
+        using JsonDocument document = JsonDocument.Parse(bufferWriter.WrittenMemory);
         if (!document.RootElement.TryGetProperty("metadata", out JsonElement metadataElement))
         {
             return new()
@@ -472,9 +492,10 @@ public sealed class EventSub
 
         if (!string.IsNullOrWhiteSpace(messageId))
         {
-            PruneSeenMessages();
+            TimeProvider effectiveTimeProvider = timeProvider ?? TimeProvider.System;
+            PruneSeenMessages(effectiveTimeProvider);
 
-            if (!_seenMessageIds.TryAdd(messageId, DateTime.UtcNow))
+            if (!_seenMessageIds.TryAdd(messageId, effectiveTimeProvider.GetUtcNow().UtcDateTime))
             {
                 return new()
                 {
@@ -506,11 +527,11 @@ public sealed class EventSub
                 case EventMetadata.MessageTypes.Notification:
                 case EventMetadata.MessageTypes.Revocation:
                     if (!string.IsNullOrWhiteSpace(metadata.SubscriptionType) &&
-                        _subscriptionTypeCache.TryGetValue(metadata.SubscriptionType, out Func<byte[], EventMetadata, IEventSubEvent>? factory) &&
+                        _subscriptionTypeCache.TryGetValue(metadata.SubscriptionType, out SubscriptionDeserializer deserializer) &&
                         document.RootElement.TryGetProperty("payload", out JsonElement eventPayloadElement))
                     {
-                        byte[] payloadBytes = Encoding.UTF8.GetBytes(eventPayloadElement.GetRawText());
-                        eventData = factory(payloadBytes, metadata);
+                        object? payload = eventPayloadElement.Deserialize(deserializer.PayloadType, TwitchApi.SerializerOptions);
+                        eventData = deserializer.WrapPayload(payload, metadata);
                     }
                     break;
                 default:
@@ -532,11 +553,12 @@ public sealed class EventSub
     /// <summary>
     /// Builds the cache mapping subscription type strings to deserialization factory delegates.
     /// </summary>
-    /// <returns>A frozen dictionary mapping subscription types to factory delegates.</returns>
-    private static FrozenDictionary<string, Func<byte[], EventMetadata, IEventSubEvent>> BuildSubscriptionTypeCache()
+    /// <returns>A frozen dictionary mapping subscription types to deserializer entries.</returns>
+    private static FrozenDictionary<string, SubscriptionDeserializer> BuildSubscriptionTypeCache()
     {
-        Dictionary<string, Func<byte[], EventMetadata, IEventSubEvent>> cache = [];
+        Dictionary<string, SubscriptionDeserializer> cache = [];
         MethodInfo deserializeMethod = typeof(EventSub).GetMethod(nameof(DeserializeEventSubEvent), BindingFlags.NonPublic | BindingFlags.Static)!;
+        MethodInfo wrapMethod = typeof(EventSub).GetMethod(nameof(WrapEventSubEvent), BindingFlags.NonPublic | BindingFlags.Static)!;
 
         foreach (Type type in typeof(EventSub).Assembly.GetTypes())
         {
@@ -547,13 +569,30 @@ public sealed class EventSub
                 {
                     MethodInfo genericMethod = deserializeMethod.MakeGenericMethod(type);
                     Func<byte[], EventMetadata, IEventSubEvent> handler = genericMethod.CreateDelegate<Func<byte[], EventMetadata, IEventSubEvent>>();
-                    cache[subscriptionType] = handler;
+                    Type payloadType = typeof(EventPayload<>).MakeGenericType(type);
+                    MethodInfo genericWrapMethod = wrapMethod.MakeGenericMethod(type);
+                    Func<object?, EventMetadata, IEventSubEvent> wrapHandler = genericWrapMethod.CreateDelegate<Func<object?, EventMetadata, IEventSubEvent>>();
+                    cache[subscriptionType] = new(handler, payloadType, wrapHandler);
                 }
             }
         }
 
         return cache.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Wraps a deserialized payload object into an <see cref="EventSubEvent{TEventType}"/> with the specified metadata.
+    /// </summary>
+    /// <typeparam name="TEventType">The event payload type.</typeparam>
+    /// <param name="payload">The deserialized payload instance.</param>
+    /// <param name="metadata">The metadata extracted from the message.</param>
+    /// <returns>An <see cref="EventSubEvent{TEventType}"/> instance implementing <see cref="IEventSubEvent"/>.</returns>
+    private static EventSubEvent<TEventType> WrapEventSubEvent<TEventType>(object? payload, EventMetadata metadata) where TEventType : IEventSubType =>
+        new()
+        {
+            Metadata = metadata,
+            Payload = payload as EventPayload<TEventType>
+        };
 
     /// <summary>
     /// Deserializes the body into an <see cref="EventSubEvent{TEventType}"/> with the specified metadata.
@@ -578,6 +617,7 @@ public sealed class EventSub
     /// <summary>
     /// Prunes expired message IDs from the duplicate detection cache if the prune interval has elapsed.
     /// </summary>
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> used to determine the current UTC time.</param>
     /// <remarks>
     /// <para>
     /// This method is amortized to execute at most once per <see cref="_pruneInterval"/>.
@@ -586,9 +626,10 @@ public sealed class EventSub
     /// Thread safety is ensured using <see cref="Interlocked.CompareExchange(ref long, long, long)"/> so that only one caller performs the cleanup, removing entries whose first-seen time is older than <see cref="_messageMaxAge"/>.
     /// </para>
     /// </remarks>
-    private static void PruneSeenMessages()
+    private static void PruneSeenMessages(TimeProvider timeProvider)
     {
-        long nowTicks = DateTime.UtcNow.Ticks;
+        DateTime utcNow = timeProvider.GetUtcNow().UtcDateTime;
+        long nowTicks = utcNow.Ticks;
         long lastPruneTicks = Volatile.Read(ref _lastPruneTicks);
 
         if ((nowTicks - lastPruneTicks) < _pruneInterval.Ticks)
@@ -601,7 +642,7 @@ public sealed class EventSub
             return;
         }
 
-        DateTime cutoff = DateTime.UtcNow - _messageMaxAge;
+        DateTime cutoff = utcNow - _messageMaxAge;
         foreach (KeyValuePair<string, DateTime> entry in _seenMessageIds)
         {
             if (entry.Value < cutoff)

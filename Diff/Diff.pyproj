@@ -36,20 +36,26 @@
   <ItemGroup>
     <Compile Include="DocParserFinder.py" />
     <Compile Include="parsers\BaseParser.py" />
-    <Compile Include="parsers\TwitchEventSubReferenceParser.py" />
-    <Compile Include="parsers\TwitchEventSubSubscriptionTypesParser.py" />
-    <Compile Include="parsers\TwitchEventSubWebSocketMessagesParser.py" />
-    <Compile Include="parsers\TwitchScopesParser.py" />
-    <Compile Include="parsers\TwitchReferenceParser.py" />
+    <Compile Include="parsers\twitch\TwitchEventSubReferenceParser.py" />
+    <Compile Include="parsers\twitch\TwitchEventSubWebSocketMessagesParser.py" />
+    <Compile Include="parsers\twitch\TwitchGenericDocumentationParser.py" />
+    <Compile Include="parsers\twitch\TwitchMarkdownBaseParser.py" />
+    <Compile Include="parsers\twitch\TwitchOAuthParser.py" />
+    <Compile Include="parsers\twitch\TwitchOidcParser.py" />
+    <Compile Include="parsers\twitch\TwitchReferenceParser.py" />
+    <Compile Include="parsers\twitch\TwitchRefreshParser.py" />
+    <Compile Include="parsers\twitch\TwitchRevokeParser.py" />
+    <Compile Include="parsers\twitch\TwitchScopesParser.py" />
+    <Compile Include="parsers\twitch\TwitchValidateParser.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="parsers\" />
+    <Folder Include="parsers\twitch\" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|Astral|CPython3.13.5" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="parsers\TwitchGenericDocumentationParser.py" />
     <Content Include="pyproject.toml" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

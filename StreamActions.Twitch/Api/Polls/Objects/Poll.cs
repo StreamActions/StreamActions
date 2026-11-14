@@ -318,7 +318,7 @@ public sealed record Poll
             throw new ArgumentNullException(nameof(parameters.Duration)).Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Choices is null || !parameters.Choices.Any())
+        if (parameters.Choices is null || parameters.Choices.Count == 0)
         {
             throw new ArgumentNullException(nameof(parameters.Choices)).Log(TwitchApi.GetLogger());
         }

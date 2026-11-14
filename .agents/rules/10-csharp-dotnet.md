@@ -13,12 +13,11 @@ globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/
 - In `.csproj` files, use `<PackageReference Include="..." />` with no `Version` attribute. Never use `VersionOverride` without explicit user approval
 - When adding a package, add its `PackageVersion` to `Directory.Packages.props`, keeping runtime packages grouped before test packages
 - Do not redeclare properties already set in `Directory.Build.props` (`AnalysisLevel`, `AnalysisLevelStyle`, `EnforceCodeStyleInBuild`, `GenerateDocumentationFile`, `AccelerateBuildsInVisualStudio`) in individual projects
-- Using `Microsoft.Extensions.*` 10.x packages while targeting `net9.0` is intentional
 
 ## Projects, namespaces, and targeting
 - The project name is the root namespace. The folder path below the project maps 1:1 to the namespace. Use file-scoped namespaces (`.editorconfig` enforces this)
 - Put project-wide `global using` directives in the project's `Usings.cs` or in `<Using Include="..." />` items in the `.csproj`. Put assembly-level suppressions in `GlobalSuppressions.cs`
-- Target `net9.0`. Do not use APIs introduced after .NET 9 unless the project multi-targets. Prefer non-obsolete alternatives when .NET 10 marks an API obsolete (`SYSLIB` diagnostics). Never change `TargetFramework` without explicit user approval
+- Target `net10.0`. Do not use APIs introduced after .NET 10 unless the project multi-targets. Prefer non-obsolete alternatives when .NET 11 marks an API obsolete (`SYSLIB` diagnostics). Never change `TargetFramework` without explicit user approval
 - Use `[GeneratedRegex]` source-generated regexes instead of constructing `Regex` instances at runtime (add the `partial` modifier to the containing type when required by `[GeneratedRegex]`)
 
 ## Coding standards

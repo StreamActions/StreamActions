@@ -41,9 +41,34 @@ public sealed record TwitchSession : IDisposable
     #region Public Properties
 
     /// <summary>
+    /// Optional custom base URI for Twitch Helix API requests, overriding the default base address configured on <see cref="TwitchApi"/>.
+    /// </summary>
+    public Uri? CustomBaseUri { get; init; }
+
+    /// <summary>
+    /// Optional custom Twitch App Client ID for this session, overriding <see cref="TwitchApi.ClientId"/>.
+    /// </summary>
+    public string? CustomClientId { get; init; }
+
+    /// <summary>
+    /// Optional custom Twitch App Client Secret for this session, overriding <see cref="TwitchApi.ClientSecret"/>.
+    /// </summary>
+    public string? CustomClientSecret { get; init; }
+
+    /// <summary>
+    /// Optional custom <see cref="HttpMessageInvoker"/> for this session, overriding the default <see cref="HttpClient"/> in <see cref="TwitchApi"/>.
+    /// </summary>
+    public HttpMessageInvoker? CustomHttpClient { get; init; }
+
+    /// <summary>
     /// Rate Limiter for TwitchAPI.
     /// </summary>
     public TokenBucketRateLimiter RateLimiter { get; init; } = new(20, TimeSpan.FromSeconds(60));
+
+    /// <summary>
+    /// Optional <see cref="System.TimeProvider"/> for this session, defaulting to <see cref="System.TimeProvider.System"/> when <see langword="null"/>.
+    /// </summary>
+    public TimeProvider? TimeProvider { get; init; }
 
     /// <summary>
     /// The OAuth token data.
@@ -51,8 +76,8 @@ public sealed record TwitchSession : IDisposable
     /// <exception cref="ArgumentNullException">Attempt to set to <see langword="null"/>.</exception>
     public TwitchToken? Token
     {
-        get => this._token;
-        internal set => this._token = value ?? throw new ArgumentNullException(nameof(value)).Log(TwitchApi.GetLogger());
+        get;
+        internal set => field = value ?? throw new ArgumentNullException(nameof(value)).Log(TwitchApi.GetLogger());
     }
 
     #endregion Public Properties
@@ -193,13 +218,4 @@ public sealed record TwitchSession : IDisposable
     internal SemaphoreSlim _refreshLock = new(1, 1);
 
     #endregion Internal Fields
-
-    #region Private Fields
-
-    /// <summary>
-    /// Backer for <see cref="Token"/>.
-    /// </summary>
-    private TwitchToken? _token;
-
-    #endregion Private Fields
 }

@@ -26,7 +26,7 @@ namespace StreamActions.Twitch.Api.Ingest.Objects;
 /// <summary>
 /// Sends and represents a response element for a request for ingest servers.
 /// </summary>
-[DocParser("Ingest", 72, "https://dev.twitch.tv/docs/video-broadcast/reference/", "TwitchReferenceParser")]
+[DocParser("Ingest", 72, "https://dev.twitch.tv/docs/video-broadcast/reference/", "twitch/TwitchReferenceParser")]
 public sealed record IngestServer
 {
     /// <summary>

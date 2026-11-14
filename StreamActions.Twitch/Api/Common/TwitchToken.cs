@@ -19,6 +19,8 @@
 using StreamActions.Common.Logging;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace StreamActions.Twitch.Api.Common;
 
@@ -84,8 +86,8 @@ public sealed record TwitchToken
     /// <exception cref="ArgumentNullException">Attempt to set to <see langword="null"/> or whitespace.</exception>
     public string? OAuth
     {
-        get => this._oauth;
-        init => this._oauth = string.IsNullOrWhiteSpace(value) ? throw new ArgumentNullException(nameof(value)) : value;
+        get;
+        init => field = string.IsNullOrWhiteSpace(value) ? throw new ArgumentNullException(nameof(value)) : value;
     }
 
     /// <summary>
@@ -245,12 +247,25 @@ public sealed record TwitchToken
 
     #endregion Public Methods
 
-    #region Private Fields
+    #region Private Methods
 
     /// <summary>
-    /// Backer for <see cref="OAuth"/>.
+    /// Formats the record members into the specified <see cref="StringBuilder"/>, redacting sensitive token values.
     /// </summary>
-    private string? _oauth;
+    /// <param name="builder">The <see cref="StringBuilder"/> to append to.</param>
+    /// <returns><see langword="true"/>.</returns>
+    [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Called by compiler-generated record ToString().")]
+    private bool PrintMembers(StringBuilder builder)
+    {
+        _ = builder.Append(nameof(this.Expires)).Append(" = ").Append(this.Expires);
+        _ = builder.Append(", ").Append(nameof(this.Login)).Append(" = ").Append(this.Login);
+        _ = builder.Append(", ").Append(nameof(this.OAuth)).Append(" = ").Append(string.IsNullOrEmpty(this.OAuth) ? "[EMPTY]" : "[REDACTED]");
+        _ = builder.Append(", ").Append(nameof(this.Refresh)).Append(" = ").Append(string.IsNullOrEmpty(this.Refresh) ? "[EMPTY]" : "[REDACTED]");
+        _ = builder.Append(", ").Append(nameof(this.Scopes)).Append(" = ").Append(this.Scopes);
+        _ = builder.Append(", ").Append(nameof(this.Type)).Append(" = ").Append(this.Type);
+        _ = builder.Append(", ").Append(nameof(this.UserId)).Append(" = ").Append(this.UserId);
+        return true;
+    }
 
-    #endregion Private Fields
+    #endregion Private Methods
 }

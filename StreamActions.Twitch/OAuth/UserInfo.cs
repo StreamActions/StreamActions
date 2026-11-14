@@ -30,7 +30,7 @@ namespace StreamActions.Twitch.OAuth;
 /// <summary>
 /// Sends and represents a response for a request for OIDC UserInfo.
 /// </summary>
-[DocParser("OIDC UserInfo", 82, "https://dev.twitch.tv/docs/authentication/getting-tokens-oidc", "TwitchOidcParser")]
+[DocParser("OIDC UserInfo", 82, "https://dev.twitch.tv/docs/authentication/getting-tokens-oidc", "twitch/TwitchOidcParser")]
 public sealed record UserInfo : JsonApiResponse
 {
     /// <summary>

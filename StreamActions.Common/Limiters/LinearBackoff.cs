@@ -27,7 +27,8 @@ namespace StreamActions.Common.Limiters;
 /// <param name="initialDuration">The initial duration of the backoff, after a reset.</param>
 /// <param name="maxDuration">The maximum allowed backoff duration.</param>
 /// <param name="stepSize">The duration to add to the previous <see cref="BackoffBase.NextDuration"/> to calculate the next backoff duration.</param>
-public sealed class LinearBackoff(TimeSpan initialDuration, TimeSpan maxDuration, TimeSpan stepSize) : BackoffBase(initialDuration, maxDuration)
+/// <param name="timeProvider">The <see cref="TimeProvider"/> used for delay operations, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
+public sealed class LinearBackoff(TimeSpan initialDuration, TimeSpan maxDuration, TimeSpan stepSize, TimeProvider? timeProvider = null) : BackoffBase(initialDuration, maxDuration, timeProvider)
 {
     #region Public Properties
 

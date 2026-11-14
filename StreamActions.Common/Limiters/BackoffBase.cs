@@ -61,37 +61,23 @@ public abstract class BackoffBase
     /// <exception cref="TimeoutException">The lock timed out.</exception>
     public void Reset(TimeSpan timeout)
     {
-        if (this.Rwl.TryEnterUpgradeableReadLock(timeout))
+        if (this.Lock.TryEnter(timeout))
         {
             try
             {
                 if (this._nextDuration.CompareTo(this._initialDuration) != 0)
                 {
-                    if (this.Rwl.TryEnterWriteLock(timeout))
-                    {
-                        try
-                        {
-                            this._nextDuration = TimeSpan.FromTicks(this._initialDuration.Ticks);
-                        }
-                        finally
-                        {
-                            this.Rwl.ExitWriteLock();
-                        }
-                    }
-                    else
-                    {
-                        throw new TimeoutException("Timed out attempting to acquire write lock.");
-                    }
+                    this._nextDuration = TimeSpan.FromTicks(this._initialDuration.Ticks);
                 }
             }
             finally
             {
-                this.Rwl.ExitUpgradeableReadLock();
+                this.Lock.Exit();
             }
         }
         else
         {
-            throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
+            throw new TimeoutException("Timed out attempting to acquire lock.");
         }
     }
 
@@ -107,7 +93,7 @@ public abstract class BackoffBase
     {
         TimeSpan delayDuration;
 
-        if (this.Rwl.TryEnterUpgradeableReadLock(timeout))
+        if (this.Lock.TryEnter(timeout))
         {
             try
             {
@@ -122,34 +108,20 @@ public abstract class BackoffBase
                         ticks = this._maxDuration.Ticks;
                     }
 
-                    if (this.Rwl.TryEnterWriteLock(timeout))
-                    {
-                        try
-                        {
-                            this._nextDuration = TimeSpan.FromTicks(ticks);
-                        }
-                        finally
-                        {
-                            this.Rwl.ExitWriteLock();
-                        }
-                    }
-                    else
-                    {
-                        throw new TimeoutException("Timed out attempting to acquire write lock.");
-                    }
+                    this._nextDuration = TimeSpan.FromTicks(ticks);
                 }
             }
             finally
             {
-                this.Rwl.ExitUpgradeableReadLock();
+                this.Lock.Exit();
             }
         }
         else
         {
-            throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
+            throw new TimeoutException("Timed out attempting to acquire lock.");
         }
 
-        await Task.Delay(delayDuration, cancellationToken.GetValueOrDefault()).ConfigureAwait(false);
+        await Task.Delay(delayDuration, this._timeProvider, cancellationToken.GetValueOrDefault()).ConfigureAwait(false);
     }
 
     #endregion Public Methods
@@ -161,19 +133,16 @@ public abstract class BackoffBase
     /// </summary>
     /// <param name="initialDuration">The initial duration of the backoff, after a reset.</param>
     /// <param name="maxDuration">The maximum allowed backoff duration.</param>
-    protected BackoffBase(TimeSpan initialDuration, TimeSpan maxDuration)
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> used for delay operations, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
+    protected BackoffBase(TimeSpan initialDuration, TimeSpan maxDuration, TimeProvider? timeProvider = null)
     {
         this._maxDuration = maxDuration;
         this._initialDuration = initialDuration;
+        this._timeProvider = timeProvider ?? TimeProvider.System;
 
-        this.Rwl.EnterWriteLock();
-        try
+        lock (this.Lock)
         {
             this._nextDuration = TimeSpan.FromTicks(initialDuration.Ticks);
-        }
-        finally
-        {
-            this.Rwl.ExitWriteLock();
         }
     }
 
@@ -184,7 +153,7 @@ public abstract class BackoffBase
     /// <summary>
     /// Lock for controlling Read/Write access to the variables.
     /// </summary>
-    protected ReaderWriterLockSlim Rwl { get; } = new();
+    protected Lock Lock { get; } = new();
 
     #endregion Protected Properties
 
@@ -211,6 +180,11 @@ public abstract class BackoffBase
     private readonly TimeSpan _maxDuration;
 
     /// <summary>
+    /// The <see cref="TimeProvider"/> used for delay operations.
+    /// </summary>
+    private readonly TimeProvider _timeProvider;
+
+    /// <summary>
     /// The duration of the next backoff.
     /// </summary>
     private TimeSpan _nextDuration;
@@ -225,14 +199,9 @@ public abstract class BackoffBase
     /// <returns>The next duration.</returns>
     private TimeSpan GetNextDuration()
     {
-        this.Rwl.EnterReadLock();
-        try
+        lock (this.Lock)
         {
             return TimeSpan.FromTicks(this._nextDuration.Ticks);
-        }
-        finally
-        {
-            this.Rwl.ExitReadLock();
         }
     }
 

@@ -568,10 +568,10 @@ public sealed class TwitchKestrelServerFixture : IAsyncLifetime, IDisposable, IA
 }
 
 /// <summary>
-/// xUnit collection definition for tests requiring the <see cref="TwitchKestrelServerFixture"/> without parallelization.
+/// xUnit collection definition for tests requiring the <see cref="TwitchKestrelServerFixture"/>.
 /// </summary>
 [SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "xUnit CollectionDefinition convention specified by architecture.")]
-[CollectionDefinition("TwitchKestrelCollection", DisableParallelization = true)]
+[CollectionDefinition("TwitchKestrelCollection")]
 public class TwitchKestrelCollection : ICollectionFixture<TwitchKestrelServerFixture>
 {
 }

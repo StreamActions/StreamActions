@@ -18,7 +18,9 @@
 #
 
 import argparse
+import itertools
 import json
+from pathlib import Path
 import idna
 import requests
 
@@ -30,8 +32,13 @@ eopmark = "_"
 
 escapes = ["(", ")", ".", "\\", "[", "]"]
 
+script_dir = Path(__file__).resolve().parent
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", action="store_true", help="Verbose (Creates syntax tree files and tld text file)")
+parser.add_argument("--out", default="tldregex.txt", help="Output file path for the generated regex (default: tldregex.txt)")
+parser.add_argument("--replacements", default=str(script_dir / "tlds-anti-workaround-replacements.txt"), help="Path to anti-workaround replacements file")
+parser.add_argument("--anti-workaround-tlds", default=str(script_dir / "tlds-anti-workaround-tlds.txt"), help="Path to anti-workaround TLDs file")
 args = parser.parse_args()
 
 def escape(echr):
@@ -54,27 +61,74 @@ def addTLDRecursive(tld_s, tld):
     isend = len(tld) == 1 and eopmark in tld
     return tld, isend
 
-resp = requests.get("https://data.iana.org/TLD/tlds-alpha-by-domain.txt", headers = { "User-Agent": "gmt2001.tldregexupdater/2023" })
+def add_tld(tld_map, tld_s):
+    if not tld_s:
+        return
+    if tld_s[0] in tld_map:
+        tld = tld_map[tld_s[0]]
+    else:
+        tld = {}
+    if len(tld_s) > 1:
+        tld_map[tld_s[0]], _ = addTLDRecursive(tld_s[1:], tld)
+    else:
+        tld[eopmark] = {}
+        tld_map[tld_s[0]] = tld
+
+def load_replacements(path):
+    replacements = {}
+    with open(path, encoding="utf8") as f:
+        for raw_line in f:
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split()
+            key_spec = parts[0]
+            omittable = key_spec.endswith("!")
+            ch = (key_spec[:-1] if omittable else key_spec).lower()
+            options = [ch]
+            if omittable:
+                options.append("")
+            for rep in parts[1:]:
+                rep_lower = rep.lower()
+                if rep_lower not in options:
+                    options.append(rep_lower)
+            replacements[ch] = options
+    return replacements
+
+def generate_anti_workaround_tlds(tlds_path, replacements):
+    variants = []
+    seen = set()
+    with open(tlds_path, encoding="utf8") as f:
+        for raw_line in f:
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            tld = line.lower()
+            char_options = [replacements.get(ch, [ch]) for ch in tld]
+            for combo in itertools.product(*char_options):
+                variant = "".join(combo)
+                if variant and variant not in seen:
+                    seen.add(variant)
+                    variants.append(variant)
+    return variants
+
+resp = requests.get("https://data.iana.org/TLD/tlds-alpha-by-domain.txt", headers = { "User-Agent": "gmt2001.tldregexupdater/2023" }, timeout=30)
 if resp.status_code != 200:
     exit(1)
 tldsresponse = resp.text
 lines = tldsresponse.splitlines()
 for line in lines:
     line = line.strip()
-    if not line.startswith("#"):
+    if line and not line.startswith("#"):
         tld_s = line.lower()
         if tld_s.startswith("xn--"):
             xntlds[tld_s] = idna.decode(line)
-            if xntlds[tld_s][0] in tlds:
-                xntld = tlds[xntlds[tld_s][0]]
-            else:
-                xntld = {}
-            tlds[xntlds[tld_s][0]], isend = addTLDRecursive(xntlds[tld_s][1:], xntld)
-        if tld_s[0] in tlds:
-            tld = tlds[tld_s[0]]
-        else:
-            tld = {}
-        tlds[tld_s[0]], isend = addTLDRecursive(tld_s[1:], tld)
+            add_tld(tlds, xntlds[tld_s])
+        add_tld(tlds, tld_s)
+
+replacements = load_replacements(args.replacements)
+for variant in generate_anti_workaround_tlds(args.anti_workaround_tlds, replacements):
+    add_tld(tlds, variant)
 
 def combineTldsRecursive(tlds):
     global eopmark
@@ -183,6 +237,6 @@ if args.v:
             out = out + '\n' + xntlds[xntld]
         tld_file.write(out)
 
-with open("tldregex.txt", "w", encoding="utf8") as tld_file:
+with open(args.out, "w", encoding="utf8") as tld_file:
     tld_file.write(regex)
 

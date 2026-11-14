@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http.Headers;
 
@@ -34,19 +33,16 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// </summary>
     /// <param name="limit">The maximum number of tokens the bucket can hold.</param>
     /// <param name="period">The period over which tokens normally refill from 0 to <paramref name="limit"/>.</param>
-    public TokenBucketRateLimiter(int limit, TimeSpan period)
+    /// <param name="timeProvider">The <see cref="TimeProvider"/> used for time operations, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
+    public TokenBucketRateLimiter(int limit, TimeSpan period, TimeProvider? timeProvider = null)
     {
-        this._rwl.EnterWriteLock();
-        try
+        this._timeProvider = timeProvider ?? TimeProvider.System;
+        lock (this._lock)
         {
             _ = Interlocked.Exchange(ref this._limit, Math.Max(limit, 1));
             _ = Interlocked.Exchange(ref this._remaining, this._limit);
             _ = Interlocked.Exchange(ref this._period, Math.Max(period.Ticks, 1));
-            _ = Interlocked.Exchange(ref this._nextReset, DateTime.UtcNow.Ticks + this._period);
-        }
-        finally
-        {
-            this._rwl.ExitWriteLock();
+            _ = Interlocked.Exchange(ref this._nextReset, this._timeProvider.GetUtcNow().UtcTicks + this._period);
         }
     }
 
@@ -192,30 +188,17 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <remarks>Fails silently if <paramref name="limit"/> is less than 1. Updates <see cref="Remaining"/> if it is higher than the new limit.</remarks>
     public void UpdateLimit(int limit)
     {
-        this._rwl.EnterUpgradeableReadLock();
-        try
+        lock (this._lock)
         {
             if (limit >= 1 && this._limit != limit)
             {
-                this._rwl.EnterWriteLock();
-                try
-                {
-                    _ = Interlocked.Exchange(ref this._limit, limit);
+                _ = Interlocked.Exchange(ref this._limit, limit);
 
-                    if (limit < this._remaining)
-                    {
-                        _ = Interlocked.Exchange(ref this._remaining, limit);
-                    }
-                }
-                finally
+                if (limit < this._remaining)
                 {
-                    this._rwl.ExitWriteLock();
+                    _ = Interlocked.Exchange(ref this._remaining, limit);
                 }
             }
-        }
-        finally
-        {
-            this._rwl.ExitUpgradeableReadLock();
         }
     }
 
@@ -223,28 +206,15 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// Changes the next time that the bucket will fully refill to the limit.
     /// </summary>
     /// <param name="nextReset">The next reset time, in <see cref="TimeSpan.Ticks"/></param>
-    /// <remarks>Fails silently if <paramref name="nextReset"/> is earlier than <see cref="DateTime.UtcNow"/>.</remarks>
+    /// <remarks>Fails silently if <paramref name="nextReset"/> is earlier than <see cref="TimeProvider.GetUtcNow()"/>.</remarks>
     public void UpdateNextReset(long nextReset)
     {
-        this._rwl.EnterUpgradeableReadLock();
-        try
+        lock (this._lock)
         {
-            if (nextReset >= DateTime.UtcNow.Ticks && this._nextReset != nextReset)
+            if (nextReset >= this._timeProvider.GetUtcNow().UtcTicks && this._nextReset != nextReset)
             {
-                this._rwl.EnterWriteLock();
-                try
-                {
-                    _ = Interlocked.Exchange(ref this._nextReset, nextReset);
-                }
-                finally
-                {
-                    this._rwl.ExitWriteLock();
-                }
+                _ = Interlocked.Exchange(ref this._nextReset, nextReset);
             }
-        }
-        finally
-        {
-            this._rwl.ExitUpgradeableReadLock();
         }
     }
 
@@ -262,25 +232,12 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <remarks>Fails silently if <paramref name="period"/> is less than 1.</remarks>
     public void UpdatePeriod(long period)
     {
-        this._rwl.EnterUpgradeableReadLock();
-        try
+        lock (this._lock)
         {
             if (period >= 1 && this._period != period)
             {
-                this._rwl.EnterWriteLock();
-                try
-                {
-                    _ = Interlocked.Exchange(ref this._period, period);
-                }
-                finally
-                {
-                    this._rwl.ExitWriteLock();
-                }
+                _ = Interlocked.Exchange(ref this._period, period);
             }
-        }
-        finally
-        {
-            this._rwl.ExitUpgradeableReadLock();
         }
     }
 
@@ -291,26 +248,13 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <remarks>Fails silently if <paramref name="remaining"/> is less than 0. Will set to <see cref="Limit"/> if <paramref name="remaining"/> exceeds it.</remarks>
     public void UpdateRemaining(int remaining)
     {
-        this._rwl.EnterUpgradeableReadLock();
-        try
+        lock (this._lock)
         {
             remaining = Math.Min(remaining, this._limit);
             if (remaining >= 0 && this._remaining != remaining)
             {
-                this._rwl.EnterWriteLock();
-                try
-                {
-                    _ = Interlocked.Exchange(ref this._remaining, remaining);
-                }
-                finally
-                {
-                    this._rwl.ExitWriteLock();
-                }
+                _ = Interlocked.Exchange(ref this._remaining, remaining);
             }
-        }
-        finally
-        {
-            this._rwl.ExitUpgradeableReadLock();
         }
     }
 
@@ -324,10 +268,10 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <exception cref="OperationCanceledException">A cancellation was requested via <paramref name="cancellationToken"/> before a rate limit token could be acquired.</exception>
     public async Task WaitForRateLimit(TimeSpan timeout, CancellationToken? cancellationToken = null)
     {
-        Stopwatch timer = Stopwatch.StartNew();
+        long startTimestamp = this._timeProvider.GetTimestamp();
         while (true)
         {
-            if (timer.Elapsed > timeout)
+            if (this._timeProvider.GetElapsedTime(startTimestamp) > timeout)
             {
                 throw new TimeoutException("Timed out waiting for the rate limit.");
             }
@@ -335,47 +279,33 @@ public sealed class TokenBucketRateLimiter : IDisposable
             cancellationToken?.ThrowIfCancellationRequested();
 
             this.RefillBucket(timeout);
-            if (this._rwl.TryEnterUpgradeableReadLock(timeout))
+            if (this._lock.TryEnter(timeout))
             {
                 try
                 {
                     if (this._remaining > 0)
                     {
-                        if (this._rwl.TryEnterWriteLock(timeout))
+                        if (Interlocked.Decrement(ref this._remaining) >= 0)
                         {
-                            try
-                            {
-                                if (Interlocked.Decrement(ref this._remaining) >= 0)
-                                {
-                                    return;
-                                }
-                                else
-                                {
-                                    _ = Interlocked.Exchange(ref this._remaining, 0);
-                                }
-                            }
-                            finally
-                            {
-                                this._rwl.ExitWriteLock();
-                            }
+                            return;
                         }
                         else
                         {
-                            throw new TimeoutException("Timed out attempting to acquire write lock.");
+                            _ = Interlocked.Exchange(ref this._remaining, 0);
                         }
                     }
                 }
                 finally
                 {
-                    this._rwl.ExitUpgradeableReadLock();
+                    this._lock.Exit();
                 }
             }
             else
             {
-                throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
+                throw new TimeoutException("Timed out attempting to acquire lock.");
             }
 
-            await Task.Delay(this.GetTimeUntilNextToken(timeout), cancellationToken.GetValueOrDefault()).ConfigureAwait(false);
+            await Task.Delay(this.GetTimeUntilNextToken(timeout), this._timeProvider, cancellationToken.GetValueOrDefault()).ConfigureAwait(false);
         }
     }
 
@@ -390,34 +320,20 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <exception cref="TimeoutException">The lock timed out.</exception>
     internal void ReturnToken(TimeSpan timeout)
     {
-        if (this._rwl.TryEnterUpgradeableReadLock(timeout))
+        if (this._lock.TryEnter(timeout))
         {
             try
             {
-                if (this._rwl.TryEnterWriteLock(timeout))
-                {
-                    try
-                    {
-                        _ = Interlocked.Increment(ref this._remaining);
-                    }
-                    finally
-                    {
-                        this._rwl.ExitWriteLock();
-                    }
-                }
-                else
-                {
-                    throw new TimeoutException("Timed out attempting to acquire write lock.");
-                }
+                _ = Interlocked.Increment(ref this._remaining);
             }
             finally
             {
-                this._rwl.ExitUpgradeableReadLock();
+                this._lock.Exit();
             }
         }
         else
         {
-            throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
+            throw new TimeoutException("Timed out attempting to acquire lock.");
         }
     }
 
@@ -426,9 +342,14 @@ public sealed class TokenBucketRateLimiter : IDisposable
     #region Private Fields
 
     /// <summary>
-    /// Lock for controlling Read/Write access to the variables.
+    /// Lock for controlling access to the bucket state.
     /// </summary>
-    private readonly ReaderWriterLockSlim _rwl = new();
+    private readonly Lock _lock = new();
+
+    /// <summary>
+    /// The <see cref="TimeProvider"/> used for time operations.
+    /// </summary>
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// The maximum number of tokens that can be in the bucket.
@@ -465,14 +386,9 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <returns>The current limit.</returns>
     private int GetLimit()
     {
-        this._rwl.EnterReadLock();
-        try
+        lock (this._lock)
         {
             return this._limit;
-        }
-        finally
-        {
-            this._rwl.ExitReadLock();
         }
     }
 
@@ -482,14 +398,9 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <returns>The next reset.</returns>
     private long GetNextReset()
     {
-        this._rwl.EnterReadLock();
-        try
+        lock (this._lock)
         {
             return this._nextReset;
-        }
-        finally
-        {
-            this._rwl.ExitReadLock();
         }
     }
 
@@ -499,14 +410,9 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <returns>The current period.</returns>
     private long GetPeriod()
     {
-        this._rwl.EnterReadLock();
-        try
+        lock (this._lock)
         {
             return this._period;
-        }
-        finally
-        {
-            this._rwl.ExitReadLock();
         }
     }
 
@@ -516,14 +422,9 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <returns>The current remaining tokens.</returns>
     private int GetRemaining()
     {
-        this._rwl.EnterReadLock();
-        try
+        lock (this._lock)
         {
             return this._remaining;
-        }
-        finally
-        {
-            this._rwl.ExitReadLock();
         }
     }
 
@@ -535,11 +436,11 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <exception cref="TimeoutException">The lock timed out.</exception>
     private TimeSpan GetTimeUntilNextToken(TimeSpan timeout)
     {
-        if (this._rwl.TryEnterReadLock(timeout))
+        if (this._lock.TryEnter(timeout))
         {
             try
             {
-                long elapsed = DateTime.UtcNow.Ticks - (this._nextReset - this._period);
+                long elapsed = this._timeProvider.GetUtcNow().UtcTicks - (this._nextReset - this._period);
                 float percent = elapsed / (float)this._period;
                 int addedTokens = (int)Math.Floor(percent * this._limit);
                 long nextTokenElapsed = (long)Math.Ceiling((addedTokens + 1) * (double)this._period / this._limit);
@@ -548,12 +449,12 @@ public sealed class TokenBucketRateLimiter : IDisposable
             }
             finally
             {
-                this._rwl.ExitReadLock();
+                this._lock.Exit();
             }
         }
         else
         {
-            throw new TimeoutException("Timed out attempting to acquire read lock.");
+            throw new TimeoutException("Timed out attempting to acquire lock.");
         }
     }
 
@@ -564,7 +465,7 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <exception cref="TimeoutException">The lock timed out.</exception>
     private void RefillBucket(TimeSpan timeout)
     {
-        if (this._rwl.TryEnterReadLock(timeout))
+        if (this._lock.TryEnter(timeout))
         {
             try
             {
@@ -572,73 +473,32 @@ public sealed class TokenBucketRateLimiter : IDisposable
                 {
                     return;
                 }
-            }
-            finally
-            {
-                this._rwl.ExitReadLock();
-            }
-        }
-        else
-        {
-            throw new TimeoutException("Timed out attempting to acquire read lock.");
-        }
-        if (this._rwl.TryEnterUpgradeableReadLock(timeout))
-        {
-            try
-            {
-                long currentTicks = DateTime.UtcNow.Ticks;
+
+                long currentTicks = this._timeProvider.GetUtcNow().UtcTicks;
                 if (currentTicks >= this._nextReset)
                 {
-                    if (this._rwl.TryEnterWriteLock(timeout))
-                    {
-                        try
-                        {
-                            _ = Interlocked.Exchange(ref this._remaining, this._limit);
-                            _ = Interlocked.Exchange(ref this._nextReset, currentTicks + this._period);
-                        }
-                        finally
-                        {
-                            this._rwl.ExitWriteLock();
-                        }
-                    }
-                    else
-                    {
-                        throw new TimeoutException("Timed out attempting to acquire write lock.");
-                    }
+                    _ = Interlocked.Exchange(ref this._remaining, this._limit);
+                    _ = Interlocked.Exchange(ref this._nextReset, currentTicks + this._period);
                 }
                 else
                 {
                     long elapsed = currentTicks - (this._nextReset - this._period);
                     float percent = elapsed / (float)this._period;
                     int addedTokens = (int)Math.Floor(percent * this._limit);
-                    if (this._rwl.TryEnterWriteLock(timeout))
+                    if (Interlocked.Add(ref this._remaining, addedTokens) > this._limit)
                     {
-                        try
-                        {
-                            if (Interlocked.Add(ref this._remaining, addedTokens) > this._limit)
-                            {
-                                _ = Interlocked.Exchange(ref this._remaining, this._limit);
-                            }
-                        }
-                        finally
-                        {
-                            this._rwl.ExitWriteLock();
-                        }
-                    }
-                    else
-                    {
-                        throw new TimeoutException("Timed out attempting to acquire write lock.");
+                        _ = Interlocked.Exchange(ref this._remaining, this._limit);
                     }
                 }
             }
             finally
             {
-                this._rwl.ExitUpgradeableReadLock();
+                this._lock.Exit();
             }
         }
         else
         {
-            throw new TimeoutException("Timed out attempting to acquire upgradeable read lock.");
+            throw new TimeoutException("Timed out attempting to acquire lock.");
         }
     }
 
@@ -652,7 +512,7 @@ public sealed class TokenBucketRateLimiter : IDisposable
         {
             if (disposing)
             {
-                this._rwl.Dispose();
+                // No managed resources to dispose; Lock does not require disposal.
             }
 
             this._disposedValue = true;

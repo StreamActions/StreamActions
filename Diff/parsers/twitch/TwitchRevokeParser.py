@@ -17,46 +17,51 @@
 # along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from bs4 import BeautifulSoup
-from BaseParser import BaseParser
+from pathlib import Path
+import sys
 
-class TwitchRevokeParser(BaseParser):
+_TWITCH_DIR = str(Path(__file__).resolve().parent)
+if _TWITCH_DIR not in sys.path:
+    sys.path.insert(0, _TWITCH_DIR)
+
+from TwitchMarkdownBaseParser import TwitchMarkdownBaseParser
+
+
+class TwitchRevokeParser(TwitchMarkdownBaseParser):
     """
     Parse the Twitch Revoke OAuth page into a format that can be diffed
     """
-    def parse(self, html:str) -> dict:
+
+    def parse(self, data: str) -> dict:
         ret = {
             "toc": {},
-            "endpoints": {}
+            "endpoints": {},
         }
-        soup = BeautifulSoup(html, "html5lib")
-        main = soup.find(class_="main") or soup
-        
         category = "Revoke OAuth"
         endpoint = "Revoke OAuth"
         ret["toc"][category] = [{"endpoint": endpoint}]
-        
-        reqBody = []
-        table = main.find("table")
-        if table and table.find("tbody"):
-            for entry in table.find("tbody").find_all("tr"):
-                cells = entry.find_all("td")
-                if len(cells) >= 4:
-                    reqBody.append({
-                        "parameter": str(cells[0].string).strip() if cells[0].string else " ".join(cells[0].stripped_strings),
-                        "required": str(cells[1].string).strip() if cells[1].string else " ".join(cells[1].stripped_strings),
-                        "type": str(cells[2].string).strip() if cells[2].string else " ".join(cells[2].stripped_strings),
-                        "description": " ".join(cells[3].stripped_strings).strip()
+
+        req_body = []
+        tables = self.parseMarkdownTables(data)
+        if tables:
+            for row in tables[0]:
+                vals = list(row.values())
+                if len(vals) >= 4:
+                    req_body.append({
+                        "parameter": vals[0],
+                        "required": vals[1],
+                        "type": vals[2],
+                        "description": vals[3],
                     })
-        
+
         ret["endpoints"][endpoint] = {
             "slug": "",
-            "requestBody": reqBody
+            "requestBody": req_body,
         }
-        
+
         return ret
+
 
 if __name__ == "__main__":
     parser = TwitchRevokeParser()
     parser.main()
-

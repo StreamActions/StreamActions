@@ -360,4 +360,47 @@ public class TwitchTokenTests
     }
 
     #endregion HasScope
+
+    #region ToString
+
+    /// <summary>
+    /// Tests that <see cref="TwitchToken.ToString"/> redacts sensitive token values when present.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ToString")]
+    public void ToString_WhenSecretsPresent_RedactsOAuthAndRefresh()
+    {
+        TwitchToken token = new()
+        {
+            OAuth = "secret-oauth-token",
+            Refresh = "secret-refresh-token",
+            Login = "testuser",
+            UserId = "12345"
+        };
+
+        string text = token.ToString();
+
+        _ = text.Should().Contain("OAuth = [REDACTED]");
+        _ = text.Should().Contain("Refresh = [REDACTED]");
+        _ = text.Should().Contain("Login = testuser");
+        _ = text.Should().NotContain("secret-oauth-token");
+        _ = text.Should().NotContain("secret-refresh-token");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchToken.ToString"/> prints <c>[EMPTY]</c> when sensitive token values are null or empty.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ToString")]
+    public void ToString_WhenSecretsNullOrEmpty_PrintsEmptyMarker()
+    {
+        TwitchToken token = TwitchToken.Empty with { Refresh = "" };
+
+        string text = token.ToString();
+
+        _ = text.Should().Contain("OAuth = [EMPTY]");
+        _ = text.Should().Contain("Refresh = [EMPTY]");
+    }
+
+    #endregion ToString
 }

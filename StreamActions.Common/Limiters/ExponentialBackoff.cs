@@ -26,7 +26,8 @@ namespace StreamActions.Common.Limiters;
 /// </remarks>
 /// <param name="initialDuration">The initial duration of the backoff, after a reset.</param>
 /// <param name="maxDuration">The maximum allowed backoff duration.</param>
-public sealed class ExponentialBackoff(TimeSpan initialDuration, TimeSpan maxDuration) : BackoffBase(initialDuration, maxDuration)
+/// <param name="timeProvider">The <see cref="TimeProvider"/> used for delay operations, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
+public sealed class ExponentialBackoff(TimeSpan initialDuration, TimeSpan maxDuration, TimeProvider? timeProvider = null) : BackoffBase(initialDuration, maxDuration, timeProvider)
 {
     #region Protected Methods
 

@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -31,25 +32,28 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
     #region Static Fields
 
     /// <summary>
-    /// A cache mapping the custom string values defined by <see cref="JsonCustomEnumAttribute"/> to their corresponding enum values.
+    /// Cached mappings between custom attribute strings and enum values.
     /// </summary>
-    private static readonly Dictionary<string, T> _stringToEnumMap = new(StringComparer.InvariantCultureIgnoreCase);
+    private static readonly (FrozenDictionary<string, T> StringToEnum, FrozenDictionary<T, string> EnumToString) _maps = BuildMaps();
 
     /// <summary>
-    /// A cache mapping enum values to their corresponding custom string values defined by <see cref="JsonCustomEnumAttribute"/>.
+    /// An alternate lookup for <see cref="_maps"/> supporting <see cref="ReadOnlySpan{T}"/> keys.
     /// </summary>
-    private static readonly Dictionary<T, string> _enumToStringMap = [];
+    private static readonly FrozenDictionary<string, T>.AlternateLookup<ReadOnlySpan<char>> _stringToEnumLookup = _maps.StringToEnum.GetAlternateLookup<ReadOnlySpan<char>>();
 
     #endregion Static Fields
 
-    #region Constructors
+    #region Private Methods
 
     /// <summary>
-    /// Initializes static members of the <see cref="JsonCustomEnumConverter{T}"/> class.
     /// Precomputes and caches the mapping between enum values and their associated custom string attributes.
     /// </summary>
-    static JsonCustomEnumConverter()
+    /// <returns>A tuple containing the string-to-enum and enum-to-string frozen dictionaries.</returns>
+    private static (FrozenDictionary<string, T> StringToEnum, FrozenDictionary<T, string> EnumToString) BuildMaps()
     {
+        Dictionary<string, T> stringToEnumMap = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<T, string> enumToStringMap = [];
+
         foreach (string name in Enum.GetNames<T>())
         {
             MemberInfo? memberInfo = typeof(T).GetMember(name).FirstOrDefault();
@@ -59,14 +63,16 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
                 if (attribute is JsonCustomEnumAttribute customAttr && customAttr.Value is not null)
                 {
                     T eval = Enum.Parse<T>(name);
-                    _stringToEnumMap[customAttr.Value] = eval;
-                    _enumToStringMap[eval] = customAttr.Value;
+                    stringToEnumMap[customAttr.Value] = eval;
+                    enumToStringMap[eval] = customAttr.Value;
                 }
             }
         }
+
+        return (stringToEnumMap.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase), enumToStringMap.ToFrozenDictionary());
     }
 
-    #endregion Constructors
+    #endregion Private Methods
 
     #region Public Properties
 
@@ -82,22 +88,49 @@ public sealed class JsonCustomEnumConverter<T> : JsonConverter<T> where T : stru
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The string comparison is performed using <see cref="StringComparison.InvariantCultureIgnoreCase"/>.
+    /// The string comparison is performed using <see cref="StringComparison.OrdinalIgnoreCase"/>.
     /// </para>
     /// </remarks>
     /// <param name="value">The string value to convert.</param>
     /// <returns>The enum value of type <typeparamref name="T"/> that has a matching <see cref="JsonCustomEnumAttribute"/>; <see langword="default"/> if there is no match.</returns>
-    public T Convert(string value) => value is not null && _stringToEnumMap.TryGetValue(value, out T result) ? result : default;
+    public T Convert(string value) => value is not null ? this.Convert(value.AsSpan()) : default;
+
+    /// <summary>
+    /// Converts the given character span into an enum value.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The comparison is performed using <see cref="StringComparison.OrdinalIgnoreCase"/>.
+    /// </para>
+    /// </remarks>
+    /// <param name="value">The character span to convert.</param>
+    /// <returns>The enum value of type <typeparamref name="T"/> that has a matching <see cref="JsonCustomEnumAttribute"/>; <see langword="default"/> if there is no match.</returns>
+    public T Convert(ReadOnlySpan<char> value) => _stringToEnumLookup.TryGetValue(value, out T result) ? result : default;
 
     /// <summary>
     /// Converts the given enum value into a string.
     /// </summary>
     /// <param name="value">The enum value to convert.</param>
     /// <returns>The string value defined in the <see cref="JsonCustomEnumAttribute"/> applied to the enum value; <see cref="Enum.GetName{TEnum}(TEnum)"/> if the attribute is not present.</returns>
-    public string? Convert(T value) => _enumToStringMap.TryGetValue(value, out string? result) ? result : Enum.GetName(value);
+    public string? Convert(T value) => _maps.EnumToString.TryGetValue(value, out string? result) ? result : Enum.GetName(value);
 
     /// <inheritdoc/>
-    public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => this.Convert(reader.GetString()!);
+    public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Null)
+        {
+            return default;
+        }
+
+        if (reader.TokenType == JsonTokenType.String && !reader.HasValueSequence && reader.ValueSpan.Length <= 128)
+        {
+            Span<char> charBuffer = stackalloc char[128];
+            int charsWritten = reader.CopyString(charBuffer);
+            return this.Convert(charBuffer[..charsWritten]);
+        }
+
+        return this.Convert(reader.GetString().AsSpan());
+    }
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => writer?.WriteStringValue(this.Convert(value));

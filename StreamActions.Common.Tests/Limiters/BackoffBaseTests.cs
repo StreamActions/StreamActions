@@ -23,7 +23,7 @@ namespace StreamActions.Common.Tests.Limiters;
 
 public sealed class BackoffBaseTests
 {
-    private sealed class TestBackoff(TimeSpan initialDuration, TimeSpan maxDuration) : BackoffBase(initialDuration, maxDuration)
+    private sealed class TestBackoff(TimeSpan initialDuration, TimeSpan maxDuration, TimeProvider? timeProvider = null) : BackoffBase(initialDuration, maxDuration, timeProvider)
     {
         public long NextTicksToReturn { get; set; } = initialDuration.Ticks * 2;
 
@@ -32,18 +32,13 @@ public sealed class BackoffBaseTests
         public void SetNextDurationReflectively(TimeSpan duration)
         {
             FieldInfo? field = typeof(BackoffBase).GetField("_nextDuration", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new InvalidOperationException("Could not find _nextDuration field.");
-            this.Rwl.EnterWriteLock();
-            try
+            lock (this.Lock)
             {
                 field.SetValue(this, duration);
             }
-            finally
-            {
-                this.Rwl.ExitWriteLock();
-            }
         }
 
-        public ReaderWriterLockSlim GetRwl() => this.Rwl;
+        public Lock GetLock() => this.Lock;
     }
 
     #region Constructor
@@ -186,17 +181,12 @@ public sealed class BackoffBaseTests
         // Lock in a background thread
         Task lockTask = Task.Run(() =>
         {
-            ReaderWriterLockSlim rwl = backoff.GetRwl();
+            Lock lockObj = backoff.GetLock();
 
-            rwl.EnterWriteLock();
-            try
+            lock (lockObj)
             {
                 _ = lockTakenEvent.Release();
                 releaseLockEvent.Wait(TestContext.Current.CancellationToken);
-            }
-            finally
-            {
-                rwl.ExitWriteLock();
             }
         }, TestContext.Current.CancellationToken);
 
@@ -232,6 +222,31 @@ public sealed class BackoffBaseTests
         await backoff.Wait(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
 
         _ = backoff.NextDuration.Should().Be(TimeSpan.FromTicks(50));
+    }
+
+    [Fact]
+    [Trait("Member", "Wait")]
+    public async Task Wait_WithFakeTimeProvider_CompletesOnlyAfterAdvancingDelay()
+    {
+        TestTimeProvider timeProvider = new();
+        TimeSpan initial = TimeSpan.FromSeconds(5);
+        TimeSpan max = TimeSpan.FromSeconds(30);
+        TestBackoff backoff = new(initial, max, timeProvider)
+        {
+            NextTicksToReturn = TimeSpan.FromSeconds(10).Ticks
+        };
+
+        Task waitTask = backoff.Wait(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
+
+        _ = waitTask.IsCompleted.Should().BeFalse();
+
+        timeProvider.Advance(TimeSpan.FromSeconds(4));
+        _ = waitTask.IsCompleted.Should().BeFalse();
+
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+        await waitTask.ConfigureAwait(true);
+
+        _ = backoff.NextDuration.Should().Be(TimeSpan.FromSeconds(10));
     }
 
     #endregion Wait

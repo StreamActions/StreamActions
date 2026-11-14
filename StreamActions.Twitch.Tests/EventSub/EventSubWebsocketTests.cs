@@ -137,7 +137,7 @@ public sealed class EventSubWebsocketTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns a welcome session with metadata and session details.
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken, TimeProvider?)"/> parses and returns a welcome session with metadata and session details.
     /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
@@ -197,7 +197,7 @@ public sealed class EventSubWebsocketTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns session keepalive metadata.
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken, TimeProvider?)"/> parses and returns session keepalive metadata.
     /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
@@ -239,7 +239,7 @@ public sealed class EventSubWebsocketTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns reconnect session metadata and reconnect URL.
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken, TimeProvider?)"/> parses and returns reconnect session metadata and reconnect URL.
     /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
@@ -297,7 +297,7 @@ public sealed class EventSubWebsocketTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns a typed notification follow event.
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken, TimeProvider?)"/> parses and returns a typed notification follow event.
     /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
@@ -398,7 +398,7 @@ public sealed class EventSubWebsocketTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> parses and returns a revocation subscription event.
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken, TimeProvider?)"/> parses and returns a revocation subscription event.
     /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
@@ -601,7 +601,7 @@ public sealed class EventSubWebsocketTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> returns a null event when a notification message contains an unknown subscription type.
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken, TimeProvider?)"/> returns a null event when a notification message contains an unknown subscription type.
     /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]
@@ -653,7 +653,7 @@ public sealed class EventSubWebsocketTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken)"/> captures and returns any exception thrown during WebSocket receive.
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken, TimeProvider?)"/> captures and returns any exception thrown during WebSocket receive.
     /// </summary>
     [Fact]
     [Trait("Member", "ReceiveWebsocketMessageAsync")]

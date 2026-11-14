@@ -237,5 +237,21 @@ public sealed class CommercialTests : IDisposable
         _ = commercial.RetryAfterDateTime.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that <see cref="Commercial.RetryAfterDateTime"/> remains stable across multiple reads.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RetryAfterDateTime")]
+    public async Task RetryAfterDateTime_WhenReadMultipleTimes_ReturnsStableTimestamp()
+    {
+        Commercial commercial = new() { RetryAfterSeconds = 60 };
+
+        DateTime? first = commercial.RetryAfterDateTime;
+        await Task.Delay(25, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        DateTime? second = commercial.RetryAfterDateTime;
+
+        _ = second.Should().Be(first);
+    }
+
     #endregion Properties
 }

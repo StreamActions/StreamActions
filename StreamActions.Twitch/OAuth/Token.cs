@@ -26,6 +26,7 @@ using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
+using System.Text;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.OAuth;
@@ -33,11 +34,12 @@ namespace StreamActions.Twitch.OAuth;
 /// <summary>
 /// Record containing response data for the Token endpoint.
 /// </summary>
-[DocParser("Authorize OAuth", 82, "https://dev.twitch.tv/docs/authentication/getting-tokens-oauth", "TwitchOAuthParser")]
-[DocParser("Refresh OAuth", 82, "https://dev.twitch.tv/docs/authentication/refresh-tokens", "TwitchRefreshParser")]
-[DocParser("Revoke OAuth", 82, "https://dev.twitch.tv/docs/authentication/revoke-tokens", "TwitchRevokeParser")]
+[DocParser("Authorize OAuth", 82, "https://dev.twitch.tv/docs/authentication/getting-tokens-oauth", "twitch/TwitchOAuthParser")]
+[DocParser("Refresh OAuth", 82, "https://dev.twitch.tv/docs/authentication/refresh-tokens", "twitch/TwitchRefreshParser")]
+[DocParser("Revoke OAuth", 82, "https://dev.twitch.tv/docs/authentication/revoke-tokens", "twitch/TwitchRevokeParser")]
 public sealed record Token : JsonApiResponse
 {
+
     /// <summary>
     /// The OAuth token that has been granted.
     /// </summary>
@@ -53,8 +55,9 @@ public sealed record Token : JsonApiResponse
     /// <summary>
     /// The approximate DateTime that <see cref="ExpiresIn"/> refers to.
     /// </summary>
+    [field: JsonIgnore]
     [JsonIgnore]
-    public DateTime Expires => DateTime.UtcNow.AddSeconds(this.ExpiresIn);
+    public DateTime Expires { get => field.AddSeconds(this.ExpiresIn); } = TimeProvider.System.GetUtcNow().UtcDateTime;
 
     /// <summary>
     /// The number of seconds, in server time, until the OAuth token expires.
@@ -79,6 +82,30 @@ public sealed record Token : JsonApiResponse
     /// </summary>
     [JsonPropertyName("token_type")]
     public string? TokenType { get; init; }
+
+    /// <summary>
+    /// Formats the record members into the specified <see cref="StringBuilder"/>, redacting sensitive token values.
+    /// </summary>
+    /// <param name="builder">The <see cref="StringBuilder"/> to append to.</param>
+    /// <returns><see langword="true"/>.</returns>
+    protected override bool PrintMembers(StringBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        if (base.PrintMembers(builder))
+        {
+            _ = builder.Append(", ");
+        }
+
+        _ = builder.Append(nameof(this.AccessToken)).Append(" = ").Append(string.IsNullOrEmpty(this.AccessToken) ? "[EMPTY]" : "[REDACTED]");
+        _ = builder.Append(", ").Append(nameof(this.RefreshToken)).Append(" = ").Append(string.IsNullOrEmpty(this.RefreshToken) ? "[EMPTY]" : "[REDACTED]");
+        _ = builder.Append(", ").Append(nameof(this.Expires)).Append(" = ").Append(this.Expires);
+        _ = builder.Append(", ").Append(nameof(this.ExpiresIn)).Append(" = ").Append(this.ExpiresIn);
+        _ = builder.Append(", ").Append(nameof(this.Scopes)).Append(" = ").Append(this.Scopes);
+        _ = builder.Append(", ").Append(nameof(this.IdToken)).Append(" = ").Append(string.IsNullOrEmpty(this.IdToken) ? "[EMPTY]" : "[REDACTED]");
+        _ = builder.Append(", ").Append(nameof(this.TokenType)).Append(" = ").Append(this.TokenType);
+        return true;
+    }
 
     /// <summary>
     /// Attempts to refresh the User OAuth token assigned to the specified <see cref="TwitchSession"/>.
@@ -106,8 +133,9 @@ public sealed record Token : JsonApiResponse
         baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
 
         using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "grant_type", "refresh_token" }, { "refresh_token", session.Token.Refresh ?? "" },
-            { "client_id", TwitchApi.ClientId ?? "" }, { "client_secret", TwitchApi.ClientSecret ?? "" } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), TwitchSession.Empty, content).ConfigureAwait(false);
+            { "client_id", session.CustomClientId ?? TwitchApi.ClientId ?? "" }, { "client_secret", session.CustomClientSecret ?? TwitchApi.ClientSecret ?? "" } });
+        using TwitchSession requestSession = CreateTokenRequestSession(session);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -143,14 +171,16 @@ public sealed record Token : JsonApiResponse
     /// Attempts to authorize a new App OAuth token.
     /// </summary>
     /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> to read from OpenID Connect configuration.</param>
+    /// <param name="session">Optional <see cref="TwitchSession"/> providing custom client credentials or HTTP overrides.</param>
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
-    public static async Task<Token?> AuthorizeApp(string? baseAddress = null)
+    public static async Task<Token?> AuthorizeApp(string? baseAddress = null, TwitchSession? session = null)
     {
         baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
 
         using FormUrlEncodedContent content = new(new Dictionary<string, string>{ { "grant_type", "client_credentials" },
-            { "client_id", TwitchApi.ClientId ?? "" }, { "client_secret", TwitchApi.ClientSecret ?? "" } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), TwitchSession.Empty, content).ConfigureAwait(false);
+            { "client_id", session?.CustomClientId ?? TwitchApi.ClientId ?? "" }, { "client_secret", session?.CustomClientSecret ?? TwitchApi.ClientSecret ?? "" } });
+        using TwitchSession? requestSession = session is not null ? CreateTokenRequestSession(session) : null;
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession ?? TwitchSession.Empty, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -171,10 +201,26 @@ public sealed record Token : JsonApiResponse
 
         session.RequireUserToken();
 
-        using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "client_id", TwitchApi.ClientId ?? "" }, { "token", session.Token?.OAuth ?? "" } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), TwitchSession.Empty, content).ConfigureAwait(false);
+        using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "client_id", session.CustomClientId ?? TwitchApi.ClientId ?? "" }, { "token", session.Token?.OAuth ?? "" } });
+        using TwitchSession requestSession = CreateTokenRequestSession(session);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Creates an empty-token <see cref="TwitchSession"/> that preserves per-session client and HTTP overrides for OAuth token requests.
+    /// </summary>
+    /// <param name="session">The source <see cref="TwitchSession"/>.</param>
+    /// <returns>A new <see cref="TwitchSession"/> with <see cref="TwitchToken.Empty"/>.</returns>
+    private static TwitchSession CreateTokenRequestSession(TwitchSession session) => new()
+    {
+        Token = TwitchToken.Empty,
+        CustomBaseUri = session.CustomBaseUri,
+        CustomClientId = session.CustomClientId,
+        CustomClientSecret = session.CustomClientSecret,
+        CustomHttpClient = session.CustomHttpClient,
+        TimeProvider = session.TimeProvider
+    };
 
     /// <summary>
     /// The default OpenID Connect configuration URL.

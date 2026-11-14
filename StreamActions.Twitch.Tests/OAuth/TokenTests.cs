@@ -146,7 +146,7 @@ public sealed class TokenTests : IDisposable
     #region AuthorizeApp
 
     /// <summary>
-    /// Tests that <see cref="Token.AuthorizeApp(string?)"/> posts client credentials and parses the returned application token.
+    /// Tests that <see cref="Token.AuthorizeApp(string?, TwitchSession?)"/> posts client credentials and parses the returned application token.
     /// </summary>
     [Fact]
     [Trait("Member", "AuthorizeApp")]
@@ -409,4 +409,75 @@ public sealed class TokenTests : IDisposable
     }
 
     #endregion SetOpenIdConnectConfigurationUrl
+
+    #region Expires
+
+    /// <summary>
+    /// Tests that <see cref="Token.Expires"/> remains stable across multiple reads.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Expires")]
+    public async Task Expires_WhenReadMultipleTimes_ReturnsStableTimestamp()
+    {
+        Token token = new() { ExpiresIn = 3600 };
+
+        DateTime first = token.Expires;
+        await Task.Delay(25, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        DateTime second = token.Expires;
+
+        _ = second.Should().Be(first);
+    }
+
+    #endregion Expires
+
+    #region ToString
+
+    /// <summary>
+    /// Tests that <see cref="Token.ToString"/> redacts sensitive token values when present.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ToString")]
+    public void ToString_WhenSecretsPresent_RedactsAccessTokenRefreshTokenAndIdToken()
+    {
+        Token token = new()
+        {
+            AccessToken = "secret-access-token",
+            RefreshToken = "secret-refresh-token",
+            IdToken = "secret-id-token",
+            TokenType = "bearer",
+            ExpiresIn = 3600
+        };
+
+        string text = token.ToString();
+
+        _ = text.Should().Contain("AccessToken = [REDACTED]");
+        _ = text.Should().Contain("RefreshToken = [REDACTED]");
+        _ = text.Should().Contain("IdToken = [REDACTED]");
+        _ = text.Should().NotContain("secret-access-token");
+        _ = text.Should().NotContain("secret-refresh-token");
+        _ = text.Should().NotContain("secret-id-token");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.ToString"/> prints <c>[EMPTY]</c> when sensitive token values are null or empty.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ToString")]
+    public void ToString_WhenSecretsNullOrEmpty_PrintsEmptyMarker()
+    {
+        Token token = new()
+        {
+            AccessToken = null,
+            RefreshToken = "",
+            IdToken = null
+        };
+
+        string text = token.ToString();
+
+        _ = text.Should().Contain("AccessToken = [EMPTY]");
+        _ = text.Should().Contain("RefreshToken = [EMPTY]");
+        _ = text.Should().Contain("IdToken = [EMPTY]");
+    }
+
+    #endregion ToString
 }

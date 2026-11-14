@@ -38,7 +38,7 @@ namespace StreamActions.Twitch.Api;
 /// Handles validation of OAuth tokens and performs HTTP calls for the API.
 /// </summary>
 [Guid("996E35EC-638A-4E5B-AEFC-84C800E16520")]
-[DocParser("Twitch API", 72, "https://dev.twitch.tv/docs/api/reference/", "TwitchReferenceParser")]
+[DocParser("Twitch API", 72, "https://dev.twitch.tv/docs/api/reference/", "twitch/TwitchReferenceParser")]
 public sealed partial class TwitchApi : IApi
 {
 
@@ -81,7 +81,7 @@ public sealed partial class TwitchApi : IApi
     /// <summary>
     /// The <see cref="JsonSerializerOptions"/> that should be used for all serialization and deserialization.
     /// </summary>
-    public static JsonSerializerOptions SerializerOptions => new()
+    public static JsonSerializerOptions SerializerOptions { get; } = new()
     {
         Converters = {
             new CustomEnumConverterFactory(),
@@ -122,7 +122,6 @@ public sealed partial class TwitchApi : IApi
         ClientSecret = clientSecret;
 
         HttpClient newClient = CreateHttpClient();
-        newClient.DefaultRequestHeaders.Add("Client-Id", clientId);
         _ = newClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "StreamActions/TwitchAPI/" + (typeof(TwitchApi).Assembly.GetName()?.Version?.ToString() ?? "0.0.0.0"));
         // Intentionally not validating the baseAddress here, as it is possible to use a custom Helix endpoint for testing.
         newClient.BaseAddress = new Uri(baseAddress);
@@ -172,7 +171,8 @@ public sealed partial class TwitchApi : IApi
     /// </remarks>
     internal static async Task<HttpResponseMessage> PerformHttpRequest(HttpMethod method, Uri uri, TwitchSession session, HttpContent? content = null, bool dontRefresh = false)
     {
-        if (!_httpClient.DefaultRequestHeaders.Contains("Client-Id"))
+        string? clientId = session.CustomClientId ?? ClientId;
+        if (string.IsNullOrWhiteSpace(clientId))
         {
             throw new InvalidOperationException("Must call TwitchAPI.Init.").Log(_logger, atLocation: 3);
         }
@@ -194,7 +194,13 @@ public sealed partial class TwitchApi : IApi
                     ? new((uri.PathAndQuery + uri.Fragment).TrimStart('/'), UriKind.Relative)
                     : uri;
 
+            if (session.CustomBaseUri is not null && !targetUri.IsAbsoluteUri)
+            {
+                targetUri = new Uri(session.CustomBaseUri, targetUri);
+            }
+
             using HttpRequestMessage request = new(method, targetUri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
+            request.Headers.Add("Client-Id", clientId);
             request.Content = content;
 
             if (session.Token != TwitchToken.Empty)
@@ -202,7 +208,8 @@ public sealed partial class TwitchApi : IApi
                 request.Headers.Add("Authorization", "Bearer " + session.Token.OAuth);
             }
 
-            HttpResponseMessage response = await _httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
+            HttpMessageInvoker httpClient = session.CustomHttpClient ?? _httpClient;
+            HttpResponseMessage response = await httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
 
             if (!retry && !dontRefresh && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token != TwitchToken.Empty)
             {
@@ -255,7 +262,7 @@ public sealed partial class TwitchApi : IApi
                                 {
                                     if (session.Token.OAuth == oldOAuth)
                                     {
-                                        Token? refresh = await Token.AuthorizeApp().ConfigureAwait(false);
+                                        Token? refresh = await Token.AuthorizeApp(session: session).ConfigureAwait(false);
 
                                         if (refresh is not null && refresh.IsSuccessStatusCode)
                                         {

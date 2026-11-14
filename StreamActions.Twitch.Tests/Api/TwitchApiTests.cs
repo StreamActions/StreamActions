@@ -351,5 +351,99 @@ public sealed class TwitchApiTests : IDisposable
         _ = parsed.Status.Should().Be(HttpStatusCode.BadGateway);
     }
 
+    [Fact]
+    [Trait("Member", "PerformHttpRequest")]
+    public async Task PerformHttpRequest_WithCustomClientIdAndCustomHttpClient_UsesSessionOverrides()
+    {
+        string? capturedClientId = null;
+        Uri? capturedUri = null;
+        using StubHttpMessageHandler handler = new(request =>
+        {
+            capturedClientId = request.Headers.GetValues("Client-Id").Single();
+            capturedUri = request.RequestUri;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"data":[]}""", System.Text.Encoding.UTF8, "application/json")
+            };
+        });
+        using HttpMessageInvoker customInvoker = new(handler);
+        using TwitchSession session = new()
+        {
+            Token = TwitchToken.Empty,
+            CustomClientId = "custom-session-client-id",
+            CustomHttpClient = customInvoker,
+            CustomBaseUri = new("https://custom.twitch.test/helix/")
+        };
+
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new("users?login=test", UriKind.Relative), session).ConfigureAwait(true);
+
+        _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _ = capturedClientId.Should().Be("custom-session-client-id");
+        _ = capturedUri.Should().Be(new Uri("https://custom.twitch.test/helix/users?login=test"));
+    }
+
+    [Fact]
+    [Trait("Member", "PerformHttpRequest")]
+    public async Task PerformHttpRequest_WithCustomClientSecretOn401Refresh_SendsCustomClientIdAndSecret()
+    {
+        string? refreshBody = null;
+        string? refreshClientIdHeader = null;
+        int helixCalls = 0;
+
+        using StubHttpMessageHandler handler = new(async request =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/oauth2/token", StringComparison.Ordinal))
+            {
+                refreshClientIdHeader = request.Headers.GetValues("Client-Id").Single();
+                refreshBody = await request.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""{"access_token":"new-access","refresh_token":"new-refresh","expires_in":3600,"token_type":"bearer"}""", System.Text.Encoding.UTF8, "application/json")
+                };
+            }
+
+            helixCalls++;
+            return helixCalls == 1
+                ? new HttpResponseMessage(HttpStatusCode.Unauthorized)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""{"data":[]}""", System.Text.Encoding.UTF8, "application/json")
+                };
+        });
+        using HttpMessageInvoker customInvoker = new(handler);
+        using TwitchSession session = new()
+        {
+            Token = new()
+            {
+                OAuth = "expired-access",
+                Refresh = "old-refresh",
+                Type = TwitchToken.TokenType.User
+            },
+            CustomClientId = "override-client-id",
+            CustomClientSecret = "override-client-secret",
+            CustomHttpClient = customInvoker,
+            CustomBaseUri = new("https://custom.twitch.test/helix/")
+        };
+
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new("users", UriKind.Relative), session).ConfigureAwait(true);
+
+        _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _ = helixCalls.Should().Be(2);
+        _ = refreshClientIdHeader.Should().Be("override-client-id");
+        _ = refreshBody.Should().Contain("client_id=override-client-id");
+        _ = refreshBody.Should().Contain("client_secret=override-client-secret");
+        _ = session.Token.OAuth.Should().Be("new-access");
+    }
+
     #endregion PerformHttpRequest
+
+    private sealed class StubHttpMessageHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> handler) : HttpMessageHandler
+    {
+        public StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> syncHandler)
+            : this(request => Task.FromResult(syncHandler(request)))
+        {
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => handler(request);
+    }
 }

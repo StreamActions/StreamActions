@@ -41,22 +41,23 @@ public sealed class TokenBucketRateLimiterTests
 
     [Fact]
     [Trait("Member", "ReturnToken")]
-    public async Task ReturnToken_ThrowsTimeoutException_WhenUpgradeableReadLockFails()
+    public async Task ReturnToken_ThrowsTimeoutException_WhenLockFails()
     {
         using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
         MethodInfo? returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", BindingFlags.Instance | BindingFlags.NonPublic);
-        FieldInfo? rwlField = typeof(TokenBucketRateLimiter).GetField("_rwl", BindingFlags.Instance | BindingFlags.NonPublic);
-        ReaderWriterLockSlim rwl = (ReaderWriterLockSlim)rwlField!.GetValue(limiter)!;
+        FieldInfo? lockField = typeof(TokenBucketRateLimiter).GetField("_lock", BindingFlags.Instance | BindingFlags.NonPublic);
+        Lock lockObj = (Lock)lockField!.GetValue(limiter)!;
 
         TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource tcs2 = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         Task t = Task.Run(() =>
         {
-            rwl.EnterWriteLock();
-            tcs.SetResult();
-            tcs2.Task.Wait();
-            rwl.ExitWriteLock();
+            lock (lockObj)
+            {
+                tcs.SetResult();
+                tcs2.Task.Wait();
+            }
         }, TestContext.Current.CancellationToken);
 
         await tcs.Task.ConfigureAwait(true);
@@ -75,52 +76,7 @@ public sealed class TokenBucketRateLimiterTests
                 }
             };
 
-            _ = act.Should().Throw<TimeoutException>().WithMessage("Timed out attempting to acquire upgradeable read lock.");
-        }
-        finally
-        {
-            tcs2.SetResult();
-            await t.ConfigureAwait(true);
-        }
-    }
-
-    [Fact]
-    [Trait("Member", "ReturnToken")]
-    public async Task ReturnToken_ThrowsTimeoutException_WhenWriteLockFails()
-    {
-        using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
-        MethodInfo? returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", BindingFlags.Instance | BindingFlags.NonPublic);
-        FieldInfo? rwlField = typeof(TokenBucketRateLimiter).GetField("_rwl", BindingFlags.Instance | BindingFlags.NonPublic);
-        ReaderWriterLockSlim rwl = (ReaderWriterLockSlim)rwlField!.GetValue(limiter)!;
-
-        TaskCompletionSource tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource tcs2 = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        Task t = Task.Run(() =>
-        {
-            rwl.EnterReadLock();
-            tcs.SetResult();
-            tcs2.Task.Wait();
-            rwl.ExitReadLock();
-        }, TestContext.Current.CancellationToken);
-
-        await tcs.Task.ConfigureAwait(true);
-
-        try
-        {
-            Action act = () =>
-            {
-                try
-                {
-                    _ = returnTokenMethod!.Invoke(limiter, [TimeSpan.FromMilliseconds(100)]);
-                }
-                catch (TargetInvocationException ex)
-                {
-                    throw ex.InnerException!;
-                }
-            };
-
-            _ = act.Should().Throw<TimeoutException>().WithMessage("Timed out attempting to acquire write lock.");
+            _ = act.Should().Throw<TimeoutException>().WithMessage("Timed out attempting to acquire lock.");
         }
         finally
         {
@@ -423,4 +379,26 @@ public sealed class TokenBucketRateLimiterTests
     }
 
     #endregion UpdatePeriod
+
+    #region WaitForRateLimit
+
+    [Fact]
+    [Trait("Member", "WaitForRateLimit")]
+    public async Task WaitForRateLimit_WithFakeTimeProvider_RefillsAndCompletesDeterministically()
+    {
+        TestTimeProvider timeProvider = new();
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromSeconds(10), timeProvider);
+
+        await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = limiter.Remaining.Should().Be(0);
+
+        Task secondWait = limiter.WaitForRateLimit(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        _ = secondWait.IsCompleted.Should().BeFalse();
+
+        timeProvider.Advance(TimeSpan.FromSeconds(10));
+        await secondWait.ConfigureAwait(true);
+        _ = limiter.Remaining.Should().Be(0);
+    }
+
+    #endregion WaitForRateLimit
 }

@@ -242,7 +242,7 @@ public sealed partial record Channel
             throw new ArgumentOutOfRangeException(nameof(parameters.Tags), parameters.Tags.Count, "must have a count <= 10").Log(TwitchApi.GetLogger());
         }
 
-        if (parameters.Tags is not null && parameters.Tags.Any())
+        if (parameters.Tags is not null && parameters.Tags.Count > 0)
         {
             foreach (string tag in parameters.Tags)
             {
@@ -261,7 +261,7 @@ public sealed partial record Channel
             }
         }
 
-        if (parameters.ContentClassificationLabels is not null && parameters.ContentClassificationLabels.Any())
+        if (parameters.ContentClassificationLabels is not null && parameters.ContentClassificationLabels.Count > 0)
         {
             foreach (ContentClassificationLabel ccl in parameters.ContentClassificationLabels)
             {

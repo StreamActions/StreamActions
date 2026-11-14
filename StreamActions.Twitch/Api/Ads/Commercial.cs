@@ -38,6 +38,12 @@ public sealed record Commercial
     public int? Length { get; init; }
 
     /// <summary>
+    /// The UTC timestamp when this instance was created.
+    /// </summary>
+    [JsonIgnore]
+    private readonly DateTime _createdAtUtc = TimeProvider.System.GetUtcNow().UtcDateTime;
+
+    /// <summary>
     /// The number of seconds you must wait before running another commercial.
     /// </summary>
     [JsonPropertyName("retry_after")]
@@ -53,7 +59,7 @@ public sealed record Commercial
     /// The timestamp you must wait until before running another commercial.
     /// </summary>
     [JsonIgnore]
-    public DateTime? RetryAfterDateTime => this.RetryAfter.HasValue ? DateTime.UtcNow.Add(this.RetryAfter.Value) : null;
+    public DateTime? RetryAfterDateTime => this.RetryAfter.HasValue ? this._createdAtUtc.Add(this.RetryAfter.Value) : null;
 
     /// <summary>
     /// A message that indicates whether Twitch was able to serve an ad.
