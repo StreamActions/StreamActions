@@ -40,11 +40,12 @@ public record JsonApiResponse
     /// <summary>
     /// The string name of <see cref="Status"/>.
     /// </summary>
+    [field: JsonIgnore]
     [JsonPropertyName("error")]
     public string Error
     {
-        get => this._error == null || this._error.Length == 0 ? Enum.GetName(this.Status) ?? "Unknown" : this._error;
-        init => this._error = value;
+        get => field == null || field.Length == 0 ? Enum.GetName(this.Status) ?? "Unknown" : field;
+        init;
     }
 
     /// <summary>
@@ -70,12 +71,6 @@ public record JsonApiResponse
     /// </summary>
     [JsonIgnore]
     public bool IsServerErrorStatusCode => (int)this.Status is >= 500 and <= 599;
-
-    /// <summary>
-    /// Backing field for <see cref="Error"/>.
-    /// </summary>
-    [JsonIgnore]
-    private string? _error;
 
     /// <summary>
     /// Backing field for <see cref="Status"/>.

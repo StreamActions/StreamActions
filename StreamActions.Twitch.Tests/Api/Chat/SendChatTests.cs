@@ -17,9 +17,6 @@
  */
 
 using StreamActions.Twitch.Api.Chat;
-using StreamActions.Twitch.Api.Chat.Objects;
-using StreamActions.Twitch.Api.Common;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
@@ -360,7 +357,7 @@ public sealed class SendChatTests : IDisposable
         _ = result.MessageId.Should().BeNull();
         _ = result.IsSent.Should().BeFalse();
         _ = result.DropReason.Should().NotBeNull();
-        _ = result.DropReason!.Code.Should().Be("msg_banned");
+        _ = result.DropReason.Code.Should().Be("msg_banned");
         _ = result.DropReason.Message.Should().Be("The sender is banned from chat.");
 
         RecordedRequest? request = this._fixture.LastRequest;

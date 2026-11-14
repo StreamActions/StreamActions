@@ -133,7 +133,7 @@ public sealed class ValidateTests : IDisposable
         Validate? result = await Validate.ValidateOAuth(session, $"{this._fixture.BaseUrl}/oauth2/validate").ConfigureAwait(true);
 
         _ = result.Should().NotBeNull();
-        _ = result!.Status.Should().Be(HttpStatusCode.Unauthorized);
+        _ = result.Status.Should().Be(HttpStatusCode.Unauthorized);
         _ = result.Message.Should().Be("invalid access token");
         _ = result.ClientId.Should().BeNull();
         _ = result.Login.Should().BeNull();

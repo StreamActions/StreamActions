@@ -213,16 +213,16 @@ public sealed class EventSubWebhookTests : IDisposable
 
         EventSubEvent<Follow>? followEvent = result.Event as EventSubEvent<Follow>;
         _ = followEvent.Should().NotBeNull();
-        _ = followEvent!.Metadata.Should().NotBeNull();
-        _ = followEvent.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
+        _ = followEvent.Metadata.Should().NotBeNull();
+        _ = followEvent.Metadata.MessageId.Should().Be(Guid.Parse(messageId));
         _ = followEvent.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Notification);
         _ = followEvent.Metadata.MessageTimestamp.Should().Be(DateTime.Parse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = followEvent.Metadata.SubscriptionType.Should().Be("channel.follow");
         _ = followEvent.Metadata.SubscriptionVersion.Should().Be("2");
 
         _ = followEvent.Payload.Should().NotBeNull();
-        _ = followEvent.Payload!.Subscription.Should().NotBeNull();
-        _ = followEvent.Payload.Subscription!.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
+        _ = followEvent.Payload.Subscription.Should().NotBeNull();
+        _ = followEvent.Payload.Subscription.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
         _ = followEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.Enabled);
         _ = followEvent.Payload.Subscription.Type.Should().Be("channel.follow");
         _ = followEvent.Payload.Subscription.Version.Should().Be("2");
@@ -230,16 +230,16 @@ public sealed class EventSubWebhookTests : IDisposable
 
         BroadcasterAndModeratorUserIdCondition? condition = followEvent.Payload.Subscription.Condition as BroadcasterAndModeratorUserIdCondition;
         _ = condition.Should().NotBeNull();
-        _ = condition!.BroadcasterUserId.Should().Be("1337");
+        _ = condition.BroadcasterUserId.Should().Be("1337");
         _ = condition.ModeratorUserId.Should().Be("1337");
 
         _ = followEvent.Payload.Subscription.Transport.Should().NotBeNull();
-        _ = followEvent.Payload.Subscription.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
+        _ = followEvent.Payload.Subscription.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
         _ = followEvent.Payload.Subscription.Transport.Callback.Should().Be("https://example.com/webhooks/callback");
         _ = followEvent.Payload.Subscription.CreatedAt.Should().Be(DateTime.Parse("2023-04-11T10:11:12.123Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         _ = followEvent.Payload.Event.Should().NotBeNull();
-        _ = followEvent.Payload.Event!.UserId.Should().Be("1234");
+        _ = followEvent.Payload.Event.UserId.Should().Be("1234");
         _ = followEvent.Payload.Event.UserLogin.Should().Be("cool_user");
         _ = followEvent.Payload.Event.UserName.Should().Be("Cool_User");
         _ = followEvent.Payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -349,16 +349,16 @@ public sealed class EventSubWebhookTests : IDisposable
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent!.Metadata.Should().NotBeNull();
-        _ = eventSubEvent.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
+        _ = eventSubEvent.Metadata.Should().NotBeNull();
+        _ = eventSubEvent.Metadata.MessageId.Should().Be(Guid.Parse(messageId));
         _ = eventSubEvent.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Revocation);
         _ = eventSubEvent.Metadata.MessageTimestamp.Should().Be(DateTime.Parse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = eventSubEvent.Metadata.SubscriptionType.Should().Be("channel.follow");
         _ = eventSubEvent.Metadata.SubscriptionVersion.Should().Be("2");
 
         _ = eventSubEvent.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload!.Subscription.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Subscription!.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
+        _ = eventSubEvent.Payload.Subscription.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
         _ = eventSubEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.AuthorizationRevoked);
         _ = eventSubEvent.Payload.Subscription.Type.Should().Be("channel.follow");
         _ = eventSubEvent.Payload.Subscription.Version.Should().Be("2");
@@ -366,10 +366,10 @@ public sealed class EventSubWebhookTests : IDisposable
 
         BroadcasterAndModeratorUserIdCondition? condition = eventSubEvent.Payload.Subscription.Condition as BroadcasterAndModeratorUserIdCondition;
         _ = condition.Should().NotBeNull();
-        _ = condition!.BroadcasterUserId.Should().Be("1337");
+        _ = condition.BroadcasterUserId.Should().Be("1337");
 
         _ = eventSubEvent.Payload.Subscription.Transport.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Subscription.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
+        _ = eventSubEvent.Payload.Subscription.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
         _ = eventSubEvent.Payload.Subscription.Transport.Callback.Should().Be("https://example.com/webhooks/callback");
         _ = eventSubEvent.Payload.Subscription.CreatedAt.Should().Be(DateTime.Parse("2023-04-11T10:11:12.123Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
     }

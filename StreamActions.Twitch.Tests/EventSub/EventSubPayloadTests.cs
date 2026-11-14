@@ -60,9 +60,9 @@ using CustomRewardRemove = StreamActions.Twitch.EventSub.Channel.ChannelPointsCu
 using CustomRewardUpdate = StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomReward.Update;
 using DropEntitlementGrant = StreamActions.Twitch.EventSub.Drop.Entitlement.Grant;
 using GoalBegin = StreamActions.Twitch.EventSub.Channel.Goal.Begin;
-using GoalTypeEnum = StreamActions.Twitch.EventSub.Channel.Goal.Objects.GoalType;
 using GoalEnd = StreamActions.Twitch.EventSub.Channel.Goal.GoalEnd;
 using GoalProgress = StreamActions.Twitch.EventSub.Channel.Goal.Progress;
+using GoalTypeEnum = StreamActions.Twitch.EventSub.Channel.Goal.Objects.GoalType;
 using GuestStarGuestUpdate = StreamActions.Twitch.EventSub.Channel.GuestStarGuest.Update;
 using GuestStarSessionBegin = StreamActions.Twitch.EventSub.Channel.GuestStarSession.SessionBegin;
 using GuestStarSessionEnd = StreamActions.Twitch.EventSub.Channel.GuestStarSession.SessionEnd;
@@ -273,10 +273,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<AutomodHold> payload = DeserializePayload<AutomodHold>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("automod.message.hold");
+        _ = payload.Subscription.Type.Should().Be("automod.message.hold");
         _ = payload.Subscription.Version.Should().Be("2");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.UserId.Should().Be("4242");
@@ -315,7 +315,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<AutomodMessageUpdate> payload = DeserializePayload<AutomodMessageUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("automod.message.update");
+        _ = payload.Subscription.Type.Should().Be("automod.message.update");
         _ = payload.Subscription.Version.Should().Be("2");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -324,7 +324,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("baduser");
         _ = payload.Event.UserName.Should().Be("BadUser");
-        _ = payload.Event!.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserId.Should().Be("9001");
         _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
         _ = payload.Event.ModeratorUserName.Should().Be("Mod");
         _ = payload.Event.MessageId.Should().Be("bad-msg-123");
@@ -356,10 +356,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<AutomodSettingsUpdate> payload = DeserializePayload<AutomodSettingsUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("automod.settings.update");
+        _ = payload.Subscription.Type.Should().Be("automod.settings.update");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
@@ -395,7 +395,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<AutomodTermsUpdate> payload = DeserializePayload<AutomodTermsUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("automod.terms.update");
+        _ = payload.Subscription.Type.Should().Be("automod.terms.update");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -404,7 +404,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
         _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
         _ = payload.Event.ModeratorUserName.Should().Be("Mod");
-        _ = payload.Event!.Action.Should().Be(AutomodTermAction.AddPermitted);
+        _ = payload.Event.Action.Should().Be(AutomodTermAction.AddPermitted);
         _ = payload.Event.FromAutomod.Should().BeFalse();
         _ = payload.Event.Terms.Should().Contain("term1");
     }
@@ -442,10 +442,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChannelBan> payload = DeserializePayload<ChannelBan>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.ban");
+        _ = payload.Subscription.Type.Should().Be("channel.ban");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("baduser");
         _ = payload.Event.UserName.Should().Be("BadUser");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -485,7 +485,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChannelCheer> payload = DeserializePayload<ChannelCheer>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.cheer");
+        _ = payload.Subscription.Type.Should().Be("channel.cheer");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.IsAnonymous.Should().BeFalse();
@@ -496,7 +496,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Message.Should().Be("cheer100");
-        _ = payload.Event!.Bits.Should().Be(100);
+        _ = payload.Event.Bits.Should().Be(100);
     }
 
     /// <summary>
@@ -523,10 +523,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChannelFollow> payload = DeserializePayload<ChannelFollow>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.follow");
+        _ = payload.Subscription.Type.Should().Be("channel.follow");
         _ = payload.Subscription.Version.Should().Be("2");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("follower");
         _ = payload.Event.UserName.Should().Be("Follower");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -559,10 +559,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChannelRaid> payload = DeserializePayload<ChannelRaid>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.raid");
+        _ = payload.Subscription.Type.Should().Be("channel.raid");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.FromBroadcasterUserId.Should().Be("1001");
+        _ = payload.Event.FromBroadcasterUserId.Should().Be("1001");
         _ = payload.Event.FromBroadcasterUserLogin.Should().Be("raider");
         _ = payload.Event.FromBroadcasterUserName.Should().Be("Raider");
         _ = payload.Event.ToBroadcasterUserId.Should().Be("1337");
@@ -597,7 +597,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChannelSubscribe> payload = DeserializePayload<ChannelSubscribe>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.subscribe");
+        _ = payload.Subscription.Type.Should().Be("channel.subscribe");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.UserId.Should().Be("4242");
@@ -606,7 +606,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.Tier.Should().Be("1000");
+        _ = payload.Event.Tier.Should().Be("1000");
         _ = payload.Event.IsGift.Should().BeFalse();
     }
 
@@ -637,10 +637,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChannelUnban> payload = DeserializePayload<ChannelUnban>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.unban");
+        _ = payload.Subscription.Type.Should().Be("channel.unban");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("unbanned");
         _ = payload.Event.UserName.Should().Be("Unbanned");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -676,13 +676,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChannelUpdate> payload = DeserializePayload<ChannelUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.update");
+        _ = payload.Subscription.Type.Should().Be("channel.update");
         _ = payload.Subscription.Version.Should().Be("2");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.Title.Should().Be("Fun Stream");
+        _ = payload.Event.Title.Should().Be("Fun Stream");
         _ = payload.Event.Language.Should().Be("en");
         _ = payload.Event.CategoryId.Should().Be("509658");
         _ = payload.Event.CategoryName.Should().Be("Just Chatting");
@@ -716,10 +716,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<AdBreakBegin> payload = DeserializePayload<AdBreakBegin>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.ad_break.begin");
+        _ = payload.Subscription.Type.Should().Be("channel.ad_break.begin");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.DurationSeconds.Should().Be(60);
+        _ = payload.Event.DurationSeconds.Should().Be(60);
         _ = payload.Event.StartedAt.Should().Be(DateTime.Parse("2023-01-01T00:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = payload.Event.IsAutomatic.Should().BeFalse();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -752,7 +752,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<BitsUse> payload = DeserializePayload<BitsUse>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.bits.use");
+        _ = payload.Subscription.Type.Should().Be("channel.bits.use");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -761,7 +761,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("bitsuser");
         _ = payload.Event.UserName.Should().Be("BitsUser");
-        _ = payload.Event!.Bits.Should().Be(500);
+        _ = payload.Event.Bits.Should().Be(500);
     }
 
     #endregion Channel AdBreak & Bits Payloads
@@ -793,7 +793,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<AutoRedemptionAdd> payload = DeserializePayload<AutoRedemptionAdd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_automatic_reward_redemption.add");
+        _ = payload.Subscription.Type.Should().Be("channel.channel_points_automatic_reward_redemption.add");
         _ = payload.Subscription.Version.Should().Be("2");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -802,7 +802,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("pointsuser");
         _ = payload.Event.UserName.Should().Be("PointsUser");
-        _ = payload.Event!.Id.Should().Be("redemption-123");
+        _ = payload.Event.Id.Should().Be("redemption-123");
     }
 
     /// <summary>
@@ -831,10 +831,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<CustomRewardAdd> payload = DeserializePayload<CustomRewardAdd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward.add");
+        _ = payload.Subscription.Type.Should().Be("channel.channel_points_custom_reward.add");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("reward-123");
+        _ = payload.Event.Id.Should().Be("reward-123");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -867,10 +867,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<CustomRewardRemove> payload = DeserializePayload<CustomRewardRemove>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward.remove");
+        _ = payload.Subscription.Type.Should().Be("channel.channel_points_custom_reward.remove");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("reward-123");
+        _ = payload.Event.Id.Should().Be("reward-123");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -901,14 +901,14 @@ public sealed class EventSubPayloadTests
 
         EventPayload<CustomRewardUpdate> payload = DeserializePayload<CustomRewardUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward.update");
+        _ = payload.Subscription.Type.Should().Be("channel.channel_points_custom_reward.update");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("reward-123");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.Cost.Should().Be(200);
+        _ = payload.Event.Cost.Should().Be(200);
         _ = payload.Event.Title.Should().Be("Hydrate More");
     }
 
@@ -939,10 +939,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<CustomRedemptionAdd> payload = DeserializePayload<CustomRedemptionAdd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward_redemption.add");
+        _ = payload.Subscription.Type.Should().Be("channel.channel_points_custom_reward_redemption.add");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("redemption-456");
+        _ = payload.Event.Id.Should().Be("redemption-456");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -979,7 +979,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<CustomRedemptionUpdate> payload = DeserializePayload<CustomRedemptionUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.channel_points_custom_reward_redemption.update");
+        _ = payload.Subscription.Type.Should().Be("channel.channel_points_custom_reward_redemption.update");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("redemption-456");
@@ -989,7 +989,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("pointsuser");
         _ = payload.Event.UserName.Should().Be("PointsUser");
-        _ = payload.Event!.Status.Should().Be("fulfilled");
+        _ = payload.Event.Status.Should().Be("fulfilled");
     }
 
     #endregion Channel Points Payloads
@@ -1020,14 +1020,14 @@ public sealed class EventSubPayloadTests
 
         EventPayload<CharityProgress> payload = DeserializePayload<CharityProgress>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.charity_campaign.progress");
+        _ = payload.Subscription.Type.Should().Be("channel.charity_campaign.progress");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("charity-1");
         _ = payload.Event.BroadcasterId.Should().Be("1337");
         _ = payload.Event.BroadcasterLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterName.Should().Be("Streamer");
-        _ = payload.Event!.CharityName.Should().Be("St. Jude");
+        _ = payload.Event.CharityName.Should().Be("St. Jude");
         _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
     }
 
@@ -1055,14 +1055,14 @@ public sealed class EventSubPayloadTests
 
         EventPayload<CharityStart> payload = DeserializePayload<CharityStart>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.charity_campaign.start");
+        _ = payload.Subscription.Type.Should().Be("channel.charity_campaign.start");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("charity-1");
         _ = payload.Event.BroadcasterId.Should().Be("1337");
         _ = payload.Event.BroadcasterLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterName.Should().Be("Streamer");
-        _ = payload.Event!.CharityName.Should().Be("St. Jude");
+        _ = payload.Event.CharityName.Should().Be("St. Jude");
         _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
     }
 
@@ -1090,14 +1090,14 @@ public sealed class EventSubPayloadTests
 
         EventPayload<CharityStop> payload = DeserializePayload<CharityStop>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.charity_campaign.stop");
+        _ = payload.Subscription.Type.Should().Be("channel.charity_campaign.stop");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("charity-1");
         _ = payload.Event.BroadcasterId.Should().Be("1337");
         _ = payload.Event.BroadcasterLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterName.Should().Be("Streamer");
-        _ = payload.Event!.CharityName.Should().Be("St. Jude");
+        _ = payload.Event.CharityName.Should().Be("St. Jude");
         _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
     }
 
@@ -1128,7 +1128,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<CharityDonate> payload = DeserializePayload<CharityDonate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.charity_campaign.donate");
+        _ = payload.Subscription.Type.Should().Be("channel.charity_campaign.donate");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("charity-1");
@@ -1137,7 +1137,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.CharityName.Should().Be("St. Jude");
         _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
-        _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("donor");
         _ = payload.Event.UserName.Should().Be("Donor");
     }
@@ -1167,10 +1167,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChatClear> payload = DeserializePayload<ChatClear>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.chat.clear");
+        _ = payload.Subscription.Type.Should().Be("channel.chat.clear");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
     }
@@ -1199,13 +1199,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChatClearUserMessages> payload = DeserializePayload<ChatClearUserMessages>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.chat.clear_user_messages");
+        _ = payload.Subscription.Type.Should().Be("channel.chat.clear_user_messages");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.TargetUserId.Should().Be("4242");
+        _ = payload.Event.TargetUserId.Should().Be("4242");
         _ = payload.Event.TargetUserLogin.Should().Be("baduser");
         _ = payload.Event.TargetUserName.Should().Be("BadUser");
     }
@@ -1274,7 +1274,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChatMessageDelete> payload = DeserializePayload<ChatMessageDelete>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.chat.message_delete");
+        _ = payload.Subscription.Type.Should().Be("channel.chat.message_delete");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -1283,7 +1283,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.TargetUserId.Should().Be("4242");
         _ = payload.Event.TargetUserLogin.Should().Be("baduser");
         _ = payload.Event.TargetUserName.Should().Be("BadUser");
-        _ = payload.Event!.MessageId.Should().Be("deleted-msg-123");
+        _ = payload.Event.MessageId.Should().Be("deleted-msg-123");
     }
 
     /// <summary>
@@ -1312,7 +1312,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChatNotification> payload = DeserializePayload<ChatNotification>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.chat.notification");
+        _ = payload.Subscription.Type.Should().Be("channel.chat.notification");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -1321,8 +1321,8 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.ChatterUserId.Should().Be("4242");
         _ = payload.Event.ChatterUserLogin.Should().Be("chatter");
         _ = payload.Event.ChatterUserName.Should().Be("Chatter");
-        _ = payload.Event!.TypeOfNotice.Should().Be(ChatNoticeType.Sub);
-        _ = payload.Event!.SystemMessage.Should().Be("Subscribed at Tier 1");
+        _ = payload.Event.TypeOfNotice.Should().Be(ChatNoticeType.Sub);
+        _ = payload.Event.SystemMessage.Should().Be("Subscribed at Tier 1");
     }
 
     /// <summary>
@@ -1350,7 +1350,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChatUserMessageHold> payload = DeserializePayload<ChatUserMessageHold>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.chat.user_message_hold");
+        _ = payload.Subscription.Type.Should().Be("channel.chat.user_message_hold");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -1359,7 +1359,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("helduser");
         _ = payload.Event.UserName.Should().Be("HeldUser");
-        _ = payload.Event!.MessageId.Should().Be("held-msg-123");
+        _ = payload.Event.MessageId.Should().Be("held-msg-123");
     }
 
     /// <summary>
@@ -1388,7 +1388,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChatUserMessageUpdate> payload = DeserializePayload<ChatUserMessageUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.chat.user_message_update");
+        _ = payload.Subscription.Type.Should().Be("channel.chat.user_message_update");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -1397,7 +1397,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("helduser");
         _ = payload.Event.UserName.Should().Be("HeldUser");
-        _ = payload.Event!.MessageId.Should().Be("held-msg-123");
+        _ = payload.Event.MessageId.Should().Be("held-msg-123");
         _ = payload.Event.Status.Should().Be(ChatUserMessageUpdate.MessageStatus.Approved);
     }
 
@@ -1428,13 +1428,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChatSettingsUpdate> payload = DeserializePayload<ChatSettingsUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.chat_settings.update");
+        _ = payload.Subscription.Type.Should().Be("channel.chat_settings.update");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.SlowMode.Should().BeTrue();
+        _ = payload.Event.SlowMode.Should().BeTrue();
         _ = payload.Event.SlowModeWaitTimeSeconds.Should().Be(10);
         _ = payload.Event.FollowerMode.Should().BeFalse();
         _ = payload.Event.SubscriberMode.Should().BeFalse();
@@ -1471,7 +1471,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<PowerUpAdd> payload = DeserializePayload<PowerUpAdd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.custom_power_up_redemption.add");
+        _ = payload.Subscription.Type.Should().Be("channel.custom_power_up_redemption.add");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -1480,7 +1480,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("poweruser");
         _ = payload.Event.UserName.Should().Be("PowerUser");
-        _ = payload.Event!.Id.Should().Be("powerup-123");
+        _ = payload.Event.Id.Should().Be("powerup-123");
     }
 
     /// <summary>
@@ -1509,10 +1509,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<GoalBegin> payload = DeserializePayload<GoalBegin>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.goal.begin");
+        _ = payload.Subscription.Type.Should().Be("channel.goal.begin");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("goal-1");
+        _ = payload.Event.Id.Should().Be("goal-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -1549,10 +1549,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<GoalEnd> payload = DeserializePayload<GoalEnd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.goal.end");
+        _ = payload.Subscription.Type.Should().Be("channel.goal.end");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("goal-1");
+        _ = payload.Event.Id.Should().Be("goal-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -1589,7 +1589,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<GoalProgress> payload = DeserializePayload<GoalProgress>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.goal.progress");
+        _ = payload.Subscription.Type.Should().Be("channel.goal.progress");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("goal-1");
@@ -1598,7 +1598,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.GoalType.Should().Be(GoalTypeEnum.Follow);
         _ = payload.Event.Description.Should().Be("Reach 1k followers");
-        _ = payload.Event!.CurrentAmount.Should().Be(500);
+        _ = payload.Event.CurrentAmount.Should().Be(500);
         _ = payload.Event.TargetAmount.Should().Be(1000);
     }
 
@@ -1633,13 +1633,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<GuestStarGuestUpdate> payload = DeserializePayload<GuestStarGuestUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.guest_star_guest.update");
+        _ = payload.Subscription.Type.Should().Be("channel.guest_star_guest.update");
         _ = payload.Subscription.Version.Should().Be("beta");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.SessionId.Should().Be("session-1");
+        _ = payload.Event.SessionId.Should().Be("session-1");
         _ = payload.Event.GuestUserId.Should().Be("4242");
         _ = payload.Event.GuestUserLogin.Should().Be("guest");
         _ = payload.Event.GuestUserName.Should().Be("Guest");
@@ -1669,13 +1669,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<GuestStarSessionBegin> payload = DeserializePayload<GuestStarSessionBegin>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.guest_star_session.begin");
+        _ = payload.Subscription.Type.Should().Be("channel.guest_star_session.begin");
         _ = payload.Subscription.Version.Should().Be("beta");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.SessionId.Should().Be("session-1");
+        _ = payload.Event.SessionId.Should().Be("session-1");
     }
 
     /// <summary>
@@ -1700,13 +1700,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<GuestStarSessionEnd> payload = DeserializePayload<GuestStarSessionEnd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.guest_star_session.end");
+        _ = payload.Subscription.Type.Should().Be("channel.guest_star_session.end");
         _ = payload.Subscription.Version.Should().Be("beta");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.SessionId.Should().Be("session-1");
+        _ = payload.Event.SessionId.Should().Be("session-1");
     }
 
     /// <summary>
@@ -1734,13 +1734,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<GuestStarSettingsUpdate> payload = DeserializePayload<GuestStarSettingsUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.guest_star_settings.update");
+        _ = payload.Subscription.Type.Should().Be("channel.guest_star_settings.update");
         _ = payload.Subscription.Version.Should().Be("beta");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.IsModeratorSendLiveEnabled.Should().BeTrue();
+        _ = payload.Event.IsModeratorSendLiveEnabled.Should().BeTrue();
         _ = payload.Event.SlotCount.Should().Be(4);
         _ = payload.Event.IsBrowserSourceAudioEnabled.Should().BeTrue();
         _ = payload.Event.GroupLayout.Should().Be("tiled");
@@ -1776,10 +1776,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<HypeTrainBegin> payload = DeserializePayload<HypeTrainBegin>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.hype_train.begin");
+        _ = payload.Subscription.Type.Should().Be("channel.hype_train.begin");
         _ = payload.Subscription.Version.Should().Be("2");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("ht-1");
+        _ = payload.Event.Id.Should().Be("ht-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -1813,10 +1813,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<HypeTrainEnd> payload = DeserializePayload<HypeTrainEnd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.hype_train.end");
+        _ = payload.Subscription.Type.Should().Be("channel.hype_train.end");
         _ = payload.Subscription.Version.Should().Be("2");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("ht-1");
+        _ = payload.Event.Id.Should().Be("ht-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -1850,7 +1850,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<HypeTrainProgress> payload = DeserializePayload<HypeTrainProgress>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.hype_train.progress");
+        _ = payload.Subscription.Type.Should().Be("channel.hype_train.progress");
         _ = payload.Subscription.Version.Should().Be("2");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("ht-1");
@@ -1858,8 +1858,8 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Level.Should().Be(2);
-        _ = payload.Event!.Total.Should().Be(1500);
-        _ = payload.Event!.ProgressAmount.Should().Be(500);
+        _ = payload.Event.Total.Should().Be(1500);
+        _ = payload.Event.ProgressAmount.Should().Be(500);
         _ = payload.Event.Goal.Should().Be(1000);
     }
 
@@ -1892,7 +1892,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ChannelModerate> payload = DeserializePayload<ChannelModerate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.moderate");
+        _ = payload.Subscription.Type.Should().Be("channel.moderate");
         _ = payload.Subscription.Version.Should().Be("2");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -1901,7 +1901,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
         _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
         _ = payload.Event.ModeratorUserName.Should().Be("Mod");
-        _ = payload.Event!.Action.Should().Be("ban");
+        _ = payload.Event.Action.Should().Be("ban");
     }
 
     /// <summary>
@@ -1928,13 +1928,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ModeratorAdd> payload = DeserializePayload<ModeratorAdd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.moderator.add");
+        _ = payload.Subscription.Type.Should().Be("channel.moderator.add");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.UserId.Should().Be("9001");
+        _ = payload.Event.UserId.Should().Be("9001");
         _ = payload.Event.UserLogin.Should().Be("newmod");
         _ = payload.Event.UserName.Should().Be("NewMod");
     }
@@ -1963,13 +1963,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ModeratorRemove> payload = DeserializePayload<ModeratorRemove>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.moderator.remove");
+        _ = payload.Subscription.Type.Should().Be("channel.moderator.remove");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.UserId.Should().Be("9001");
+        _ = payload.Event.UserId.Should().Be("9001");
         _ = payload.Event.UserLogin.Should().Be("oldmod");
         _ = payload.Event.UserName.Should().Be("OldMod");
     }
@@ -2005,10 +2005,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<PollBegin> payload = DeserializePayload<PollBegin>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.poll.begin");
+        _ = payload.Subscription.Type.Should().Be("channel.poll.begin");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("poll-1");
+        _ = payload.Event.Id.Should().Be("poll-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -2043,7 +2043,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<PollEnd> payload = DeserializePayload<PollEnd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.poll.end");
+        _ = payload.Subscription.Type.Should().Be("channel.poll.end");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("poll-1");
@@ -2051,7 +2051,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Title.Should().Be("Best Game?");
-        _ = payload.Event!.Status.Should().Be(PollStatusEnum.Completed);
+        _ = payload.Event.Status.Should().Be(PollStatusEnum.Completed);
         _ = payload.Event.Choices.Should().HaveCount(1);
     }
 
@@ -2081,7 +2081,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<PollProgress> payload = DeserializePayload<PollProgress>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.poll.progress");
+        _ = payload.Subscription.Type.Should().Be("channel.poll.progress");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("poll-1");
@@ -2089,7 +2089,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Title.Should().Be("Best Game?");
-        _ = payload.Event!.Choices.Should().HaveCount(1);
+        _ = payload.Event.Choices.Should().HaveCount(1);
     }
 
     #endregion Channel Poll Payloads
@@ -2122,10 +2122,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<PredictionBegin> payload = DeserializePayload<PredictionBegin>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.prediction.begin");
+        _ = payload.Subscription.Type.Should().Be("channel.prediction.begin");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("pred-1");
+        _ = payload.Event.Id.Should().Be("pred-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -2161,7 +2161,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<PredictionEnd> payload = DeserializePayload<PredictionEnd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.prediction.end");
+        _ = payload.Subscription.Type.Should().Be("channel.prediction.end");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("pred-1");
@@ -2169,7 +2169,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Title.Should().Be("Will we win?");
-        _ = payload.Event!.WinningOutcomeId.Should().Be("out-1");
+        _ = payload.Event.WinningOutcomeId.Should().Be("out-1");
         _ = payload.Event.Status.Should().Be(PredictionStatusEnum.Resolved);
         _ = payload.Event.Outcomes.Should().HaveCount(1);
     }
@@ -2200,10 +2200,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<PredictionLock> payload = DeserializePayload<PredictionLock>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.prediction.lock");
+        _ = payload.Subscription.Type.Should().Be("channel.prediction.lock");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("pred-1");
+        _ = payload.Event.Id.Should().Be("pred-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -2237,10 +2237,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<PredictionProgress> payload = DeserializePayload<PredictionProgress>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.prediction.progress");
+        _ = payload.Subscription.Type.Should().Be("channel.prediction.progress");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("pred-1");
+        _ = payload.Event.Id.Should().Be("pred-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -2277,10 +2277,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<SharedChatBegin> payload = DeserializePayload<SharedChatBegin>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.shared_chat.begin");
+        _ = payload.Subscription.Type.Should().Be("channel.shared_chat.begin");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.SessionId.Should().Be("sc-1");
+        _ = payload.Event.SessionId.Should().Be("sc-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -2314,10 +2314,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<SharedChatEnd> payload = DeserializePayload<SharedChatEnd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.shared_chat.end");
+        _ = payload.Subscription.Type.Should().Be("channel.shared_chat.end");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.SessionId.Should().Be("sc-1");
+        _ = payload.Event.SessionId.Should().Be("sc-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -2351,10 +2351,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<SharedChatUpdate> payload = DeserializePayload<SharedChatUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.shared_chat.update");
+        _ = payload.Subscription.Type.Should().Be("channel.shared_chat.update");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.SessionId.Should().Be("sc-1");
+        _ = payload.Event.SessionId.Should().Be("sc-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -2387,10 +2387,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ShieldModeBegin> payload = DeserializePayload<ShieldModeBegin>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.shield_mode.begin");
+        _ = payload.Subscription.Type.Should().Be("channel.shield_mode.begin");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
@@ -2422,10 +2422,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ShieldModeEnd> payload = DeserializePayload<ShieldModeEnd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.shield_mode.end");
+        _ = payload.Subscription.Type.Should().Be("channel.shield_mode.end");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
@@ -2465,7 +2465,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ShoutoutCreate> payload = DeserializePayload<ShoutoutCreate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.shoutout.create");
+        _ = payload.Subscription.Type.Should().Be("channel.shoutout.create");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -2474,7 +2474,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.ModeratorUserId.Should().Be("9001");
         _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
         _ = payload.Event.ModeratorUserName.Should().Be("Mod");
-        _ = payload.Event!.ToBroadcasterUserId.Should().Be("2001");
+        _ = payload.Event.ToBroadcasterUserId.Should().Be("2001");
         _ = payload.Event.ToBroadcasterUserLogin.Should().Be("shouted");
         _ = payload.Event.ToBroadcasterUserName.Should().Be("Shouted");
         _ = payload.Event.ViewerCount.Should().Be(100);
@@ -2505,13 +2505,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ShoutoutReceive> payload = DeserializePayload<ShoutoutReceive>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.shoutout.receive");
+        _ = payload.Subscription.Type.Should().Be("channel.shoutout.receive");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.FromBroadcasterUserId.Should().Be("2001");
+        _ = payload.Event.FromBroadcasterUserId.Should().Be("2001");
         _ = payload.Event.FromBroadcasterUserLogin.Should().Be("shouting");
         _ = payload.Event.FromBroadcasterUserName.Should().Be("Shouting");
         _ = payload.Event.ViewerCount.Should().Be(100);
@@ -2548,7 +2548,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<SubscriptionGift> payload = DeserializePayload<SubscriptionGift>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.subscription.gift");
+        _ = payload.Subscription.Type.Should().Be("channel.subscription.gift");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.UserId.Should().Be("4242");
@@ -2557,7 +2557,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.Total.Should().Be(5);
+        _ = payload.Event.Total.Should().Be(5);
         _ = payload.Event.Tier.Should().Be("1000");
         _ = payload.Event.IsAnonymous.Should().BeFalse();
     }
@@ -2590,7 +2590,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<SubscriptionMessage> payload = DeserializePayload<SubscriptionMessage>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.subscription.message");
+        _ = payload.Subscription.Type.Should().Be("channel.subscription.message");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.UserId.Should().Be("4242");
@@ -2600,7 +2600,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Tier.Should().Be("1000");
-        _ = payload.Event!.CumulativeMonths.Should().Be(6);
+        _ = payload.Event.CumulativeMonths.Should().Be(6);
         _ = payload.Event.DurationMonths.Should().Be(1);
         _ = payload.Event.StreakMonths.Should().Be(6);
     }
@@ -2631,7 +2631,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<SubscriptionEnd> payload = DeserializePayload<SubscriptionEnd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.subscription.end");
+        _ = payload.Subscription.Type.Should().Be("channel.subscription.end");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.UserId.Should().Be("4242");
@@ -2640,7 +2640,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.Tier.Should().Be("1000");
+        _ = payload.Event.Tier.Should().Be("1000");
         _ = payload.Event.IsGift.Should().BeFalse();
     }
 
@@ -2674,7 +2674,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<SuspiciousUserMessage> payload = DeserializePayload<SuspiciousUserMessage>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.suspicious_user.message");
+        _ = payload.Subscription.Type.Should().Be("channel.suspicious_user.message");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -2684,7 +2684,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserLogin.Should().Be("sususer");
         _ = payload.Event.UserName.Should().Be("SusUser");
         _ = payload.Event.LowTrustStatus.Should().Be(LowTrustStatusEnum.ActiveMonitoring);
-        _ = payload.Event!.MessageId.Should().Be("sus-1");
+        _ = payload.Event.MessageId.Should().Be("sus-1");
     }
 
     /// <summary>
@@ -2715,7 +2715,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<SuspiciousUserUpdate> payload = DeserializePayload<SuspiciousUserUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.suspicious_user.update");
+        _ = payload.Subscription.Type.Should().Be("channel.suspicious_user.update");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -2727,7 +2727,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("sususer");
         _ = payload.Event.UserName.Should().Be("SusUser");
-        _ = payload.Event!.LowTrustStatus.Should().Be(LowTrustStatusEnum.Restricted);
+        _ = payload.Event.LowTrustStatus.Should().Be(LowTrustStatusEnum.Restricted);
     }
 
     /// <summary>
@@ -2756,10 +2756,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<UnbanRequestCreate> payload = DeserializePayload<UnbanRequestCreate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.unban_request.create");
+        _ = payload.Subscription.Type.Should().Be("channel.unban_request.create");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("ub-1");
+        _ = payload.Event.Id.Should().Be("ub-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -2799,10 +2799,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<UnbanRequestResolve> payload = DeserializePayload<UnbanRequestResolve>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.unban_request.resolve");
+        _ = payload.Subscription.Type.Should().Be("channel.unban_request.resolve");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("ub-1");
+        _ = payload.Event.Id.Should().Be("ub-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
@@ -2844,13 +2844,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<VipAdd> payload = DeserializePayload<VipAdd>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.vip.add");
+        _ = payload.Subscription.Type.Should().Be("channel.vip.add");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("vipuser");
         _ = payload.Event.UserName.Should().Be("VipUser");
     }
@@ -2879,13 +2879,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<VipRemove> payload = DeserializePayload<VipRemove>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.vip.remove");
+        _ = payload.Subscription.Type.Should().Be("channel.vip.remove");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("exvip");
         _ = payload.Event.UserName.Should().Be("ExVip");
     }
@@ -2914,13 +2914,13 @@ public sealed class EventSubPayloadTests
 
         EventPayload<WarningAcknowledge> payload = DeserializePayload<WarningAcknowledge>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.warning.acknowledge");
+        _ = payload.Subscription.Type.Should().Be("channel.warning.acknowledge");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event!.UserId.Should().Be("4242");
+        _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("warneduser");
         _ = payload.Event.UserName.Should().Be("WarnedUser");
     }
@@ -2953,7 +2953,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<WarningSend> payload = DeserializePayload<WarningSend>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("channel.warning.send");
+        _ = payload.Subscription.Type.Should().Be("channel.warning.send");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -2965,7 +2965,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("warneduser");
         _ = payload.Event.UserName.Should().Be("WarnedUser");
-        _ = payload.Event!.Reason.Should().Be("Be nice");
+        _ = payload.Event.Reason.Should().Be("Be nice");
     }
 
     #endregion Channel VIP & Warning Payloads
@@ -2993,10 +2993,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<ConduitShardDisabled> payload = DeserializePayload<ConduitShardDisabled>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("conduit.shard.disabled");
+        _ = payload.Subscription.Type.Should().Be("conduit.shard.disabled");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.ConduitId.Should().Be("conduit-1");
+        _ = payload.Event.ConduitId.Should().Be("conduit-1");
         _ = payload.Event.ShardId.Should().Be("0");
         _ = payload.Event.Status.Should().Be("disabled");
     }
@@ -3029,12 +3029,12 @@ public sealed class EventSubPayloadTests
 
         EventPayload<DropEntitlementGrant> payload = DeserializePayload<DropEntitlementGrant>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("drop.entitlement.grant");
+        _ = payload.Subscription.Type.Should().Be("drop.entitlement.grant");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("grant-1");
+        _ = payload.Event.Id.Should().Be("grant-1");
         _ = payload.Event.Data.Should().HaveCount(1);
-        StreamActions.Twitch.EventSub.Drop.Entitlement.Objects.Entitlement entitlement = payload.Event.Data!.First();
+        StreamActions.Twitch.EventSub.Drop.Entitlement.Objects.Entitlement entitlement = payload.Event.Data.First();
         _ = entitlement.EntitlementId.Should().Be("ent-1");
         _ = entitlement.BenefitId.Should().Be("b-1");
         _ = entitlement.UserId.Should().Be("4242");
@@ -3074,10 +3074,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<BitsTransactionCreate> payload = DeserializePayload<BitsTransactionCreate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("extension.bits_transaction.create");
+        _ = payload.Subscription.Type.Should().Be("extension.bits_transaction.create");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.Id.Should().Be("trans-1");
+        _ = payload.Event.Id.Should().Be("trans-1");
         _ = payload.Event.ExtensionClientId.Should().Be("ext-1");
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
@@ -3086,7 +3086,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserLogin.Should().Be("buyer");
         _ = payload.Event.UserName.Should().Be("Buyer");
         _ = payload.Event.Product.Should().NotBeNull();
-        _ = payload.Event.Product!.Sku.Should().Be("item_1");
+        _ = payload.Event.Product.Sku.Should().Be("item_1");
         _ = payload.Event.Product.Bits.Should().Be(100);
         _ = payload.Event.Product.InDevelopment.Should().BeFalse();
         _ = payload.Event.Product.Name.Should().Be("Magic Item");
@@ -3114,11 +3114,11 @@ public sealed class EventSubPayloadTests
 
         EventPayload<StreamOffline> payload = DeserializePayload<StreamOffline>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("stream.offline");
+        _ = payload.Subscription.Type.Should().Be("stream.offline");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("stream-1");
-        _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
     }
@@ -3147,11 +3147,11 @@ public sealed class EventSubPayloadTests
 
         EventPayload<StreamOnline> payload = DeserializePayload<StreamOnline>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("stream.online");
+        _ = payload.Subscription.Type.Should().Be("stream.online");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("stream-1");
-        _ = payload.Event!.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.TypeOfStream.Should().Be(StreamOnline.StreamType.Live);
@@ -3182,10 +3182,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<UserUpdate> payload = DeserializePayload<UserUpdate>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("user.update");
+        _ = payload.Subscription.Type.Should().Be("user.update");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.UserId.Should().Be("1337");
+        _ = payload.Event.UserId.Should().Be("1337");
         _ = payload.Event.UserLogin.Should().Be("streamer");
         _ = payload.Event.UserName.Should().Be("Streamer");
         _ = payload.Event.Email.Should().Be("user@example.com");
@@ -3215,10 +3215,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<UserAuthGrant> payload = DeserializePayload<UserAuthGrant>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("user.authorization.grant");
+        _ = payload.Subscription.Type.Should().Be("user.authorization.grant");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.ClientId.Should().Be("app-client-id");
+        _ = payload.Event.ClientId.Should().Be("app-client-id");
         _ = payload.Event.UserId.Should().Be("1337");
         _ = payload.Event.UserLogin.Should().Be("streamer");
         _ = payload.Event.UserName.Should().Be("Streamer");
@@ -3246,10 +3246,10 @@ public sealed class EventSubPayloadTests
 
         EventPayload<UserAuthRevoke> payload = DeserializePayload<UserAuthRevoke>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("user.authorization.revoke");
+        _ = payload.Subscription.Type.Should().Be("user.authorization.revoke");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event!.ClientId.Should().Be("app-client-id");
+        _ = payload.Event.ClientId.Should().Be("app-client-id");
         _ = payload.Event.UserId.Should().Be("1337");
         _ = payload.Event.UserLogin.Should().Be("streamer");
         _ = payload.Event.UserName.Should().Be("Streamer");
@@ -3281,7 +3281,7 @@ public sealed class EventSubPayloadTests
 
         EventPayload<UserWhisperMessage> payload = DeserializePayload<UserWhisperMessage>(json);
         _ = payload.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be("user.whisper.message");
+        _ = payload.Subscription.Type.Should().Be("user.whisper.message");
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.FromUserId.Should().Be("4242");
@@ -3290,9 +3290,9 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.ToUserId.Should().Be("1337");
         _ = payload.Event.ToUserLogin.Should().Be("recipient");
         _ = payload.Event.ToUserName.Should().Be("Recipient");
-        _ = payload.Event!.WhisperId.Should().Be("whisp-1");
+        _ = payload.Event.WhisperId.Should().Be("whisp-1");
         _ = payload.Event.Whisper.Should().NotBeNull();
-        _ = payload.Event.Whisper!.Text.Should().Be("Secret message");
+        _ = payload.Event.Whisper.Text.Should().Be("Secret message");
     }
 
     #endregion Conduit, Drop, Extension, Stream, User Payloads
@@ -3311,8 +3311,8 @@ public sealed class EventSubPayloadTests
     {
         EventPayload<TEventType>? payload = JsonSerializer.Deserialize<EventPayload<TEventType>>(json, TwitchApi.SerializerOptions);
         _ = payload.Should().NotBeNull();
-        _ = payload!.Subscription.Should().NotBeNull();
-        _ = payload.Subscription!.Type.Should().Be(TEventType.Type);
+        _ = payload.Subscription.Should().NotBeNull();
+        _ = payload.Subscription.Type.Should().Be(TEventType.Type);
         _ = payload.Subscription.Version.Should().Be(TEventType.Version);
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Should().BeOfType<TEventType>();

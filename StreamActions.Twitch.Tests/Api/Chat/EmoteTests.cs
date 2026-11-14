@@ -169,7 +169,7 @@ public sealed class EmoteTests : IDisposable
         _ = emote.Scale.Should().Contain(Emote.Scales.Small);
         _ = emote.ThemeMode.Should().Contain(Emote.ThemeModes.Light);
         _ = emote.Images.Should().NotBeNull();
-        _ = emote.Images!.Url1X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3001/static/light/1.0"));
+        _ = emote.Images.Url1X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3001/static/light/1.0"));
         _ = emote.Images.Url2X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3001/static/light/2.0"));
         _ = emote.Images.Url4X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3001/static/light/3.0"));
 
@@ -238,7 +238,7 @@ public sealed class EmoteTests : IDisposable
         _ = emote.Id.Should().Be("25");
         _ = emote.Name.Should().Be("Kappa");
         _ = emote.Images.Should().NotBeNull();
-        _ = emote.Images!.Url1X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/25/static/light/1.0"));
+        _ = emote.Images.Url1X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/25/static/light/1.0"));
         _ = emote.Images.Url2X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/25/static/light/2.0"));
         _ = emote.Images.Url4X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/25/static/light/3.0"));
         _ = emote.Format.Should().Contain(Emote.Formats.Static);
@@ -343,7 +343,7 @@ public sealed class EmoteTests : IDisposable
         _ = emote.Id.Should().Be("3002");
         _ = emote.Name.Should().Be("coolEmote");
         _ = emote.Images.Should().NotBeNull();
-        _ = emote.Images!.Url1X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/1.0"));
+        _ = emote.Images.Url1X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/1.0"));
         _ = emote.Images.Url2X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/2.0"));
         _ = emote.Images.Url4X.Should().Be(new Uri("https://static-cdn.jtvnw.net/emoticons/v2/3002/static/light/3.0"));
         _ = emote.EmoteType.Should().Be(Emote.EmoteTypes.Subscriptions);

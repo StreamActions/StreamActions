@@ -32,11 +32,6 @@ namespace StreamActions.Twitch.OAuth;
 [DocParser("Validate OAuth", 82, "https://dev.twitch.tv/docs/authentication/validate-tokens", "twitch/TwitchValidateParser")]
 public sealed record Validate : JsonApiResponse
 {
-    /// <summary>
-    /// The UTC timestamp when this instance was created.
-    /// </summary>
-    [JsonIgnore]
-    private readonly DateTime _createdAtUtc = TimeProvider.System.GetUtcNow().UtcDateTime;
 
     /// <summary>
     /// The returned Client Id attached to the validated OAuth token.
@@ -47,8 +42,9 @@ public sealed record Validate : JsonApiResponse
     /// <summary>
     /// The approximate DateTime that <see cref="ExpiresIn"/> refers to.
     /// </summary>
+    [field: JsonIgnore]
     [JsonIgnore]
-    public DateTime Expires => this._createdAtUtc.AddSeconds(this.ExpiresIn);
+    public DateTime Expires { get => field.AddSeconds(this.ExpiresIn); } = TimeProvider.System.GetUtcNow().UtcDateTime;
 
     /// <summary>
     /// The number of seconds, in server time, until the OAuth token expires.

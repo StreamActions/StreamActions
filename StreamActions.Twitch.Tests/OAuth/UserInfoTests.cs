@@ -187,11 +187,11 @@ public sealed class UserInfoTests : IDisposable
         UserInfo? userInfo = await UserInfo.GetUserInfo(session, explicitBaseAddress.ToString()).ConfigureAwait(true);
 
         _ = userInfo.Should().NotBeNull();
-        _ = userInfo!.Subject.Should().Be("141981764");
+        _ = userInfo.Subject.Should().Be("141981764");
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request!.Method.Should().Be("GET");
+        _ = request.Method.Should().Be("GET");
         _ = request.Path.Should().Be("/oauth2/userinfo");
     }
 
@@ -212,7 +212,7 @@ public sealed class UserInfoTests : IDisposable
         UserInfo? userInfo = await UserInfo.GetUserInfo(session).ConfigureAwait(true);
 
         _ = userInfo.Should().NotBeNull();
-        _ = userInfo!.Audience.Should().BeNull();
+        _ = userInfo.Audience.Should().BeNull();
         _ = userInfo.AuthorizedParty.Should().BeNull();
         _ = userInfo.ExpiresUnix.Should().BeNull();
         _ = userInfo.Expires.Should().BeNull();

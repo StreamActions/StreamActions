@@ -370,7 +370,7 @@ public sealed class ExtensionTests : IDisposable
         _ = item.HasChatSupport.Should().BeTrue();
         _ = item.IconUrl.Should().Be(new Uri("https://extensions-discovery-images.twitch.tv/pgn0bjv51epi7eaekt53tovjnc82qo/0.0.8/logob6c995d8-8b45-48cc-a748-b256e92ac1cd"));
         _ = item.IconUrls.Should().NotBeNull();
-        _ = item.IconUrls!["100x100"].Should().Be("https://extensions-discovery-images.twitch.tv/pgn0bjv51epi7eaekt53tovjnc82qo/0.0.8/logob6c995d8-8b45-48cc-a748-b256e92ac1cd");
+        _ = item.IconUrls["100x100"].Should().Be("https://extensions-discovery-images.twitch.tv/pgn0bjv51epi7eaekt53tovjnc82qo/0.0.8/logob6c995d8-8b45-48cc-a748-b256e92ac1cd");
         _ = item.Id.Should().Be("pgn0bjv51epi7eaekt53tovjnc82qo");
         _ = item.Name.Should().Be("Official Developer Experience Demo");
         _ = item.PrivacyPolicyUrl.Should().Be(new Uri("https://example.com/privacy"));
@@ -389,8 +389,8 @@ public sealed class ExtensionTests : IDisposable
         _ = item.AllowlistedPanelUrls.Should().ContainSingle().Which.Should().Be("https://example.com/panel");
 
         _ = item.Views.Should().NotBeNull();
-        _ = item.Views!.Panel.Should().NotBeNull();
-        _ = item.Views.Panel!.ViewerUrl.Should().Be(new Uri("https://example.com/panel.html"));
+        _ = item.Views.Panel.Should().NotBeNull();
+        _ = item.Views.Panel.ViewerUrl.Should().Be(new Uri("https://example.com/panel.html"));
         _ = item.Views.Panel.Height.Should().Be(300);
         _ = item.Views.Panel.CanLinkExternalContent.Should().BeFalse();
 

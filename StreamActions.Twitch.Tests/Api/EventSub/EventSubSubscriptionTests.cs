@@ -152,7 +152,7 @@ public sealed class EventSubSubscriptionTests : IDisposable
         _ = sub.CreatedAt.Should().Be(createdAt);
         _ = sub.Cost.Should().Be(1);
         _ = sub.Condition.Should().BeOfType<BroadcasterUserIdCondition>();
-        BroadcasterUserIdCondition condition = (BroadcasterUserIdCondition)sub.Condition!;
+        BroadcasterUserIdCondition condition = (BroadcasterUserIdCondition)sub.Condition;
         _ = condition.BroadcasterUserId.Should().Be("12345");
         _ = sub.Transport.Should().NotBeNull();
         _ = sub.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
@@ -594,10 +594,10 @@ public sealed class EventSubSubscriptionTests : IDisposable
         _ = sub.CreatedAt.Should().Be(createdAt);
         _ = sub.Cost.Should().Be(1);
         _ = sub.Condition.Should().BeOfType<BroadcasterUserIdCondition>();
-        BroadcasterUserIdCondition condition = (BroadcasterUserIdCondition)sub.Condition!;
+        BroadcasterUserIdCondition condition = (BroadcasterUserIdCondition)sub.Condition;
         _ = condition.BroadcasterUserId.Should().Be("12345");
         _ = sub.Transport.Should().NotBeNull();
-        _ = sub.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
+        _ = sub.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Webhook);
         _ = sub.Transport.Callback.Should().Be("https://example.com/callback");
 
         RecordedRequest? request = this._fixture.LastRequest;
@@ -668,7 +668,7 @@ public sealed class EventSubSubscriptionTests : IDisposable
 
         EventSubSubscription sub = response.Data[0];
         _ = sub.Transport.Should().NotBeNull();
-        _ = sub.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Websocket);
+        _ = sub.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Websocket);
         _ = sub.Transport.SessionId.Should().Be("ws-1");
         _ = sub.Transport.ConnectedAt.Should().Be(connectedAt);
 
@@ -736,7 +736,7 @@ public sealed class EventSubSubscriptionTests : IDisposable
 
         EventSubSubscription sub = response.Data[0];
         _ = sub.Transport.Should().NotBeNull();
-        _ = sub.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Conduit);
+        _ = sub.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Conduit);
         _ = sub.Transport.ConduitId.Should().Be(conduitId);
 
         RecordedRequest? request = this._fixture.LastRequest;

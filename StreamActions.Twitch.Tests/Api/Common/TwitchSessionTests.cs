@@ -259,7 +259,7 @@ public class TwitchSessionTests
     public void RequireUserOrAppToken_WhenScopesIsNull_DoesNotThrow()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession();
-        Action action = () => session.RequireUserOrAppToken((Scope?[])null!);
+        Action action = () => session.RequireUserOrAppToken(null);
         _ = action.Should().NotThrow();
     }
 
@@ -340,7 +340,7 @@ public class TwitchSessionTests
     public void RequireUserToken_WhenScopesIsNull_DoesNotThrow()
     {
         using TwitchSession session = TestTokenFactory.CreateUserSession();
-        Action action = () => session.RequireUserToken((Scope?[])null!);
+        Action action = () => session.RequireUserToken(null);
         _ = action.Should().NotThrow();
     }
 

@@ -99,7 +99,7 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         _ = ws.State.Should().Be(WebSocketState.Open);
         _ = this._fixture.LastRequest.Should().NotBeNull();
-        _ = this._fixture.LastRequest!.Path.Should().Be("/ws");
+        _ = this._fixture.LastRequest.Path.Should().Be("/ws");
         _ = (this._fixture.LastRequest?.QueryString.Contains("keepalive_timeout_seconds", StringComparison.OrdinalIgnoreCase) ?? false).Should().BeFalse();
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -117,7 +117,7 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         _ = ws.State.Should().Be(WebSocketState.Open);
         _ = this._fixture.LastRequest.Should().NotBeNull();
-        _ = this._fixture.LastRequest!.Path.Should().Be("/ws");
+        _ = this._fixture.LastRequest.Path.Should().Be("/ws");
         _ = this._fixture.LastRequest.QueryString.Should().Contain("keepalive_timeout_seconds=30");
 
         await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -179,15 +179,15 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.Exception.Should().BeNull();
         _ = result.Event.Should().NotBeNull();
         _ = result.Event.Metadata.Should().NotBeNull();
-        _ = result.Event.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
+        _ = result.Event.Metadata.MessageId.Should().Be(Guid.Parse(messageId));
         _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.SessionWelcome);
         _ = result.Event.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent!.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload!.Session.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Session!.Id.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
+        _ = eventSubEvent.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session.Id.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
         _ = eventSubEvent.Payload.Session.Status.Should().Be(EventSubSession.ConnectionStatus.Connected);
         _ = eventSubEvent.Payload.Session.KeepaliveTimeoutSeconds.Should().Be(10);
         _ = eventSubEvent.Payload.Session.ConnectedAt.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
@@ -231,7 +231,7 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.Exception.Should().BeNull();
         _ = result.Event.Should().NotBeNull();
         _ = result.Event.Metadata.Should().NotBeNull();
-        _ = result.Event.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
+        _ = result.Event.Metadata.MessageId.Should().Be(Guid.Parse(messageId));
         _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.SessionKeepAlive);
         _ = result.Event.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T14:57:01.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
@@ -279,15 +279,15 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.IsDuplicate.Should().BeFalse();
         _ = result.Event.Should().NotBeNull();
         _ = result.Event.Metadata.Should().NotBeNull();
-        _ = result.Event.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
+        _ = result.Event.Metadata.MessageId.Should().Be(Guid.Parse(messageId));
         _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.SessionReconnect);
         _ = result.Event.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T14:58:01.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent!.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload!.Session.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Session!.Id.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
+        _ = eventSubEvent.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Session.Id.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
         _ = eventSubEvent.Payload.Session.Status.Should().Be(EventSubSession.ConnectionStatus.Reconnecting);
         _ = eventSubEvent.Payload.Session.KeepaliveTimeoutSeconds.Should().Be(10);
         _ = eventSubEvent.Payload.Session.ConnectedAt.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
@@ -360,16 +360,16 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         EventSubEvent<Follow>? followEvent = result.Event as EventSubEvent<Follow>;
         _ = followEvent.Should().NotBeNull();
-        _ = followEvent!.Metadata.Should().NotBeNull();
-        _ = followEvent.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
+        _ = followEvent.Metadata.Should().NotBeNull();
+        _ = followEvent.Metadata.MessageId.Should().Be(Guid.Parse(messageId));
         _ = followEvent.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Notification);
         _ = followEvent.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T14:59:01.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = followEvent.Metadata.SubscriptionType.Should().Be("channel.follow");
         _ = followEvent.Metadata.SubscriptionVersion.Should().Be("2");
 
         _ = followEvent.Payload.Should().NotBeNull();
-        _ = followEvent.Payload!.Subscription.Should().NotBeNull();
-        _ = followEvent.Payload.Subscription!.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
+        _ = followEvent.Payload.Subscription.Should().NotBeNull();
+        _ = followEvent.Payload.Subscription.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
         _ = followEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.Enabled);
         _ = followEvent.Payload.Subscription.Type.Should().Be("channel.follow");
         _ = followEvent.Payload.Subscription.Version.Should().Be("2");
@@ -377,16 +377,16 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         BroadcasterAndModeratorUserIdCondition? condition = followEvent.Payload.Subscription.Condition as BroadcasterAndModeratorUserIdCondition;
         _ = condition.Should().NotBeNull();
-        _ = condition!.BroadcasterUserId.Should().Be("1337");
+        _ = condition.BroadcasterUserId.Should().Be("1337");
         _ = condition.ModeratorUserId.Should().Be("1337");
 
         _ = followEvent.Payload.Subscription.Transport.Should().NotBeNull();
-        _ = followEvent.Payload.Subscription.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Websocket);
+        _ = followEvent.Payload.Subscription.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Websocket);
         _ = followEvent.Payload.Subscription.Transport.SessionId.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
         _ = followEvent.Payload.Subscription.CreatedAt.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 
         _ = followEvent.Payload.Event.Should().NotBeNull();
-        _ = followEvent.Payload.Event!.UserId.Should().Be("1234");
+        _ = followEvent.Payload.Event.UserId.Should().Be("1234");
         _ = followEvent.Payload.Event.UserLogin.Should().Be("cool_user");
         _ = followEvent.Payload.Event.UserName.Should().Be("Cool_User");
         _ = followEvent.Payload.Event.BroadcasterUserId.Should().Be("1337");
@@ -449,7 +449,7 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.IsDuplicate.Should().BeFalse();
         _ = result.Event.Should().NotBeNull();
         _ = result.Event.Metadata.Should().NotBeNull();
-        _ = result.Event.Metadata!.MessageId.Should().Be(Guid.Parse(messageId));
+        _ = result.Event.Metadata.MessageId.Should().Be(Guid.Parse(messageId));
         _ = result.Event.Metadata.MessageType.Should().Be(EventMetadata.MessageTypes.Revocation);
         _ = result.Event.Metadata.MessageTimestamp.Should().Be(DateTime.Parse("2023-07-19T15:00:01.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
         _ = result.Event.Metadata.SubscriptionType.Should().Be("channel.follow");
@@ -457,9 +457,9 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
         _ = eventSubEvent.Should().NotBeNull();
-        _ = eventSubEvent!.Payload.Should().NotBeNull();
-        _ = eventSubEvent.Payload!.Subscription.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Subscription!.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
+        _ = eventSubEvent.Payload.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription.Should().NotBeNull();
+        _ = eventSubEvent.Payload.Subscription.Id.Should().Be(Guid.Parse("f1c2a387-161a-49f9-a165-0f21d7a4e1c4"));
         _ = eventSubEvent.Payload.Subscription.Status.Should().Be(EventSubSubscription.SubscriptionStatus.AuthorizationRevoked);
         _ = eventSubEvent.Payload.Subscription.Type.Should().Be("channel.follow");
         _ = eventSubEvent.Payload.Subscription.Version.Should().Be("2");
@@ -467,10 +467,10 @@ public sealed class EventSubWebsocketTests : IDisposable
 
         BroadcasterAndModeratorUserIdCondition? revocationCondition = eventSubEvent.Payload.Subscription.Condition as BroadcasterAndModeratorUserIdCondition;
         _ = revocationCondition.Should().NotBeNull();
-        _ = revocationCondition!.BroadcasterUserId.Should().Be("1337");
+        _ = revocationCondition.BroadcasterUserId.Should().Be("1337");
 
         _ = eventSubEvent.Payload.Subscription.Transport.Should().NotBeNull();
-        _ = eventSubEvent.Payload.Subscription.Transport!.Method.Should().Be(EventSubTransport.TransportMethod.Websocket);
+        _ = eventSubEvent.Payload.Subscription.Transport.Method.Should().Be(EventSubTransport.TransportMethod.Websocket);
         _ = eventSubEvent.Payload.Subscription.Transport.SessionId.Should().Be("AQoQILLtwP2YTI6stDYQgILv-gEg-x");
         _ = eventSubEvent.Payload.Subscription.CreatedAt.Should().Be(DateTime.Parse("2023-07-19T14:56:51.616329Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
 

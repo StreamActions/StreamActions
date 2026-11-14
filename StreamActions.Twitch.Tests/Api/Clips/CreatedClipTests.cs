@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Twitch.Api.Clips;
-using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;

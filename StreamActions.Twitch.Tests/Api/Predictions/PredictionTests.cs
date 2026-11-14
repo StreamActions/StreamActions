@@ -791,14 +791,9 @@ public sealed class PredictionTests : IDisposable
         _ = item.BroadcasterName.Should().Be("Streamer");
         _ = item.BroadcasterLogin.Should().Be("streamer");
         _ = item.Title.Should().Be("Will we win?");
-        if (status == Prediction.PredictionStatus.Resolved)
-        {
-            _ = item.WinningOutcomeId.Should().Be(outcomeId);
-        }
-        else
-        {
-            _ = item.WinningOutcomeId.Should().BeNull();
-        }
+        _ = status == Prediction.PredictionStatus.Resolved
+            ? item.WinningOutcomeId.Should().Be(outcomeId)
+            : item.WinningOutcomeId.Should().BeNull();
 
         _ = item.Outcomes.Should().NotBeNull();
         _ = item.Outcomes.Should().BeEmpty();
@@ -816,14 +811,9 @@ public sealed class PredictionTests : IDisposable
         _ = request.Body.Should().Contain("\"broadcaster_id\":\"1234\"");
         _ = request.Body.Should().Contain($"\"id\":\"{predictionId}\"");
         _ = request.Body.Should().Contain($"\"status\":\"{statusStr}\"");
-        if (status == Prediction.PredictionStatus.Resolved)
-        {
-            _ = request.Body.Should().Contain($"\"winning_outcome_id\":\"{outcomeId}\"");
-        }
-        else
-        {
-            _ = request.Body.Should().NotContain($"\"winning_outcome_id\":\"{outcomeId}\"");
-        }
+        _ = status == Prediction.PredictionStatus.Resolved
+            ? request.Body.Should().Contain($"\"winning_outcome_id\":\"{outcomeId}\"")
+            : request.Body.Should().NotContain($"\"winning_outcome_id\":\"{outcomeId}\"");
     }
 
     #endregion EndPrediction

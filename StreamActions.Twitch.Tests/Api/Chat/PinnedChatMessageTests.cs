@@ -185,9 +185,9 @@ public sealed class PinnedChatMessageTests : IDisposable
         _ = pin.PinnedByUserLogin.Should().Be("mod");
         _ = pin.PinnedByUserName.Should().Be("Mod");
         _ = pin.Message.Should().NotBeNull();
-        _ = pin.Message!.Text.Should().Be("Important announcement!");
+        _ = pin.Message.Text.Should().Be("Important announcement!");
         _ = pin.Message.Fragments.Should().NotBeNull();
-        _ = pin.Message.Fragments!.Count.Should().Be(1);
+        _ = pin.Message.Fragments.Count.Should().Be(1);
         _ = pin.Message.Fragments[0].Type.Should().Be(PinnedChatMessageFragment.FragmentTypes.Text);
         _ = pin.Message.Fragments[0].Text.Should().Be("Important announcement!");
         _ = pin.StartsAt.Should().Be(startsAt);
