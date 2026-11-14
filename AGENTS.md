@@ -21,10 +21,12 @@ This file contains instructions for Generative AI Agents
 | Project | Role |
 | :-- | :-- |
 | `StreamActions.Common` | Shared utilities (`Util.BuildUri`, JSON converters, `NameValueCollection` extensions, exceptions, `DocParserAttribute`) |
-| `StreamActions.Twitch` | Twitch Helix API, EventSub, and OAuth client library |
-| `StreamActions.Common.Tests`, `StreamActions.Twitch.Tests` | xUnit v3 + FluentAssertions test projects |
-| *(planned)* daemon host | Long-running chat/bot service entrypoint |
-| *(planned)* ASP.NET Core UI | Web UI and HTTP API entrypoint |
+| `StreamActions.Twitch` | Pure Twitch Helix API, EventSub, and OAuth client library |
+| `StreamActions.Core` | Pure domain models, store/plugin/platform abstractions, `BootstrapOptions`, `ISecretRedactor`, bounded `InMemoryEventBus`, and `PluginManager` (zero DB/ASP.NET Core dependencies) |
+| `StreamActions.Database` | EF Core 10 persistence (`StreamActionsDbContext`, `IDbContextFactory`, SQLite/PostgreSQL/MySQL/MariaDB/SQL Server providers, Data Protection encryption, `HybridCache`, `IWorkspaceKeyValueStore`, hot backups, `.sabackup` archives) |
+| `StreamActions.Web` | ASP.NET Core & Blazor Server 10 shell, strongly-typed SignalR hubs, and `/healthz` / `/readyz` health endpoints |
+| `StreamActions.Daemon` | Host composition root (`Program.cs`), pre-DB Sentry bootstrap, Windows Service / `systemd`, 3-phase graceful shutdown, CLI & local IPC, `Dockerfile`, and RID publish profiles |
+| `StreamActions.Common.Tests`, `StreamActions.Twitch.Tests`, `StreamActions.Core.Tests`, `StreamActions.Database.Tests`, `StreamActions.Daemon.Tests` | xUnit v3 + FluentAssertions test projects |
 
 - The project name is the root namespace and the project folder name. Sub-folders map to sub-namespaces
 - Projects may contain `Usings.cs` (project-wide `global using` directives) and `GlobalSuppressions.cs` (assembly-level `SuppressMessage` attributes)

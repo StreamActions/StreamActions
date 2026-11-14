@@ -16,6 +16,7 @@ globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/
 
 ## Projects, namespaces, and targeting
 - The project name is the root namespace. The folder path below the project maps 1:1 to the namespace. Use file-scoped namespaces (`.editorconfig` enforces this)
+- Keep architectural boundaries clean: `StreamActions.Common` and `StreamActions.Twitch` have zero `Core`/`Database`/`Web` dependencies; `StreamActions.Core` has zero EF Core or database driver dependencies; `StreamActions.Web` depends on `StreamActions.Core` (never `StreamActions.Database` directly); `StreamActions.Daemon` is the composition root
 - Put project-wide `global using` directives in the project's `Usings.cs` or in `<Using Include="..." />` items in the `.csproj`. Put assembly-level suppressions in `GlobalSuppressions.cs`
 - Target `net10.0`. Do not use APIs introduced after .NET 10 unless the project multi-targets. Prefer non-obsolete alternatives when .NET 11 marks an API obsolete (`SYSLIB` diagnostics). Never change `TargetFramework` without explicit user approval
 - Use `[GeneratedRegex]` source-generated regexes instead of constructing `Regex` instances at runtime (add the `partial` modifier to the containing type when required by `[GeneratedRegex]`)
@@ -38,7 +39,7 @@ globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/
 - For properties in an API which are URIs, use the `Uri` type for the property instead of `string`
 - For properties in an API which are timestamps, use the `DateTime` type for the property instead of `string`
 - When checking if a string is null, just use `string.IsNullOrWhiteSpace`, unless otherwise specified
-- Add XMLDoc for all interfaces, classes, records, enums, properties, and methods, when reference documentation is available
+- Add XMLDoc for all types and members, including non-public (`private`, `protected`, `internal`, `file`) interfaces, classes, records, structs, enums, constants, fields, properties, constructors, and methods (and include API reference details when reference documentation is available)
 - Always import namespaces when an exception, interface, class, record, enum, property, or method is being referenced in an XMLDoc, even if not referenced in actual code
 - Use `ArgumentNullException` when the count of values in all IEnumerable parameters is `0`, but the method requires values to be present
 - Use `ArgumentOutOfRangeException` when multiple IEnumerable parameters are not `null` and contain values, but the method does not allow more than one of them to contain values, using the same format and message as `GetVideos` in `StreamActions.Twitch/Api/Videos/Video.cs`

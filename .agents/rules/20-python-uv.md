@@ -10,6 +10,7 @@ globs: "**/*.py, **/pyproject.toml, **/uv.lock"
 - `uv` always runs outside the sandbox (see `05-sandbox-execution.md`). `uv run` and `uv sync` are auto-approved in the synced allowlist; `uv add`, `uv remove`, and `uv lock` prompt the operator and must be skipped in unattended runs
 - Manage dependencies only with `uv add --project <folder> <package>` or `uv remove --project <folder> <package>`, so that `pyproject.toml` and `uv.lock` change together. Never hand-edit `uv.lock`. CI runs `uv sync --locked`, so a stale lock fails the workflow
 - Keep `requires-python = ">=3.13"`. `.py` files use the `.py` section of `StreamActions.sln.licenseheader`
+- Add Python docstrings (pyDoc) for all modules, classes, functions, and methods, including non-public/internal (`_name`, `__name`) helpers
 
 ## Doc parsers (`/Diff`)
 - `Diff/parsers/BaseParser.py` must remain 100% website-agnostic (providing `fetchUrl(url)` for multi-page parsers and `parseFromUrl(url, out)`). Platform-specific parsers live in `Diff/parsers/<platform>/<Name>Parser.py` (e.g., `Diff/parsers/twitch/`, `Diff/parsers/youtube/`, `Diff/parsers/discord/`), subclass `BaseParser` (or a platform base like `TwitchMarkdownBaseParser`), implement `parse(data) -> dict`, and call `main()` when run as a script

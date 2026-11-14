@@ -62,6 +62,20 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Common.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreamActions.Twitch.Tests", "StreamActions.Twitch.Tests\StreamActions.Twitch.Tests.csproj", "{4F3D8BD1-B7C4-40D6-88E1-976B16778694}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Core", "StreamActions.Core\StreamActions.Core.csproj", "{A1B2C3D4-1111-4A11-8A11-100000000001}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Core.Tests", "StreamActions.Core.Tests\StreamActions.Core.Tests.csproj", "{A1B2C3D4-1111-4A11-8A11-100000000002}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Database", "StreamActions.Database\StreamActions.Database.csproj", "{A1B2C3D4-1111-4A11-8A11-100000000003}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Database.Tests", "StreamActions.Database.Tests\StreamActions.Database.Tests.csproj", "{A1B2C3D4-1111-4A11-8A11-100000000004}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Web", "StreamActions.Web\StreamActions.Web.csproj", "{A1B2C3D4-1111-4A11-8A11-100000000005}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Daemon", "StreamActions.Daemon\StreamActions.Daemon.csproj", "{A1B2C3D4-1111-4A11-8A11-100000000006}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamActions.Daemon.Tests", "StreamActions.Daemon.Tests\StreamActions.Daemon.Tests.csproj", "{A1B2C3D4-1111-4A11-8A11-100000000007}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".agents", ".agents", "{4C41B3BD-4B7D-42C4-8BC6-51026DFEE4F5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "agents", "agents", "{F18D305E-8320-42B4-9C5D-1A9A54EE02D2}"
@@ -70,6 +84,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "agents", "agents", "{F18D30
 		.agents\agents\flash-researcher.md = .agents\agents\flash-researcher.md
 		.agents\agents\orchestrator.md = .agents\agents\orchestrator.md
 		.agents\agents\performance-auditor.md = .agents\agents\performance-auditor.md
+		.agents\agents\rapid-coder-inherit.md = .agents\agents\rapid-coder-inherit.md
 		.agents\agents\rapid-coder.md = .agents\agents\rapid-coder.md
 		.agents\agents\security-auditor.md = .agents\agents\security-auditor.md
 		.agents\agents\triage-sweeper.md = .agents\agents\triage-sweeper.md
@@ -115,6 +130,34 @@ Global
 		{4F3D8BD1-B7C4-40D6-88E1-976B16778694}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F3D8BD1-B7C4-40D6-88E1-976B16778694}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F3D8BD1-B7C4-40D6-88E1-976B16778694}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000002}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000003}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000003}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000003}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000004}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000005}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000005}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000005}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000006}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000006}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000006}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000006}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000007}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000007}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000007}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-1111-4A11-8A11-100000000007}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
