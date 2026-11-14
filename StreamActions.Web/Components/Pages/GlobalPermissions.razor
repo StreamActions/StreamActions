@@ -1,0 +1,329 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@page "/admin/global-permissions"
+@rendermode InteractiveServer
+@implements IDisposable
+
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
+@using StreamActions.Core.Permissions
+
+@inject IPermissionStore PermissionStore
+@inject IPermissionService PermissionService
+@inject IPermissionRegistry PermissionRegistry
+@inject IEventBus EventBus
+
+<PageTitle>Global Permissions (Tier 1)</PageTitle>
+
+<h1>Global Permissions (Tier 1)</h1>
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <p role="status">@_statusMessage</p>
+}
+
+<section aria-labelledby="global-groups-heading">
+    <h2 id="global-groups-heading">Global Permission Groups</h2>
+    <div>
+        <label for="new-global-group-name">New Global Group:</label>
+        <input id="new-global-group-name" type="text" @bind="_newGlobalGroupName" placeholder="Global group name" />
+        <button type="button" @onclick="CreateGlobalGroupAsync">Create Global Group</button>
+    </div>
+
+    @if (_globalGroups.Count == 0)
+    {
+        <p>No global permission groups configured.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (PermissionGroup group in _globalGroups)
+            {
+                <li>
+                    <strong>@group.Name</strong>
+                    <code>(@group.Id)</code>
+                    <button type="button" @onclick="() => DeleteGlobalGroupAsync(group.Id)">Delete</button>
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+<section aria-labelledby="global-matrix-heading">
+    <h2 id="global-matrix-heading">Global Permission Grants</h2>
+    @if (_globalGroups.Count == 0)
+    {
+        <p>Create a global permission group to configure Tier 1 grants.</p>
+    }
+    else
+    {
+        @foreach (string category in _categories)
+        {
+            IReadOnlyList<PermissionDescriptor> descriptors = PermissionRegistry.GetByCategory(category);
+            if (descriptors.Count == 0)
+            {
+                continue;
+            }
+
+            <h3>@category</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Permission</th>
+                        @foreach (PermissionGroup group in _globalGroups)
+                        {
+                            <th>@group.Name</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (PermissionDescriptor descriptor in descriptors)
+                    {
+                        <tr class="@(descriptor.IsGloballyGated ? "globally-gated-feature" : string.Empty)">
+                            <td>
+                                <strong>@descriptor.DisplayName</strong>
+                                <code>(@descriptor.Key)</code>
+                                @if (descriptor.IsGloballyGated)
+                                {
+                                    <strong>[Globally Gated]</strong>
+                                }
+                                <div>@descriptor.Description</div>
+                            </td>
+                            @foreach (PermissionGroup group in _globalGroups)
+                            {
+                                PermissionState currentState = GetGrantState(group.Id, descriptor.Key);
+                                <td>
+                                    <select aria-label="@($"{descriptor.DisplayName} for {group.Name}")"
+                                            value="@currentState"
+                                            @onchange="(ChangeEventArgs args) => OnGrantChangedAsync(group.Id, descriptor.Key, args)">
+                                        <option value="@PermissionState.Inherit">Inherit</option>
+                                        <option value="@PermissionState.Allow">Allow</option>
+                                        <option value="@PermissionState.Deny">Deny</option>
+                                    </select>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+</section>
+
+<section aria-labelledby="workspace-assignments-heading">
+    <h2 id="workspace-assignments-heading">Workspace Assignments</h2>
+    <div>
+        <label for="assignment-workspace-id">Workspace ID:</label>
+        <input id="assignment-workspace-id" type="text" @bind="_workspaceIdInput" placeholder="Enter Workspace GUID" />
+        <button type="button" @onclick="LoadWorkspaceAssignmentsAsync">Inspect Workspace</button>
+
+        @if (_globalGroups.Count > 0)
+        {
+            <label for="assignment-global-group">Global Group:</label>
+            <select id="assignment-global-group" @bind="_selectedGlobalGroupId">
+                @foreach (PermissionGroup group in _globalGroups)
+                {
+                    <option value="@group.Id">@group.Name</option>
+                }
+            </select>
+            <button type="button" @onclick="AssignWorkspaceAsync">Assign Workspace</button>
+        }
+    </div>
+
+    @if (_inspectedWorkspaceId is not null)
+    {
+        <h3>Assigned Global Groups for @_inspectedWorkspaceId</h3>
+        @if (_assignedWorkspaceGroups.Count == 0)
+        {
+            <p>No global groups assigned to this workspace.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (PermissionGroup assignedGroup in _assignedWorkspaceGroups)
+                {
+                    <li>
+                        <strong>@assignedGroup.Name</strong>
+                        <button type="button" @onclick="() => RemoveWorkspaceAssignmentAsync(assignedGroup.Id)">Remove</button>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</section>
+
+@code {
+    private readonly Dictionary<(Guid GroupId, string PermissionKey), PermissionState> _grantStates = [];
+
+    private IReadOnlyList<PermissionGroup> _globalGroups = [];
+    private IReadOnlyList<string> _categories = [];
+    private string _newGlobalGroupName = string.Empty;
+    private string _workspaceIdInput = string.Empty;
+    private Guid _selectedGlobalGroupId;
+    private Guid? _inspectedWorkspaceId;
+    private IReadOnlyList<PermissionGroup> _assignedWorkspaceGroups = [];
+    private string? _statusMessage;
+    private IDisposable? _eventSubscription;
+
+    /// <inheritdoc/>
+    protected override async Task OnInitializedAsync()
+    {
+        _eventSubscription = EventBus.Subscribe<PermissionsInvalidatedEvent>(OnPermissionsInvalidatedAsync);
+        await LoadGlobalDataAsync();
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _eventSubscription?.Dispose();
+        _eventSubscription = null;
+    }
+
+    private PermissionState GetGrantState(Guid groupId, string permissionKey)
+    {
+        return _grantStates.TryGetValue((groupId, permissionKey), out PermissionState state)
+            ? state
+            : PermissionState.Inherit;
+    }
+
+    private async Task CreateGlobalGroupAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newGlobalGroupName))
+        {
+            _statusMessage = "Global group name is required.";
+            return;
+        }
+
+        PermissionGroup newGroup = new()
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = null,
+            Name = _newGlobalGroupName.Trim()
+        };
+
+        _ = await PermissionStore.UpsertGroupAsync(newGroup);
+        await PermissionService.InvalidateGlobalAsync();
+        _newGlobalGroupName = string.Empty;
+        await LoadGlobalDataAsync();
+        _statusMessage = $"Created global group '{newGroup.Name}'.";
+    }
+
+    private async Task DeleteGlobalGroupAsync(Guid groupId)
+    {
+        await PermissionStore.DeleteGroupAsync(groupId);
+        await PermissionService.InvalidateGlobalAsync();
+        await LoadGlobalDataAsync();
+        _statusMessage = "Deleted global group.";
+    }
+
+    private async Task OnGrantChangedAsync(Guid groupId, string permissionKey, ChangeEventArgs args)
+    {
+        if (!Enum.TryParse(args.Value?.ToString(), out PermissionState newState))
+        {
+            return;
+        }
+
+        await PermissionStore.SetGrantAsync(groupId, permissionKey, newState);
+        _grantStates[(groupId, permissionKey)] = newState;
+        await PermissionService.InvalidateGlobalAsync();
+        _statusMessage = $"Updated global grant '{permissionKey}' to {newState}.";
+    }
+
+    private async Task LoadWorkspaceAssignmentsAsync()
+    {
+        if (!Guid.TryParse(_workspaceIdInput.Trim(), out Guid workspaceId))
+        {
+            _statusMessage = "Please enter a valid Workspace GUID.";
+            return;
+        }
+
+        _inspectedWorkspaceId = workspaceId;
+        _assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(workspaceId);
+        _statusMessage = null;
+    }
+
+    private async Task AssignWorkspaceAsync()
+    {
+        if (!Guid.TryParse(_workspaceIdInput.Trim(), out Guid workspaceId) || _selectedGlobalGroupId == Guid.Empty)
+        {
+            _statusMessage = "Please enter a valid Workspace GUID and select a global group.";
+            return;
+        }
+
+        await PermissionStore.AssignWorkspaceToGlobalGroupAsync(workspaceId, _selectedGlobalGroupId);
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        _inspectedWorkspaceId = workspaceId;
+        _assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(workspaceId);
+        _statusMessage = "Assigned workspace to global group.";
+    }
+
+    private async Task RemoveWorkspaceAssignmentAsync(Guid globalGroupId)
+    {
+        if (_inspectedWorkspaceId is not Guid workspaceId)
+        {
+            return;
+        }
+
+        await PermissionStore.RemoveWorkspaceFromGlobalGroupAsync(workspaceId, globalGroupId);
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        _assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(workspaceId);
+        _statusMessage = "Removed workspace assignment from global group.";
+    }
+
+    private async Task LoadGlobalDataAsync()
+    {
+        _categories = PermissionRegistry.GetCategories();
+        _globalGroups = await PermissionStore.GetGroupsAsync(null);
+        _grantStates.Clear();
+
+        foreach (PermissionGroup group in _globalGroups)
+        {
+            IReadOnlyList<PermissionGrant> grants = await PermissionStore.GetGrantsAsync(group.Id);
+            foreach (PermissionGrant grant in grants)
+            {
+                _grantStates[(group.Id, grant.PermissionKey)] = grant.State;
+            }
+        }
+
+        if (_globalGroups.Count > 0 && !_globalGroups.Any(g => g.Id == _selectedGlobalGroupId))
+        {
+            _selectedGlobalGroupId = _globalGroups[0].Id;
+        }
+
+        if (_inspectedWorkspaceId is Guid workspaceId)
+        {
+            _assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(workspaceId);
+        }
+    }
+
+    private ValueTask OnPermissionsInvalidatedAsync(PermissionsInvalidatedEvent evt, CancellationToken cancellationToken)
+    {
+        if (evt.WorkspaceId is not null && evt.WorkspaceId != _inspectedWorkspaceId)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        return new ValueTask(InvokeAsync(async () =>
+        {
+            await LoadGlobalDataAsync();
+            StateHasChanged();
+        }));
+    }
+}

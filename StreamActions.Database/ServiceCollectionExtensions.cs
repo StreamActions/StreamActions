@@ -113,6 +113,7 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<SecretProtectionService>();
         services.TryAddSingleton<IWorkspaceKeyValueStore, WorkspaceKeyValueStore>();
+        services.TryAddSingleton<IPermissionStore, PermissionStore>();
         services.TryAddSingleton<WorkspaceCacheService>();
         services.TryAddSingleton<DatabaseMigrationService>();
         services.TryAddSingleton<IInstanceSettingsService, InstanceSettingsService>();

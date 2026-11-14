@@ -47,6 +47,7 @@ public static class WebServiceCollectionExtensions
         _ = services.AddRazorComponents()
             .AddInteractiveServerComponents();
         _ = services.AddSignalR();
+        _ = services.AddHostedService<PermissionHubEventBridge>();
         _ = services.AddHealthChecks()
             .AddCheck<PluginReadinessHealthCheck>("plugins", tags: ["ready"]);
 

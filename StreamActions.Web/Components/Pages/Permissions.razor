@@ -1,0 +1,440 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@page "/permissions"
+@rendermode InteractiveServer
+@implements IDisposable
+
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
+@using StreamActions.Core.Permissions
+
+@inject IPermissionStore PermissionStore
+@inject IPermissionService PermissionService
+@inject IPermissionRegistry PermissionRegistry
+@inject IEventBus EventBus
+
+<PageTitle>Workspace Permissions</PageTitle>
+
+<h1>Workspace Permissions</h1>
+
+<section aria-labelledby="workspace-selector-heading">
+    <h2 id="workspace-selector-heading">Workspace</h2>
+    <div>
+        <label for="workspace-id-input">Workspace ID:</label>
+        <input id="workspace-id-input" type="text" @bind="_workspaceIdInput" placeholder="Enter Workspace GUID" />
+        <button type="button" @onclick="SelectWorkspaceAsync">Load Workspace</button>
+        @if (_workspaceId is not null)
+        {
+            <button type="button" @onclick="SeedBuiltInGroupsAsync">Seed Built-in Groups</button>
+        }
+    </div>
+    @if (_workspace is not null)
+    {
+        <p>Loaded workspace: <strong>@_workspace.Name</strong> (@_workspace.Id)</p>
+    }
+    else if (_workspaceId is not null)
+    {
+        <p>Workspace ID: <code>@_workspaceId</code></p>
+    }
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <p role="status">@_statusMessage</p>
+    }
+</section>
+
+@if (_workspaceId is not null)
+{
+    <section aria-labelledby="custom-groups-heading">
+        <h2 id="custom-groups-heading">Permission Groups</h2>
+        <div>
+            <label for="new-group-name">New Custom Group:</label>
+            <input id="new-group-name" type="text" @bind="_newGroupName" placeholder="Group name" />
+            <button type="button" @onclick="CreateCustomGroupAsync">Create Group</button>
+        </div>
+
+        @if (_groups.Count == 0)
+        {
+            <p>No permission groups found for this workspace. Seed built-in groups or create a custom group.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (PermissionGroup group in _groups)
+                {
+                    <li>
+                        <strong>@group.Name</strong>
+                        @if (IsBuiltInGroup(group))
+                        {
+                            <span>(Built-in: @group.MappedPlatformDesignation)</span>
+                        }
+                        else
+                        {
+                            <span>(Custom)</span>
+                            <button type="button" @onclick="() => DeleteGroupAsync(group.Id)">Delete Group</button>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section aria-labelledby="permission-matrix-heading">
+        <h2 id="permission-matrix-heading">Permission Matrix</h2>
+        @if (_groups.Count == 0)
+        {
+            <p>Add or seed permission groups to configure the permission matrix.</p>
+        }
+        else
+        {
+            @foreach (string category in _categories)
+            {
+                IReadOnlyList<PermissionDescriptor> descriptors = PermissionRegistry.GetByCategory(category);
+                if (descriptors.Count == 0)
+                {
+                    continue;
+                }
+
+                <h3>@category</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Permission</th>
+                            @foreach (PermissionGroup group in _groups)
+                            {
+                                <th>@group.Name</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (PermissionDescriptor descriptor in descriptors)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@descriptor.DisplayName</strong>
+                                    <code>(@descriptor.Key)</code>
+                                    @if (descriptor.IsGloballyGated)
+                                    {
+                                        <span>[Globally Gated]</span>
+                                    }
+                                    <div>@descriptor.Description</div>
+                                </td>
+                                @foreach (PermissionGroup group in _groups)
+                                {
+                                    PermissionState currentState = GetGrantState(group.Id, descriptor.Key);
+                                    <td>
+                                        <select aria-label="@($"{descriptor.DisplayName} for {group.Name}")"
+                                                value="@currentState"
+                                                @onchange="(ChangeEventArgs args) => OnGrantChangedAsync(group.Id, descriptor.Key, args)">
+                                            <option value="@PermissionState.Inherit">Inherit</option>
+                                            <option value="@PermissionState.Allow">Allow</option>
+                                            <option value="@PermissionState.Deny">Deny</option>
+                                        </select>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+    </section>
+
+    <section aria-labelledby="group-members-heading">
+        <h2 id="group-members-heading">Group Members</h2>
+        @if (_groups.Count == 0)
+        {
+            <p>No groups available.</p>
+        }
+        else
+        {
+            <div>
+                <label for="member-group-select">Group:</label>
+                <select id="member-group-select" @bind="_selectedMemberGroupId">
+                    @foreach (PermissionGroup group in _groups)
+                    {
+                        <option value="@group.Id">@group.Name</option>
+                    }
+                </select>
+                <label for="member-platform-input">Platform ID:</label>
+                <input id="member-platform-input" type="text" @bind="_newMemberPlatformId" placeholder="twitch" />
+                <label for="member-userid-input">Platform User ID:</label>
+                <input id="member-userid-input" type="text" @bind="_newMemberPlatformUserId" placeholder="User ID" />
+                <label for="member-username-input">Username:</label>
+                <input id="member-username-input" type="text" @bind="_newMemberUsername" placeholder="Optional username" />
+                <button type="button" @onclick="AddMemberAsync">Add Member</button>
+            </div>
+
+            @foreach (PermissionGroup group in _groups)
+            {
+                IReadOnlyList<PermissionGroupMember> members = GetMembersForGroup(group.Id);
+                if (members.Count == 0)
+                {
+                    continue;
+                }
+
+                <h3>@group.Name Members</h3>
+                <ul>
+                    @foreach (PermissionGroupMember member in members)
+                    {
+                        <li>
+                            <span>@member.PlatformId:@member.PlatformUserId</span>
+                            @if (!string.IsNullOrWhiteSpace(member.LastKnownUsername))
+                            {
+                                <span>(@member.LastKnownUsername)</span>
+                            }
+                            <button type="button" @onclick="() => RemoveMemberAsync(group.Id, member.PlatformId, member.PlatformUserId)">Remove</button>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    </section>
+}
+
+@code {
+    private readonly Dictionary<(Guid GroupId, string PermissionKey), PermissionState> _grantStates = [];
+    private readonly Dictionary<Guid, IReadOnlyList<PermissionGroupMember>> _groupMembers = [];
+
+    private string _workspaceIdInput = string.Empty;
+    private Guid? _workspaceId;
+    private Workspace? _workspace;
+    private IReadOnlyList<PermissionGroup> _groups = [];
+    private IReadOnlyList<string> _categories = [];
+    private string _newGroupName = string.Empty;
+    private Guid _selectedMemberGroupId;
+    private string _newMemberPlatformId = "twitch";
+    private string _newMemberPlatformUserId = string.Empty;
+    private string _newMemberUsername = string.Empty;
+    private string? _statusMessage;
+    private IDisposable? _eventSubscription;
+
+    /// <inheritdoc/>
+    protected override void OnInitialized()
+    {
+        _categories = PermissionRegistry.GetCategories();
+        _eventSubscription = EventBus.Subscribe<PermissionsInvalidatedEvent>(OnPermissionsInvalidatedAsync);
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _eventSubscription?.Dispose();
+        _eventSubscription = null;
+    }
+
+    private static bool IsBuiltInGroup(PermissionGroup group)
+    {
+        return !string.IsNullOrWhiteSpace(group.MappedPlatformDesignation)
+            || !string.IsNullOrWhiteSpace(group.MappedOidcGroupClaim);
+    }
+
+    private PermissionState GetGrantState(Guid groupId, string permissionKey)
+    {
+        return _grantStates.TryGetValue((groupId, permissionKey), out PermissionState state)
+            ? state
+            : PermissionState.Inherit;
+    }
+
+    private IReadOnlyList<PermissionGroupMember> GetMembersForGroup(Guid groupId)
+    {
+        return _groupMembers.TryGetValue(groupId, out IReadOnlyList<PermissionGroupMember>? members)
+            ? members
+            : [];
+    }
+
+    private async Task SelectWorkspaceAsync()
+    {
+        if (!Guid.TryParse(_workspaceIdInput.Trim(), out Guid parsedWorkspaceId))
+        {
+            _statusMessage = "Please enter a valid Workspace GUID.";
+            return;
+        }
+
+        _workspaceId = parsedWorkspaceId;
+        _statusMessage = null;
+        await LoadWorkspaceDataAsync();
+    }
+
+    private async Task SeedBuiltInGroupsAsync()
+    {
+        if (_workspaceId is not Guid workspaceId)
+        {
+            return;
+        }
+
+        await PermissionStore.SeedBuiltInWorkspaceGroupsAsync(workspaceId);
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        await LoadWorkspaceDataAsync();
+        _statusMessage = "Built-in workspace groups seeded.";
+    }
+
+    private async Task CreateCustomGroupAsync()
+    {
+        if (_workspaceId is not Guid workspaceId)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_newGroupName))
+        {
+            _statusMessage = "Group name is required.";
+            return;
+        }
+
+        PermissionGroup newGroup = new()
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = workspaceId,
+            Name = _newGroupName.Trim()
+        };
+
+        _ = await PermissionStore.UpsertGroupAsync(newGroup);
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        _newGroupName = string.Empty;
+        await LoadWorkspaceDataAsync();
+        _statusMessage = $"Created group '{newGroup.Name}'.";
+    }
+
+    private async Task DeleteGroupAsync(Guid groupId)
+    {
+        if (_workspaceId is not Guid workspaceId)
+        {
+            return;
+        }
+
+        await PermissionStore.DeleteGroupAsync(groupId);
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        await LoadWorkspaceDataAsync();
+        _statusMessage = "Deleted custom group.";
+    }
+
+    private async Task OnGrantChangedAsync(Guid groupId, string permissionKey, ChangeEventArgs args)
+    {
+        if (_workspaceId is not Guid workspaceId)
+        {
+            return;
+        }
+
+        if (!Enum.TryParse(args.Value?.ToString(), out PermissionState newState))
+        {
+            return;
+        }
+
+        await PermissionStore.SetGrantAsync(groupId, permissionKey, newState);
+        _grantStates[(groupId, permissionKey)] = newState;
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        _statusMessage = $"Updated '{permissionKey}' to {newState}.";
+    }
+
+    private async Task AddMemberAsync()
+    {
+        if (_workspaceId is not Guid workspaceId || _selectedMemberGroupId == Guid.Empty)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_newMemberPlatformId) || string.IsNullOrWhiteSpace(_newMemberPlatformUserId))
+        {
+            _statusMessage = "Platform ID and Platform User ID are required.";
+            return;
+        }
+
+        PermissionGroupMember member = new()
+        {
+            Id = Guid.NewGuid(),
+            GroupId = _selectedMemberGroupId,
+            PlatformId = _newMemberPlatformId.Trim(),
+            PlatformUserId = _newMemberPlatformUserId.Trim(),
+            LastKnownUsername = string.IsNullOrWhiteSpace(_newMemberUsername) ? null : _newMemberUsername.Trim(),
+            AddedAtUtc = DateTimeOffset.UtcNow
+        };
+
+        await PermissionStore.AddGroupMemberAsync(member);
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        _newMemberPlatformUserId = string.Empty;
+        _newMemberUsername = string.Empty;
+        await LoadWorkspaceDataAsync();
+        _statusMessage = "Added group member.";
+    }
+
+    private async Task RemoveMemberAsync(Guid groupId, string platformId, string platformUserId)
+    {
+        if (_workspaceId is not Guid workspaceId)
+        {
+            return;
+        }
+
+        await PermissionStore.RemoveGroupMemberAsync(groupId, platformId, platformUserId);
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        await LoadWorkspaceDataAsync();
+        _statusMessage = "Removed group member.";
+    }
+
+    private async Task LoadWorkspaceDataAsync()
+    {
+        if (_workspaceId is not Guid workspaceId)
+        {
+            return;
+        }
+
+        _categories = PermissionRegistry.GetCategories();
+        _workspace = await PermissionStore.GetWorkspaceAsync(workspaceId);
+        _groups = await PermissionStore.GetGroupsAsync(workspaceId);
+
+        _grantStates.Clear();
+        _groupMembers.Clear();
+
+        foreach (PermissionGroup group in _groups)
+        {
+            IReadOnlyList<PermissionGrant> grants = await PermissionStore.GetGrantsAsync(group.Id);
+            foreach (PermissionGrant grant in grants)
+            {
+                _grantStates[(group.Id, grant.PermissionKey)] = grant.State;
+            }
+
+            IReadOnlyList<PermissionGroupMember> members = await PermissionStore.GetGroupMembersAsync(group.Id);
+            _groupMembers[group.Id] = members;
+        }
+
+        if (_groups.Count > 0 && !_groups.Any(g => g.Id == _selectedMemberGroupId))
+        {
+            _selectedMemberGroupId = _groups[0].Id;
+        }
+    }
+
+    private ValueTask OnPermissionsInvalidatedAsync(PermissionsInvalidatedEvent evt, CancellationToken cancellationToken)
+    {
+        if (_workspaceId is not Guid currentWorkspaceId)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        if (evt.WorkspaceId is not null && evt.WorkspaceId != currentWorkspaceId)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        return new ValueTask(InvokeAsync(async () =>
+        {
+            await LoadWorkspaceDataAsync();
+            StateHasChanged();
+        }));
+    }
+}

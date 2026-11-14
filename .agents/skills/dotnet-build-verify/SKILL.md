@@ -44,6 +44,7 @@ All commands run with `BypassSandbox: true`. They are auto-approved (see `05-san
 The skill is complete when:
 - step 2 exits 0;
 - step 3 prints no `warning` or `error` lines;
-- step 4 reports zero failed tests.
+- step 4 reports zero failed tests;
+- all newly added or edited non-public (`private`, `protected`, `internal`, `file`) types, fields, constants, properties, constructors, and methods have XMLDoc (since `CS1591` only flags `public` members).
 
 Report this using the `VERIFIED` section of the Result Report.

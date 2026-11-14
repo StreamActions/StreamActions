@@ -19,6 +19,13 @@
 @inherits LayoutComponentBase
 
 <div class="page">
+    <header class="top-nav px-4">
+        <nav aria-label="Main navigation">
+            <NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
+            <NavLink href="/permissions">Permissions</NavLink>
+            <NavLink href="/admin/global-permissions">Global Permissions</NavLink>
+        </nav>
+    </header>
     <main>
         <article class="content px-4">
             @Body

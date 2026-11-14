@@ -21,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using StreamActions.Core.Abstractions;
 using StreamActions.Core.Configuration;
+using StreamActions.Core.Permissions;
 using StreamActions.Core.Services;
 
 namespace StreamActions.Core;
@@ -49,6 +50,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ISecretRedactor, SecretRedactor>();
         services.TryAddSingleton<IEventBus, InMemoryEventBus>();
         services.TryAddSingleton<IPluginManager, PluginManager>();
+        services.TryAddSingleton<IPermissionRegistry, PermissionRegistry>();
+        services.TryAddScoped<IPermissionService, PermissionService>();
         _ = services.AddHybridCache();
 
         return services;

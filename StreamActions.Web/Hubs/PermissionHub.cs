@@ -23,4 +23,26 @@ namespace StreamActions.Web.Hubs;
 /// <summary>
 /// SignalR hub for broadcasting permission configuration changes.
 /// </summary>
-public sealed class PermissionHub : Hub<IPermissionClient>;
+public sealed class PermissionHub : Hub<IPermissionClient>
+{
+    /// <summary>
+    /// Gets the SignalR group name for a workspace's permission notifications.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <returns>The SignalR group name.</returns>
+    public static string WorkspaceGroupName(Guid workspaceId) => $"workspace:{workspaceId:N}";
+
+    /// <summary>
+    /// Joins the caller to the permission notification group for the specified workspace.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public Task JoinWorkspaceAsync(Guid workspaceId) => this.Groups.AddToGroupAsync(this.Context.ConnectionId, WorkspaceGroupName(workspaceId));
+
+    /// <summary>
+    /// Removes the caller from the permission notification group for the specified workspace.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public Task LeaveWorkspaceAsync(Guid workspaceId) => this.Groups.RemoveFromGroupAsync(this.Context.ConnectionId, WorkspaceGroupName(workspaceId));
+}

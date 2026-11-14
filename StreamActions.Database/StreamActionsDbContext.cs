@@ -130,6 +130,26 @@ public class StreamActionsDbContext : DbContext
     public DbSet<PermissionGrant> PermissionGrants => this.Set<PermissionGrant>();
 
     /// <summary>
+    /// Gets the workspace global group assignments table.
+    /// </summary>
+    public DbSet<WorkspaceGlobalGroupAssignment> WorkspaceGlobalGroupAssignments => this.Set<WorkspaceGlobalGroupAssignment>();
+
+    /// <summary>
+    /// Gets the permission group members table.
+    /// </summary>
+    public DbSet<PermissionGroupMember> PermissionGroupMembers => this.Set<PermissionGroupMember>();
+
+    /// <summary>
+    /// Gets the user permission overrides table.
+    /// </summary>
+    public DbSet<UserPermissionOverride> UserPermissionOverrides => this.Set<UserPermissionOverride>();
+
+    /// <summary>
+    /// Gets the workspace platform role rosters table.
+    /// </summary>
+    public DbSet<WorkspacePlatformRoleRoster> WorkspacePlatformRoleRosters => this.Set<WorkspacePlatformRoleRoster>();
+
+    /// <summary>
     /// Gets the external OIDC providers table.
     /// </summary>
     public DbSet<ExternalOidcProvider> ExternalOidcProviders => this.Set<ExternalOidcProvider>();
