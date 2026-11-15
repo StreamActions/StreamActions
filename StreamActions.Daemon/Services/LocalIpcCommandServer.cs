@@ -46,6 +46,11 @@ internal sealed partial class LocalIpcCommandServer : BackgroundService
     private readonly ILogger<LocalIpcCommandServer> _logger;
 
     /// <summary>
+    /// Completion source signaled once the IPC listener is bound and ready to accept connections.
+    /// </summary>
+    private TaskCompletionSource? _listenerReady;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="LocalIpcCommandServer"/> class.
     /// </summary>
     /// <param name="commandProcessor">The command processor executing incoming commands.</param>
@@ -66,18 +71,39 @@ internal sealed partial class LocalIpcCommandServer : BackgroundService
     }
 
     /// <inheritdoc/>
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        this._listenerReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await base.StartAsync(cancellationToken).ConfigureAwait(false);
+        await this._listenerReady.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        BootstrapOptions options = this._bootstrapOptions.Value;
-        if (OperatingSystem.IsWindows())
+        try
         {
-            string pipeName = LocalIpcEndpoint.GetNamedPipeName(options);
-            await this.RunNamedPipeLoopAsync(pipeName, stoppingToken).ConfigureAwait(false);
+            BootstrapOptions options = this._bootstrapOptions.Value;
+            if (OperatingSystem.IsWindows())
+            {
+                string pipeName = LocalIpcEndpoint.GetNamedPipeName(options);
+                await this.RunNamedPipeLoopAsync(pipeName, stoppingToken).ConfigureAwait(false);
+            }
+            else
+            {
+                string socketPath = LocalIpcEndpoint.GetUnixSocketPath(options);
+                await this.RunUnixSocketLoopAsync(socketPath, stoppingToken).ConfigureAwait(false);
+            }
         }
-        else
+        catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
         {
-            string socketPath = LocalIpcEndpoint.GetUnixSocketPath(options);
-            await this.RunUnixSocketLoopAsync(socketPath, stoppingToken).ConfigureAwait(false);
+            _ = this._listenerReady?.TrySetCanceled(ex.CancellationToken);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _ = this._listenerReady?.TrySetException(ex);
+            throw;
         }
     }
 
@@ -101,6 +127,8 @@ internal sealed partial class LocalIpcCommandServer : BackgroundService
 
             await using (server.ConfigureAwait(false))
             {
+                _ = this._listenerReady?.TrySetResult();
+
                 try
                 {
                     await server.WaitForConnectionAsync(stoppingToken).ConfigureAwait(false);
@@ -141,6 +169,7 @@ internal sealed partial class LocalIpcCommandServer : BackgroundService
         using Socket listener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
         listener.Bind(new UnixDomainSocketEndPoint(socketPath));
         listener.Listen(8);
+        _ = this._listenerReady?.TrySetResult();
 
         try
         {
