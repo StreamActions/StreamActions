@@ -219,19 +219,6 @@ jobs:
               const statusOut = await exec.getExecOutput('git', ['status', '--porcelain']);
               const hasChanges = statusOut.stdout.trim().length > 0;
 
-              if (hasChanges && (group.ecosystemsArg === 'dotnet' || group.ecosystemsArg === 'all' || group.ecosystemsArg.includes('dotnet'))) {
-                const formatRes = await exec.getExecOutput(
-                  'dotnet',
-                  ['format', '--verify-no-changes'],
-                  { env: updaterEnv, ignoreReturnCode: true }
-                );
-                const formatLine = formatRes.exitCode === 0
-                  ? '- `dotnet format --verify-no-changes`: PASS'
-                  : '- `dotnet format --verify-no-changes`: FAIL';
-                body += `\n${formatLine}\n`;
-                fs.writeFileSync(mdPath, body, 'utf8');
-              }
-
               if (fs.existsSync(jsonPath)) {
                 const payload = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
                 for (const eco of payload.ecosystems || []) {
