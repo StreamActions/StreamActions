@@ -40,7 +40,7 @@ jobs:
       - name: Generate code coverage report
         run: dotnet tool run reportgenerator -- "-reports:./CollectedTestResults/*.coverage.cobertura.xml" "-targetdir:coveragereport" "-reporttypes:Html;MarkdownSummaryGithub"
       - name: Upload Code Coverage Report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
             name: coveragereport
             path: ./coveragereport/
