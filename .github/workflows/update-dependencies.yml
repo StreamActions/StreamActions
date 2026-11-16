@@ -40,9 +40,21 @@ jobs:
     if: ${{ github.repository == 'StreamActions/StreamActions' && github.ref_name == 'main' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Check GitHub App Configuration
+        id: check_app
+        env:
+          APP_ID: ${{ vars.DEPENDENCY_UPDATER_APP_ID || secrets.DEPENDENCY_UPDATER_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.DEPENDENCY_UPDATER_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub App Token
         id: app_token
-        if: ${{ (vars.DEPENDENCY_UPDATER_APP_ID != '' || secrets.DEPENDENCY_UPDATER_APP_ID != '') && secrets.DEPENDENCY_UPDATER_APP_PRIVATE_KEY != '' }}
+        if: ${{ steps.check_app.outputs.enabled == 'true' }}
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.DEPENDENCY_UPDATER_APP_ID || secrets.DEPENDENCY_UPDATER_APP_ID }}
@@ -53,7 +65,7 @@ jobs:
 
       - name: Create Read-Only GitHub App Token
         id: readonly_app_token
-        if: ${{ (vars.DEPENDENCY_UPDATER_APP_ID != '' || secrets.DEPENDENCY_UPDATER_APP_ID != '') && secrets.DEPENDENCY_UPDATER_APP_PRIVATE_KEY != '' }}
+        if: ${{ steps.check_app.outputs.enabled == 'true' }}
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.DEPENDENCY_UPDATER_APP_ID || secrets.DEPENDENCY_UPDATER_APP_ID }}
