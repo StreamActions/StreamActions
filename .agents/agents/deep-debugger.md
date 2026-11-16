@@ -37,6 +37,7 @@ You diagnose hard problems down to a confirmed root cause and carry out multi-fi
 ## Repository hazards
 - By design, `StreamActions.Twitch` uses no `CancellationToken` and no try-catch (see `StreamActions.Twitch/AGENTS.md`). Do not "fix" either unless the task says so
 - CI runs tests in 4 timezones and on 3 operating systems. Treat `DateTime.Kind`, `DateTimeOffset`, culture-sensitive parsing and formatting, and path separators as prime suspects for intermittent failures
+- Treat cross-OS IPC readiness (`NamedPipeClientStream.ConnectAsync` polling on Windows vs. immediate `ENOENT`/`Cannot assign requested address` on Unix domain sockets) and unawaited async event dispatch (`InMemoryEventBus`, `InvokeAsync`) as prime suspects for OS-specific or intermittent test failures
 - Do not change public API signatures unless the task requires it, and call out every breaking change explicitly
 - Never skip or disable failing tests. Never run destructive commands. Stay inside the workspace
 

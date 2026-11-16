@@ -70,6 +70,8 @@ globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/
 - If a data model property is not available in all API contexts, document this limitation in a `<remarks>` tag directly on the property.
 - In XML documentation, use the `<paramref name="parameterName"/>` tag when referring to method parameters within `<remarks>`, `<summary>`, or `<exception>` blocks.
 - The `[Obsolete]` attribute cannot be applied to method parameters; deprecation of parameters should be documented in the method's XML documentation.
+- When a `BackgroundService` binds a socket, named pipe, or other listener inside `ExecuteAsync`, override `StartAsync` and await a `TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)` signaled only after `Bind`/`Listen` (or pipe creation) succeeds (propagating any startup exception or cancellation). Windows `NamedPipeClientStream.ConnectAsync` polls when a pipe does not exist yet (masking startup races), whereas Linux/macOS `Socket.ConnectAsync` on `UnixDomainSocketEndPoint` fails immediately with `ENOENT` (`SocketException: Cannot assign requested address`).
+- Do not name a single lambda parameter `_` when the lambda body uses `_ = ...` discard assignments (for example, use `(evt, cancellationToken) =>` instead of `(evt, _) =>`); a single `_` parameter shadows the discard token and causes `CS0029`.
 
 ## Tests
 - Use the `Xunit` testing framework for all tests
@@ -82,4 +84,6 @@ globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/
 - When testing for exceptions, use the `FluentAssertions` syntax of `action.Should().Throw<ExceptionType>()` instead of `Assert.Throws<ExceptionType>()`
 - Never skip failing tests. If the failure is due to the code being tested, you should fix the code being tested, and if the failure is due to the test itself, fix the test. If you are unsure, or the user specified to not change code, ask the user for clarification
 - Tests must pass in every CI timezone (`UTC`, `America/New_York`, `Europe/London`, `Asia/Tokyo`). Never depend on the local timezone or culture
+- Never assert immediately on state populated by an asynchronous or fire-and-forget event dispatcher (`InMemoryEventBus.PublishAsync`, `EventHandler<T>.InvokeAsync`). Signal a `TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)` from the subscriber once the expected event count or condition is reached, and `await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)` before asserting.
+- When subscribing to a `static event` (such as `TwitchApi.OnTokenRefreshed`) in a test, store the delegate in a local `EventHandler<T>` variable, unsubscribe that same variable in a `finally` block (never pass a new lambda to `-=`), and filter by the test's target instance (for example, `ReferenceEquals(args.Session, session)`).
 
