@@ -255,8 +255,15 @@ public sealed class TwitchApiTests : IDisposable
         string initialOAuth = session.Token!.OAuth!;
         string initialRefresh = session.Token.Refresh!;
 
-        TokenRefreshedEventArgs? eventArgs = null;
-        TwitchApi.OnTokenRefreshed += (sender, args) => eventArgs = args;
+        TaskCompletionSource<TokenRefreshedEventArgs> tokenRefreshed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        EventHandler<TokenRefreshedEventArgs> handler = (_, args) =>
+        {
+            if (ReferenceEquals(args.Session, session))
+            {
+                _ = tokenRefreshed.TrySetResult(args);
+            }
+        };
+        TwitchApi.OnTokenRefreshed += handler;
 
         try
         {
@@ -268,12 +275,12 @@ public sealed class TwitchApiTests : IDisposable
             _ = session.Token.Refresh.Should().Be(newRefresh);
             _ = session.Token.OAuth.Should().NotBe(initialOAuth);
             _ = session.Token.Refresh.Should().NotBe(initialRefresh);
-            _ = eventArgs.Should().NotBeNull();
-            _ = eventArgs!.Session.Should().BeSameAs(session);
+            TokenRefreshedEventArgs eventArgs = await tokenRefreshed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = eventArgs.Session.Should().BeSameAs(session);
         }
         finally
         {
-            TwitchApi.OnTokenRefreshed -= (sender, args) => eventArgs = args;
+            TwitchApi.OnTokenRefreshed -= handler;
         }
     }
 
@@ -310,8 +317,15 @@ public sealed class TwitchApiTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateAppSession();
         string initialOAuth = session.Token!.OAuth!;
 
-        TokenRefreshedEventArgs? eventArgs = null;
-        TwitchApi.OnTokenRefreshed += (sender, args) => eventArgs = args;
+        TaskCompletionSource<TokenRefreshedEventArgs> tokenRefreshed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        EventHandler<TokenRefreshedEventArgs> handler = (_, args) =>
+        {
+            if (ReferenceEquals(args.Session, session))
+            {
+                _ = tokenRefreshed.TrySetResult(args);
+            }
+        };
+        TwitchApi.OnTokenRefreshed += handler;
 
         try
         {
@@ -321,12 +335,12 @@ public sealed class TwitchApiTests : IDisposable
             _ = attempt.Should().Be(2);
             _ = session.Token.OAuth.Should().Be(newAppBearer);
             _ = session.Token.OAuth.Should().NotBe(initialOAuth);
-            _ = eventArgs.Should().NotBeNull();
-            _ = eventArgs!.Session.Should().BeSameAs(session);
+            TokenRefreshedEventArgs eventArgs = await tokenRefreshed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = eventArgs.Session.Should().BeSameAs(session);
         }
         finally
         {
-            TwitchApi.OnTokenRefreshed -= (sender, args) => eventArgs = args;
+            TwitchApi.OnTokenRefreshed -= handler;
         }
     }
 
