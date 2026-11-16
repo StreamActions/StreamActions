@@ -19,6 +19,16 @@ updates:
       - "/"
     schedule:
       interval: "weekly"
+    ignore:
+      - dependency-name: "Microsoft.AspNetCore.*"
+        versions:
+          - ">= 11.0.0"
+      - dependency-name: "Microsoft.EntityFrameworkCore*"
+        versions:
+          - ">= 11.0.0"
+      - dependency-name: "Microsoft.Extensions.*"
+        versions:
+          - ">= 11.0.0"
     groups:
       microsoft-identitymodel-security:
         applies-to: security-updates
