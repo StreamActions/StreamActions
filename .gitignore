@@ -325,6 +325,7 @@ paket-files/
 
 # Python Tools for Visual Studio (PTVS)
 env/
+.venv/
 __pycache__/
 *.pyc
 

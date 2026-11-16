@@ -1,0 +1,9 @@
+[project]
+name = "dependencyupdater"
+version = "1.0.0"
+description = "Automates dependency updates across .NET, Python (uv), Docker, and GitHub Actions in support of GitHub Actions workflows"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.13"
+dependencies = [
+    "requests>=2.34.2",
+]

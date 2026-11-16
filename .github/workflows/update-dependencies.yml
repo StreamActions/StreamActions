@@ -1,0 +1,375 @@
+name: Update Dependencies
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      ecosystems:
+        description: 'Ecosystems to update'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - dotnet
+          - python
+          - docker
+          - actions
+      combinePrs:
+        description: 'Combine all selected ecosystem updates into a single Pull Request'
+        required: false
+        default: false
+        type: boolean
+      dryRun:
+        description: 'Run updates and verification without pushing branches or opening Pull Requests'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: Update and Verify Dependencies
+    if: ${{ github.repository == 'StreamActions/StreamActions' && github.ref_name == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub App Token
+        id: app_token
+        if: ${{ (vars.DEPENDENCY_UPDATER_APP_ID != '' || secrets.DEPENDENCY_UPDATER_APP_ID != '') && secrets.DEPENDENCY_UPDATER_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.DEPENDENCY_UPDATER_APP_ID || secrets.DEPENDENCY_UPDATER_APP_ID }}
+          private-key: ${{ secrets.DEPENDENCY_UPDATER_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+
+      - name: Create Read-Only GitHub App Token
+        id: readonly_app_token
+        if: ${{ (vars.DEPENDENCY_UPDATER_APP_ID != '' || secrets.DEPENDENCY_UPDATER_APP_ID != '') && secrets.DEPENDENCY_UPDATER_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.DEPENDENCY_UPDATER_APP_ID || secrets.DEPENDENCY_UPDATER_APP_ID }}
+          private-key: ${{ secrets.DEPENDENCY_UPDATER_APP_PRIVATE_KEY }}
+          permission-contents: read
+
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect Active .NET Target Framework
+        id: tfm
+        run: |
+          SDK_VER=$(sed -n 's/.*<TargetFramework>net\([0-9]*\.[0-9]*\).*/\1.x/p' Directory.Build.props | head -n 1)
+          echo "sdk=${SDK_VER:-10.0.x}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: ${{ steps.tfm.outputs.sdk }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+
+      - name: Sync DependencyUpdater
+        run: uv sync --locked --project ./DependencyUpdater
+
+      - name: Run Dependency Updaters and Manage Pull Requests
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          INPUT_ECOSYSTEMS: ${{ inputs.ecosystems || 'all' }}
+          INPUT_COMBINE_PRS: ${{ inputs.combinePrs || false }}
+          INPUT_DRY_RUN: ${{ inputs.dryRun || false }}
+          APP_SLUG: ${{ steps.app_token.outputs.app-slug || '' }}
+          READONLY_GITHUB_TOKEN: ${{ steps.readonly_app_token.outputs.token || '' }}
+        with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const pushToken = process.env['INPUT_GITHUB-TOKEN'] || '';
+            const updaterEnv = { ...process.env };
+            delete updaterEnv['INPUT_GITHUB-TOKEN'];
+            delete updaterEnv.GITHUB_TOKEN;
+            delete updaterEnv.GH_TOKEN;
+            delete updaterEnv.ACTIONS_RUNTIME_TOKEN;
+            delete updaterEnv.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+            if (process.env.READONLY_GITHUB_TOKEN) {
+              updaterEnv.GITHUB_TOKEN = process.env.READONLY_GITHUB_TOKEN;
+            }
+            delete updaterEnv.READONLY_GITHUB_TOKEN;
+
+            const ecosystemsInput = process.env.INPUT_ECOSYSTEMS || 'all';
+            const combinePrs = process.env.INPUT_COMBINE_PRS === 'true';
+            const dryRun = process.env.INPUT_DRY_RUN === 'true';
+
+            const groupConfigs = {
+              dotnet: {
+                branch: 'chore/deps-dotnet',
+                title: 'chore(deps): update .NET packages',
+                ecosystemsArg: 'dotnet',
+                label: 'dotnet'
+              },
+              python: {
+                branch: 'chore/deps-python',
+                title: 'chore(deps): update Python (uv) dependencies',
+                ecosystemsArg: 'python',
+                label: 'python'
+              },
+              docker: {
+                branch: 'chore/deps-docker',
+                title: 'chore(deps): update Docker base images',
+                ecosystemsArg: 'docker',
+                label: 'docker'
+              },
+              actions: {
+                branch: 'chore/deps-actions',
+                title: 'chore(deps): update GitHub Actions',
+                ecosystemsArg: 'actions',
+                label: 'actions'
+              }
+            };
+
+            const groups = combinePrs
+              ? [{
+                  branch: 'chore/dependency-updates',
+                  title: 'chore(deps): update dependencies',
+                  ecosystemsArg: ecosystemsInput,
+                  label: 'combined'
+                }]
+              : (ecosystemsInput === 'all' ? ['dotnet', 'python', 'docker', 'actions'] : [ecosystemsInput])
+                  .map(key => groupConfigs[key]);
+
+            const reportDir = path.join(process.env.RUNNER_TEMP || '/tmp', 'dependency-updates');
+            fs.mkdirSync(reportDir, { recursive: true });
+
+            const appSlug = process.env.APP_SLUG || '';
+            let gitUserName = 'github-actions[bot]';
+            let gitUserEmail = '41898282+github-actions[bot]@users.noreply.github.com';
+            if (appSlug) {
+              const botLogin = `${appSlug}[bot]`;
+              const { data: botUser } = await github.rest.users.getByUsername({ username: botLogin });
+              gitUserName = botLogin;
+              gitUserEmail = `${botUser.id}+${botLogin}@users.noreply.github.com`;
+            }
+
+            await exec.exec('git', ['config', 'user.name', gitUserName]);
+            await exec.exec('git', ['config', 'user.email', gitUserEmail]);
+
+            const baseShaOut = await exec.getExecOutput('git', ['rev-parse', 'HEAD']);
+            const baseSha = baseShaOut.stdout.trim();
+            const baseBranch = context.ref.replace('refs/heads/', '');
+
+            const remoteUrl = `https://x-access-token@github.com/${context.repo.owner}/${context.repo.repo}.git`;
+            const askpassPath = path.join(process.env.RUNNER_TEMP || '/tmp', 'sa-git-askpass.sh');
+
+            const summaryParts = [];
+            const fatalErrors = [];
+
+            for (const group of groups) {
+              core.startGroup(`Ecosystem: ${group.label}`);
+              await exec.exec('git', ['checkout', '-f', baseSha]);
+              await exec.exec('git', ['clean', '-fd']);
+
+              const jsonPath = path.join(reportDir, `${group.label}.json`);
+              const mdPath = path.join(reportDir, `${group.label}.md`);
+
+              const runRes = await exec.getExecOutput(
+                'uv',
+                [
+                  'run',
+                  '--project', './DependencyUpdater',
+                  './DependencyUpdater/DependencyUpdater.py',
+                  '--ecosystems', group.ecosystemsArg,
+                  '--verify',
+                  '--out-json', jsonPath,
+                  '--out-markdown', mdPath
+                ],
+                { env: updaterEnv, ignoreReturnCode: true }
+              );
+
+              if (runRes.exitCode !== 0) {
+                fatalErrors.push(`${group.label}: DependencyUpdater exited with ${runRes.exitCode}`);
+              }
+
+              let body = fs.existsSync(mdPath) ? fs.readFileSync(mdPath, 'utf8') : `## Dependency Updates (${group.label})\n`;
+              const statusOut = await exec.getExecOutput('git', ['status', '--porcelain']);
+              const hasChanges = statusOut.stdout.trim().length > 0;
+
+              if (hasChanges && (group.ecosystemsArg === 'dotnet' || group.ecosystemsArg === 'all' || group.ecosystemsArg.includes('dotnet'))) {
+                const formatRes = await exec.getExecOutput(
+                  'dotnet',
+                  ['format', '--verify-no-changes'],
+                  { env: updaterEnv, ignoreReturnCode: true }
+                );
+                const formatLine = formatRes.exitCode === 0
+                  ? '- `dotnet format --verify-no-changes`: PASS'
+                  : '- `dotnet format --verify-no-changes`: FAIL';
+                body += `\n${formatLine}\n`;
+                fs.writeFileSync(mdPath, body, 'utf8');
+              }
+
+              if (fs.existsSync(jsonPath)) {
+                const payload = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+                for (const eco of payload.ecosystems || []) {
+                  for (const err of eco.errors || []) {
+                    fatalErrors.push(`${group.label} (${eco.ecosystem}): ${err}`);
+                  }
+                }
+              }
+
+              summaryParts.push(`# ${group.title}\n\n${body}`);
+
+              if (hasChanges) {
+                const diffOut = await exec.getExecOutput('git', ['diff']);
+                fs.writeFileSync(path.join(reportDir, `${group.label}.patch`), diffOut.stdout, 'utf8');
+
+                if (!dryRun) {
+                  await exec.exec('git', ['checkout', '-B', group.branch]);
+                  await exec.exec('git', ['add', '-A']);
+                  await exec.exec('git', ['commit', '-m', group.title]);
+
+                  fs.writeFileSync(askpassPath, '#!/bin/sh\nprintf \'%s\\n\' "$GIT_PUSH_TOKEN"\n', { mode: 0o700 });
+                  let pushRes;
+                  try {
+                    pushRes = await exec.getExecOutput(
+                      'git',
+                      ['push', '--force', remoteUrl, group.branch],
+                      {
+                        env: {
+                          ...process.env,
+                          GIT_TERMINAL_PROMPT: '0',
+                          GIT_ASKPASS: askpassPath,
+                          GIT_PUSH_TOKEN: pushToken
+                        },
+                        ignoreReturnCode: true
+                      }
+                    );
+                  } finally {
+                    fs.rmSync(askpassPath, { force: true });
+                  }
+
+                  if (pushRes.exitCode !== 0) {
+                    const combinedErr = `${pushRes.stdout}\n${pushRes.stderr}`;
+                    if (combinedErr.includes('workflows') && combinedErr.includes('permission')) {
+                      core.warning(
+                        `Cannot push '${group.branch}' because GITHUB_TOKEN lacks 'workflows: write' permission for .github/workflows/* changes. ` +
+                        `Configure DEPENDENCY_UPDATER_APP_ID and DEPENDENCY_UPDATER_APP_PRIVATE_KEY for the GitHub App, ` +
+                        `or apply the '${group.label}.patch' artifact manually.`
+                      );
+                    } else {
+                      fatalErrors.push(`${group.label}: git push failed: ${combinedErr.trim()}`);
+                    }
+                    core.endGroup();
+                    continue;
+                  }
+
+                  const { data: existingPrs } = await github.rest.pulls.list({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    head: `${context.repo.owner}:${group.branch}`,
+                    base: baseBranch,
+                    state: 'open'
+                  });
+
+                  if (existingPrs.length > 0) {
+                    await github.rest.pulls.update({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      pull_number: existingPrs[0].number,
+                      title: group.title,
+                      body
+                    });
+                    core.info(`Updated existing PR #${existingPrs[0].number} for ${group.branch}`);
+                  } else {
+                    const { data: createdPr } = await github.rest.pulls.create({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      title: group.title,
+                      head: group.branch,
+                      base: baseBranch,
+                      body
+                    });
+                    core.info(`Opened new PR #${createdPr.number} for ${group.branch}`);
+                  }
+                } else {
+                  core.info(`[dryRun] Changes detected for ${group.label}; skipping git push and PR creation.`);
+                }
+              } else {
+                core.info(`No changes detected for ${group.label}.`);
+                if (!dryRun) {
+                  const { data: stalePrs } = await github.rest.pulls.list({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    head: `${context.repo.owner}:${group.branch}`,
+                    base: baseBranch,
+                    state: 'open'
+                  });
+                  for (const pr of stalePrs) {
+                    await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: pr.number,
+                      body: 'All dependencies in this PR are now up to date on `main`. Closing.'
+                    });
+                    await github.rest.pulls.update({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      pull_number: pr.number,
+                      state: 'closed'
+                    });
+                    fs.writeFileSync(askpassPath, '#!/bin/sh\nprintf \'%s\\n\' "$GIT_PUSH_TOKEN"\n', { mode: 0o700 });
+                    try {
+                      await exec.getExecOutput(
+                        'git',
+                        ['push', remoteUrl, '--delete', group.branch],
+                        {
+                          env: {
+                            ...process.env,
+                            GIT_TERMINAL_PROMPT: '0',
+                            GIT_ASKPASS: askpassPath,
+                            GIT_PUSH_TOKEN: pushToken
+                          },
+                          ignoreReturnCode: true
+                        }
+                      );
+                    } finally {
+                      fs.rmSync(askpassPath, { force: true });
+                    }
+                  }
+                }
+              }
+
+              core.endGroup();
+            }
+
+            await exec.exec('git', ['checkout', '-f', baseSha]);
+            await exec.exec('git', ['clean', '-fd']);
+
+            const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+            if (summaryFile) {
+              fs.appendFileSync(summaryFile, summaryParts.join('\n\n'), 'utf8');
+            }
+
+            if (fatalErrors.length > 0) {
+              core.setFailed(`Dependency updater reported errors:\n${fatalErrors.join('\n')}`);
+            }
+
+      - name: Upload Dependency Update Reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dependency-update-reports
+          path: ${{ runner.temp }}/dependency-updates
+

@@ -35,12 +35,10 @@ jobs:
                 echo $x
                 cp $x ./CollectedTestResults/`basename $(dirname $(dirname $(dirname ${x})))`.coverage.cobertura.xml
             done
+      - name: Restore .NET tools
+        run: dotnet tool restore
       - name: Generate code coverage report
-        uses: danielpalme/ReportGenerator-GitHub-Action@861674232075b2c6bd1405a04c4bb9b150653e81
-        with:
-          reports: ./CollectedTestResults/*.coverage.cobertura.xml
-          targetdir: coveragereport
-          reporttypes: Html;MarkdownSummaryGithub
+        run: dotnet tool run reportgenerator -- "-reports:./CollectedTestResults/*.coverage.cobertura.xml" "-targetdir:coveragereport" "-reporttypes:Html;MarkdownSummaryGithub"
       - name: Upload Code Coverage Report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:

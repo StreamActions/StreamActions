@@ -1,17 +1,13 @@
-
 version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
     groups:
       codeql-security:
         applies-to: security-updates
-        patterns:
-          - "github/codeql-action/*"
-      codeql-version:
-        applies-to: version-updates
         patterns:
           - "github/codeql-action/*"
   - package-ecosystem: "nuget"
@@ -19,6 +15,7 @@ updates:
       - "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: "Microsoft.AspNetCore.*"
         versions:
@@ -34,17 +31,8 @@ updates:
         applies-to: security-updates
         patterns:
           - "Microsoft.IdentityModel.*"
-      microsoft-identitymodel-version:
-        applies-to: version-updates
-        patterns:
-          - "Microsoft.IdentityModel.*"
       microsoft-extensions-logging-security:
         applies-to: security-updates
-        patterns:
-          - "Microsoft.Extensions.Logging"
-          - "Microsoft.Extensions.Logging.*"
-      microsoft-extensions-logging-version:
-        applies-to: version-updates
         patterns:
           - "Microsoft.Extensions.Logging"
           - "Microsoft.Extensions.Logging.*"
@@ -52,5 +40,12 @@ updates:
     directories:
       - "/Diff"
       - "/TldRegexUpdater"
+      - "/DependencyUpdater"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
+  - package-ecosystem: "docker"
+    directory: "/StreamActions.Daemon"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0

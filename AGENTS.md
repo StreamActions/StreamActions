@@ -37,8 +37,10 @@ This file contains instructions for Generative AI Agents
 - Each Python folder is an independent `uv` project with its own `pyproject.toml` and `uv.lock` (Python >= 3.13)
 - `/Diff`: Platform documentation parsers (`BaseParser.py` is 100% website-agnostic; platform parsers live in `Diff/parsers/<platform>/`, e.g., `Diff/parsers/twitch/`). `DocParserFinder.py` discovers `[DocParser(...)]` attributes in `.cs` files, and `.github/workflows/update-issues.yml` runs the matching parser in `Diff/parsers/` to keep tracking issues up to date
 - `/TldRegexUpdater`: generates the TLD portion of the chat link-detection regex from the IANA TLD list
+- `/DependencyUpdater`: per-ecosystem dependency updater modules (`.NET`, `Python/uv`, `Docker`, `GitHub Actions`) used by `.github/workflows/update-dependencies.yml`
 
 ## CI
-- `.github/workflows/ci.yml`: `dotnet test` on .NET 9, with timezone (`UTC`, `America/New_York`, `Europe/London`, `Asia/Tokyo`) and OS (Ubuntu, Windows, macOS) matrices
+- `.github/workflows/ci.yml`: `dotnet test` on .NET 10, with timezone (`UTC`, `America/New_York`, `Europe/London`, `Asia/Tokyo`) and OS (Ubuntu, Windows, macOS) matrices
 - `.github/workflows/codeql-analysis.yml`: CodeQL
+- `.github/workflows/update-dependencies.yml`: scheduled and `workflow_dispatch` dependency updater across `.NET`, `Python/uv`, `Docker`, and `GitHub Actions` (Dependabot handles security updates only)
 - `.github/workflows/update-issues.yml`: scheduled DocParser diff and issue updater (uses `uv`)

@@ -1,0 +1,61 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>d3e4f5a6-2b3c-4d5e-8f9a-1b2c3d4e5f60</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>DependencyUpdater.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>DependencyUpdater</Name>
+    <RootNamespace>DependencyUpdater</RootNamespace>
+    <InterpreterId>Global|Astral|CPython3.13.5</InterpreterId>
+    <SuppressPackageInstallationPrompt>True</SuppressPackageInstallationPrompt>
+    <IsWindowsApplication>False</IsWindowsApplication>
+    <TestFramework>Pytest</TestFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>
+      </PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DependencyUpdater.py" />
+    <Compile Include="updaters\__init__.py" />
+    <Compile Include="updaters\BaseUpdater.py" />
+    <Compile Include="updaters\DockerUpdater.py" />
+    <Compile Include="updaters\DotNetUpdater.py" />
+    <Compile Include="updaters\GitHubActionsUpdater.py" />
+    <Compile Include="updaters\PythonUpdater.py" />
+    <Compile Include="tests\__init__.py" />
+    <Compile Include="tests\test_updaters.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="updaters\" />
+    <Folder Include="tests\" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="Global|Astral|CPython3.13.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="pyproject.toml" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>
