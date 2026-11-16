@@ -41,10 +41,12 @@ public sealed class PermissionStoreTests
         using TestSqliteContextFactory factory = new();
         (_, Guid workspaceId) = await factory.SeedWorkspaceAsync(ct);
         using InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
+        TaskCompletionSource firstEventReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<PermissionsInvalidatedEvent> events = [];
-        using IDisposable sub = eventBus.Subscribe<PermissionsInvalidatedEvent>((evt, _) =>
+        using IDisposable sub = eventBus.Subscribe<PermissionsInvalidatedEvent>((evt, cancellationToken) =>
         {
             events.Add(evt);
+            _ = firstEventReceived.TrySetResult();
             return ValueTask.CompletedTask;
         });
 
@@ -65,6 +67,7 @@ public sealed class PermissionStoreTests
             ("Follower", "follower"),
             ("Everyone", "everyone"),
         ]);
+        await firstEventReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
         _ = events.Should().ContainSingle(e => e.WorkspaceId == workspaceId);
     }
     #endregion
@@ -78,10 +81,16 @@ public sealed class PermissionStoreTests
         using TestSqliteContextFactory factory = new();
         (_, Guid workspaceId) = await factory.SeedWorkspaceAsync(ct);
         using InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
+        TaskCompletionSource threeEventsReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<PermissionsInvalidatedEvent> events = [];
-        using IDisposable sub = eventBus.Subscribe<PermissionsInvalidatedEvent>((evt, _) =>
+        using IDisposable sub = eventBus.Subscribe<PermissionsInvalidatedEvent>((evt, cancellationToken) =>
         {
             events.Add(evt);
+            if (events.Count >= 3)
+            {
+                _ = threeEventsReceived.TrySetResult();
+            }
+
             return ValueTask.CompletedTask;
         });
 
@@ -106,6 +115,7 @@ public sealed class PermissionStoreTests
 
         await store.DeleteGroupAsync(created.Id, ct);
         _ = (await store.GetGroupsAsync(workspaceId, ct)).Should().BeEmpty();
+        await threeEventsReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
         _ = events.Should().HaveCount(3);
         _ = events.Should().AllSatisfy(e => e.WorkspaceId.Should().Be(workspaceId));
     }
