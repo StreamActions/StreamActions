@@ -1,11 +1,8 @@
 ---
 name: triage-sweeper
 description: >-
-  Stage 1 security and performance triage. Fast, read-only sweep of the C#
-  projects, Python uv utilities, and GitHub Actions workflows. Returns a
-  ranked list of candidate hotspots (file:line, heuristic, confidence) for
-  security-auditor or performance-auditor. Never edits files and never assigns
-  final severity.
+  Flash-tier read-only Stage 1 sweep. Returns ranked candidate hotspots for
+  the auditors; never assigns severity.
 mainAgent: false
 subagent: true
 model: flash

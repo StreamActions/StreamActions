@@ -12,7 +12,7 @@ globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/
 - `Directory.Packages.props` sets `ManagePackageVersionsCentrally`. Package versions are declared only there, as `<PackageVersion Include="..." Version="..." />`
 - In `.csproj` files, use `<PackageReference Include="..." />` with no `Version` attribute. Never use `VersionOverride` without explicit user approval
 - When adding a package, add its `PackageVersion` to `Directory.Packages.props`, keeping runtime packages grouped before test packages
-- Do not redeclare properties already set in `Directory.Build.props` (`AnalysisLevel`, `AnalysisLevelStyle`, `EnforceCodeStyleInBuild`, `GenerateDocumentationFile`, `AccelerateBuildsInVisualStudio`) in individual projects
+- Do not redeclare properties already set in `Directory.Build.props` (see root `AGENTS.md`) in individual projects
 
 ## Projects, namespaces, and targeting
 - The project name is the root namespace. The folder path below the project maps 1:1 to the namespace. Use file-scoped namespaces (`.editorconfig` enforces this)
@@ -30,8 +30,7 @@ globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/
 - Use simplified collection initialization, such as `NameValueCollection queryParameters = [];` instead of `NameValueCollection queryParameters = new();`
 - When creating/editing records, Enums should be defined inside of the record
 - When creating/editing records, Methods should be defined inside of the record
-- Use nullable properties with no default values, unless otherwise specified
-- All properties must be nullable, unless otherwise specified
+- All properties, including those in data model records, are nullable, have no default values, and do not use the `required` modifier (to handle potentially missing fields in API responses), unless otherwise specified
 - All properties should use `{ get; init; }` instead of `{ get; set; }`, unless otherwise specified
 - Use `StreamActions.Common.Util.BuildUri` instead of the `Uri` class to build Uris
 - The first parameter of `StreamActions.Common.Util.BuildUri` should be constructed as a new `Uri`
@@ -52,7 +51,6 @@ globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/
 - When a API field represents a duration in seconds, map it to a `long` property suffixed with `Seconds` and provide a secondary `TimeSpan` property that parses the seconds value for easier programmatic use.
 - The `StreamActions.Common.Extensions` namespace contains an extension method for `NameValueCollection` that supports adding `IEnumerable<string>` values.
 - For properties in an API model that represent a GUID, use the `Guid?` type instead of `string?`.
-- Properties in data model records should be nullable and should not use the required modifier to handle potentially missing fields in API responses.
 - Nested record types that model complex objects from an API response should be defined in their own separate files.
 - Data model records should not use the partial modifier.
 - Use the `[JsonPropertyName("json_name")]` attribute on record properties to map from the snake_case JSON field names used by the API to PascalCase C# property names.

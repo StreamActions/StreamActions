@@ -400,7 +400,6 @@ FodyWeavers.xsd
 *.sln.iml
 
 # Agents
-.agents/local-config-path.txt
 .agents/plan-digest.md
 .agents/scratch/
 .agents/reports/

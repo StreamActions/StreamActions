@@ -19,7 +19,7 @@ trigger: always_on
 
 ## Auto-approved commands (outside the sandbox)
 <!-- BEGIN SYNCED ALLOWLIST: managed by skill sync-command-permissions. Do not hand-edit. -->
-Last synced: 2026-10-31 from 14dff664-ff30-444d-95d5-bda4744bb3fd.json.
+Last synced: 2026-10-31 from operator-provided list.
 
 | Directive | Auto-approved examples |
 | :-- | :-- |
@@ -40,5 +40,5 @@ Pre-approved URLs: `https://dev.twitch.tv`, `https://twitch.tv`, `https://github
 - If a build fails because a file is in use (`MSB3026`, `MSB3027`, `MSB3021`), run the allow-listed `Get-Process -Name dotnet*, MSBuild*, VBCSCompiler*` to identify the process, then report it to the operator. Never stop processes without approval
 
 ## Stale allowlist
-- If an allow-listed command unexpectedly prompts or is denied, the table above may be out of date. In interactive mode, suggest running the `sync-command-permissions` skill
+- If an allow-listed command unexpectedly prompts or is denied, the table above may be out of date. In interactive mode, ask the operator to paste their current allow list and run the `sync-command-permissions` skill
 

@@ -1,11 +1,9 @@
 ---
 name: deep-debugger
 description: >-
-  Senior debugger and refactoring agent (Argon tier). MUST be invoked when
-  (1) rapid-coder returns STATUS: BLOCKED or fails to resolve a compiler
-  warning, test failure, or runtime issue after 2 attempts, or (2) a task needs
-  multi-project architectural refactoring, subtle async/await, concurrency, or
-  serialization debugging, or root-cause analysis across C# subprojects.
+  Argon-tier debugger. Use when rapid-coder returns BLOCKED or fails at
+  ATTEMPT 2/2, or for cross-project behavior changes, async/concurrency/
+  serialization bugs, or unknown root causes.
 mainAgent: false
 subagent: true
 model: inherit

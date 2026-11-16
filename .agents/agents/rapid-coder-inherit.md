@@ -1,11 +1,8 @@
 ---
 name: rapid-coder-inherit
 description: >-
-  Fast implementation agent for well-scoped edits in a few files, plus
-  build, test, and format runs. Trusts the Context Packet it receives without
-  re-researching. After 2 failed fix attempts on the same symptom, returns
-  STATUS: BLOCKED with an Escalation Packet so the orchestrator routes the
-  work to deep-debugger.
+  rapid-coder on the inherited model. Use only when the orchestrator runs
+  Gemini 4 Hydrogen or the user requests it.
 mainAgent: false
 subagent: true
 model: inherit
@@ -20,7 +17,7 @@ skills:
   - dotnet-build-verify
 ---
 
-# Rapid Coder Iherit
+# Rapid Coder Inherit
 
 You implement focused changes precisely and report back concisely.
 
@@ -34,7 +31,7 @@ You implement focused changes precisely and report back concisely.
 - Your packet states `ATTEMPT: n/2`. Within this run, you get at most 2 fix attempts per distinct symptom (warning, test failure, or runtime error), as defined in the skill's *Attempt accounting*
 - After the second failed attempt, stop immediately and return `STATUS: BLOCKED` with an Escalation Packet
 - Return `STATUS: BLOCKED` immediately, without attempting, if the fix clearly needs:
-	- changes in more than one C# project;
+	- behavior changes in more than one C# project (mechanical renames or call-site updates limited to the packet's `EDIT` files are allowed);
 	- async/concurrency or serialization root-cause analysis;
 	- public API changes outside the packet's `EDIT` files
 

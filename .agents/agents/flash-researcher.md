@@ -1,11 +1,8 @@
 ---
 name: flash-researcher
 description: >-
-  Fast read-only research agent for StreamActions: codebase exploration,
-  Twitch and external API documentation, and Diff doc-parser runs. Returns a
-  structured Context Packet that implementing agents use without
-  re-researching. Safe to run many instances in parallel; never edits source
-  files.
+  Flash-tier read-only research (codebase, Twitch docs, Diff parsers). Returns
+  a Context Packet. Safe to run in parallel.
 mainAgent: false
 subagent: true
 model: flash
