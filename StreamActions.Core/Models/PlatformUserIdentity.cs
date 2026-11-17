@@ -28,6 +28,7 @@ namespace StreamActions.Core.Models;
 /// <param name="PanelUserId">The optional linked panel user identifier.</param>
 /// <param name="IsRoot">A value indicating whether the actor is the instance root user.</param>
 /// <param name="IsGlobalAdmin">A value indicating whether the actor is a global instance administrator.</param>
+/// <param name="OidcGroupClaims">Optional OIDC group claim values associated with the actor's authenticated session.</param>
 public sealed record PlatformUserIdentity(
     string PlatformId,
     string PlatformUserId,
@@ -35,4 +36,5 @@ public sealed record PlatformUserIdentity(
     PlatformUserDesignations Designations = PlatformUserDesignations.None,
     Guid? PanelUserId = null,
     bool IsRoot = false,
-    bool IsGlobalAdmin = false);
+    bool IsGlobalAdmin = false,
+    IReadOnlyCollection<string>? OidcGroupClaims = null);

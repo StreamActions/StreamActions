@@ -1,0 +1,140 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@page "/setup"
+@page "/setup-recovery"
+
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.DataProtection
+@using Microsoft.AspNetCore.Http
+@using Microsoft.Extensions.DependencyInjection
+@using StreamActions.Core.Abstractions
+@using StreamActions.Web.Endpoints
+
+@inject IBootstrapTokenService BootstrapTokenService
+@inject IPanelUserStore PanelUserStore
+
+<PageTitle>@(_isRootRecovery ? "Root Recovery" : "Initial Setup") - StreamActions</PageTitle>
+
+<h1>@(_isRootRecovery ? "Root Recovery" : "Initial Setup")</h1>
+
+@if (_isRootRecovery)
+{
+    <p data-setup-mode="recovery">Root Recovery mode: enter the bootstrap token printed to the daemon console to recover root operator access.</p>
+}
+else
+{
+    <p data-setup-mode="initial">Initial Setup mode: enter the bootstrap token printed to the daemon console to initialize this node.</p>
+}
+
+@if (_hasValidSetupTicket)
+{
+    <p role="status">
+        Bootstrap token verified. Setup session cookie has been issued.
+        <a href="/auth/twitch/login?flow=setup">Continue with Twitch</a>
+    </p>
+}
+
+@if (!_tokenAvailable)
+{
+    int cooldownSeconds = Math.Max(1, (int)Math.Ceiling((_cooldownRemaining ?? TimeSpan.Zero).TotalSeconds));
+    <p role="alert" data-setup-cooldown="true">
+        Bootstrap token generation is in cooldown after repeated failed attempts. Please wait @cooldownSeconds second(s) before requesting a new token.
+    </p>
+}
+else
+{
+    <form method="post" action="/setup/verify">
+        <AntiforgeryToken />
+        <div>
+            <label for="bootstrap-token">Bootstrap Token</label>
+            <input id="bootstrap-token" name="bootstrapToken" type="password" autocomplete="off" required />
+        </div>
+        <div>
+            <label for="platform-id">Platform</label>
+            <select id="platform-id" name="platformId">
+                <option value="twitch" selected>Twitch</option>
+            </select>
+        </div>
+        <div>
+            <label for="client-id">OAuth Client ID</label>
+            <input id="client-id" name="clientId" type="text" autocomplete="off" />
+        </div>
+        <div>
+            <label for="client-secret">OAuth Client Secret</label>
+            <input id="client-secret" name="clientSecret" type="password" autocomplete="new-password" />
+        </div>
+        <button type="submit">Verify &amp; Continue</button>
+    </form>
+}
+
+@code {
+    /// <summary>
+    /// Indicates whether an active bootstrap token is available for verification.
+    /// </summary>
+    private bool _tokenAvailable;
+
+    /// <summary>
+    /// Remaining cooldown duration when bootstrap token issuance is temporarily blocked.
+    /// </summary>
+    private TimeSpan? _cooldownRemaining;
+
+    /// <summary>
+    /// Indicates whether the node already has a root operator account and is in recovery mode.
+    /// </summary>
+    private bool _isRootRecovery;
+
+    /// <summary>
+    /// Indicates whether a valid setup ticket is active for continuing to platform OAuth.
+    /// </summary>
+    private bool _hasValidSetupTicket;
+
+    /// <summary>
+    /// Gets or sets the ambient HTTP context during static SSR rendering.
+    /// </summary>
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    /// <summary>
+    /// Gets or sets a query flag indicating whether verification just succeeded.
+    /// </summary>
+    [SupplyParameterFromQuery]
+    public bool? Verified { get; set; }
+
+    /// <summary>
+    /// Requests or reuses the console bootstrap token and checks whether a root user already exists.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        BootstrapTokenRequestResult tokenResult = BootstrapTokenService.RequestOrReuseActiveToken();
+        _tokenAvailable = tokenResult.Succeeded;
+        _cooldownRemaining = tokenResult.CooldownRemaining;
+        _isRootRecovery = await PanelUserStore.HasRootUserAsync().ConfigureAwait(false);
+        _hasValidSetupTicket = Verified == true;
+
+        if (!_hasValidSetupTicket && HttpContext is not null)
+        {
+            IDataProtectionProvider? dataProtectionProvider = HttpContext.RequestServices.GetService<IDataProtectionProvider>();
+            if (dataProtectionProvider is not null)
+            {
+                _hasValidSetupTicket = SetupEndpoints.TryReadSetupTicket(HttpContext, dataProtectionProvider, out _);
+            }
+        }
+    }
+}

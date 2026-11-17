@@ -52,6 +52,13 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IPluginManager, PluginManager>();
         services.TryAddSingleton<IPermissionRegistry, PermissionRegistry>();
         services.TryAddScoped<IPermissionService, PermissionService>();
+        services.TryAddScoped<IOAuthClientConfigResolver, OAuthClientConfigResolver>();
+        services.TryAddScoped<IBotCredentialResolver, BotCredentialResolver>();
+        services.TryAddSingleton<ITokenLifecycleService, TokenLifecycleService>();
+        services.TryAddSingleton<IScopeDriftDetector, ScopeDriftDetector>();
+        services.TryAddScoped<IWorkspaceAccessService, WorkspaceAccessService>();
+        services.TryAddSingleton<ITotpService, TotpService>();
+        services.TryAddScoped<IMfaPolicyService, MfaPolicyService>();
         _ = services.AddHybridCache();
 
         return services;

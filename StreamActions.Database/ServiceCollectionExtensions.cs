@@ -114,9 +114,15 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<SecretProtectionService>();
         services.TryAddSingleton<IWorkspaceKeyValueStore, WorkspaceKeyValueStore>();
         services.TryAddSingleton<IPermissionStore, PermissionStore>();
+        services.TryAddSingleton<IPanelUserStore, PanelUserStore>();
+        services.TryAddSingleton<IWorkspaceStore, WorkspaceStore>();
+        services.TryAddSingleton<IExternalOidcProviderStore, ExternalOidcProviderStore>();
+        services.TryAddSingleton<IPlatformCredentialStore, PlatformCredentialStore>();
+        services.TryAddSingleton<IMfaCredentialStore, MfaCredentialStore>();
         services.TryAddSingleton<WorkspaceCacheService>();
         services.TryAddSingleton<DatabaseMigrationService>();
         services.TryAddSingleton<IInstanceSettingsService, InstanceSettingsService>();
+        services.TryAddSingleton<IInstanceOAuthConfigService, InstanceOAuthConfigService>();
         services.TryAddSingleton<IWorkspacePortableArchiveService, WorkspacePortableArchiveService>();
         services.TryAddSingleton<DatabaseBackupService>();
         services.TryAddSingleton<IDatabaseBackupService>(static sp => sp.GetRequiredService<DatabaseBackupService>());

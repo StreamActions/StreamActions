@@ -13,7 +13,8 @@
     <OutputPath>.</OutputPath>
     <Name>Diff</Name>
     <RootNamespace>Diff</RootNamespace>
-    <InterpreterId>Global|Astral|CPython3.13.5</InterpreterId>
+    <InterpreterId>
+    </InterpreterId>
     <SuppressPackageInstallationPrompt>True</SuppressPackageInstallationPrompt>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
@@ -51,9 +52,6 @@
   <ItemGroup>
     <Folder Include="parsers\" />
     <Folder Include="parsers\twitch\" />
-  </ItemGroup>
-  <ItemGroup>
-    <InterpreterReference Include="Global|Astral|CPython3.13.5" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="pyproject.toml" />

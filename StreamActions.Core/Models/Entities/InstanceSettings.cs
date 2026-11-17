@@ -84,6 +84,36 @@ public sealed class InstanceSettings
     public string? EncryptedPlatformOAuthConfigJson { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether open self-registration via external OIDC is permitted.
+    /// </summary>
+    public bool AllowOpenRegistration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the external OpenID Connect login mode for panel authentication.
+    /// </summary>
+    public ExternalOidcLoginMode ExternalOidcLoginMode { get; set; } = ExternalOidcLoginMode.Allowed;
+
+    /// <summary>
+    /// Gets or sets the instance-wide availability policy for WebAuthn passkeys.
+    /// </summary>
+    public MfaMethodAvailability MfaPasskeyAvailability { get; set; } = MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Gets or sets the instance-wide availability policy for TOTP authenticator apps.
+    /// </summary>
+    public MfaMethodAvailability MfaTotpAvailability { get; set; } = MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Gets or sets the instance-wide panel login MFA requirement.
+    /// </summary>
+    public PanelLoginMfaRequirement LoginMfaRequirement { get; set; } = PanelLoginMfaRequirement.Optional;
+
+    /// <summary>
+    /// Gets or sets the instance-wide step-up ("Sudo Mode") MFA policy for sensitive actions.
+    /// </summary>
+    public StepUpSudoPolicy StepUpSudoPolicy { get; set; } = StepUpSudoPolicy.Optional;
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when settings were last updated.
     /// </summary>
     public DateTimeOffset UpdatedAtUtc { get; set; }

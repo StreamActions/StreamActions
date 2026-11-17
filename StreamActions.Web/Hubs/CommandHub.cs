@@ -16,11 +16,14 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using StreamActions.Web.Security;
 
 namespace StreamActions.Web.Hubs;
 
 /// <summary>
 /// SignalR hub for broadcasting command configuration changes.
 /// </summary>
+[Authorize(Policy = AuthClaims.PanelAuthenticatedPolicy)]
 public sealed class CommandHub : Hub<ICommandClient>;

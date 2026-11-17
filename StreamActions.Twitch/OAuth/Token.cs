@@ -26,6 +26,7 @@ using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -147,7 +148,18 @@ public sealed record Token : JsonApiResponse
     /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> to read from OpenID Connect configuration.</param>
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="code"/> is <see langword="null"/> or whitespace, or <paramref name="redirectUri"/> is <see langword="null"/>.</exception>
-    public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null)
+    public static Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null) => AuthorizeOAuth(code, redirectUri, session: null, baseAddress);
+
+    /// <summary>
+    /// Attempts to authorize a new User OAuth token using an authorization code and optional per-session overrides.
+    /// </summary>
+    /// <param name="code">The authorization code.</param>
+    /// <param name="redirectUri">The redirect Uri that was used.</param>
+    /// <param name="session">Optional <see cref="TwitchSession"/> providing custom client credentials or HTTP overrides.</param>
+    /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> to read from OpenID Connect configuration.</param>
+    /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="code"/> is <see langword="null"/> or whitespace, or <paramref name="redirectUri"/> is <see langword="null"/>.</exception>
+    public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, TwitchSession? session, string? baseAddress = null)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
@@ -161,9 +173,16 @@ public sealed record Token : JsonApiResponse
 
         baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
 
-        using FormUrlEncodedContent content = new(new Dictionary<string, string>{ { "grant_type", "authorization_code" }, { "code", code },
-            { "client_id", TwitchApi.ClientId ?? "" }, { "client_secret", TwitchApi.ClientSecret ?? "" }, { "redirect_uri", redirectUri.ToString() } });
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), TwitchSession.Empty, content).ConfigureAwait(false);
+        using FormUrlEncodedContent content = new(new Dictionary<string, string>
+        {
+            { "grant_type", "authorization_code" },
+            { "code", code },
+            { "client_id", session?.CustomClientId ?? TwitchApi.ClientId ?? "" },
+            { "client_secret", session?.CustomClientSecret ?? TwitchApi.ClientSecret ?? "" },
+            { "redirect_uri", redirectUri.ToString() }
+        });
+        using TwitchSession? requestSession = session is not null ? CreateTokenRequestSession(session) : null;
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession ?? TwitchSession.Empty, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -212,7 +231,7 @@ public sealed record Token : JsonApiResponse
     /// </summary>
     /// <param name="session">The source <see cref="TwitchSession"/>.</param>
     /// <returns>A new <see cref="TwitchSession"/> with <see cref="TwitchToken.Empty"/>.</returns>
-    private static TwitchSession CreateTokenRequestSession(TwitchSession session) => new()
+    internal static TwitchSession CreateTokenRequestSession(TwitchSession session) => new()
     {
         Token = TwitchToken.Empty,
         CustomBaseUri = session.CustomBaseUri,
@@ -249,21 +268,32 @@ public sealed record Token : JsonApiResponse
     /// Validates and converts <see cref="IdToken"/>, if present, to a <see cref="JsonWebToken"/>.
     /// </summary>
     /// <returns>A <see cref="JsonWebToken"/> if <see cref="IdToken"/> is a valid JWT, else <see langword="null"/>.</returns>
-    public async Task<JsonWebToken?> GetJwtTokenAsync()
+    public Task<JsonWebToken?> GetJwtTokenAsync() => this.GetJwtTokenAsync(null, null);
+
+    /// <summary>
+    /// Validates and converts <see cref="IdToken"/>, if present, to a <see cref="JsonWebToken"/> using the specified expected audience and optional nonce.
+    /// </summary>
+    /// <param name="expectedAudience">The expected JWT audience (<c>aud</c> claim). Defaults to <see cref="TwitchApi.ClientId"/> when <see langword="null"/>.</param>
+    /// <param name="expectedNonce">The expected <c>nonce</c> claim value, or <see langword="null"/> or whitespace to skip nonce validation.</param>
+    /// <returns>A <see cref="JsonWebToken"/> if <see cref="IdToken"/> is a valid JWT matching the expected audience and nonce, else <see langword="null"/>.</returns>
+    public async Task<JsonWebToken?> GetJwtTokenAsync(string? expectedAudience, string? expectedNonce = null)
     {
-        if (this.IdToken is not null)
+        if (!string.IsNullOrWhiteSpace(this.IdToken))
         {
             TokenValidationResult result = await new JsonWebTokenHandler().ValidateTokenAsync(this.IdToken, new()
             {
                 IssuerSigningKeys = _openIdConnectConfiguration.Value.JsonWebKeySet.Keys,
-                ValidAudience = TwitchApi.ClientId,
+                ValidAudience = expectedAudience ?? TwitchApi.ClientId,
                 ValidIssuer = _openIdConnectConfiguration.Value.Issuer,
                 ValidateLifetime = true
             }).ConfigureAwait(false);
 
-            if (result.IsValid)
+            if (result.IsValid && result.SecurityToken is JsonWebToken jwt)
             {
-                return (JsonWebToken?)result.SecurityToken;
+                return !string.IsNullOrWhiteSpace(expectedNonce) &&
+                    (!jwt.TryGetClaim("nonce", out Claim? nonceClaim) || !string.Equals(nonceClaim.Value, expectedNonce, StringComparison.Ordinal))
+                    ? null
+                    : jwt;
             }
         }
 

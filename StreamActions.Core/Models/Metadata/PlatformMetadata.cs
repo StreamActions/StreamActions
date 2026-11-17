@@ -31,6 +31,11 @@ public sealed class PlatformMetadata
     public bool AutoJoinChat { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the workspace broadcaster account should be used as the chat bot identity.
+    /// </summary>
+    public bool UseBroadcasterAsBot { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional bot username override for this platform.
     /// </summary>
     public string? BotUsername { get; set; }

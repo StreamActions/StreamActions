@@ -1,0 +1,168 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@page "/auth/mfa"
+@attribute [Authorize(Policy = AuthClaims.MfaPendingPolicy)]
+
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.DependencyInjection
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
+
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IMfaPolicyService MfaPolicyService
+@inject IServiceProvider ServiceProvider
+
+<PageTitle>Two-Factor Authentication - StreamActions</PageTitle>
+
+<h1>Two-Factor Authentication</h1>
+
+@if (!string.IsNullOrWhiteSpace(Error))
+{
+    <p role="alert" data-mfa-error="@Error">Verification failed. Please check your code or security key and try again.</p>
+}
+
+@if (!_loaded)
+{
+    <p>Loading authentication options…</p>
+}
+else if (_policy.IsMfaDisabled)
+{
+    <p role="alert">All multi-factor authentication methods are currently disabled by policy.</p>
+}
+else
+{
+    <p>Verify your identity to complete signing in to StreamActions.</p>
+
+    @if (_policy.IsPasskeyAllowed)
+    {
+        <section aria-labelledby="mfa-passkey-heading">
+            <h2 id="mfa-passkey-heading">Passkey</h2>
+            <button type="button"
+                    data-mfa-passkey="true"
+                    data-return-url="@_safeReturnUrl"
+                    onclick="window.streamActionsWebAuthn && window.streamActionsWebAuthn.verifyPasskey(this.dataset.returnUrl, 'mfa-passkey-error')">
+                Verify with Passkey
+            </button>
+            <p id="mfa-passkey-error" role="alert" hidden></p>
+        </section>
+    }
+
+    @if (_policy.IsTotpAllowed)
+    {
+        <section aria-labelledby="mfa-totp-heading">
+            <h2 id="mfa-totp-heading">Authenticator App (TOTP)</h2>
+            <form method="post" action="/auth/mfa/totp/verify" data-mfa-totp="true">
+                <AntiforgeryToken />
+                <input type="hidden" name="returnUrl" value="@_safeReturnUrl" />
+                <div>
+                    <label for="mfa-totp-code">6-digit code</label>
+                    <input id="mfa-totp-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required />
+                </div>
+                <button type="submit">Verify Code</button>
+            </form>
+        </section>
+    }
+
+    <section aria-labelledby="mfa-recovery-heading">
+        <h2 id="mfa-recovery-heading">One-Time Recovery Code</h2>
+        <form method="post" action="/auth/mfa/recovery/verify" data-mfa-recovery="true">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="@_safeReturnUrl" />
+            <div>
+                <label for="mfa-recovery-code">Recovery Code</label>
+                <input id="mfa-recovery-code" name="code" type="text" autocomplete="off" required />
+            </div>
+            <button type="submit">Verify Recovery Code</button>
+        </form>
+    </section>
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets the optional local return URL requested prior to MFA challenge.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional verification error code.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+
+    /// <summary>
+    /// Indicates whether policy evaluation has completed.
+    /// </summary>
+    private bool _loaded;
+
+    /// <summary>
+    /// Validated safe local return URL.
+    /// </summary>
+    private string _safeReturnUrl = "/";
+
+    /// <summary>
+    /// Effective MFA policy governing permitted challenge methods.
+    /// </summary>
+    private EffectiveMfaPolicy _policy = new(
+        MfaMethodAvailability.Allowed,
+        MfaMethodAvailability.Allowed,
+        PanelLoginMfaRequirement.Optional,
+        StepUpSudoPolicy.Optional);
+
+    /// <summary>
+    /// Loads the current user's effective MFA policy to determine which verification methods may be presented.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        _safeReturnUrl = AuthClaims.SafeReturnUrlOrDefault(ReturnUrl, "/");
+
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        ClaimsPrincipal principal = authState.User;
+
+        IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
+        Guid? userId = AuthClaims.GetPanelUserId(principal);
+        PanelUser? user = panelUserStore is not null && userId.HasValue
+            ? await panelUserStore.GetByIdAsync(userId.Value).ConfigureAwait(false)
+            : null;
+
+        if (user is not null && panelUserStore is not null)
+        {
+            IReadOnlyList<UserLoginIdentity> identities = await panelUserStore
+                .GetLoginIdentitiesAsync(user.Id)
+                .ConfigureAwait(false);
+            IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(principal);
+
+            _policy = await MfaPolicyService
+                .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, workspaceId: null)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            _policy = await MfaPolicyService
+                .GetEffectivePolicyAsync(workspaceId: null)
+                .ConfigureAwait(false);
+        }
+
+        _loaded = true;
+    }
+}
+

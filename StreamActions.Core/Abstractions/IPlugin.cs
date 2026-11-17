@@ -24,6 +24,12 @@ namespace StreamActions.Core.Abstractions;
 public interface IPlugin
 {
     /// <summary>
+    /// Shared empty platform scope dictionary returned by default for plugins without platform scope requirements.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, IReadOnlyCollection<string>> _emptyPlatformScopes =
+        new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Gets the unique plugin identifier (for example, <c>core.commands</c> or <c>twitch.loyalty</c>).
     /// </summary>
     string Id { get; }
@@ -42,6 +48,11 @@ public interface IPlugin
     /// Gets the optional platform identifier required by this plugin, or <see langword="null"/> if universal.
     /// </summary>
     string? RequiredPlatformId => null;
+
+    /// <summary>
+    /// Gets the platform OAuth scopes required by this plugin, keyed by normalized platform identifier.
+    /// </summary>
+    IReadOnlyDictionary<string, IReadOnlyCollection<string>> RequiredPlatformScopes => _emptyPlatformScopes;
 
     /// <summary>
     /// Initializes the plugin with the provided host context.

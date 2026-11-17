@@ -91,6 +91,24 @@ public sealed class DaemonCommandProcessorAndIpcTests
         string unknownResult = await env.Processor.ExecuteCommandAsync("bogus", ct);
         _ = unknownResult.Should().Contain("Unknown command 'bogus'");
     }
+
+    [Fact]
+    [Trait("Member", "ExecuteCommandAsync")]
+    public async Task ExecuteCommandAsync_WhenBootstrapTokenInCooldown_ReturnsFriendlyCooldownMessage()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TestSqliteDaemonEnvironment env = await TestSqliteDaemonEnvironment.CreateAsync(ct);
+
+        string issued = await env.Processor.ExecuteCommandAsync("bootstrap-token", ct);
+        _ = issued.Should().Contain("Bootstrap token (valid for 5 minutes):");
+
+        _ = env.TokenService.ValidateToken("wrong-1").Should().BeFalse();
+        _ = env.TokenService.ValidateToken("wrong-2").Should().BeFalse();
+        _ = env.TokenService.ValidateToken("wrong-3").Should().BeFalse();
+
+        string cooldownResult = await env.Processor.ExecuteCommandAsync("bootstrap-token", ct);
+        _ = cooldownResult.Should().Contain("cooldown").And.Contain("300 second(s)");
+    }
     #endregion
 
     #region LocalIpc
@@ -259,6 +277,7 @@ public sealed class DaemonCommandProcessorAndIpcTests
             string rootDir,
             string backupDir,
             IDbContextFactory<StreamActionsDbContext> contextFactory,
+            ConsoleBootstrapTokenService tokenService,
             DaemonCommandProcessor processor,
             IOptions<BootstrapOptions> bootstrapOptions)
         {
@@ -266,6 +285,7 @@ public sealed class DaemonCommandProcessorAndIpcTests
             this._rootDir = rootDir;
             this.BackupDir = backupDir;
             this.ContextFactory = contextFactory;
+            this.TokenService = tokenService;
             this.Processor = processor;
             this.BootstrapOptions = bootstrapOptions;
         }
@@ -273,6 +293,8 @@ public sealed class DaemonCommandProcessorAndIpcTests
         public string BackupDir { get; }
 
         public IDbContextFactory<StreamActionsDbContext> ContextFactory { get; }
+
+        public ConsoleBootstrapTokenService TokenService { get; }
 
         public DaemonCommandProcessor Processor { get; }
 
@@ -339,6 +361,7 @@ public sealed class DaemonCommandProcessorAndIpcTests
                 rootDir,
                 backupDir,
                 contextFactory,
+                tokenService,
                 processor,
                 bootstrapOptions);
         }

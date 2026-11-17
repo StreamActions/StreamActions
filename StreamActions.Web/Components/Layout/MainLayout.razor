@@ -17,14 +17,63 @@
  *@
 
 @inherits LayoutComponentBase
+@implements IDisposable
+
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+
+@inject IWorkspaceSessionContext WorkspaceSession
+@inject NavigationManager Navigation
 
 <div class="page">
     <header class="top-nav px-4">
         <nav aria-label="Main navigation">
             <NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
+            <NavLink href="/workspace/platforms">Platforms</NavLink>
             <NavLink href="/permissions">Permissions</NavLink>
             <NavLink href="/admin/global-permissions">Global Permissions</NavLink>
+            <AuthorizeView Policy="@AuthClaims.RootOrGlobalAdminPolicy">
+                <Authorized>
+                    <NavLink href="/admin/auth">Auth Settings</NavLink>
+                </Authorized>
+            </AuthorizeView>
+            <AuthorizeView Policy="@AuthClaims.PanelAuthenticatedPolicy">
+                <Authorized>
+                    <NavLink href="/account/mfa">Security &amp; MFA</NavLink>
+                </Authorized>
+            </AuthorizeView>
         </nav>
+        <div class="auth-status">
+            <AuthorizeView Policy="@AuthClaims.PanelAuthenticatedPolicy">
+                <Authorized>
+                    @if (WorkspaceSession.AccessibleWorkspaces.Count > 0)
+                    {
+                        <form method="post" action="/auth/workspace/select" data-workspace-switcher="true">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="returnUrl" value="@GetCurrentLocalPath()" />
+                            <label for="workspace-switcher-select">Workspace:</label>
+                            <select id="workspace-switcher-select" name="workspaceId" onchange="this.form.submit()">
+                                @foreach (AccessibleWorkspace ws in WorkspaceSession.AccessibleWorkspaces)
+                                {
+                                    <option value="@ws.Workspace.Id.ToString("D")" selected="@(ws.Workspace.Id == WorkspaceSession.ActiveWorkspaceId)">
+                                        @ws.Workspace.Name (@ws.Workspace.PrimaryPlatformId)
+                                    </option>
+                                }
+                            </select>
+                            <button type="submit">Switch</button>
+                        </form>
+                    }
+                    <span class="user-display-name">@context.User.Identity?.Name</span>
+                    <form method="post" action="/auth/logout">
+                        <AntiforgeryToken />
+                        <button type="submit">Sign Out</button>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    <NavLink href="/login">Sign In</NavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
     </header>
     <main>
         <article class="content px-4">
@@ -32,3 +81,38 @@
         </article>
     </main>
 </div>
+
+@code {
+    /// <summary>
+    /// Initializes the workspace session context for the layout switcher.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        WorkspaceSession.WorkspaceChanged += OnWorkspaceChanged;
+        await WorkspaceSession.InitializeAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Releases layout event subscriptions.
+    /// </summary>
+    public void Dispose() => WorkspaceSession.WorkspaceChanged -= OnWorkspaceChanged;
+
+    /// <summary>
+    /// Re-renders the layout when the active workspace selection changes.
+    /// </summary>
+    /// <param name="sender">The event sender.</param>
+    /// <param name="args">The event arguments.</param>
+    private void OnWorkspaceChanged(object? sender, EventArgs args) =>
+        _ = InvokeAsync(StateHasChanged);
+
+    /// <summary>
+    /// Returns the current relative local path for safe workspace-switch redirects.
+    /// </summary>
+    /// <returns>A safe relative local URL starting with <c>/</c>.</returns>
+    private string GetCurrentLocalPath()
+    {
+        string relative = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+        return AuthClaims.SafeReturnUrlOrDefault(relative, "/");
+    }
+}

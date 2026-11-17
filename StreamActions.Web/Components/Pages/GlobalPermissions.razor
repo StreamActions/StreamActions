@@ -17,6 +17,7 @@
  *@
 
 @page "/admin/global-permissions"
+@attribute [Authorize(Policy = AuthClaims.RootOrGlobalAdminPolicy)]
 @rendermode InteractiveServer
 @implements IDisposable
 

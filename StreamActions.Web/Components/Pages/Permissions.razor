@@ -17,6 +17,7 @@
  *@
 
 @page "/permissions"
+@attribute [Authorize(Policy = AuthClaims.PanelAuthenticatedPolicy)]
 @rendermode InteractiveServer
 @implements IDisposable
 
@@ -29,6 +30,8 @@
 @inject IPermissionService PermissionService
 @inject IPermissionRegistry PermissionRegistry
 @inject IEventBus EventBus
+@inject IWorkspaceSessionContext WorkspaceSession
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Workspace Permissions</PageTitle>
 
@@ -61,6 +64,8 @@
 
 @if (_workspaceId is not null)
 {
+    <StepUpMfaGuard WorkspaceId="@_workspaceId"
+                    OperationDescription="Confirm MFA verification to modify workspace permission groups, grants, or group members.">
     <section aria-labelledby="custom-groups-heading">
         <h2 id="custom-groups-heading">Permission Groups</h2>
         <div>
@@ -206,6 +211,7 @@
             }
         }
     </section>
+    </StepUpMfaGuard>
 }
 
 @code {
@@ -226,18 +232,46 @@
     private IDisposable? _eventSubscription;
 
     /// <inheritdoc/>
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _categories = PermissionRegistry.GetCategories();
         _eventSubscription = EventBus.Subscribe<PermissionsInvalidatedEvent>(OnPermissionsInvalidatedAsync);
+        WorkspaceSession.WorkspaceChanged += OnActiveWorkspaceChanged;
+
+        await WorkspaceSession.InitializeAsync().ConfigureAwait(false);
+        if (WorkspaceSession.ActiveWorkspaceId is Guid activeWorkspaceId)
+        {
+            _workspaceId = activeWorkspaceId;
+            _workspaceIdInput = activeWorkspaceId.ToString("D");
+            await LoadWorkspaceDataAsync().ConfigureAwait(false);
+        }
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
+        WorkspaceSession.WorkspaceChanged -= OnActiveWorkspaceChanged;
         _eventSubscription?.Dispose();
         _eventSubscription = null;
     }
+
+    /// <summary>
+    /// Handles active workspace changes triggered by the workspace session context.
+    /// </summary>
+    /// <param name="sender">The event sender.</param>
+    /// <param name="args">The event arguments.</param>
+    private void OnActiveWorkspaceChanged(object? sender, EventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            if (WorkspaceSession.ActiveWorkspaceId is Guid activeWorkspaceId && _workspaceId != activeWorkspaceId)
+            {
+                _workspaceId = activeWorkspaceId;
+                _workspaceIdInput = activeWorkspaceId.ToString("D");
+                _statusMessage = null;
+                await LoadWorkspaceDataAsync();
+                StateHasChanged();
+            }
+        });
 
     private static bool IsBuiltInGroup(PermissionGroup group)
     {
@@ -261,10 +295,27 @@
 
     private async Task SelectWorkspaceAsync()
     {
-        if (!Guid.TryParse(_workspaceIdInput.Trim(), out Guid parsedWorkspaceId))
+        if (!Guid.TryParse(_workspaceIdInput.Trim(), out Guid parsedWorkspaceId) || parsedWorkspaceId == Guid.Empty)
         {
             _statusMessage = "Please enter a valid Workspace GUID.";
             return;
+        }
+
+        bool isAccessible = WorkspaceSession.AccessibleWorkspaces.Any(w => w.Workspace.Id == parsedWorkspaceId);
+        if (isAccessible)
+        {
+            _ = await WorkspaceSession.SelectWorkspaceAsync(parsedWorkspaceId).ConfigureAwait(false);
+        }
+        else
+        {
+            AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            bool isRootOrAdmin = AuthClaims.HasTrueClaim(authState.User, AuthClaims.IsRootClaimType)
+                || AuthClaims.HasTrueClaim(authState.User, AuthClaims.IsGlobalAdminClaimType);
+            if (!isRootOrAdmin)
+            {
+                _statusMessage = "You do not have access to the requested workspace.";
+                return;
+            }
         }
 
         _workspaceId = parsedWorkspaceId;

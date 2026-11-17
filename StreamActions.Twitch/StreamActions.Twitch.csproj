@@ -33,6 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="StreamActions.Daemon" />
     <InternalsVisibleTo Include="StreamActions.Twitch.Tests" />
   </ItemGroup>
 

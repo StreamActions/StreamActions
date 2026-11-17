@@ -1,0 +1,805 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@page "/workspace/platforms"
+@attribute [Authorize(Policy = AuthClaims.PanelAuthenticatedPolicy)]
+@rendermode InteractiveServer
+@implements IDisposable
+
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
+@using StreamActions.Core.Permissions
+
+@inject IWorkspaceSessionContext WorkspaceSession
+@inject IWorkspaceStore WorkspaceStore
+@inject IPlatformCredentialStore PlatformCredentialStore
+@inject IBotCredentialResolver BotCredentialResolver
+@inject IScopeDriftDetector ScopeDriftDetector
+@inject IInstanceSettingsService InstanceSettingsService
+@inject IPanelUserStore PanelUserStore
+@inject IPermissionService PermissionService
+@inject IEnumerable<IPlatformOAuthProvider> PlatformProviders
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Workspace Platforms - StreamActions</PageTitle>
+
+<h1>Workspace Platforms</h1>
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <p role="status" data-platforms-status="true">@_statusMessage</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <p role="alert" data-platforms-error="true">@_errorMessage</p>
+}
+
+@if (_activeWorkspace is null)
+{
+    <p>No accessible workspace is currently selected.</p>
+}
+else
+{
+    <section aria-labelledby="workspace-overview-heading">
+        <h2 id="workspace-overview-heading">@_activeWorkspace.Workspace.Name</h2>
+        <p>Primary Platform: <strong>@_activeWorkspace.Workspace.PrimaryPlatformId</strong></p>
+        <p>Bot Account Policy: <strong>@_botPolicy</strong> | OAuth App Policy: <strong>@_oauthPolicy</strong></p>
+
+        @if (_botPolicy == InstanceBotAccountPolicy.DefaultWithOptionalOverride && _customBotFeatureAllowed)
+        {
+            <div>
+                <label for="allow-custom-bot-override">
+                    <input id="allow-custom-bot-override"
+                           type="checkbox"
+                           checked="@_activeWorkspace.Workspace.AllowCustomBotAccountOverride"
+                           @onchange="ToggleCustomBotOverrideAsync" />
+                    Allow custom bot account override for this workspace
+                </label>
+            </div>
+        }
+    </section>
+
+    <StepUpMfaGuard WorkspaceId="@_activeWorkspace.Workspace.Id"
+                    OperationDescription="Confirm MFA verification to manage workspace MFA policies, custom OAuth credentials, or broadcaster and bot accounts.">
+    <section aria-labelledby="workspace-mfa-policy-heading" data-workspace-mfa-policy="true">
+        <h2 id="workspace-mfa-policy-heading">Workspace MFA Policies</h2>
+        <p>Workspace policies can enforce stricter rules than instance defaults (strictest setting always wins).</p>
+        <div>
+            <label for="ws-mfa-passkey-availability">Passkey (WebAuthn) Availability</label>
+            <select id="ws-mfa-passkey-availability" @bind="_wsMfaPasskeyAvailability">
+                <option value="@MfaMethodAvailability.Allowed">Allowed</option>
+                <option value="@MfaMethodAvailability.Disabled">Disabled</option>
+                <option value="@MfaMethodAvailability.Required">Required</option>
+            </select>
+        </div>
+        <div>
+            <label for="ws-mfa-totp-availability">Authenticator App (TOTP) Availability</label>
+            <select id="ws-mfa-totp-availability" @bind="_wsMfaTotpAvailability">
+                <option value="@MfaMethodAvailability.Allowed">Allowed</option>
+                <option value="@MfaMethodAvailability.Disabled">Disabled</option>
+                <option value="@MfaMethodAvailability.Required">Required</option>
+            </select>
+        </div>
+        <div>
+            <label for="ws-login-mfa-requirement">Workspace Login MFA Requirement</label>
+            <select id="ws-login-mfa-requirement" @bind="_wsLoginMfaRequirement">
+                <option value="@PanelLoginMfaRequirement.Optional">Optional</option>
+                <option value="@PanelLoginMfaRequirement.RequiredForRootAndStreamers">Required for Streamers</option>
+                <option value="@PanelLoginMfaRequirement.RequiredForModerators">Required for Moderators</option>
+                <option value="@PanelLoginMfaRequirement.RequiredForAll">Required for All Users</option>
+            </select>
+        </div>
+        <div>
+            <label for="ws-step-up-sudo-policy">Workspace Step-Up MFA Policy (Sudo Mode)</label>
+            <select id="ws-step-up-sudo-policy" @bind="_wsStepUpSudoPolicy">
+                <option value="@StepUpSudoPolicy.Optional">Optional</option>
+                <option value="@StepUpSudoPolicy.Required">Required</option>
+            </select>
+        </div>
+        <button type="button" @onclick="SaveWorkspaceMfaPoliciesAsync">Save Workspace MFA Policies</button>
+    </section>
+
+    <section aria-labelledby="attached-platforms-heading">
+        <h2 id="attached-platforms-heading">Attached Platforms</h2>
+        @if (_platformStates.Count == 0)
+        {
+            <p>No platforms are currently attached to this workspace.</p>
+        }
+        else
+        {
+            @foreach (PlatformCardState card in _platformStates)
+            {
+                string platformId = card.Attachment.PlatformId;
+                <article data-platform-card="@platformId">
+                    <h3>@platformId (@card.Attachment.Role)</h3>
+                    <p>Channel / Guild ID: <code>@card.Attachment.PlatformChannelId</code></p>
+
+                    <div>
+                        <label for="role-@platformId">Role</label>
+                        <select id="role-@platformId"
+                                value="@card.Attachment.Role"
+                                @onchange="(ChangeEventArgs args) => UpdatePlatformRoleAsync(card.Attachment, args)">
+                            <option value="@PlatformRole.Primary">Primary</option>
+                            <option value="@PlatformRole.SimulcastPeer">SimulcastPeer</option>
+                            <option value="@PlatformRole.Addon">Addon</option>
+                        </select>
+                        @if (card.Attachment.Role != PlatformRole.Primary)
+                        {
+                            <button type="button" @onclick="() => RemovePlatformAsync(platformId)">Remove Platform</button>
+                        }
+                    </div>
+
+                    <div data-broadcaster-status="@platformId">
+                        <h4>Broadcaster Account</h4>
+                        @if (card.BroadcasterFound)
+                        {
+                            <p>
+                                Status: <strong>@card.BroadcasterStatus</strong>
+                                @if (!string.IsNullOrWhiteSpace(card.BroadcasterUsername))
+                                {
+                                    <span>(@card.BroadcasterUsername)</span>
+                                }
+                            </p>
+                        }
+                        else
+                        {
+                            <p>Status: <strong>Not Connected</strong></p>
+                        }
+
+                        @if (card.BroadcasterFound && card.BroadcasterStatus == CredentialStatus.Active && card.ScopeDrift.HasDrift)
+                        {
+                            <div role="alert" data-scope-drift-banner="@platformId">
+                                <p>
+                                    <strong>Missing Platform Scopes — Click to Upgrade Permissions</strong>
+                                    (Missing: @string.Join(", ", card.ScopeDrift.MissingScopes))
+                                </p>
+                                <a href="@BuildBroadcasterUpgradeHref(_activeWorkspace.Workspace.Id, platformId, card.ScopeDrift.UpgradeScopesUnion)">
+                                    Upgrade Permissions
+                                </a>
+                            </div>
+                        }
+
+                        <a href="@BuildBroadcasterAuthorizeHref(_activeWorkspace.Workspace.Id, platformId)">
+                            Authorize Broadcaster Account
+                        </a>
+                    </div>
+
+                    <div data-bot-status="@platformId">
+                        <h4>Chat Bot Account</h4>
+                        <p>
+                            Resolved Status: <strong>@card.BotResolution.Status</strong>
+                            (@card.BotResolution.Source)
+                            @if (!string.IsNullOrWhiteSpace(card.BotResolution.Payload?.PlatformUsername))
+                            {
+                                <span>— @card.BotResolution.Payload.PlatformUsername</span>
+                            }
+                        </p>
+
+                        @if (_botPolicy != InstanceBotAccountPolicy.DefaultOnly
+                            && (_botPolicy == InstanceBotAccountPolicy.RequireStreamerBotAccount || card.BotResolution.IsCustomOverrideAllowed || _activeWorkspace.Workspace.AllowCustomBotAccountOverride))
+                        {
+                            <div>
+                                <a href="@BuildPersonalBotAuthorizeHref(_activeWorkspace.Workspace.Id, platformId)"
+                                   data-personal-bot-link="@platformId">
+                                    Authorize Personal Bot Account
+                                </a>
+                            </div>
+                            <div>
+                                <label for="use-broadcaster-bot-@platformId">
+                                    <input id="use-broadcaster-bot-@platformId"
+                                           type="checkbox"
+                                           checked="@card.Attachment.Metadata.UseBroadcasterAsBot"
+                                           @onchange="(ChangeEventArgs args) => ToggleUseBroadcasterAsBotAsync(card.Attachment, args)" />
+                                    Use Broadcaster as Bot
+                                </label>
+                            </div>
+                        }
+                    </div>
+
+                    @if (_oauthPolicy != InstanceOAuthAppPolicy.InstanceOnly)
+                    {
+                        <div data-custom-oauth="@platformId">
+                            <h4>Custom OAuth Application</h4>
+                            <p>
+                                Redirect / Callback URI:
+                                <code data-callback-uri="@platformId">@BuildCallbackUriDisplay(platformId)</code>
+                            </p>
+                            <div>
+                                <label for="custom-client-id-@platformId">Client ID</label>
+                                <input id="custom-client-id-@platformId"
+                                       type="text"
+                                       value="@GetClientIdInput(platformId)"
+                                       @onchange="(ChangeEventArgs args) => SetClientIdInput(platformId, args.Value?.ToString())"
+                                       autocomplete="off" />
+                            </div>
+                            <div>
+                                <label for="custom-client-secret-@platformId">
+                                    Client Secret (@(!string.IsNullOrWhiteSpace(card.Attachment.EncryptedCustomClientSecret) ? "configured; leave blank to keep existing" : "write-only"))
+                                </label>
+                                <input id="custom-client-secret-@platformId"
+                                       type="password"
+                                       value="@GetClientSecretInput(platformId)"
+                                       @onchange="(ChangeEventArgs args) => SetClientSecretInput(platformId, args.Value?.ToString())"
+                                       autocomplete="new-password" />
+                            </div>
+                            <button type="button" @onclick="() => SaveCustomOAuthAsync(platformId)">Save Custom OAuth</button>
+                            <button type="button" @onclick="() => ClearCustomOAuthAsync(platformId)">Clear Custom OAuth</button>
+                        </div>
+                    }
+                </article>
+            }
+        }
+    </section>
+
+    <section aria-labelledby="attach-platform-heading">
+        <h2 id="attach-platform-heading">Attach Platform</h2>
+        <div>
+            <label for="new-platform-id">Platform</label>
+            <select id="new-platform-id" @bind="_newPlatformId">
+                @foreach (string availablePlatform in _availablePlatforms)
+                {
+                    <option value="@availablePlatform">@availablePlatform</option>
+                }
+            </select>
+            <label for="new-platform-role">Role</label>
+            <select id="new-platform-role" @bind="_newPlatformRole">
+                <option value="@PlatformRole.Primary">Primary</option>
+                <option value="@PlatformRole.SimulcastPeer">SimulcastPeer</option>
+                <option value="@PlatformRole.Addon">Addon</option>
+            </select>
+            <label for="new-platform-channel">Channel / Guild ID</label>
+            <input id="new-platform-channel" type="text" @bind="_newPlatformChannelId" autocomplete="off" />
+            <button type="button" @onclick="AttachPlatformAsync">Attach Platform</button>
+        </div>
+    </section>
+    </StepUpMfaGuard>
+}
+
+<section aria-labelledby="linked-accounts-heading">
+    <h2 id="linked-accounts-heading">Linked Accounts</h2>
+    @if (_linkedIdentities.Count == 0)
+    {
+        <p>No external login identities linked.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (UserLoginIdentity identity in _linkedIdentities)
+            {
+                <li>
+                    <strong>@identity.ProviderId</strong>: @identity.ProviderUsername (<code>@identity.ProviderUserId</code>)
+                </li>
+            }
+        </ul>
+    }
+
+    <div>
+        @foreach (string platformId in _availablePlatforms)
+        {
+            <a href="/auth/@Uri.EscapeDataString(platformId)/login?flow=link&returnUrl=%2Fworkspace%2Fplatforms">
+                Link @platformId Account
+            </a>
+        }
+    </div>
+</section>
+
+@code {
+    /// <summary>
+    /// Cached UI inputs for custom OAuth client IDs keyed by platform identifier.
+    /// </summary>
+    private readonly Dictionary<string, string> _customClientIds = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Write-only UI inputs for custom OAuth client secrets keyed by platform identifier. Never populated from stored values.
+    /// </summary>
+    private readonly Dictionary<string, string> _customClientSecrets = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Active workspace wrapper from <see cref="IWorkspaceSessionContext"/>.
+    /// </summary>
+    private AccessibleWorkspace? _activeWorkspace;
+
+    /// <summary>
+    /// Registered platform identifiers available for attachment and linking.
+    /// </summary>
+    private List<string> _availablePlatforms = ["twitch"];
+
+    /// <summary>
+    /// Loaded platform attachment states for the active workspace.
+    /// </summary>
+    private List<PlatformCardState> _platformStates = [];
+
+    /// <summary>
+    /// Linked external login identities for the current user.
+    /// </summary>
+    private IReadOnlyList<UserLoginIdentity> _linkedIdentities = [];
+
+    /// <summary>
+    /// Active instance bot account policy.
+    /// </summary>
+    private InstanceBotAccountPolicy _botPolicy = InstanceBotAccountPolicy.DefaultOnly;
+
+    /// <summary>
+    /// Active instance OAuth application policy.
+    /// </summary>
+    private InstanceOAuthAppPolicy _oauthPolicy = InstanceOAuthAppPolicy.InstanceOnly;
+
+    /// <summary>
+    /// Indicates whether <see cref="BuiltInPermissionKeys.FeatureCustomBotAccount"/> is allowed for the active workspace.
+    /// </summary>
+    private bool _customBotFeatureAllowed;
+
+    /// <summary>
+    /// Platform identifier input for attaching a new platform.
+    /// </summary>
+    private string _newPlatformId = "twitch";
+
+    /// <summary>
+    /// Platform role selection for attaching a new platform.
+    /// </summary>
+    private PlatformRole _newPlatformRole = PlatformRole.SimulcastPeer;
+
+    /// <summary>
+    /// Channel or guild identifier input for attaching a new platform.
+    /// </summary>
+    private string _newPlatformChannelId = string.Empty;
+
+    /// <summary>
+    /// Status banner message.
+    /// </summary>
+    private string? _statusMessage;
+
+    /// <summary>
+    /// Error banner message.
+    /// </summary>
+    private string? _errorMessage;
+
+    /// <summary>
+    /// Workspace-level WebAuthn passkey availability policy selection.
+    /// </summary>
+    private MfaMethodAvailability _wsMfaPasskeyAvailability = MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Workspace-level TOTP authenticator availability policy selection.
+    /// </summary>
+    private MfaMethodAvailability _wsMfaTotpAvailability = MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Workspace-level panel login MFA requirement selection.
+    /// </summary>
+    private PanelLoginMfaRequirement _wsLoginMfaRequirement = PanelLoginMfaRequirement.Optional;
+
+    /// <summary>
+    /// Workspace-level step-up ("Sudo Mode") MFA policy selection.
+    /// </summary>
+    private StepUpSudoPolicy _wsStepUpSudoPolicy = StepUpSudoPolicy.Optional;
+
+    /// <summary>
+    /// Initializes platform connections, bot status, scope drift diagnostics, and linked identities.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        List<string> discoveredPlatforms = [.. PlatformProviders
+            .Select(static p => p.PlatformId)
+            .Where(static p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static p => p, StringComparer.OrdinalIgnoreCase)];
+
+        if (discoveredPlatforms.Count > 0)
+        {
+            _availablePlatforms = discoveredPlatforms;
+            _newPlatformId = discoveredPlatforms[0];
+        }
+
+        WorkspaceSession.WorkspaceChanged += OnWorkspaceChanged;
+        await WorkspaceSession.InitializeAsync().ConfigureAwait(false);
+        await LoadDataAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Releases component event subscriptions.
+    /// </summary>
+    public void Dispose() => WorkspaceSession.WorkspaceChanged -= OnWorkspaceChanged;
+
+    /// <summary>
+    /// Reloads workspace platform state when the active workspace changes.
+    /// </summary>
+    /// <param name="sender">The event sender.</param>
+    /// <param name="args">The event arguments.</param>
+    private void OnWorkspaceChanged(object? sender, EventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            await LoadDataAsync();
+            StateHasChanged();
+        });
+
+    /// <summary>
+    /// Loads instance policies, workspace platforms, broadcaster scope drift, bot status, and linked accounts.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
+    private async Task LoadDataAsync()
+    {
+        _activeWorkspace = WorkspaceSession.ActiveWorkspace;
+
+        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        _botPolicy = AuthPolicyParser.ParseBotAccountPolicy(settings.InstanceBotAccountPolicy);
+        _oauthPolicy = AuthPolicyParser.ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
+
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        Guid? panelUserId = AuthClaims.GetPanelUserId(authState.User);
+        _linkedIdentities = panelUserId.HasValue
+            ? await PanelUserStore.GetLoginIdentitiesAsync(panelUserId.Value).ConfigureAwait(false)
+            : [];
+
+        _platformStates = [];
+        _customBotFeatureAllowed = false;
+
+        if (_activeWorkspace is null)
+        {
+            return;
+        }
+
+        _wsMfaPasskeyAvailability = _activeWorkspace.Workspace.MfaPasskeyAvailability;
+        _wsMfaTotpAvailability = _activeWorkspace.Workspace.MfaTotpAvailability;
+        _wsLoginMfaRequirement = _activeWorkspace.Workspace.LoginMfaRequirement;
+        _wsStepUpSudoPolicy = _activeWorkspace.Workspace.StepUpSudoPolicy;
+
+        Guid workspaceId = _activeWorkspace.Workspace.Id;
+        PlatformUserIdentity workspaceActor = new(
+            _activeWorkspace.Workspace.PrimaryPlatformId,
+            "__workspace__",
+            "workspace",
+            PlatformUserDesignations.Broadcaster);
+
+        _customBotFeatureAllowed = await PermissionService
+            .IsAllowedAsync(workspaceId, workspaceActor, BuiltInPermissionKeys.FeatureCustomBotAccount)
+            .ConfigureAwait(false);
+
+        IReadOnlyList<WorkspacePlatform> attachments = await WorkspaceStore
+            .GetPlatformsAsync(workspaceId)
+            .ConfigureAwait(false);
+
+        foreach (WorkspacePlatform attachment in attachments)
+        {
+            _customClientIds[attachment.PlatformId] = attachment.CustomClientId ?? string.Empty;
+            _ = _customClientSecrets.TryAdd(attachment.PlatformId, string.Empty);
+
+            (bool broadcasterFound, CredentialStatus broadcasterStatus, PlatformTokenPayload? broadcasterPayload) =
+                await PlatformCredentialStore
+                    .TryGetTokenAsync(workspaceId, attachment.PlatformId, TokenRole.Broadcaster)
+                    .ConfigureAwait(false);
+
+            ScopeDriftReport drift = ScopeDriftDetector.DetectDrift(attachment.PlatformId, broadcasterPayload);
+            BotCredentialResolutionResult botResolution = await BotCredentialResolver
+                .ResolveAsync(workspaceId, attachment.PlatformId)
+                .ConfigureAwait(false);
+
+            _platformStates.Add(new PlatformCardState(
+                attachment,
+                broadcasterFound,
+                broadcasterStatus,
+                broadcasterPayload?.PlatformUsername,
+                drift,
+                botResolution));
+        }
+    }
+
+    /// <summary>
+    /// Attaches a new platform to the active workspace.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous save operation.</returns>
+    private async Task AttachPlatformAsync()
+    {
+        ClearMessages();
+        if (_activeWorkspace is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_newPlatformId) || string.IsNullOrWhiteSpace(_newPlatformChannelId))
+        {
+            _errorMessage = "Platform and Channel / Guild ID are required.";
+            return;
+        }
+
+        _ = await WorkspaceStore.UpsertPlatformAsync(new WorkspacePlatform
+        {
+            WorkspaceId = _activeWorkspace.Workspace.Id,
+            PlatformId = _newPlatformId.Trim(),
+            Role = _newPlatformRole,
+            PlatformChannelId = _newPlatformChannelId.Trim(),
+        }).ConfigureAwait(false);
+
+        _newPlatformChannelId = string.Empty;
+        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
+        await LoadDataAsync().ConfigureAwait(false);
+        _statusMessage = $"Attached platform '{_newPlatformId.Trim()}'.";
+    }
+
+    /// <summary>
+    /// Updates the <see cref="PlatformRole"/> of an attached workspace platform.
+    /// </summary>
+    /// <param name="attachment">The platform attachment.</param>
+    /// <param name="args">The change event arguments containing the selected role.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous update operation.</returns>
+    private async Task UpdatePlatformRoleAsync(WorkspacePlatform attachment, ChangeEventArgs args)
+    {
+        ClearMessages();
+        if (!Enum.TryParse(args.Value?.ToString(), out PlatformRole newRole))
+        {
+            return;
+        }
+
+        attachment.Role = newRole;
+        _ = await WorkspaceStore.UpsertPlatformAsync(attachment).ConfigureAwait(false);
+        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
+        await LoadDataAsync().ConfigureAwait(false);
+        _statusMessage = $"Updated role for '{attachment.PlatformId}' to {newRole}.";
+    }
+
+    /// <summary>
+    /// Removes a non-primary platform attachment from the active workspace.
+    /// </summary>
+    /// <param name="platformId">The platform identifier to remove.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous removal operation.</returns>
+    private async Task RemovePlatformAsync(string platformId)
+    {
+        ClearMessages();
+        if (_activeWorkspace is null)
+        {
+            return;
+        }
+
+        _ = await WorkspaceStore
+            .RemovePlatformAsync(_activeWorkspace.Workspace.Id, platformId)
+            .ConfigureAwait(false);
+
+        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
+        await LoadDataAsync().ConfigureAwait(false);
+        _statusMessage = $"Removed platform '{platformId}'.";
+    }
+
+    /// <summary>
+    /// Toggles <see cref="Workspace.AllowCustomBotAccountOverride"/> for the active workspace.
+    /// </summary>
+    /// <param name="args">The checkbox change event arguments.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous update operation.</returns>
+    private async Task ToggleCustomBotOverrideAsync(ChangeEventArgs args)
+    {
+        ClearMessages();
+        if (_activeWorkspace is null || args.Value is not bool enabled)
+        {
+            return;
+        }
+
+        _activeWorkspace.Workspace.AllowCustomBotAccountOverride = enabled;
+        _ = await WorkspaceStore.UpdateWorkspaceAsync(_activeWorkspace.Workspace).ConfigureAwait(false);
+        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
+        await LoadDataAsync().ConfigureAwait(false);
+        _statusMessage = enabled
+            ? "Enabled custom bot account override for this workspace."
+            : "Disabled custom bot account override for this workspace.";
+    }
+
+    /// <summary>
+    /// Persists workspace-level MFA policy overrides into <see cref="Workspace"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous save operation.</returns>
+    private async Task SaveWorkspaceMfaPoliciesAsync()
+    {
+        ClearMessages();
+        if (_activeWorkspace is null)
+        {
+            return;
+        }
+
+        _activeWorkspace.Workspace.MfaPasskeyAvailability = _wsMfaPasskeyAvailability;
+        _activeWorkspace.Workspace.MfaTotpAvailability = _wsMfaTotpAvailability;
+        _activeWorkspace.Workspace.LoginMfaRequirement = _wsLoginMfaRequirement;
+        _activeWorkspace.Workspace.StepUpSudoPolicy = _wsStepUpSudoPolicy;
+
+        _ = await WorkspaceStore.UpdateWorkspaceAsync(_activeWorkspace.Workspace).ConfigureAwait(false);
+        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
+        await LoadDataAsync().ConfigureAwait(false);
+        _statusMessage = "Workspace MFA policies updated.";
+    }
+
+    /// <summary>
+    /// Toggles <see cref="StreamActions.Core.Models.Metadata.PlatformMetadata.UseBroadcasterAsBot"/> for an attached platform.
+    /// </summary>
+    /// <param name="attachment">The platform attachment.</param>
+    /// <param name="args">The checkbox change event arguments.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous update operation.</returns>
+    private async Task ToggleUseBroadcasterAsBotAsync(WorkspacePlatform attachment, ChangeEventArgs args)
+    {
+        ClearMessages();
+        if (args.Value is not bool useBroadcaster)
+        {
+            return;
+        }
+
+        attachment.Metadata.UseBroadcasterAsBot = useBroadcaster;
+        _ = await WorkspaceStore.UpsertPlatformAsync(attachment).ConfigureAwait(false);
+        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
+        await LoadDataAsync().ConfigureAwait(false);
+        _statusMessage = useBroadcaster
+            ? $"Enabled broadcaster identity fallback for '{attachment.PlatformId}'."
+            : $"Disabled broadcaster identity fallback for '{attachment.PlatformId}'.";
+    }
+
+    /// <summary>
+    /// Persists custom OAuth application credentials for a workspace platform without exposing stored secrets.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous save operation.</returns>
+    private async Task SaveCustomOAuthAsync(string platformId)
+    {
+        ClearMessages();
+        if (_activeWorkspace is null)
+        {
+            return;
+        }
+
+        string clientId = GetClientIdInput(platformId).Trim();
+        string? clientSecret = GetClientSecretInput(platformId);
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            _errorMessage = "Custom OAuth Client ID is required.";
+            return;
+        }
+
+        _ = await WorkspaceStore
+            .SetCustomOAuthAppAsync(
+                _activeWorkspace.Workspace.Id,
+                platformId,
+                clientId,
+                string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret.Trim())
+            .ConfigureAwait(false);
+
+        _customClientSecrets[platformId] = string.Empty;
+        await LoadDataAsync().ConfigureAwait(false);
+        _statusMessage = $"Saved custom OAuth credentials for '{platformId}'.";
+    }
+
+    /// <summary>
+    /// Clears custom OAuth application credentials for a workspace platform.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous clear operation.</returns>
+    private async Task ClearCustomOAuthAsync(string platformId)
+    {
+        ClearMessages();
+        if (_activeWorkspace is null)
+        {
+            return;
+        }
+
+        _ = await WorkspaceStore
+            .SetCustomOAuthAppAsync(_activeWorkspace.Workspace.Id, platformId, null, null)
+            .ConfigureAwait(false);
+
+        _customClientIds[platformId] = string.Empty;
+        _customClientSecrets[platformId] = string.Empty;
+        await LoadDataAsync().ConfigureAwait(false);
+        _statusMessage = $"Cleared custom OAuth credentials for '{platformId}'.";
+    }
+
+    /// <summary>
+    /// Gets the current client ID input value for <paramref name="platformId"/>.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The client ID string.</returns>
+    private string GetClientIdInput(string platformId) =>
+        _customClientIds.TryGetValue(platformId, out string? value) ? value : string.Empty;
+
+    /// <summary>
+    /// Updates the client ID input value for <paramref name="platformId"/>.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="value">The new input value.</param>
+    private void SetClientIdInput(string platformId, string? value) =>
+        _customClientIds[platformId] = value ?? string.Empty;
+
+    /// <summary>
+    /// Gets the current write-only client secret input value for <paramref name="platformId"/>.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The secret input string.</returns>
+    private string GetClientSecretInput(string platformId) =>
+        _customClientSecrets.TryGetValue(platformId, out string? value) ? value : string.Empty;
+
+    /// <summary>
+    /// Updates the write-only client secret input value for <paramref name="platformId"/>.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="value">The new secret input value.</param>
+    private void SetClientSecretInput(string platformId, string? value) =>
+        _customClientSecrets[platformId] = value ?? string.Empty;
+
+    /// <summary>
+    /// Builds the callback URI display string for custom OAuth app registration.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The full callback URI string.</returns>
+    private string BuildCallbackUriDisplay(string platformId) =>
+        $"{Navigation.BaseUri.TrimEnd('/')}/auth/{Uri.EscapeDataString(platformId)}/callback";
+
+    /// <summary>
+    /// Builds the broadcaster authorization URL.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The relative authorization initiation URL.</returns>
+    private static string BuildBroadcasterAuthorizeHref(Guid workspaceId, string platformId) =>
+        $"/auth/{Uri.EscapeDataString(platformId)}/login?flow=broadcaster&workspaceId={workspaceId:D}&returnUrl=%2Fworkspace%2Fplatforms";
+
+    /// <summary>
+    /// Builds the incremental broadcaster permission upgrade URL with the union of granted and missing scopes.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="upgradeScopesUnion">The deduplicated union of granted and missing scopes.</param>
+    /// <returns>The relative authorization initiation URL.</returns>
+    private static string BuildBroadcasterUpgradeHref(
+        Guid workspaceId,
+        string platformId,
+        IReadOnlyList<string> upgradeScopesUnion)
+    {
+        string encodedScopes = Uri.EscapeDataString(string.Join(' ', upgradeScopesUnion));
+        return $"/auth/{Uri.EscapeDataString(platformId)}/login?flow=broadcaster&workspaceId={workspaceId:D}&scopes={encodedScopes}&returnUrl=%2Fworkspace%2Fplatforms";
+    }
+
+    /// <summary>
+    /// Builds the personal bot authorization URL enforcing <c>force_verify=true</c>.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The relative authorization initiation URL.</returns>
+    private static string BuildPersonalBotAuthorizeHref(Guid workspaceId, string platformId) =>
+        $"/auth/{Uri.EscapeDataString(platformId)}/login?flow=bot&workspaceId={workspaceId:D}&force_verify=true&returnUrl=%2Fworkspace%2Fplatforms";
+
+    /// <summary>
+    /// Clears any displayed status or error messages.
+    /// </summary>
+    private void ClearMessages()
+    {
+        _statusMessage = null;
+        _errorMessage = null;
+    }
+
+    /// <summary>
+    /// View state for a single attached workspace platform card.
+    /// </summary>
+    /// <param name="Attachment">The persisted workspace platform attachment.</param>
+    /// <param name="BroadcasterFound">Whether a broadcaster token record exists.</param>
+    /// <param name="BroadcasterStatus">The broadcaster token lifecycle status.</param>
+    /// <param name="BroadcasterUsername">The optional broadcaster platform username.</param>
+    /// <param name="ScopeDrift">The broadcaster token scope drift report.</param>
+    /// <param name="BotResolution">The resolved bot credential status.</param>
+    private sealed record PlatformCardState(
+        WorkspacePlatform Attachment,
+        bool BroadcasterFound,
+        CredentialStatus BroadcasterStatus,
+        string? BroadcasterUsername,
+        ScopeDriftReport ScopeDrift,
+        BotCredentialResolutionResult BotResolution);
+}

@@ -100,4 +100,49 @@ public sealed class SecretProtectionServiceTests
         _ = status.Should().Be(CredentialStatus.Active);
     }
     #endregion
+
+    #region ProtectWorkspaceOAuth
+    [Fact]
+    [Trait("Member", "ProtectWorkspaceOAuth")]
+    public void ProtectAndUnprotect_WorkspaceOAuth_RoundTripsAndIsolatesWorkspaces()
+    {
+        EphemeralDataProtectionProvider provider = new();
+        SecretProtectionService service = new(provider, NullLogger<SecretProtectionService>.Instance);
+        Guid workspaceA = Guid.CreateVersion7();
+        Guid workspaceB = Guid.CreateVersion7();
+
+        string protectedPayload = service.ProtectWorkspaceOAuth(workspaceA, "TWITCH", "custom-secret");
+        (bool okA, string? plainA, CredentialStatus statusA) = service.TryUnprotectWorkspaceOAuth(workspaceA, "twitch", protectedPayload);
+        (bool okB, string? plainB, CredentialStatus statusB) = service.TryUnprotectWorkspaceOAuth(workspaceB, "twitch", protectedPayload);
+
+        _ = okA.Should().BeTrue();
+        _ = plainA.Should().Be("custom-secret");
+        _ = statusA.Should().Be(CredentialStatus.Active);
+        _ = okB.Should().BeFalse();
+        _ = plainB.Should().BeNull();
+        _ = statusB.Should().Be(CredentialStatus.KeyRingMismatchRequiresReauth);
+    }
+    #endregion
+
+    #region ProtectExternalOidcSecret
+    [Fact]
+    [Trait("Member", "ProtectExternalOidcSecret")]
+    public void ProtectAndUnprotect_ExternalOidcSecret_DistinguishesInstanceAndWorkspaceScopes()
+    {
+        EphemeralDataProtectionProvider provider = new();
+        SecretProtectionService service = new(provider, NullLogger<SecretProtectionService>.Instance);
+        Guid workspaceId = Guid.CreateVersion7();
+
+        string protectedInstance = service.ProtectExternalOidcSecret(null, "Authentik", "inst-oidc-secret");
+        (bool okInst, string? plainInst, CredentialStatus statusInst) = service.TryUnprotectExternalOidcSecret(null, "authentik", protectedInstance);
+        (bool okWsMismatch, string? plainWsMismatch, CredentialStatus statusWsMismatch) = service.TryUnprotectExternalOidcSecret(workspaceId, "authentik", protectedInstance);
+
+        _ = okInst.Should().BeTrue();
+        _ = plainInst.Should().Be("inst-oidc-secret");
+        _ = statusInst.Should().Be(CredentialStatus.Active);
+        _ = okWsMismatch.Should().BeFalse();
+        _ = plainWsMismatch.Should().BeNull();
+        _ = statusWsMismatch.Should().Be(CredentialStatus.KeyRingMismatchRequiresReauth);
+    }
+    #endregion
 }

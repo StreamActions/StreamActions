@@ -17,10 +17,12 @@
  */
 
 using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
+using System.Security.Cryptography;
 
 namespace StreamActions.Twitch.Tests.OAuth;
 
@@ -139,6 +141,49 @@ public sealed class TokenTests : IDisposable
         _ = request.Body.Should().Contain($"client_id={this._fixture.ClientId}");
         _ = request.Body.Should().Contain($"client_secret={this._fixture.ClientSecret}");
         _ = request.Body.Should().Contain("redirect_uri=http%3A%2F%2Flocalhost%3A3000");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, TwitchSession?, string?)"/> posts custom session client credentials when provided.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AuthorizeOAuth")]
+    public async Task AuthorizeOAuth_WhenSessionHasCustomCredentials_PostsCustomCredentialsAndReturnsToken()
+    {
+        string expectedBearer = TestTokenFactory.CreateToken("BEARER");
+        string expectedRefresh = TestTokenFactory.CreateToken("REFRESH");
+        this._fixture.RegisterJsonResponse("POST", "/oauth2/token", new
+        {
+            access_token = expectedBearer,
+            expires_in = 14124,
+            refresh_token = expectedRefresh,
+            scope = _authorizationScopes,
+            token_type = "bearer"
+        });
+
+        using TwitchSession session = new()
+        {
+            Token = TwitchToken.Empty,
+            CustomClientId = "custom_client_id",
+            CustomClientSecret = "custom_client_secret"
+        };
+
+        Uri redirectUri = new("http://localhost:3000/callback");
+        Token? token = await Token.AuthorizeOAuth("custom_code", redirectUri, session).ConfigureAwait(true);
+
+        _ = token.Should().NotBeNull();
+        _ = token.AccessToken.Should().Be(expectedBearer);
+        _ = token.RefreshToken.Should().Be(expectedRefresh);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("POST");
+        _ = request.Headers["Client-Id"].ToString().Should().Be("custom_client_id");
+        _ = request.Body.Should().Contain("grant_type=authorization_code");
+        _ = request.Body.Should().Contain("code=custom_code");
+        _ = request.Body.Should().Contain("client_id=custom_client_id");
+        _ = request.Body.Should().Contain("client_secret=custom_client_secret");
+        _ = request.Body.Should().Contain("redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fcallback");
     }
 
     #endregion AuthorizeOAuth
@@ -349,7 +394,7 @@ public sealed class TokenTests : IDisposable
     #region GetJwtTokenAsync
 
     /// <summary>
-    /// Tests that <see cref="Token.GetJwtTokenAsync"/> returns null when the ID token is null.
+    /// Tests that <see cref="Token.GetJwtTokenAsync()"/> returns null when the ID token is null.
     /// </summary>
     [Fact]
     [Trait("Member", "GetJwtTokenAsync")]
@@ -361,7 +406,7 @@ public sealed class TokenTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="Token.GetJwtTokenAsync"/> returns null when the ID token string is invalid.
+    /// Tests that <see cref="Token.GetJwtTokenAsync()"/> returns null when the ID token string is invalid.
     /// </summary>
     [Fact]
     [Trait("Member", "GetJwtTokenAsync")]
@@ -373,7 +418,7 @@ public sealed class TokenTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="Token.GetJwtTokenAsync"/> validates and returns the parsed <see cref="JsonWebToken"/> when signed.
+    /// Tests that <see cref="Token.GetJwtTokenAsync()"/> validates and returns the parsed <see cref="JsonWebToken"/> when signed.
     /// </summary>
     [Fact]
     [Trait("Member", "GetJwtTokenAsync")]
@@ -390,6 +435,82 @@ public sealed class TokenTests : IDisposable
         _ = jwt.Issuer.Should().Be(this._fixture.BaseUrl);
         _ = jwt.TryGetClaim("preferred_username", out System.Security.Claims.Claim? usernameClaim).Should().BeTrue();
         _ = usernameClaim.Value.Should().Be("twitchdev");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?)"/> validates against the specified expected audience.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetJwtTokenAsync")]
+    public async Task GetJwtTokenAsync_WhenExpectedAudienceMatchesOrMismatches_ValidatesAccordingly()
+    {
+        const string customAudience = "custom_audience_client_id";
+        string signedIdToken = this._fixture.CreateSignedJwtIdToken(customAudience, "141981764", "twitchdev");
+        Token token = new() { IdToken = signedIdToken };
+
+        JsonWebToken? matchingJwt = await token.GetJwtTokenAsync(customAudience).ConfigureAwait(true);
+        JsonWebToken? mismatchedJwt = await token.GetJwtTokenAsync("different_audience").ConfigureAwait(true);
+
+        _ = matchingJwt.Should().NotBeNull();
+        _ = matchingJwt.Audiences.Should().Contain(customAudience);
+        _ = mismatchedJwt.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?)"/> returns the parsed JWT when the <c>nonce</c> claim matches.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetJwtTokenAsync")]
+    public async Task GetJwtTokenAsync_WhenExpectedNonceMatches_ReturnsJsonWebToken()
+    {
+        using RSA rsa = RSA.Create(2048);
+        string signedIdToken = this.CreateSignedJwtWithOptionalNonce(rsa, this._fixture.ClientId, "expected_nonce_123");
+        Token token = new() { IdToken = signedIdToken };
+
+        JsonWebToken? jwt = await token.GetJwtTokenAsync(this._fixture.ClientId, "expected_nonce_123").ConfigureAwait(true);
+
+        _ = jwt.Should().NotBeNull();
+        _ = jwt.TryGetClaim("nonce", out System.Security.Claims.Claim? nonceClaim).Should().BeTrue();
+        _ = nonceClaim.Value.Should().Be("expected_nonce_123");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?)"/> returns <see langword="null"/> when the <c>nonce</c> claim mismatches or is missing.
+    /// </summary>
+    /// <param name="tokenNonce">The nonce claim embedded in the signed JWT, or <see langword="null"/> to omit it.</param>
+    /// <param name="expectedNonce">The expected nonce passed to validation.</param>
+    [Theory]
+    [Trait("Member", "GetJwtTokenAsync")]
+    [InlineData("actual_nonce", "different_nonce")]
+    [InlineData(null, "expected_nonce")]
+    public async Task GetJwtTokenAsync_WhenExpectedNonceMismatchesOrMissing_ReturnsNull(string? tokenNonce, string expectedNonce)
+    {
+        using RSA rsa = RSA.Create(2048);
+        string signedIdToken = this.CreateSignedJwtWithOptionalNonce(rsa, this._fixture.ClientId, tokenNonce);
+        Token token = new() { IdToken = signedIdToken };
+
+        JsonWebToken? jwt = await token.GetJwtTokenAsync(this._fixture.ClientId, expectedNonce).ConfigureAwait(true);
+
+        _ = jwt.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?)"/> skips <c>nonce</c> validation when <paramref name="expectedNonce"/> is <see langword="null"/> or whitespace.
+    /// </summary>
+    /// <param name="expectedNonce">The null or whitespace expected nonce value.</param>
+    [Theory]
+    [Trait("Member", "GetJwtTokenAsync")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetJwtTokenAsync_WhenExpectedNonceIsNullOrWhitespace_SkipsNonceValidation(string? expectedNonce)
+    {
+        string signedIdToken = this._fixture.CreateSignedJwtIdToken(this._fixture.ClientId, "141981764", "twitchdev");
+        Token token = new() { IdToken = signedIdToken };
+
+        JsonWebToken? jwt = await token.GetJwtTokenAsync(this._fixture.ClientId, expectedNonce).ConfigureAwait(true);
+
+        _ = jwt.Should().NotBeNull();
     }
 
     #endregion GetJwtTokenAsync
@@ -480,4 +601,62 @@ public sealed class TokenTests : IDisposable
     }
 
     #endregion ToString
+
+    #region Private Methods
+
+    /// <summary>
+    /// Registers a temporary JWKS endpoint on the fixture and creates a signed OIDC ID token with an optional <c>nonce</c> claim.
+    /// </summary>
+    /// <param name="rsa">The RSA key pair used to sign the token.</param>
+    /// <param name="audience">The expected JWT audience.</param>
+    /// <param name="nonce">Optional <c>nonce</c> claim value.</param>
+    /// <returns>A serialized, signed JWT string.</returns>
+    private string CreateSignedJwtWithOptionalNonce(RSA rsa, string audience, string? nonce)
+    {
+        string keyId = Guid.NewGuid().ToString("N");
+        RSAParameters parameters = rsa.ExportParameters(false);
+        this._fixture.RegisterJsonResponse("GET", "/oauth2/keys", new
+        {
+            keys = new[]
+            {
+                new
+                {
+                    kty = "RSA",
+                    use = "sig",
+                    alg = "RS256",
+                    kid = keyId,
+                    n = Base64UrlEncoder.Encode(parameters.Modulus),
+                    e = Base64UrlEncoder.Encode(parameters.Exponent)
+                }
+            }
+        });
+        Token.SetOpenIdConnectConfigurationUrl($"{this._fixture.BaseUrl}/oauth2/.well-known/openid-configuration");
+
+        RsaSecurityKey securityKey = new(rsa) { KeyId = keyId };
+        SigningCredentials credentials = new(securityKey, SecurityAlgorithms.RsaSha256);
+        Dictionary<string, object> claims = new()
+        {
+            { "sub", "141981764" },
+            { "preferred_username", "twitchdev" }
+        };
+
+        if (nonce is not null)
+        {
+            claims["nonce"] = nonce;
+        }
+
+        SecurityTokenDescriptor descriptor = new()
+        {
+            Issuer = this._fixture.BaseUrl,
+            Audience = audience,
+            Expires = DateTime.UtcNow.AddHours(1),
+            IssuedAt = DateTime.UtcNow,
+            SigningCredentials = credentials,
+            Claims = claims
+        };
+
+        return new JsonWebTokenHandler().CreateToken(descriptor);
+    }
+
+    #endregion Private Methods
 }

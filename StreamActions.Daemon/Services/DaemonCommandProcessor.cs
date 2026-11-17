@@ -44,7 +44,7 @@ internal sealed class DaemonCommandProcessor
     /// <summary>
     /// Service managing single-use console bootstrap tokens.
     /// </summary>
-    private readonly ConsoleBootstrapTokenService _bootstrapTokenService;
+    private readonly IBootstrapTokenService _bootstrapTokenService;
 
     /// <summary>
     /// Service responsible for triggering database backups.
@@ -67,7 +67,7 @@ internal sealed class DaemonCommandProcessor
     public DaemonCommandProcessor(
         IDbContextFactory<StreamActionsDbContext> contextFactory,
         IPluginManager pluginManager,
-        ConsoleBootstrapTokenService bootstrapTokenService,
+        IBootstrapTokenService bootstrapTokenService,
         IDatabaseBackupService backupService,
         IOptions<BootstrapOptions> bootstrapOptions)
     {
@@ -137,11 +137,19 @@ internal sealed class DaemonCommandProcessor
     /// <summary>
     /// Issues or retrieves the active console bootstrap token and formats it for display.
     /// </summary>
-    /// <returns>A message containing the active bootstrap token.</returns>
+    /// <returns>A message containing the active bootstrap token or the remaining cooldown duration.</returns>
     private string IssueBootstrapToken()
     {
-        string token = this._bootstrapTokenService.GetOrCreateToken();
-        return $"Bootstrap token (valid for 5 minutes): {token}";
+        BootstrapTokenRequestResult result = this._bootstrapTokenService.RequestOrReuseActiveToken();
+        if (!result.Succeeded || (result.Token is null))
+        {
+            int remainingSeconds = Math.Max(1, (int)Math.Ceiling((result.CooldownRemaining ?? TimeSpan.Zero).TotalSeconds));
+            return string.Create(
+                CultureInfo.InvariantCulture,
+                $"Bootstrap token generation is in cooldown after repeated failed attempts. Try again in {remainingSeconds} second(s).");
+        }
+
+        return $"Bootstrap token (valid for 5 minutes): {result.Token}";
     }
 
     /// <summary>

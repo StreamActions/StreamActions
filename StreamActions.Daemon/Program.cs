@@ -22,10 +22,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using StreamActions.Core;
+using StreamActions.Core.Abstractions;
 using StreamActions.Core.Configuration;
 using StreamActions.Core.Models;
 using StreamActions.Core.Services;
 using StreamActions.Daemon.Cli;
+using StreamActions.Daemon.Platforms;
 using StreamActions.Daemon.Services;
 using StreamActions.Daemon.Telemetry;
 using StreamActions.Database;
@@ -84,6 +86,10 @@ public partial class Program
                 _ = services.AddStreamActionsCore(hostContext.Configuration);
                 _ = services.AddStreamActionsDatabase(hostContext.Configuration);
                 _ = services.AddStreamActionsWeb();
+                _ = services.AddHttpClient();
+
+                services.TryAddSingleton<TwitchPlatformOAuthProvider>();
+                services.TryAddEnumerable(ServiceDescriptor.Singleton<IPlatformOAuthProvider, TwitchPlatformOAuthProvider>());
 
                 string keyRingDir = string.IsNullOrWhiteSpace(bootstrap.DataProtection.KeyRingDir)
                     ? Path.Combine(bootstrap.Paths.DataDir, "keys")
@@ -103,6 +109,7 @@ public partial class Program
                     .AddCheck<DatabaseReadinessHealthCheck>("database", tags: ["ready"]);
 
                 services.TryAddSingleton<ConsoleBootstrapTokenService>();
+                services.TryAddSingleton<IBootstrapTokenService>(static sp => sp.GetRequiredService<ConsoleBootstrapTokenService>());
                 services.TryAddSingleton<DaemonCommandProcessor>();
                 services.TryAddSingleton<GracefulShutdownLifecycleService>();
                 _ = services.AddHostedService(static sp => sp.GetRequiredService<GracefulShutdownLifecycleService>());
@@ -110,6 +117,7 @@ public partial class Program
                 _ = services.AddHostedService(static sp => sp.GetRequiredService<SentryBootstrapSyncService>());
                 _ = services.AddHostedService<LocalIpcCommandServer>();
                 _ = services.AddHostedService<InteractiveConsoleService>();
+                _ = services.AddHostedService<TokenLifecycleHostedService>();
             });
 
             _ = builder.Logging.Configure(static _ => { });

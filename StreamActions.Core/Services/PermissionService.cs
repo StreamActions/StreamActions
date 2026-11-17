@@ -152,7 +152,7 @@ public sealed class PermissionService : IPermissionService
 
         foreach (GroupWithGrants entry in workspaceGroups)
         {
-            if (!MatchesGroup(entry.Group, effectiveDesignations, userGroupIds))
+            if (!MatchesGroup(entry.Group, effectiveDesignations, userGroupIds, actor.OidcGroupClaims))
             {
                 continue;
             }
@@ -232,22 +232,48 @@ public sealed class PermissionService : IPermissionService
     private static string GetWorkspaceCacheTag(Guid workspaceId) => $"perm:ws:{workspaceId:N}";
 
     /// <summary>
-    /// Determines whether a permission group applies to an actor based on group membership or mapped designation.
+    /// Determines whether a permission group applies to an actor based on group membership, mapped designation, or mapped OIDC group claim.
     /// </summary>
     /// <param name="group">The permission group to test.</param>
     /// <param name="effectiveDesignations">The actor's combined platform designations.</param>
     /// <param name="userGroupIds">The identifiers of custom groups the actor explicitly belongs to.</param>
+    /// <param name="oidcGroupClaims">The optional OIDC group claim values from the actor's session.</param>
     /// <returns><see langword="true"/> if the group matches the actor; otherwise, <see langword="false"/>.</returns>
     private static bool MatchesGroup(
         PermissionGroup group,
         PlatformUserDesignations effectiveDesignations,
-        IReadOnlyList<Guid> userGroupIds) =>
-        userGroupIds.Contains(group.Id)
-            || (!string.IsNullOrWhiteSpace(group.MappedPlatformDesignation)
-                && (string.Equals(group.MappedPlatformDesignation, _everyoneDesignation, StringComparison.OrdinalIgnoreCase)
-                    || (Enum.TryParse<PlatformUserDesignations>(group.MappedPlatformDesignation, ignoreCase: true, out PlatformUserDesignations mappedDesignation)
-                        && mappedDesignation != PlatformUserDesignations.None
-                        && effectiveDesignations.HasFlag(mappedDesignation))));
+        IReadOnlyList<Guid> userGroupIds,
+        IReadOnlyCollection<string>? oidcGroupClaims)
+    {
+        if (userGroupIds.Contains(group.Id))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(group.MappedPlatformDesignation)
+            && (string.Equals(group.MappedPlatformDesignation, _everyoneDesignation, StringComparison.OrdinalIgnoreCase)
+                || (Enum.TryParse<PlatformUserDesignations>(group.MappedPlatformDesignation, ignoreCase: true, out PlatformUserDesignations mappedDesignation)
+                    && mappedDesignation != PlatformUserDesignations.None
+                    && effectiveDesignations.HasFlag(mappedDesignation))))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(group.MappedOidcGroupClaim) && oidcGroupClaims is not null)
+        {
+            string expectedClaim = group.MappedOidcGroupClaim.Trim();
+            foreach (string claim in oidcGroupClaims)
+            {
+                if (!string.IsNullOrWhiteSpace(claim)
+                    && string.Equals(claim.Trim(), expectedClaim, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Retrieves cached global permission groups and their grants for a workspace.

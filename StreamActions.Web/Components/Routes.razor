@@ -19,12 +19,25 @@
 @using System.Reflection
 @inject WebAssemblyRegistry AssemblyRegistry
 
-<Router AppAssembly="typeof(Routes).Assembly" AdditionalAssemblies="AdditionalAssemblies">
-    <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-</Router>
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Routes).Assembly" AdditionalAssemblies="AdditionalAssemblies">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <p role="alert">Authentication required. <a href="/login">Sign in</a></p>
+                    }
+                    else
+                    {
+                        <p role="alert">Access denied. <a href="/access-denied">View details</a></p>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+    </Router>
+</CascadingAuthenticationState>
 
 @code {
     private IEnumerable<Assembly> AdditionalAssemblies => AssemblyRegistry.PluginAssemblies;

@@ -11,10 +11,12 @@
     <OutputPath>.</OutputPath>
     <Name>DependencyUpdater</Name>
     <RootNamespace>DependencyUpdater</RootNamespace>
-    <InterpreterId>Global|Astral|CPython3.13.5</InterpreterId>
+    <InterpreterId>Global|VisualStudio|DependencyUpdater</InterpreterId>
     <SuppressPackageInstallationPrompt>True</SuppressPackageInstallationPrompt>
     <IsWindowsApplication>False</IsWindowsApplication>
-    <TestFramework>Pytest</TestFramework>
+    <TestFramework>unittest</TestFramework>
+    <UnitTestPattern>test_*.py</UnitTestPattern>
+    <UnitTestRootDirectory>.</UnitTestRootDirectory>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -48,7 +50,8 @@
     <Folder Include="tests\" />
   </ItemGroup>
   <ItemGroup>
-    <InterpreterReference Include="Global|Astral|CPython3.13.5" />
+    <InterpreterReference Include="Global|VisualStudio|DependencyUpdater" />
+    <InterpreterReference Include="Global|VisualStudio|Scripts" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="pyproject.toml" />

@@ -16,6 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Core.Abstractions;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -24,7 +26,7 @@ namespace StreamActions.Daemon.Services;
 /// <summary>
 /// Manages single-instance 128-bit console bootstrap tokens with a 5-minute TTL and 3-strike brute-force burn protection.
 /// </summary>
-internal sealed partial class ConsoleBootstrapTokenService
+internal sealed partial class ConsoleBootstrapTokenService : IBootstrapTokenService
 {
     /// <summary>
     /// Maximum number of consecutive failed validation attempts before the active token is burned.
@@ -32,12 +34,12 @@ internal sealed partial class ConsoleBootstrapTokenService
     public const int MaxFailedAttempts = 3;
 
     /// <summary>
-    /// Lifetime of a generated bootstrap token.
+    /// Lifetime of a generated bootstrap token and the post-burn cooldown duration.
     /// </summary>
     public static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(5);
 
     /// <summary>
-    /// Time provider used to evaluate token expiration.
+    /// Time provider used to evaluate token expiration and cooldowns.
     /// </summary>
     private readonly TimeProvider _timeProvider;
 
@@ -45,6 +47,11 @@ internal sealed partial class ConsoleBootstrapTokenService
     /// Logger instance for token lifecycle events.
     /// </summary>
     private readonly ILogger<ConsoleBootstrapTokenService> _logger;
+
+    /// <summary>
+    /// Optional console output writer override used when printing newly generated tokens.
+    /// </summary>
+    private readonly TextWriter? _consoleOutput;
 
     /// <summary>
     /// Synchronization lock protecting active token state.
@@ -62,6 +69,11 @@ internal sealed partial class ConsoleBootstrapTokenService
     private DateTimeOffset _expiresAtUtc = DateTimeOffset.MinValue;
 
     /// <summary>
+    /// UTC timestamp until which token issuance is blocked after a token is burned.
+    /// </summary>
+    private DateTimeOffset _cooldownUntilUtc = DateTimeOffset.MinValue;
+
+    /// <summary>
     /// Number of consecutive failed validation attempts against the current token.
     /// </summary>
     private int _failedAttempts;
@@ -71,56 +83,77 @@ internal sealed partial class ConsoleBootstrapTokenService
     /// </summary>
     /// <param name="timeProvider">The time provider controlling token expiration.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="consoleOutput">An optional <see cref="TextWriter"/> receiving newly generated tokens instead of <see cref="Console.Out"/>.</param>
     public ConsoleBootstrapTokenService(
         TimeProvider timeProvider,
-        ILogger<ConsoleBootstrapTokenService> logger)
+        ILogger<ConsoleBootstrapTokenService> logger,
+        TextWriter? consoleOutput = null)
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(logger);
 
         this._timeProvider = timeProvider;
         this._logger = logger;
+        this._consoleOutput = consoleOutput;
     }
 
-    /// <summary>
-    /// Returns the currently active bootstrap token if still within its 5-minute TTL, or issues a fresh 128-bit token.
-    /// </summary>
-    /// <returns>The active hexadecimal bootstrap token.</returns>
-    public string GetOrCreateToken()
+    /// <inheritdoc/>
+    public BootstrapTokenRequestResult RequestOrReuseActiveToken()
     {
         lock (this._gate)
         {
             DateTimeOffset now = this._timeProvider.GetUtcNow();
-            if ((this._activeToken is not null) && (now < this._expiresAtUtc))
+            if (now < this._cooldownUntilUtc)
             {
-                return this._activeToken;
+                return new(false, null, this._cooldownUntilUtc - now);
             }
 
-            byte[] randomBytes = RandomNumberGenerator.GetBytes(16);
-            this._activeToken = Convert.ToHexStringLower(randomBytes);
+            if ((this._activeToken is not null) && (now < this._expiresAtUtc))
+            {
+                return new(true, this._activeToken, null);
+            }
+
+            this._activeToken = RandomNumberGenerator.GetHexString(32, lowercase: true);
             this._expiresAtUtc = now + TokenLifetime;
+            this._cooldownUntilUtc = DateTimeOffset.MinValue;
             this._failedAttempts = 0;
 
             LogTokenGenerated(this._logger, this._expiresAtUtc);
-            return this._activeToken;
+            TextWriter output = this._consoleOutput ?? Console.Out;
+            output.WriteLine(string.Create(
+                CultureInfo.InvariantCulture,
+                $"Console bootstrap token (valid until {this._expiresAtUtc:O}): {this._activeToken}"));
+
+            return new(true, this._activeToken, null);
         }
     }
 
-    /// <summary>
-    /// Validates a candidate bootstrap token using constant-time comparison and burns the active token after 3 failed guesses.
-    /// </summary>
-    /// <param name="candidate">The candidate token string to validate.</param>
-    /// <returns><see langword="true"/> if the token is active and matches; otherwise <see langword="false"/>.</returns>
+    /// <inheritdoc/>
+    public string GetOrCreateToken()
+    {
+        BootstrapTokenRequestResult result = this.RequestOrReuseActiveToken();
+        if (!result.Succeeded || (result.Token is null))
+        {
+            int remainingSeconds = Math.Max(1, (int)Math.Ceiling((result.CooldownRemaining ?? TimeSpan.Zero).TotalSeconds));
+            throw new InvalidOperationException(string.Create(
+                CultureInfo.InvariantCulture,
+                $"Bootstrap token generation is in cooldown for {remainingSeconds} second(s)."));
+        }
+
+        return result.Token;
+    }
+
+    /// <inheritdoc/>
     public bool ValidateToken(string candidate)
     {
         lock (this._gate)
         {
-            if (this._activeToken is null)
+            DateTimeOffset now = this._timeProvider.GetUtcNow();
+            if ((now < this._cooldownUntilUtc) || (this._activeToken is null))
             {
                 return false;
             }
 
-            DateTimeOffset now = this._timeProvider.GetUtcNow();
             if (now >= this._expiresAtUtc)
             {
                 this.InvalidateLocked();
@@ -142,6 +175,7 @@ internal sealed partial class ConsoleBootstrapTokenService
             if (this._failedAttempts >= MaxFailedAttempts)
             {
                 this.InvalidateLocked();
+                this._cooldownUntilUtc = now + TokenLifetime;
                 LogTokenBurned(this._logger);
             }
 

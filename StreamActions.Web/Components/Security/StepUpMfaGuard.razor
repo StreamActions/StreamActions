@@ -1,0 +1,193 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@using System.Security.Claims
+@using Microsoft.Extensions.DependencyInjection
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
+
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IMfaPolicyService MfaPolicyService
+@inject TimeProvider TimeProvider
+@inject NavigationManager Navigation
+@inject IServiceProvider ServiceProvider
+
+@if (!_loaded)
+{
+    <p>Checking security policy…</p>
+}
+else if (!_policy.IsStepUpRequired || _isElevated)
+{
+    @ChildContent
+}
+else
+{
+    <section aria-labelledby="step-up-guard-heading" data-step-up-guard="true">
+        <h2 id="step-up-guard-heading">Step-Up MFA Verification Required (Sudo Mode)</h2>
+        @if (!string.IsNullOrWhiteSpace(OperationDescription))
+        {
+            <p>@OperationDescription</p>
+        }
+        else
+        {
+            <p>Recent multi-factor authentication verification is required before performing this sensitive action.</p>
+        }
+
+        @if (_policy.IsMfaDisabled)
+        {
+            <p role="alert">All multi-factor authentication methods are currently disabled by policy.</p>
+        }
+        else
+        {
+            @if (_policy.IsPasskeyAllowed)
+            {
+                <div>
+                    <button type="button"
+                            data-step-up-passkey="true"
+                            data-return-url="@_returnUrl"
+                            onclick="window.streamActionsWebAuthn && window.streamActionsWebAuthn.verifyPasskey(this.dataset.returnUrl, 'step-up-passkey-error')">
+                        Verify with Passkey
+                    </button>
+                    <p id="step-up-passkey-error" role="alert" hidden></p>
+                </div>
+            }
+
+            @if (_policy.IsTotpAllowed)
+            {
+                <form method="post" action="/auth/mfa/totp/verify" data-step-up-totp="true">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="returnUrl" value="@_returnUrl" />
+                    <div>
+                        <label for="step-up-totp-code">Authenticator Code (TOTP)</label>
+                        <input id="step-up-totp-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required />
+                    </div>
+                    <button type="submit">Verify Code</button>
+                </form>
+            }
+
+            <form method="post" action="/auth/mfa/recovery/verify" data-step-up-recovery="true">
+                <AntiforgeryToken />
+                <input type="hidden" name="returnUrl" value="@_returnUrl" />
+                <div>
+                    <label for="step-up-recovery-code">Recovery Code</label>
+                    <input id="step-up-recovery-code" name="code" type="text" autocomplete="off" required />
+                </div>
+                <button type="submit">Use Recovery Code</button>
+            </form>
+
+            <p>
+                <a href="/account/mfa">Manage MFA credentials</a>
+            </p>
+        }
+    </section>
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets the protected content rendered when step-up MFA is not required or already elevated.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional workspace identifier whose stricter MFA policy applies.
+    /// </summary>
+    [Parameter]
+    public Guid? WorkspaceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional explanation of the sensitive operation requiring step-up verification.
+    /// </summary>
+    [Parameter]
+    public string? OperationDescription { get; set; }
+
+    /// <summary>
+    /// Indicates whether policy evaluation has completed.
+    /// </summary>
+    private bool _loaded;
+
+    /// <summary>
+    /// Indicates whether the current principal holds an active step-up elevation claim.
+    /// </summary>
+    private bool _isElevated;
+
+    /// <summary>
+    /// Safe local return URL for post-verification redirects.
+    /// </summary>
+    private string _returnUrl = "/";
+
+    /// <summary>
+    /// Resolved effective MFA policy for the current user and optional workspace.
+    /// </summary>
+    private EffectiveMfaPolicy _policy = new(
+        MfaMethodAvailability.Allowed,
+        MfaMethodAvailability.Allowed,
+        PanelLoginMfaRequirement.Optional,
+        StepUpSudoPolicy.Optional);
+
+    /// <summary>
+    /// Re-evaluates step-up elevation and effective MFA policy whenever parameters change.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous evaluation operation.</returns>
+    protected override async Task OnParametersSetAsync()
+    {
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        ClaimsPrincipal principal = authState.User;
+
+        _isElevated = AuthClaims.IsStepUpElevated(principal, TimeProvider);
+        _returnUrl = GetCurrentLocalPath();
+
+        IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
+        Guid? userId = AuthClaims.GetPanelUserId(principal);
+        PanelUser? user = panelUserStore is not null && userId.HasValue
+            ? await panelUserStore.GetByIdAsync(userId.Value).ConfigureAwait(false)
+            : null;
+
+        if (user is not null && panelUserStore is not null)
+        {
+            IReadOnlyList<UserLoginIdentity> identities = await panelUserStore
+                .GetLoginIdentitiesAsync(user.Id)
+                .ConfigureAwait(false);
+            IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(principal);
+
+            _policy = await MfaPolicyService
+                .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, WorkspaceId)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            _policy = await MfaPolicyService
+                .GetEffectivePolicyAsync(WorkspaceId)
+                .ConfigureAwait(false);
+        }
+
+        _loaded = true;
+    }
+
+    /// <summary>
+    /// Computes a safe local return URL for the current navigation location.
+    /// </summary>
+    /// <returns>A validated local relative path starting with <c>/</c>.</returns>
+    private string GetCurrentLocalPath()
+    {
+        string relative = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+        return AuthClaims.SafeReturnUrlOrDefault(relative, "/");
+    }
+}
+

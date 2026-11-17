@@ -16,7 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="StreamActions.Daemon.Tests" />
+    <InternalsVisibleTo Include="StreamActions.Web.Tests" />
   </ItemGroup>
 
   <ItemGroup>

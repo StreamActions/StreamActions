@@ -1,0 +1,585 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@page "/admin/auth"
+@attribute [Authorize(Policy = AuthClaims.RootOrGlobalAdminPolicy)]
+@rendermode InteractiveServer
+
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
+@using System.Text.Json
+
+@inject IInstanceSettingsService InstanceSettingsService
+@inject IInstanceOAuthConfigService InstanceOAuthConfigService
+@inject IExternalOidcProviderStore OidcProviderStore
+@inject IEnumerable<IPlatformOAuthProvider> PlatformProviders
+
+<PageTitle>Authentication Administration - StreamActions</PageTitle>
+
+<h1>Authentication Administration</h1>
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <p role="status" data-admin-auth-status="true">@_statusMessage</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <p role="alert" data-admin-auth-error="true">@_errorMessage</p>
+}
+
+<StepUpMfaGuard OperationDescription="Confirm MFA verification to modify instance authentication policies, OAuth credentials, or external OIDC providers.">
+<section aria-labelledby="auth-policies-heading">
+    <h2 id="auth-policies-heading">Instance Authentication Policies</h2>
+    <div>
+        <label for="oauth-app-policy">Instance OAuth App Policy</label>
+        <select id="oauth-app-policy" @bind="_oauthAppPolicy">
+            <option value="@InstanceOAuthAppPolicy.InstanceOnly">Instance Only</option>
+            <option value="@InstanceOAuthAppPolicy.InstanceWithOptionalOverride">Instance With Optional Override</option>
+            <option value="@InstanceOAuthAppPolicy.RequireStreamerOAuthApp">Require Streamer OAuth App</option>
+        </select>
+    </div>
+    <div>
+        <label for="bot-account-policy">Instance Bot Account Policy</label>
+        <select id="bot-account-policy" @bind="_botAccountPolicy">
+            <option value="@InstanceBotAccountPolicy.DefaultOnly">Default Only</option>
+            <option value="@InstanceBotAccountPolicy.DefaultWithOptionalOverride">Default With Optional Override</option>
+            <option value="@InstanceBotAccountPolicy.RequireStreamerBotAccount">Require Streamer Bot Account</option>
+        </select>
+    </div>
+    <div>
+        <label for="oidc-login-mode">External OIDC Login Mode</label>
+        <select id="oidc-login-mode" @bind="_oidcLoginMode">
+            <option value="@ExternalOidcLoginMode.Allowed">Allowed</option>
+            <option value="@ExternalOidcLoginMode.Disabled">Disabled</option>
+            <option value="@ExternalOidcLoginMode.Required">Required</option>
+        </select>
+    </div>
+    <div>
+        <label for="allow-open-registration">
+            <input id="allow-open-registration" type="checkbox" @bind="_allowOpenRegistration" />
+            Allow Open Self-Registration
+        </label>
+    </div>
+    <div>
+        <label for="mfa-passkey-availability">Passkey (WebAuthn) Availability</label>
+        <select id="mfa-passkey-availability" @bind="_mfaPasskeyAvailability">
+            <option value="@MfaMethodAvailability.Allowed">Allowed</option>
+            <option value="@MfaMethodAvailability.Disabled">Disabled</option>
+            <option value="@MfaMethodAvailability.Required">Required</option>
+        </select>
+    </div>
+    <div>
+        <label for="mfa-totp-availability">Authenticator App (TOTP) Availability</label>
+        <select id="mfa-totp-availability" @bind="_mfaTotpAvailability">
+            <option value="@MfaMethodAvailability.Allowed">Allowed</option>
+            <option value="@MfaMethodAvailability.Disabled">Disabled</option>
+            <option value="@MfaMethodAvailability.Required">Required</option>
+        </select>
+    </div>
+    <div>
+        <label for="login-mfa-requirement">Panel Login MFA Requirement</label>
+        <select id="login-mfa-requirement" @bind="_loginMfaRequirement">
+            <option value="@PanelLoginMfaRequirement.Optional">Optional</option>
+            <option value="@PanelLoginMfaRequirement.RequiredForRootAndStreamers">Required for Root &amp; Streamers</option>
+            <option value="@PanelLoginMfaRequirement.RequiredForModerators">Required for Moderators</option>
+            <option value="@PanelLoginMfaRequirement.RequiredForAll">Required for All Users</option>
+        </select>
+    </div>
+    <div>
+        <label for="step-up-sudo-policy">Step-Up MFA Policy (Sudo Mode)</label>
+        <select id="step-up-sudo-policy" @bind="_stepUpSudoPolicy">
+            <option value="@StepUpSudoPolicy.Optional">Optional</option>
+            <option value="@StepUpSudoPolicy.Required">Required</option>
+        </select>
+    </div>
+    <button type="button" @onclick="SavePoliciesAsync">Save Policies</button>
+</section>
+
+<section aria-labelledby="platform-oauth-heading">
+    <h2 id="platform-oauth-heading">Platform OAuth Application</h2>
+    <div>
+        <label for="platform-oauth-select">Platform</label>
+        <select id="platform-oauth-select" @bind="_selectedPlatformId" @bind:after="LoadSelectedPlatformOAuthAsync">
+            @foreach (string platformId in _availablePlatforms)
+            {
+                <option value="@platformId">@platformId</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label for="platform-client-id">Client ID</label>
+        <input id="platform-client-id" type="text" @bind="_platformClientId" autocomplete="off" />
+    </div>
+    <div>
+        <label for="platform-client-secret">
+            Client Secret (@(_hasExistingPlatformSecret ? "configured; leave blank to keep existing" : "write-only"))
+        </label>
+        <input id="platform-client-secret" type="password" @bind="_platformClientSecret" autocomplete="new-password" />
+    </div>
+    <div>
+        <button type="button" @onclick="SavePlatformOAuthAsync">Save Platform OAuth</button>
+        <button type="button" @onclick="ClearPlatformOAuthAsync">Remove Platform OAuth</button>
+        <a href="/auth/@_selectedPlatformId/login?flow=instance-bot">Connect Instance Bot Account</a>
+    </div>
+</section>
+
+<section aria-labelledby="oidc-providers-heading">
+    <h2 id="oidc-providers-heading">External OIDC Providers</h2>
+
+    @if (_oidcProviders.Count == 0)
+    {
+        <p>No instance external OIDC providers configured.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (ExternalOidcProvider provider in _oidcProviders)
+            {
+                <li>
+                    <strong>@provider.DisplayName</strong> (<code>@provider.Slug</code>) — @provider.AuthorityUrl
+                    <span>[@(provider.IsEnabled ? "Enabled" : "Disabled")]</span>
+                    <button type="button" @onclick="() => BeginEditOidcProvider(provider)">Edit</button>
+                    <button type="button" @onclick="() => DeleteOidcProviderAsync(provider.Id)">Delete</button>
+                </li>
+            }
+        </ul>
+    }
+
+    <h3>@(_editingOidcProviderId is null ? "Add External OIDC Provider" : "Edit External OIDC Provider")</h3>
+    <div>
+        <label for="oidc-slug">Slug</label>
+        <input id="oidc-slug" type="text" @bind="_oidcSlug" autocomplete="off" />
+    </div>
+    <div>
+        <label for="oidc-display-name">Display Name</label>
+        <input id="oidc-display-name" type="text" @bind="_oidcDisplayName" autocomplete="off" />
+    </div>
+    <div>
+        <label for="oidc-authority-url">Authority URL</label>
+        <input id="oidc-authority-url" type="url" @bind="_oidcAuthorityUrl" autocomplete="off" />
+    </div>
+    <div>
+        <label for="oidc-client-id">Client ID</label>
+        <input id="oidc-client-id" type="text" @bind="_oidcClientId" autocomplete="off" />
+    </div>
+    <div>
+        <label for="oidc-client-secret">
+            Client Secret (@(_editingOidcProviderId is not null ? "leave blank to preserve existing" : "required"))
+        </label>
+        <input id="oidc-client-secret" type="password" @bind="_oidcClientSecret" autocomplete="new-password" />
+    </div>
+    <div>
+        <label for="oidc-scopes">Scopes (comma-separated)</label>
+        <input id="oidc-scopes" type="text" @bind="_oidcScopesInput" autocomplete="off" />
+    </div>
+    <div>
+        <label for="oidc-group-claim">Group Claim Type</label>
+        <input id="oidc-group-claim" type="text" @bind="_oidcGroupClaimType" autocomplete="off" />
+    </div>
+    <div>
+        <label for="oidc-enabled">
+            <input id="oidc-enabled" type="checkbox" @bind="_oidcIsEnabled" />
+            Enabled
+        </label>
+    </div>
+    <div>
+        <button type="button" @onclick="SaveOidcProviderAsync">Save OIDC Provider</button>
+        <button type="button" @onclick="ResetOidcForm">Reset Form</button>
+    </div>
+</section>
+</StepUpMfaGuard>
+
+@code {
+    /// <summary>
+    /// Available platform identifiers.
+    /// </summary>
+    private List<string> _availablePlatforms = ["twitch"];
+
+    /// <summary>
+    /// Selected platform identifier for OAuth app editing.
+    /// </summary>
+    private string _selectedPlatformId = "twitch";
+
+    /// <summary>
+    /// Current instance OAuth app policy selection.
+    /// </summary>
+    private InstanceOAuthAppPolicy _oauthAppPolicy = InstanceOAuthAppPolicy.InstanceOnly;
+
+    /// <summary>
+    /// Current instance bot account policy selection.
+    /// </summary>
+    private InstanceBotAccountPolicy _botAccountPolicy = InstanceBotAccountPolicy.DefaultOnly;
+
+    /// <summary>
+    /// Current external OIDC login mode selection.
+    /// </summary>
+    private ExternalOidcLoginMode _oidcLoginMode = ExternalOidcLoginMode.Allowed;
+
+    /// <summary>
+    /// Whether open registration is permitted.
+    /// </summary>
+    private bool _allowOpenRegistration;
+
+    /// <summary>
+    /// Current instance-wide WebAuthn passkey availability policy selection.
+    /// </summary>
+    private MfaMethodAvailability _mfaPasskeyAvailability = MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Current instance-wide TOTP authenticator availability policy selection.
+    /// </summary>
+    private MfaMethodAvailability _mfaTotpAvailability = MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Current instance-wide panel login MFA requirement selection.
+    /// </summary>
+    private PanelLoginMfaRequirement _loginMfaRequirement = PanelLoginMfaRequirement.Optional;
+
+    /// <summary>
+    /// Current instance-wide step-up ("Sudo Mode") MFA policy selection.
+    /// </summary>
+    private StepUpSudoPolicy _stepUpSudoPolicy = StepUpSudoPolicy.Optional;
+
+    /// <summary>
+    /// Platform OAuth client identifier input.
+    /// </summary>
+    private string _platformClientId = string.Empty;
+
+    /// <summary>
+    /// Write-only platform OAuth client secret input. Never populated from stored secrets.
+    /// </summary>
+    private string _platformClientSecret = string.Empty;
+
+    /// <summary>
+    /// Indicates whether the selected platform already has stored OAuth credentials.
+    /// </summary>
+    private bool _hasExistingPlatformSecret;
+
+    /// <summary>
+    /// Configured instance-wide external OIDC providers.
+    /// </summary>
+    private IReadOnlyList<ExternalOidcProvider> _oidcProviders = [];
+
+    /// <summary>
+    /// Identifier of the OIDC provider currently being edited, or <see langword="null"/> when creating a new provider.
+    /// </summary>
+    private Guid? _editingOidcProviderId;
+
+    /// <summary>
+    /// OIDC provider slug input.
+    /// </summary>
+    private string _oidcSlug = string.Empty;
+
+    /// <summary>
+    /// OIDC provider display name input.
+    /// </summary>
+    private string _oidcDisplayName = string.Empty;
+
+    /// <summary>
+    /// OIDC provider authority URL input.
+    /// </summary>
+    private string _oidcAuthorityUrl = string.Empty;
+
+    /// <summary>
+    /// OIDC provider client identifier input.
+    /// </summary>
+    private string _oidcClientId = string.Empty;
+
+    /// <summary>
+    /// Write-only OIDC client secret input. Never populated from stored secrets.
+    /// </summary>
+    private string _oidcClientSecret = string.Empty;
+
+    /// <summary>
+    /// Comma-separated OIDC scopes input.
+    /// </summary>
+    private string _oidcScopesInput = "openid, profile, email";
+
+    /// <summary>
+    /// Optional OIDC group claim type input.
+    /// </summary>
+    private string _oidcGroupClaimType = "groups";
+
+    /// <summary>
+    /// Whether the OIDC provider being edited is enabled.
+    /// </summary>
+    private bool _oidcIsEnabled = true;
+
+    /// <summary>
+    /// Status banner message.
+    /// </summary>
+    private string? _statusMessage;
+
+    /// <summary>
+    /// Error banner message.
+    /// </summary>
+    private string? _errorMessage;
+
+    /// <summary>
+    /// Loads current instance authentication policies, platform OAuth metadata, and OIDC providers.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        List<string> discoveredPlatforms = [.. PlatformProviders
+            .Select(static p => p.PlatformId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static p => p, StringComparer.OrdinalIgnoreCase)];
+        if (discoveredPlatforms.Count > 0)
+        {
+            _availablePlatforms = discoveredPlatforms;
+            _selectedPlatformId = discoveredPlatforms[0];
+        }
+
+        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        _oauthAppPolicy = AuthPolicyParser.ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
+        _botAccountPolicy = AuthPolicyParser.ParseBotAccountPolicy(settings.InstanceBotAccountPolicy);
+        _oidcLoginMode = settings.ExternalOidcLoginMode;
+        _allowOpenRegistration = settings.AllowOpenRegistration;
+        _mfaPasskeyAvailability = settings.MfaPasskeyAvailability;
+        _mfaTotpAvailability = settings.MfaTotpAvailability;
+        _loginMfaRequirement = settings.LoginMfaRequirement;
+        _stepUpSudoPolicy = settings.StepUpSudoPolicy;
+
+        await LoadSelectedPlatformOAuthAsync().ConfigureAwait(false);
+        await ReloadOidcProvidersAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Persists updated authentication policy flags into <see cref="InstanceSettings"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous save operation.</returns>
+    private async Task SavePoliciesAsync()
+    {
+        ClearMessages();
+        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        settings.InstanceOAuthAppPolicy = _oauthAppPolicy.ToString();
+        settings.InstanceBotAccountPolicy = _botAccountPolicy.ToString();
+        settings.ExternalOidcLoginMode = _oidcLoginMode;
+        settings.AllowOpenRegistration = _allowOpenRegistration;
+        settings.MfaPasskeyAvailability = _mfaPasskeyAvailability;
+        settings.MfaTotpAvailability = _mfaTotpAvailability;
+        settings.LoginMfaRequirement = _loginMfaRequirement;
+        settings.StepUpSudoPolicy = _stepUpSudoPolicy;
+
+        await InstanceSettingsService.UpdateAsync(settings).ConfigureAwait(false);
+        _statusMessage = "Authentication policies updated.";
+    }
+
+    /// <summary>
+    /// Loads client ID metadata for the selected platform while keeping the secret field write-only.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
+    private async Task LoadSelectedPlatformOAuthAsync()
+    {
+        PlatformOAuthAppCredentials? existing = await InstanceOAuthConfigService
+            .GetAsync(_selectedPlatformId)
+            .ConfigureAwait(false);
+
+        _platformClientId = existing?.ClientId ?? string.Empty;
+        _platformClientSecret = string.Empty;
+        _hasExistingPlatformSecret = existing is not null;
+    }
+
+    /// <summary>
+    /// Saves instance-wide platform OAuth credentials without exposing any previously saved secret.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous save operation.</returns>
+    private async Task SavePlatformOAuthAsync()
+    {
+        ClearMessages();
+        if (string.IsNullOrWhiteSpace(_platformClientId))
+        {
+            _errorMessage = "Platform Client ID is required.";
+            return;
+        }
+
+        string? secretToPersist = string.IsNullOrWhiteSpace(_platformClientSecret)
+            ? null
+            : _platformClientSecret.Trim();
+
+        if (secretToPersist is null)
+        {
+            PlatformOAuthAppCredentials? existing = await InstanceOAuthConfigService
+                .GetAsync(_selectedPlatformId)
+                .ConfigureAwait(false);
+            secretToPersist = existing?.ClientSecret;
+        }
+
+        if (string.IsNullOrWhiteSpace(secretToPersist))
+        {
+            _errorMessage = "Platform Client Secret is required when configuring credentials for the first time.";
+            return;
+        }
+
+        await InstanceOAuthConfigService
+            .SetAsync(_selectedPlatformId, new PlatformOAuthAppCredentials(_platformClientId.Trim(), secretToPersist))
+            .ConfigureAwait(false);
+
+        _platformClientSecret = string.Empty;
+        _hasExistingPlatformSecret = true;
+        _statusMessage = $"Saved OAuth application credentials for {_selectedPlatformId}.";
+    }
+
+    /// <summary>
+    /// Clears instance-wide platform OAuth credentials for the selected platform.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous remove operation.</returns>
+    private async Task ClearPlatformOAuthAsync()
+    {
+        ClearMessages();
+        _ = await InstanceOAuthConfigService.RemoveAsync(_selectedPlatformId).ConfigureAwait(false);
+        _platformClientId = string.Empty;
+        _platformClientSecret = string.Empty;
+        _hasExistingPlatformSecret = false;
+        _statusMessage = $"Removed OAuth application credentials for {_selectedPlatformId}.";
+    }
+
+    /// <summary>
+    /// Populates the OIDC editor form from an existing provider without exposing its client secret.
+    /// </summary>
+    /// <param name="provider">The provider to edit.</param>
+    private void BeginEditOidcProvider(ExternalOidcProvider provider)
+    {
+        ClearMessages();
+        _editingOidcProviderId = provider.Id;
+        _oidcSlug = provider.Slug;
+        _oidcDisplayName = provider.DisplayName;
+        _oidcAuthorityUrl = provider.AuthorityUrl;
+        _oidcClientId = provider.ClientId;
+        _oidcClientSecret = string.Empty;
+        _oidcGroupClaimType = provider.GroupClaimType ?? string.Empty;
+        _oidcIsEnabled = provider.IsEnabled;
+
+        try
+        {
+            string[]? parsedScopes = JsonSerializer.Deserialize<string[]>(provider.ScopesJson);
+            _oidcScopesInput = parsedScopes is { Length: > 0 }
+                ? string.Join(", ", parsedScopes)
+                : "openid, profile, email";
+        }
+        catch (JsonException)
+        {
+            _oidcScopesInput = "openid, profile, email";
+        }
+    }
+
+    /// <summary>
+    /// Creates or updates an instance-wide <see cref="ExternalOidcProvider"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous save operation.</returns>
+    private async Task SaveOidcProviderAsync()
+    {
+        ClearMessages();
+
+        if (string.IsNullOrWhiteSpace(_oidcSlug)
+            || string.IsNullOrWhiteSpace(_oidcDisplayName)
+            || string.IsNullOrWhiteSpace(_oidcAuthorityUrl)
+            || string.IsNullOrWhiteSpace(_oidcClientId))
+        {
+            _errorMessage = "Slug, Display Name, Authority URL, and Client ID are required.";
+            return;
+        }
+
+        string? plaintextSecret = string.IsNullOrWhiteSpace(_oidcClientSecret)
+            ? null
+            : _oidcClientSecret.Trim();
+
+        if (_editingOidcProviderId is null && plaintextSecret is null)
+        {
+            _errorMessage = "Client Secret is required when creating a new OIDC provider.";
+            return;
+        }
+
+        string[] scopes = [.. _oidcScopesInput
+            .Split([',', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.Ordinal)];
+
+        ExternalOidcProvider provider = new()
+        {
+            Id = _editingOidcProviderId ?? Guid.Empty,
+            WorkspaceId = null,
+            Slug = _oidcSlug.Trim(),
+            DisplayName = _oidcDisplayName.Trim(),
+            AuthorityUrl = _oidcAuthorityUrl.Trim(),
+            ClientId = _oidcClientId.Trim(),
+            ScopesJson = JsonSerializer.Serialize(scopes.Length > 0 ? scopes : ["openid", "profile", "email"]),
+            GroupClaimType = string.IsNullOrWhiteSpace(_oidcGroupClaimType) ? null : _oidcGroupClaimType.Trim(),
+            IsEnabled = _oidcIsEnabled,
+        };
+
+        _ = await OidcProviderStore.UpsertAsync(provider, plaintextSecret).ConfigureAwait(false);
+        await ReloadOidcProvidersAsync().ConfigureAwait(false);
+        ResetOidcForm();
+        _statusMessage = $"Saved external OIDC provider '{provider.Slug}'.";
+    }
+
+    /// <summary>
+    /// Deletes an instance-wide <see cref="ExternalOidcProvider"/>.
+    /// </summary>
+    /// <param name="providerId">The provider identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous delete operation.</returns>
+    private async Task DeleteOidcProviderAsync(Guid providerId)
+    {
+        ClearMessages();
+        _ = await OidcProviderStore.DeleteAsync(providerId).ConfigureAwait(false);
+        if (_editingOidcProviderId == providerId)
+        {
+            ResetOidcForm();
+        }
+
+        await ReloadOidcProvidersAsync().ConfigureAwait(false);
+        _statusMessage = "Deleted external OIDC provider.";
+    }
+
+    /// <summary>
+    /// Resets the OIDC provider editor back to creation mode.
+    /// </summary>
+    private void ResetOidcForm()
+    {
+        _editingOidcProviderId = null;
+        _oidcSlug = string.Empty;
+        _oidcDisplayName = string.Empty;
+        _oidcAuthorityUrl = string.Empty;
+        _oidcClientId = string.Empty;
+        _oidcClientSecret = string.Empty;
+        _oidcScopesInput = "openid, profile, email";
+        _oidcGroupClaimType = "groups";
+        _oidcIsEnabled = true;
+    }
+
+    /// <summary>
+    /// Reloads the list of instance-wide external OIDC providers.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
+    private async Task ReloadOidcProvidersAsync() =>
+        _oidcProviders = await OidcProviderStore
+            .GetProvidersAsync(workspaceId: null, enabledOnly: false)
+            .ConfigureAwait(false);
+
+    /// <summary>
+    /// Clears any visible status or error banners.
+    /// </summary>
+    private void ClearMessages()
+    {
+        _statusMessage = null;
+        _errorMessage = null;
+    }
+}

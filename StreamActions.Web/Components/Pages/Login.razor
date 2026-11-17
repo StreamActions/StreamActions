@@ -1,0 +1,225 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@page "/login"
+
+@using Microsoft.AspNetCore.Components
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
+@using System.Globalization
+
+@inject IEnumerable<IPlatformOAuthProvider> PlatformProviders
+@inject IInstanceSettingsService InstanceSettingsService
+@inject IExternalOidcProviderStore OidcProviderStore
+
+<PageTitle>Sign In - StreamActions</PageTitle>
+
+<h1>Sign In</h1>
+
+@if (!string.IsNullOrWhiteSpace(Error))
+{
+    <p role="alert" data-login-error="@Error">
+        @FormatErrorMessage(Error, Platform)
+    </p>
+}
+
+@if (_oidcLoginMode != ExternalOidcLoginMode.Required)
+{
+    <section aria-labelledby="platform-login-heading">
+        <h2 id="platform-login-heading">Platform Sign In</h2>
+        @if (_providers.Count == 0)
+        {
+            <p>No streaming platform OAuth providers are currently registered.</p>
+        }
+        else if (_oauthAppPolicy == InstanceOAuthAppPolicy.RequireStreamerOAuthApp)
+        {
+            <p>This instance requires your own OAuth application credentials to sign in with a streaming platform.</p>
+            @foreach (IPlatformOAuthProvider provider in _providers)
+            {
+                string displayName = FormatPlatformName(provider.PlatformId);
+                <form method="post" action="/auth/@provider.PlatformId/login" data-streamer-oauth-form="@provider.PlatformId">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="flow" value="login" />
+                    @if (!string.IsNullOrWhiteSpace(ReturnUrl))
+                    {
+                        <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                    }
+                    <h3>@displayName</h3>
+                    <div>
+                        <label for="custom-client-id-@provider.PlatformId">Custom OAuth Client ID</label>
+                        <input id="custom-client-id-@provider.PlatformId" name="customClientId" type="text" autocomplete="off" required />
+                    </div>
+                    <div>
+                        <label for="custom-client-secret-@provider.PlatformId">Custom OAuth Client Secret</label>
+                        <input id="custom-client-secret-@provider.PlatformId" name="customClientSecret" type="password" autocomplete="new-password" required />
+                    </div>
+                    <button type="submit">Continue with @displayName</button>
+                </form>
+            }
+        }
+        else
+        {
+            <ul>
+                @foreach (IPlatformOAuthProvider provider in _providers)
+                {
+                    string displayName = FormatPlatformName(provider.PlatformId);
+                    string loginHref = BuildPlatformLoginHref(provider.PlatformId);
+                    <li>
+                        <a href="@loginHref">Sign in with @displayName</a>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+@if (_oidcLoginMode != ExternalOidcLoginMode.Disabled)
+{
+    <section aria-labelledby="oidc-login-heading">
+        <h2 id="oidc-login-heading">External SSO (OpenID Connect)</h2>
+        @if (_oidcProviders.Count == 0)
+        {
+            <p>No external OIDC providers are currently enabled.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (ExternalOidcProvider provider in _oidcProviders)
+                {
+                    string oidcHref = BuildOidcLoginHref(provider.Slug);
+                    <li>
+                        <a href="@oidcHref">Sign in with @provider.DisplayName</a>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+<section aria-labelledby="setup-recovery-heading">
+    <h2 id="setup-recovery-heading">Instance Administration</h2>
+    <p>
+        <a href="/setup-recovery">Admin Setup / Recovery</a>
+    </p>
+</section>
+
+@code {
+    /// <summary>
+    /// Registered streaming platform OAuth providers.
+    /// </summary>
+    private IReadOnlyList<IPlatformOAuthProvider> _providers = [];
+
+    /// <summary>
+    /// Enabled instance-wide external OIDC providers.
+    /// </summary>
+    private IReadOnlyList<ExternalOidcProvider> _oidcProviders = [];
+
+    /// <summary>
+    /// Effective instance OAuth application policy.
+    /// </summary>
+    private InstanceOAuthAppPolicy _oauthAppPolicy = InstanceOAuthAppPolicy.InstanceOnly;
+
+    /// <summary>
+    /// Effective external OIDC login mode.
+    /// </summary>
+    private ExternalOidcLoginMode _oidcLoginMode = ExternalOidcLoginMode.Allowed;
+
+    /// <summary>
+    /// Gets or sets the optional authentication error code supplied on query redirect.
+    /// </summary>
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional platform identifier associated with an error redirect.
+    /// </summary>
+    [SupplyParameterFromQuery]
+    public string? Platform { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional local return URL requested prior to login.
+    /// </summary>
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    /// <summary>
+    /// Loads instance authentication policies and enabled login providers.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        _providers = [.. PlatformProviders.OrderBy(static p => p.PlatformId, StringComparer.OrdinalIgnoreCase)];
+
+        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        _oauthAppPolicy = AuthPolicyParser.ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
+        _oidcLoginMode = settings.ExternalOidcLoginMode;
+
+        if (_oidcLoginMode != ExternalOidcLoginMode.Disabled)
+        {
+            _oidcProviders = await OidcProviderStore
+                .GetProvidersAsync(workspaceId: null, enabledOnly: true)
+                .ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Builds the platform login link with an optional safe return URL.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The login endpoint URL.</returns>
+    private string BuildPlatformLoginHref(string platformId) =>
+        AuthClaims.IsSafeLocalRedirect(ReturnUrl)
+            ? $"/auth/{Uri.EscapeDataString(platformId)}/login?flow=login&returnUrl={Uri.EscapeDataString(ReturnUrl!.Trim())}"
+            : $"/auth/{Uri.EscapeDataString(platformId)}/login?flow=login";
+
+    /// <summary>
+    /// Builds the OIDC login link with an optional safe return URL.
+    /// </summary>
+    /// <param name="slug">The OIDC provider slug.</param>
+    /// <returns>The OIDC login endpoint URL.</returns>
+    private string BuildOidcLoginHref(string slug) =>
+        AuthClaims.IsSafeLocalRedirect(ReturnUrl)
+            ? $"/auth/oidc/{Uri.EscapeDataString(slug)}/login?returnUrl={Uri.EscapeDataString(ReturnUrl!.Trim())}"
+            : $"/auth/oidc/{Uri.EscapeDataString(slug)}/login";
+
+    /// <summary>
+    /// Formats a platform identifier into a title-cased display label.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The formatted display name.</returns>
+    private static string FormatPlatformName(string platformId) =>
+        CultureInfo.InvariantCulture.TextInfo.ToTitleCase(platformId.Trim());
+
+    /// <summary>
+    /// Converts a query error code into a user-safe status message.
+    /// </summary>
+    /// <param name="error">The error code.</param>
+    /// <param name="platform">The optional platform identifier.</param>
+    /// <returns>A safe error message.</returns>
+    private static string FormatErrorMessage(string error, string? platform) => error switch
+    {
+        "oauth_not_configured" => string.IsNullOrWhiteSpace(platform)
+            ? "OAuth application credentials are not configured for this platform."
+            : $"OAuth application credentials are not configured for {FormatPlatformName(platform)}.",
+        "oidc_required" => "External OIDC SSO is required for panel login on this instance.",
+        "oidc_secret_unavailable" => "External OIDC provider credentials could not be decrypted.",
+        "identity_missing" => "The identity provider did not return a valid user identifier.",
+        _ => "Authentication could not be completed. Please try again.",
+    };
+}

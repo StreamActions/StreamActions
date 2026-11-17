@@ -77,14 +77,24 @@ public sealed record Validate : JsonApiResponse
     /// <param name="baseAddress">The uri to the Validate endpoint.</param>
     /// <returns>A <see cref="Validate"/> with the current token data or a Twitch error.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
-    public static async Task<Validate?> ValidateOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/validate")
+    public static Task<Validate?> ValidateOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/validate") => ValidateOAuth(session, false, baseAddress);
+
+    /// <summary>
+    /// Validates the OAuth token assigned to the specified <see cref="TwitchSession"/>, optionally skipping automatic token refresh on 401 responses.
+    /// </summary>
+    /// <param name="session">The <see cref="TwitchSession"/> to validate.</param>
+    /// <param name="dontRefresh"><see langword="true"/> to skip automatic token refresh if the server returns 401 Unauthorized; otherwise, <see langword="false"/>.</param>
+    /// <param name="baseAddress">The uri to the Validate endpoint.</param>
+    /// <returns>A <see cref="Validate"/> with the current token data or a Twitch error.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
+    public static async Task<Validate?> ValidateOAuth(TwitchSession session, bool dontRefresh, string baseAddress = "https://id.twitch.tv/oauth2/validate")
     {
         if (session is null)
         {
             throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session, dontRefresh: dontRefresh).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Validate>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

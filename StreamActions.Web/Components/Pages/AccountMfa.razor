@@ -1,0 +1,492 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@page "/account/mfa"
+@attribute [Authorize(Policy = AuthClaims.MfaPendingPolicy)]
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+@using System.Text.Json.Serialization
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.DependencyInjection
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
+
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IMfaCredentialStore MfaCredentialStore
+@inject IMfaPolicyService MfaPolicyService
+@inject IEnumerable<IPlatformOAuthProvider> PlatformProviders
+@inject IJSRuntime JS
+@inject IServiceProvider ServiceProvider
+
+<PageTitle>Security &amp; MFA - StreamActions</PageTitle>
+
+<h1>Security &amp; Multi-Factor Authentication</h1>
+
+@if (EnrollRequired == true || _isEnrollmentRequiredClaim)
+{
+    <div role="alert" data-mfa-enroll-required="true">
+        <p>
+            <strong>Login MFA enrollment is required</strong> before you can enter the panel.
+            Enroll a Passkey or Authenticator App below to complete your sign-in.
+        </p>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <p role="status" data-account-mfa-status="true">@_statusMessage</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <p role="alert" data-account-mfa-error="true">@_errorMessage</p>
+}
+
+<section aria-labelledby="enrolled-mfa-heading">
+    <h2 id="enrolled-mfa-heading">Enrolled MFA Credentials</h2>
+    @if (_summaries.Count == 0)
+    {
+        <p>No multi-factor authentication credentials are currently enrolled.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (MfaCredentialSummary summary in _summaries)
+            {
+                <li data-mfa-credential-id="@summary.Id.ToString("D")">
+                    <strong>@summary.Method</strong>
+                    @if (!string.IsNullOrWhiteSpace(summary.DisplayName))
+                    {
+                        <span> — @summary.DisplayName</span>
+                    }
+                    <span> (Added @summary.CreatedAtUtc.ToString("u"))</span>
+                    @if (summary.Method == MfaMethod.Totp)
+                    {
+                        <span> — @summary.RemainingRecoveryCodesCount recovery code(s) remaining</span>
+                    }
+                    @if (!_isMfaPending)
+                    {
+                        <button type="button" @onclick="() => DeleteCredentialAsync(summary.Id)">Remove</button>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@if (_policy.IsPasskeyAllowed)
+{
+    <section aria-labelledby="passkey-enroll-heading" data-passkey-enroll-section="true">
+        <h2 id="passkey-enroll-heading">Register a Passkey</h2>
+        <div>
+            <label for="passkey-display-name">Passkey Name (optional)</label>
+            <input id="passkey-display-name" type="text" @bind="_passkeyName" placeholder="e.g. Hardware Security Key" autocomplete="off" />
+        </div>
+        <button type="button" data-register-passkey="true" @onclick="RegisterPasskeyAsync">Register Passkey</button>
+    </section>
+}
+
+@if (_policy.IsTotpAllowed)
+{
+    <section aria-labelledby="totp-enroll-heading" data-totp-enroll-section="true">
+        <h2 id="totp-enroll-heading">Authenticator App (TOTP)</h2>
+        @if (_pendingTotpSecret is null)
+        {
+            <button type="button" data-totp-begin="true" @onclick="BeginTotpEnrollmentAsync">Set Up Authenticator App</button>
+        }
+        else
+        {
+            <div data-totp-pending="true">
+                <p>Add this key to your authenticator app:</p>
+                <p>Secret Key: <code data-totp-secret="true">@_pendingTotpSecret</code></p>
+                @if (!string.IsNullOrWhiteSpace(_pendingOtpAuthUri))
+                {
+                    <p>Provisioning URI: <code data-totp-uri="true">@_pendingOtpAuthUri</code></p>
+                }
+                <div>
+                    <label for="totp-confirm-code">6-digit verification code</label>
+                    <input id="totp-confirm-code" type="text" inputmode="numeric" autocomplete="one-time-code" @bind="_totpConfirmCode" />
+                </div>
+                <button type="button" data-totp-confirm="true" @onclick="ConfirmTotpEnrollmentAsync">Confirm TOTP Enrollment</button>
+                <button type="button" @onclick="CancelTotpEnrollment">Cancel</button>
+            </div>
+        }
+
+        @if (_revealedRecoveryCodes is { Count: > 0 })
+        {
+            <div role="region" aria-labelledby="recovery-codes-heading" data-recovery-codes="true">
+                <h3 id="recovery-codes-heading">Save Your One-Time Recovery Codes</h3>
+                <p>Store these recovery codes in a safe place. Each code can only be used once and will not be shown again.</p>
+                <ul>
+                    @foreach (string recoveryCode in _revealedRecoveryCodes)
+                    {
+                        <li><code>@recoveryCode</code></li>
+                    }
+                </ul>
+                <p>
+                    <a href="@_safeReturnUrl">Continue</a>
+                </p>
+            </div>
+        }
+    </section>
+}
+
+<section aria-labelledby="account-linked-identities-heading">
+    <h2 id="account-linked-identities-heading">Linked External Accounts</h2>
+    @if (_linkedIdentities.Count == 0)
+    {
+        <p>No external login identities linked.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (UserLoginIdentity identity in _linkedIdentities)
+            {
+                <li>
+                    <strong>@identity.ProviderId</strong>: @identity.ProviderUsername (<code>@identity.ProviderUserId</code>)
+                </li>
+            }
+        </ul>
+    }
+
+    @if (!_isMfaPending)
+    {
+        <div>
+            @foreach (string platformId in _availablePlatforms)
+            {
+                <a href="/auth/@Uri.EscapeDataString(platformId)/login?flow=link&returnUrl=%2Faccount%2Fmfa">
+                    Link @platformId Account
+                </a>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// Gets or sets a value indicating whether login MFA enrollment is required before accessing the panel.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "enrollRequired")]
+    public bool? EnrollRequired { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional local return URL requested prior to MFA enrollment.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    /// <summary>
+    /// Available streaming platform identifiers for account linking.
+    /// </summary>
+    private List<string> _availablePlatforms = ["twitch"];
+
+    /// <summary>
+    /// Authenticated panel user identifier.
+    /// </summary>
+    private Guid? _panelUserId;
+
+    /// <summary>
+    /// Indicates whether the current session is still awaiting MFA completion or enrollment.
+    /// </summary>
+    private bool _isMfaPending;
+
+    /// <summary>
+    /// Indicates whether the current principal carries <see cref="AuthClaims.MfaEnrollmentRequiredClaimType"/>.
+    /// </summary>
+    private bool _isEnrollmentRequiredClaim;
+
+    /// <summary>
+    /// Validated safe local return URL.
+    /// </summary>
+    private string _safeReturnUrl = "/";
+
+    /// <summary>
+    /// Effective MFA policy governing allowed enrollment methods.
+    /// </summary>
+    private EffectiveMfaPolicy _policy = new(
+        MfaMethodAvailability.Allowed,
+        MfaMethodAvailability.Allowed,
+        PanelLoginMfaRequirement.Optional,
+        StepUpSudoPolicy.Optional);
+
+    /// <summary>
+    /// Enrolled MFA credential metadata summaries.
+    /// </summary>
+    private IReadOnlyList<MfaCredentialSummary> _summaries = [];
+
+    /// <summary>
+    /// Linked external login identities for the current user.
+    /// </summary>
+    private IReadOnlyList<UserLoginIdentity> _linkedIdentities = [];
+
+    /// <summary>
+    /// Optional friendly display name for a newly registered passkey.
+    /// </summary>
+    private string _passkeyName = string.Empty;
+
+    /// <summary>
+    /// Pending Base32 TOTP secret during enrollment.
+    /// </summary>
+    private string? _pendingTotpSecret;
+
+    /// <summary>
+    /// Pending <c>otpauth://</c> provisioning URI during TOTP enrollment.
+    /// </summary>
+    private string? _pendingOtpAuthUri;
+
+    /// <summary>
+    /// User-entered 6-digit TOTP confirmation code.
+    /// </summary>
+    private string _totpConfirmCode = string.Empty;
+
+    /// <summary>
+    /// Newly generated plaintext recovery codes shown once after TOTP confirmation.
+    /// </summary>
+    private IReadOnlyList<string>? _revealedRecoveryCodes;
+
+    /// <summary>
+    /// Status banner message.
+    /// </summary>
+    private string? _statusMessage;
+
+    /// <summary>
+    /// Error banner message.
+    /// </summary>
+    private string? _errorMessage;
+
+    /// <summary>
+    /// Initializes enrolled credentials, effective MFA policy, and linked external identities.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        List<string> discoveredPlatforms = [.. PlatformProviders
+            .Select(static p => p.PlatformId)
+            .Where(static p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static p => p, StringComparer.OrdinalIgnoreCase)];
+        if (discoveredPlatforms.Count > 0)
+        {
+            _availablePlatforms = discoveredPlatforms;
+        }
+
+        _safeReturnUrl = AuthClaims.SafeReturnUrlOrDefault(ReturnUrl, "/");
+
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        ClaimsPrincipal principal = authState.User;
+        _panelUserId = AuthClaims.GetPanelUserId(principal);
+        _isMfaPending = AuthClaims.HasTrueClaim(principal, AuthClaims.MfaPendingClaimType);
+        _isEnrollmentRequiredClaim = AuthClaims.HasTrueClaim(principal, AuthClaims.MfaEnrollmentRequiredClaimType);
+
+        IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
+        PanelUser? user = panelUserStore is not null && _panelUserId.HasValue
+            ? await panelUserStore.GetByIdAsync(_panelUserId.Value).ConfigureAwait(false)
+            : null;
+
+        if (user is not null && panelUserStore is not null)
+        {
+            _linkedIdentities = await panelUserStore
+                .GetLoginIdentitiesAsync(user.Id)
+                .ConfigureAwait(false);
+            IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(principal);
+            _policy = await MfaPolicyService
+                .GetEffectivePolicyForUserAsync(user, _linkedIdentities, oidcGroups, workspaceId: null)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            _policy = await MfaPolicyService
+                .GetEffectivePolicyAsync(workspaceId: null)
+                .ConfigureAwait(false);
+        }
+
+        await ReloadSummariesAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Reloads the user's enrolled MFA credential summaries.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
+    private async Task ReloadSummariesAsync() =>
+        _summaries = _panelUserId.HasValue
+            ? await MfaCredentialStore.GetSummariesAsync(_panelUserId.Value).ConfigureAwait(false)
+            : [];
+
+    /// <summary>
+    /// Initiates WebAuthn passkey registration via <c>window.streamActionsWebAuthn.registerPasskey</c>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous registration operation.</returns>
+    private async Task RegisterPasskeyAsync()
+    {
+        ClearMessages();
+        string redirectTarget = (EnrollRequired == true || _isEnrollmentRequiredClaim)
+            ? _safeReturnUrl
+            : "/account/mfa";
+
+        try
+        {
+            _ = await JS.InvokeAsync<object?>(
+                "streamActionsWebAuthn.registerPasskey",
+                _passkeyName,
+                redirectTarget).ConfigureAwait(false);
+        }
+        catch (JSException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Initiates TOTP enrollment by requesting a Base32 secret and <c>otpauth://</c> URI from <c>/auth/mfa/totp/enroll/begin</c>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task BeginTotpEnrollmentAsync()
+    {
+        ClearMessages();
+        _revealedRecoveryCodes = null;
+
+        try
+        {
+            TotpEnrollBeginDto result = await JS
+                .InvokeAsync<TotpEnrollBeginDto>("streamActionsWebAuthn.beginTotpEnrollment")
+                .ConfigureAwait(false);
+
+            _pendingTotpSecret = result.SecretBase32;
+            _pendingOtpAuthUri = result.OtpAuthUri;
+            _totpConfirmCode = string.Empty;
+        }
+        catch (JSException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Confirms TOTP enrollment with the 6-digit verification code and reveals the generated one-time recovery codes.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous confirmation operation.</returns>
+    private async Task ConfirmTotpEnrollmentAsync()
+    {
+        ClearMessages();
+        if (string.IsNullOrWhiteSpace(_totpConfirmCode))
+        {
+            _errorMessage = "Enter the 6-digit code from your authenticator app.";
+            return;
+        }
+
+        try
+        {
+            TotpEnrollConfirmDto result = await JS
+                .InvokeAsync<TotpEnrollConfirmDto>("streamActionsWebAuthn.confirmTotpEnrollment", _totpConfirmCode.Trim())
+                .ConfigureAwait(false);
+
+            _pendingTotpSecret = null;
+            _pendingOtpAuthUri = null;
+            _totpConfirmCode = string.Empty;
+            _revealedRecoveryCodes = result.RecoveryCodes ?? [];
+            _isMfaPending = false;
+            _isEnrollmentRequiredClaim = false;
+            await ReloadSummariesAsync().ConfigureAwait(false);
+            _statusMessage = "Authenticator app enrolled. Save your recovery codes below.";
+        }
+        catch (JSException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Cancels in-progress TOTP enrollment.
+    /// </summary>
+    private void CancelTotpEnrollment()
+    {
+        _pendingTotpSecret = null;
+        _pendingOtpAuthUri = null;
+        _totpConfirmCode = string.Empty;
+    }
+
+    /// <summary>
+    /// Deletes an enrolled MFA credential owned by the current user.
+    /// </summary>
+    /// <param name="credentialId">The credential record identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous delete operation.</returns>
+    private async Task DeleteCredentialAsync(Guid credentialId)
+    {
+        ClearMessages();
+        if (!_panelUserId.HasValue || _isMfaPending)
+        {
+            _errorMessage = "Complete MFA verification before modifying credentials.";
+            return;
+        }
+
+        bool deleted = await MfaCredentialStore
+            .DeleteCredentialAsync(_panelUserId.Value, credentialId)
+            .ConfigureAwait(false);
+
+        if (!deleted)
+        {
+            _errorMessage = "MFA credential was not found.";
+            return;
+        }
+
+        await ReloadSummariesAsync().ConfigureAwait(false);
+        _statusMessage = "Removed MFA credential.";
+    }
+
+    /// <summary>
+    /// Clears visible status and error messages.
+    /// </summary>
+    private void ClearMessages()
+    {
+        _statusMessage = null;
+        _errorMessage = null;
+    }
+
+    /// <summary>
+    /// Deserialized response returned from <c>POST /auth/mfa/totp/enroll/begin</c>.
+    /// </summary>
+    private sealed record TotpEnrollBeginDto
+    {
+        /// <summary>
+        /// Gets the Base32 shared secret.
+        /// </summary>
+        [JsonPropertyName("secretBase32")]
+        public string? SecretBase32 { get; init; }
+
+        /// <summary>
+        /// Gets the <c>otpauth://</c> provisioning URI string.
+        /// </summary>
+        [JsonPropertyName("otpAuthUri")]
+        public string? OtpAuthUri { get; init; }
+    }
+
+    /// <summary>
+    /// Deserialized response returned from <c>POST /auth/mfa/totp/enroll/confirm</c>.
+    /// </summary>
+    private sealed record TotpEnrollConfirmDto
+    {
+        /// <summary>
+        /// Gets the newly generated plaintext recovery codes.
+        /// </summary>
+        [JsonPropertyName("recoveryCodes")]
+        public IReadOnlyList<string>? RecoveryCodes { get; init; }
+    }
+}
+

@@ -345,6 +345,121 @@ public sealed class PermissionServiceTests
         }
     }
 
+    [Fact]
+    [Trait("Member", "EvaluateAsync")]
+    public async Task EvaluateAsyncWhenOidcGroupClaimMatchesGroupAllowsCaseInsensitivelyAndTrimmed()
+    {
+        (PermissionService service, FakePermissionStore store, _, InMemoryEventBus eventBus, ServiceProvider provider) = CreateSut();
+        await using (provider.ConfigureAwait(false))
+        using (eventBus)
+        {
+            Guid oidcGroupId = Guid.NewGuid();
+            store.WorkspaceGroups[oidcGroupId] = new()
+            {
+                Id = oidcGroupId,
+                WorkspaceId = _workspaceId,
+                Name = "OIDC Staff",
+                MappedOidcGroupClaim = "  stream-staff  ",
+            };
+            store.Grants.Add(new()
+            {
+                Id = Guid.NewGuid(),
+                GroupId = oidcGroupId,
+                PermissionKey = BuiltInPermissionKeys.UiPanelAccess,
+                State = PermissionState.Allow,
+            });
+
+            PlatformUserIdentity matchingActor = new(
+                "oidc",
+                "sub-123",
+                "alice",
+                OidcGroupClaims: ["viewers", "  STREAM-STAFF "]);
+
+            PlatformUserIdentity nonMatchingActor = new(
+                "oidc",
+                "sub-456",
+                "bob",
+                OidcGroupClaims: ["viewers", "other-group"]);
+
+            PermissionEvaluationResult matched = await service.EvaluateAsync(
+                _workspaceId,
+                matchingActor,
+                BuiltInPermissionKeys.UiPanelAccess,
+                TestContext.Current.CancellationToken);
+
+            PermissionEvaluationResult unmatched = await service.EvaluateAsync(
+                _workspaceId,
+                nonMatchingActor,
+                BuiltInPermissionKeys.UiPanelAccess,
+                TestContext.Current.CancellationToken);
+
+            _ = matched.IsAllowed.Should().BeTrue();
+            _ = matched.EffectiveState.Should().Be(PermissionState.Allow);
+            _ = unmatched.IsAllowed.Should().BeFalse();
+            _ = unmatched.EffectiveState.Should().Be(PermissionState.Inherit);
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "EvaluateAsync")]
+    public async Task EvaluateAsyncWhenOidcGroupClaimGroupExplicitlyDeniesDeniesEvenIfAnotherGroupAllows()
+    {
+        (PermissionService service, FakePermissionStore store, _, InMemoryEventBus eventBus, ServiceProvider provider) = CreateSut();
+        await using (provider.ConfigureAwait(false))
+        using (eventBus)
+        {
+            Guid modGroupId = Guid.NewGuid();
+            store.WorkspaceGroups[modGroupId] = new()
+            {
+                Id = modGroupId,
+                WorkspaceId = _workspaceId,
+                Name = "Moderators",
+                MappedPlatformDesignation = "Moderator",
+            };
+            store.Grants.Add(new()
+            {
+                Id = Guid.NewGuid(),
+                GroupId = modGroupId,
+                PermissionKey = BuiltInPermissionKeys.UiSecretsView,
+                State = PermissionState.Allow,
+            });
+
+            Guid restrictedOidcGroupId = Guid.NewGuid();
+            store.WorkspaceGroups[restrictedOidcGroupId] = new()
+            {
+                Id = restrictedOidcGroupId,
+                WorkspaceId = _workspaceId,
+                Name = "Restricted OIDC Contractors",
+                MappedOidcGroupClaim = "contractors",
+            };
+            store.Grants.Add(new()
+            {
+                Id = Guid.NewGuid(),
+                GroupId = restrictedOidcGroupId,
+                PermissionKey = BuiltInPermissionKeys.UiSecretsView,
+                State = PermissionState.Deny,
+            });
+
+            PlatformUserIdentity actor = new(
+                "twitch",
+                "u-99",
+                "contractor_mod",
+                Designations: PlatformUserDesignations.Moderator,
+                OidcGroupClaims: ["Contractors"]);
+
+            PermissionEvaluationResult result = await service.EvaluateAsync(
+                _workspaceId,
+                actor,
+                BuiltInPermissionKeys.UiSecretsView,
+                TestContext.Current.CancellationToken);
+
+            _ = result.IsAllowed.Should().BeFalse();
+            _ = result.EffectiveState.Should().Be(PermissionState.Deny);
+            _ = result.DenyingGroupId.Should().Be(restrictedOidcGroupId);
+            _ = result.DenyingGroupName.Should().Be("Restricted OIDC Contractors");
+        }
+    }
+
     #endregion
 
     /// <summary>

@@ -100,6 +100,26 @@ public static class BuiltInPermissionKeys
     public const string FeaturePlugins = "feature.plugins";
 
     /// <summary>
+    /// Enables configuring and using custom per-workspace platform OAuth application credentials.
+    /// </summary>
+    public const string FeatureCustomOAuthApp = "feature.custom_oauth_app";
+
+    /// <summary>
+    /// Enables connecting and using a custom per-workspace bot chat account.
+    /// </summary>
+    public const string FeatureCustomBotAccount = "feature.custom_bot_account";
+
+    /// <summary>
+    /// Enables configuring and using custom per-workspace external OIDC identity providers.
+    /// </summary>
+    public const string FeatureCustomOidcProvider = "feature.auth.custom_oidc_provider";
+
+    /// <summary>
+    /// Allows accessing the workspace web panel.
+    /// </summary>
+    public const string UiPanelAccess = "ui.panel.access";
+
+    /// <summary>
     /// Allows viewing the workspace dashboard in the web panel.
     /// </summary>
     public const string UiDashboardView = "ui.dashboard.view";
@@ -113,6 +133,21 @@ public static class BuiltInPermissionKeys
     /// Allows creating, editing, and deleting custom commands in the web panel.
     /// </summary>
     public const string UiCommandsEdit = "ui.commands.edit";
+
+    /// <summary>
+    /// Allows editing custom command script routines in the web panel.
+    /// </summary>
+    public const string UiCommandsScriptEdit = "ui.commands.script.edit";
+
+    /// <summary>
+    /// Allows viewing workspace secrets metadata in the web panel.
+    /// </summary>
+    public const string UiSecretsView = "ui.secrets.view";
+
+    /// <summary>
+    /// Allows creating, updating, and deleting workspace secrets in the web panel.
+    /// </summary>
+    public const string UiSecretsManage = "ui.secrets.manage";
 
     /// <summary>
     /// Allows managing timers in the web panel.

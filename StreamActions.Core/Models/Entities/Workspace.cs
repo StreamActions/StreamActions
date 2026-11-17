@@ -49,6 +49,26 @@ public sealed class Workspace
     public bool AllowCustomBotAccountOverride { get; set; }
 
     /// <summary>
+    /// Gets or sets the workspace-level availability policy for WebAuthn passkeys.
+    /// </summary>
+    public MfaMethodAvailability MfaPasskeyAvailability { get; set; } = MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Gets or sets the workspace-level availability policy for TOTP authenticator apps.
+    /// </summary>
+    public MfaMethodAvailability MfaTotpAvailability { get; set; } = MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Gets or sets the workspace-level panel login MFA requirement.
+    /// </summary>
+    public PanelLoginMfaRequirement LoginMfaRequirement { get; set; } = PanelLoginMfaRequirement.Optional;
+
+    /// <summary>
+    /// Gets or sets the workspace-level step-up ("Sudo Mode") MFA policy for sensitive actions.
+    /// </summary>
+    public StepUpSudoPolicy StepUpSudoPolicy { get; set; } = StepUpSudoPolicy.Optional;
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when the workspace was created.
     /// </summary>
     public DateTimeOffset CreatedAtUtc { get; set; }
