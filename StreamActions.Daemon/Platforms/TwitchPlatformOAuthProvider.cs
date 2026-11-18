@@ -43,6 +43,37 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
     public const string HttpClientName = "TwitchOAuth";
 
     /// <summary>
+    /// Default scopes requested for Twitch panel login and identity linking flows.
+    /// </summary>
+    private static readonly string[] _defaultLoginScopes = ["openid", "user:read:email"];
+
+    /// <summary>
+    /// Default scopes requested for Twitch broadcaster workspace authorization flows.
+    /// </summary>
+    private static readonly string[] _defaultBroadcasterScopes =
+    [
+        "openid",
+        "user:read:email",
+        "channel:bot",
+        "chat:read",
+        "chat:edit",
+        "moderator:manage:banned_users",
+        "moderator:manage:chat_messages",
+    ];
+
+    /// <summary>
+    /// Default scopes requested for Twitch bot chat account authorization flows.
+    /// </summary>
+    private static readonly string[] _defaultBotScopes =
+    [
+        "user:read:chat",
+        "user:write:chat",
+        "user:bot",
+        "chat:read",
+        "chat:edit",
+    ];
+
+    /// <summary>
     /// Optional HTTP client factory for creating outbound HTTP clients.
     /// </summary>
     private readonly IHttpClientFactory? _httpClientFactory;
@@ -99,6 +130,15 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
 
     /// <inheritdoc />
     public string PlatformId => "twitch";
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> DefaultLoginScopes => _defaultLoginScopes;
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> DefaultBroadcasterScopes => _defaultBroadcasterScopes;
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> DefaultBotScopes => _defaultBotScopes;
 
     /// <inheritdoc />
     public Uri BuildAuthorizationUri(

@@ -39,9 +39,19 @@ public sealed class Workspace
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the unique normalized lowercase URL-friendly workspace slug.
+    /// </summary>
+    public string Slug { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the identifier of the primary platform anchoring this workspace.
     /// </summary>
     public string PrimaryPlatformId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether non-admin users must authenticate via an external OIDC provider to access this workspace.
+    /// </summary>
+    public bool RequireExternalOidcLogin { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this workspace may override the instance default bot account.
@@ -66,7 +76,7 @@ public sealed class Workspace
     /// <summary>
     /// Gets or sets the workspace-level step-up ("Sudo Mode") MFA policy for sensitive actions.
     /// </summary>
-    public StepUpSudoPolicy StepUpSudoPolicy { get; set; } = StepUpSudoPolicy.Optional;
+    public StepUpSudoPolicy StepUpSudoPolicy { get; set; } = StepUpSudoPolicy.Required;
 
     /// <summary>
     /// Gets or sets the UTC timestamp when the workspace was created.

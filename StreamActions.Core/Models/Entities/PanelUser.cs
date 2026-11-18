@@ -44,6 +44,11 @@ public sealed class PanelUser
     public bool IsGlobalAdmin { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether an instance administrator removed this user's MFA credentials and a notice banner is pending.
+    /// </summary>
+    public bool MfaResetByAdminNoticePending { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when the user was created.
     /// </summary>
     public DateTimeOffset CreatedAtUtc { get; set; }

@@ -21,6 +21,7 @@
 @rendermode InteractiveServer
 @implements IDisposable
 
+@using Microsoft.Extensions.DependencyInjection
 @using StreamActions.Core.Abstractions
 @using StreamActions.Core.Models
 @using StreamActions.Core.Models.Entities
@@ -30,10 +31,29 @@
 @inject IPermissionService PermissionService
 @inject IPermissionRegistry PermissionRegistry
 @inject IEventBus EventBus
+@inject IServiceProvider ServiceProvider
 
-<PageTitle>Global Permissions (Tier 1)</PageTitle>
+<PageTitle>@AuthPolicyParser.FormatPageTitle("Global Permissions (Tier 1)", _instanceName)</PageTitle>
 
 <h1>Global Permissions (Tier 1)</h1>
+
+<p data-permission-hierarchy-guide="true">
+    <strong>Permission Hierarchy (Allow / Inherit / Explicit Deny):</strong>
+    <strong>Explicit Deny</strong> always wins over <strong>Allow</strong> across all matching groups.
+    <strong>Allow</strong> grants a permission when no Explicit Deny exists.
+    <strong>Inherit</strong> defers to other groups and defaults to Deny if no group grants Allow.
+    Tier 1 Global Groups govern <code>[Globally Gated]</code> features across assigned workspaces before Tier 2 Workspace Groups are evaluated.
+</p>
+
+<div>
+    <label for="global-permissions-search">Search Permissions, Global Groups &amp; Workspaces:</label>
+    <input id="global-permissions-search"
+           data-global-permissions-search="true"
+           type="search"
+           @bind="_searchQuery"
+           @bind:event="oninput"
+           placeholder="Filter permissions, global groups, or workspaces..." />
+</div>
 
 @if (!string.IsNullOrWhiteSpace(_statusMessage))
 {
@@ -54,16 +74,24 @@
     }
     else
     {
-        <ul>
-            @foreach (PermissionGroup group in _globalGroups)
-            {
-                <li>
-                    <strong>@group.Name</strong>
-                    <code>(@group.Id)</code>
-                    <button type="button" @onclick="() => DeleteGlobalGroupAsync(group.Id)">Delete</button>
-                </li>
-            }
-        </ul>
+        List<PermissionGroup> filteredGroups = [.. _globalGroups.Where(MatchesGlobalGroupSearch)];
+        @if (filteredGroups.Count == 0)
+        {
+            <p>No global permission groups match the current search.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (PermissionGroup group in filteredGroups)
+                {
+                    <li>
+                        <strong>@group.Name</strong>
+                        <code>(@group.Id)</code>
+                        <button type="button" @onclick="() => DeleteGlobalGroupAsync(group.Id)">Delete</button>
+                    </li>
+                }
+            </ul>
+        }
     }
 </section>
 
@@ -75,14 +103,16 @@
     }
     else
     {
+        bool anyPermissionRendered = false;
         @foreach (string category in _categories)
         {
-            IReadOnlyList<PermissionDescriptor> descriptors = PermissionRegistry.GetByCategory(category);
+            List<PermissionDescriptor> descriptors = [.. PermissionRegistry.GetByCategory(category).Where(MatchesPermissionSearch)];
             if (descriptors.Count == 0)
             {
                 continue;
             }
 
+            anyPermissionRendered = true;
             <h3>@category</h3>
             <table>
                 <thead>
@@ -125,14 +155,25 @@
                 </tbody>
             </table>
         }
+
+        @if (!anyPermissionRendered)
+        {
+            <p>No permissions match the current search.</p>
+        }
     }
 </section>
 
 <section aria-labelledby="workspace-assignments-heading">
     <h2 id="workspace-assignments-heading">Workspace Assignments</h2>
     <div>
-        <label for="assignment-workspace-id">Workspace ID:</label>
-        <input id="assignment-workspace-id" type="text" @bind="_workspaceIdInput" placeholder="Enter Workspace GUID" />
+        <label for="assignment-workspace-select">Workspace:</label>
+        <select id="assignment-workspace-select" @bind="_selectedWorkspaceId" @bind:after="LoadWorkspaceAssignmentsAsync">
+            <option value="">-- Select a workspace --</option>
+            @foreach (Workspace workspace in _workspaces.Where(MatchesWorkspaceSearch))
+            {
+                <option value="@workspace.Id.ToString("D")">@($"{workspace.Name} ({workspace.PrimaryPlatformId})")</option>
+            }
+        </select>
         <button type="button" @onclick="LoadWorkspaceAssignmentsAsync">Inspect Workspace</button>
 
         @if (_globalGroups.Count > 0)
@@ -150,7 +191,11 @@
 
     @if (_inspectedWorkspaceId is not null)
     {
-        <h3>Assigned Global Groups for @_inspectedWorkspaceId</h3>
+        Workspace? inspectedWorkspace = _workspaces.FirstOrDefault(w => w.Id == _inspectedWorkspaceId);
+        string workspaceLabel = inspectedWorkspace is not null
+            ? $"{inspectedWorkspace.Name} ({inspectedWorkspace.PrimaryPlatformId})"
+            : _inspectedWorkspaceId.Value.ToString("D");
+        <h3>Assigned Global Groups for @workspaceLabel</h3>
         @if (_assignedWorkspaceGroups.Count == 0)
         {
             <p>No global groups assigned to this workspace.</p>
@@ -171,21 +216,81 @@
 </section>
 
 @code {
+    /// <summary>
+    /// Cached global permission grant states keyed by group and permission key.
+    /// </summary>
     private readonly Dictionary<(Guid GroupId, string PermissionKey), PermissionState> _grantStates = [];
 
+    /// <summary>
+    /// Configured Tier-1 global permission groups.
+    /// </summary>
     private IReadOnlyList<PermissionGroup> _globalGroups = [];
+
+    /// <summary>
+    /// Registered permission categories.
+    /// </summary>
     private IReadOnlyList<string> _categories = [];
+
+    /// <summary>
+    /// All known workspaces loaded from <see cref="IWorkspaceStore"/> when available.
+    /// </summary>
+    private IReadOnlyList<Workspace> _workspaces = [];
+
+    /// <summary>
+    /// Page-level search query filtering permissions, global groups, and workspaces.
+    /// </summary>
+    private string _searchQuery = string.Empty;
+
+    /// <summary>
+    /// New global group name input.
+    /// </summary>
     private string _newGlobalGroupName = string.Empty;
-    private string _workspaceIdInput = string.Empty;
+
+    /// <summary>
+    /// Currently selected workspace identifier in the workspace assignment dropdown.
+    /// </summary>
+    private Guid? _selectedWorkspaceId;
+
+    /// <summary>
+    /// Currently selected global group identifier for workspace assignment.
+    /// </summary>
     private Guid _selectedGlobalGroupId;
+
+    /// <summary>
+    /// Workspace identifier whose assigned global groups are currently displayed.
+    /// </summary>
     private Guid? _inspectedWorkspaceId;
+
+    /// <summary>
+    /// Global permission groups assigned to <see cref="_inspectedWorkspaceId"/>.
+    /// </summary>
     private IReadOnlyList<PermissionGroup> _assignedWorkspaceGroups = [];
+
+    /// <summary>
+    /// Status banner message.
+    /// </summary>
     private string? _statusMessage;
+
+    /// <summary>
+    /// Event bus subscription for permission invalidation notifications.
+    /// </summary>
     private IDisposable? _eventSubscription;
+
+    /// <summary>
+    /// Operator-configured instance display name.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
 
     /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
     {
+        IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
+        if (settingsService is not null)
+        {
+            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        }
+
         _eventSubscription = EventBus.Subscribe<PermissionsInvalidatedEvent>(OnPermissionsInvalidatedAsync);
         await LoadGlobalDataAsync();
     }
@@ -197,6 +302,62 @@
         _eventSubscription = null;
     }
 
+    /// <summary>
+    /// Determines whether a permission descriptor matches the current <see cref="_searchQuery"/>.
+    /// </summary>
+    /// <param name="descriptor">The permission descriptor.</param>
+    /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
+    private bool MatchesPermissionSearch(PermissionDescriptor descriptor)
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            return true;
+        }
+
+        string term = _searchQuery.Trim();
+        return descriptor.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Key.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Description.Contains(term, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Determines whether a global permission group matches the current <see cref="_searchQuery"/>.
+    /// </summary>
+    /// <param name="group">The permission group.</param>
+    /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
+    private bool MatchesGlobalGroupSearch(PermissionGroup group)
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            return true;
+        }
+
+        return group.Name.Contains(_searchQuery.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Determines whether a workspace matches the current <see cref="_searchQuery"/>.
+    /// </summary>
+    /// <param name="workspace">The workspace entity.</param>
+    /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
+    private bool MatchesWorkspaceSearch(Workspace workspace)
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            return true;
+        }
+
+        string term = _searchQuery.Trim();
+        return workspace.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || workspace.PrimaryPlatformId.Contains(term, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Retrieves the cached permission grant state for a global group and permission key.
+    /// </summary>
+    /// <param name="groupId">The global group identifier.</param>
+    /// <param name="permissionKey">The permission key.</param>
+    /// <returns>The configured <see cref="PermissionState"/>, defaulting to <see cref="PermissionState.Inherit"/>.</returns>
     private PermissionState GetGrantState(Guid groupId, string permissionKey)
     {
         return _grantStates.TryGetValue((groupId, permissionKey), out PermissionState state)
@@ -204,6 +365,10 @@
             : PermissionState.Inherit;
     }
 
+    /// <summary>
+    /// Creates a new Tier-1 global permission group.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task CreateGlobalGroupAsync()
     {
         if (string.IsNullOrWhiteSpace(_newGlobalGroupName))
@@ -226,6 +391,11 @@
         _statusMessage = $"Created global group '{newGroup.Name}'.";
     }
 
+    /// <summary>
+    /// Deletes a Tier-1 global permission group.
+    /// </summary>
+    /// <param name="groupId">The global group identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task DeleteGlobalGroupAsync(Guid groupId)
     {
         await PermissionStore.DeleteGroupAsync(groupId);
@@ -234,6 +404,13 @@
         _statusMessage = "Deleted global group.";
     }
 
+    /// <summary>
+    /// Updates a Tier-1 permission grant state for a global group.
+    /// </summary>
+    /// <param name="groupId">The global group identifier.</param>
+    /// <param name="permissionKey">The permission key.</param>
+    /// <param name="args">The change event arguments containing the selected <see cref="PermissionState"/>.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task OnGrantChangedAsync(Guid groupId, string permissionKey, ChangeEventArgs args)
     {
         if (!Enum.TryParse(args.Value?.ToString(), out PermissionState newState))
@@ -247,11 +424,19 @@
         _statusMessage = $"Updated global grant '{permissionKey}' to {newState}.";
     }
 
+    /// <summary>
+    /// Loads the assigned Tier-1 global groups for the currently selected workspace.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task LoadWorkspaceAssignmentsAsync()
     {
-        if (!Guid.TryParse(_workspaceIdInput.Trim(), out Guid workspaceId))
+        if (_selectedWorkspaceId is not Guid workspaceId || workspaceId == Guid.Empty)
         {
-            _statusMessage = "Please enter a valid Workspace GUID.";
+            _inspectedWorkspaceId = null;
+            _assignedWorkspaceGroups = [];
+            _statusMessage = _workspaces.Count == 0
+                ? "No workspaces are available."
+                : "Please select a workspace.";
             return;
         }
 
@@ -260,11 +445,15 @@
         _statusMessage = null;
     }
 
+    /// <summary>
+    /// Assigns the selected Tier-1 global group to the selected workspace.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task AssignWorkspaceAsync()
     {
-        if (!Guid.TryParse(_workspaceIdInput.Trim(), out Guid workspaceId) || _selectedGlobalGroupId == Guid.Empty)
+        if (_selectedWorkspaceId is not Guid workspaceId || workspaceId == Guid.Empty || _selectedGlobalGroupId == Guid.Empty)
         {
-            _statusMessage = "Please enter a valid Workspace GUID and select a global group.";
+            _statusMessage = "Please select a workspace and a global group.";
             return;
         }
 
@@ -275,6 +464,11 @@
         _statusMessage = "Assigned workspace to global group.";
     }
 
+    /// <summary>
+    /// Removes a Tier-1 global group assignment from the inspected workspace.
+    /// </summary>
+    /// <param name="globalGroupId">The global group identifier to remove.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task RemoveWorkspaceAssignmentAsync(Guid globalGroupId)
     {
         if (_inspectedWorkspaceId is not Guid workspaceId)
@@ -288,6 +482,10 @@
         _statusMessage = "Removed workspace assignment from global group.";
     }
 
+    /// <summary>
+    /// Loads categories, global groups, grant states, available workspaces, and current workspace assignments.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
     private async Task LoadGlobalDataAsync()
     {
         _categories = PermissionRegistry.GetCategories();
@@ -303,6 +501,17 @@
             }
         }
 
+        IWorkspaceStore? workspaceStore = ServiceProvider.GetService<IWorkspaceStore>();
+        _workspaces = workspaceStore is not null
+            ? await workspaceStore.GetAllAsync().ConfigureAwait(false)
+            : [];
+
+        if (_workspaces.Count > 0 && (!_selectedWorkspaceId.HasValue || !_workspaces.Any(w => w.Id == _selectedWorkspaceId.Value)))
+        {
+            _selectedWorkspaceId = _workspaces[0].Id;
+            _inspectedWorkspaceId = _selectedWorkspaceId;
+        }
+
         if (_globalGroups.Count > 0 && !_globalGroups.Any(g => g.Id == _selectedGlobalGroupId))
         {
             _selectedGlobalGroupId = _globalGroups[0].Id;
@@ -314,6 +523,12 @@
         }
     }
 
+    /// <summary>
+    /// Refreshes global permission data when a <see cref="PermissionsInvalidatedEvent"/> is received.
+    /// </summary>
+    /// <param name="evt">The invalidation event.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the asynchronous refresh.</returns>
     private ValueTask OnPermissionsInvalidatedAsync(PermissionsInvalidatedEvent evt, CancellationToken cancellationToken)
     {
         if (evt.WorkspaceId is not null && evt.WorkspaceId != _inspectedWorkspaceId)

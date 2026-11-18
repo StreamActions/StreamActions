@@ -31,6 +31,21 @@ public interface IPlatformOAuthProvider
     string PlatformId { get; }
 
     /// <summary>
+    /// Gets the default OAuth scopes requested for panel sign-in and identity linking flows on this platform.
+    /// </summary>
+    IReadOnlyList<string> DefaultLoginScopes { get; }
+
+    /// <summary>
+    /// Gets the default OAuth scopes requested for broadcaster workspace authorization flows on this platform.
+    /// </summary>
+    IReadOnlyList<string> DefaultBroadcasterScopes { get; }
+
+    /// <summary>
+    /// Gets the default OAuth scopes requested for bot chat account authorization flows on this platform.
+    /// </summary>
+    IReadOnlyList<string> DefaultBotScopes { get; }
+
+    /// <summary>
     /// Builds an authorization URL for initiating an OAuth 2.0 or OpenID Connect authorization code flow.
     /// </summary>
     /// <param name="clientId">The OAuth application client identifier.</param>

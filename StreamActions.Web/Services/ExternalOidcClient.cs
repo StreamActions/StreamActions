@@ -85,6 +85,7 @@ public sealed class ExternalOidcClient : IExternalOidcClient
         Uri redirectUri,
         string? state = null,
         string? nonce = null,
+        string? prompt = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(provider);
@@ -115,6 +116,11 @@ public sealed class ExternalOidcClient : IExternalOidcClient
             { "code_challenge", codeChallenge },
             { "code_challenge_method", "S256" },
         };
+
+        if (!string.IsNullOrWhiteSpace(prompt))
+        {
+            queryParameters.Add("prompt", prompt.Trim());
+        }
 
         Uri authorizationUri = Util.BuildUri(new(config.AuthorizationEndpoint), queryParameters);
         return new ExternalOidcAuthorizationRequest(

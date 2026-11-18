@@ -38,7 +38,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
-<PageTitle>Workspace Platforms - StreamActions</PageTitle>
+<PageTitle>@AuthPolicyParser.FormatPageTitle("Workspace Platforms", _instanceName)</PageTitle>
 
 <h1>Workspace Platforms</h1>
 
@@ -63,15 +63,17 @@ else
         <p>Primary Platform: <strong>@_activeWorkspace.Workspace.PrimaryPlatformId</strong></p>
         <p>Bot Account Policy: <strong>@_botPolicy</strong> | OAuth App Policy: <strong>@_oauthPolicy</strong></p>
 
-        @if (_botPolicy == InstanceBotAccountPolicy.DefaultWithOptionalOverride && _customBotFeatureAllowed)
+        @if (_botPolicy != InstanceBotAccountPolicy.RequireStreamerBotAccount)
         {
+            bool customBotBlocked = IsCustomBotOverrideBlockedByRoot();
             <div>
                 <label for="allow-custom-bot-override">
                     <input id="allow-custom-bot-override"
                            type="checkbox"
-                           checked="@_activeWorkspace.Workspace.AllowCustomBotAccountOverride"
+                           disabled="@customBotBlocked"
+                           checked="@(_activeWorkspace.Workspace.AllowCustomBotAccountOverride && !customBotBlocked)"
                            @onchange="ToggleCustomBotOverrideAsync" />
-                    Allow custom bot account override for this workspace
+                    Allow custom bot account override for this workspace@(customBotBlocked ? " (blocked by root policy)" : string.Empty)
                 </label>
             </div>
         }
@@ -84,35 +86,63 @@ else
         <p>Workspace policies can enforce stricter rules than instance defaults (strictest setting always wins).</p>
         <div>
             <label for="ws-mfa-passkey-availability">Passkey (WebAuthn) Availability</label>
-            <select id="ws-mfa-passkey-availability" @bind="_wsMfaPasskeyAvailability">
-                <option value="@MfaMethodAvailability.Allowed">Allowed</option>
-                <option value="@MfaMethodAvailability.Disabled">Disabled</option>
-                <option value="@MfaMethodAvailability.Required">Required</option>
+            <select id="ws-mfa-passkey-availability" disabled="@IsPasskeyPolicyFixedByRoot()" @bind="_wsMfaPasskeyAvailability">
+                <option value="@MfaMethodAvailability.Allowed" disabled="@IsPasskeyOptionBlocked(MfaMethodAvailability.Allowed)">@FormatOptionLabel("Allowed", IsPasskeyOptionBlocked(MfaMethodAvailability.Allowed))</option>
+                <option value="@MfaMethodAvailability.Disabled" disabled="@IsPasskeyOptionBlocked(MfaMethodAvailability.Disabled)">@FormatOptionLabel("Disabled", IsPasskeyOptionBlocked(MfaMethodAvailability.Disabled))</option>
+                <option value="@MfaMethodAvailability.Required" disabled="@IsPasskeyOptionBlocked(MfaMethodAvailability.Required)">@FormatOptionLabel("Required", IsPasskeyOptionBlocked(MfaMethodAvailability.Required))</option>
             </select>
+            @if (IsPasskeyPolicyFixedByRoot())
+            {
+                <span data-blocked-by-root-policy="true">(blocked by root policy)</span>
+            }
         </div>
         <div>
             <label for="ws-mfa-totp-availability">Authenticator App (TOTP) Availability</label>
-            <select id="ws-mfa-totp-availability" @bind="_wsMfaTotpAvailability">
-                <option value="@MfaMethodAvailability.Allowed">Allowed</option>
-                <option value="@MfaMethodAvailability.Disabled">Disabled</option>
-                <option value="@MfaMethodAvailability.Required">Required</option>
+            <select id="ws-mfa-totp-availability" disabled="@IsTotpPolicyFixedByRoot()" @bind="_wsMfaTotpAvailability">
+                <option value="@MfaMethodAvailability.Allowed" disabled="@IsTotpOptionBlocked(MfaMethodAvailability.Allowed)">@FormatOptionLabel("Allowed", IsTotpOptionBlocked(MfaMethodAvailability.Allowed))</option>
+                <option value="@MfaMethodAvailability.Disabled" disabled="@IsTotpOptionBlocked(MfaMethodAvailability.Disabled)">@FormatOptionLabel("Disabled", IsTotpOptionBlocked(MfaMethodAvailability.Disabled))</option>
+                <option value="@MfaMethodAvailability.Required" disabled="@IsTotpOptionBlocked(MfaMethodAvailability.Required)">@FormatOptionLabel("Required", IsTotpOptionBlocked(MfaMethodAvailability.Required))</option>
             </select>
+            @if (IsTotpPolicyFixedByRoot())
+            {
+                <span data-blocked-by-root-policy="true">(blocked by root policy)</span>
+            }
         </div>
         <div>
             <label for="ws-login-mfa-requirement">Workspace Login MFA Requirement</label>
-            <select id="ws-login-mfa-requirement" @bind="_wsLoginMfaRequirement">
-                <option value="@PanelLoginMfaRequirement.Optional">Optional</option>
-                <option value="@PanelLoginMfaRequirement.RequiredForRootAndStreamers">Required for Streamers</option>
-                <option value="@PanelLoginMfaRequirement.RequiredForModerators">Required for Moderators</option>
-                <option value="@PanelLoginMfaRequirement.RequiredForAll">Required for All Users</option>
+            <select id="ws-login-mfa-requirement" disabled="@IsLoginMfaPolicyFixedByRoot()" @bind="_wsLoginMfaRequirement">
+                <option value="@PanelLoginMfaRequirement.Optional" disabled="@IsLoginMfaOptionBlocked(PanelLoginMfaRequirement.Optional)">@FormatOptionLabel("Optional", IsLoginMfaOptionBlocked(PanelLoginMfaRequirement.Optional))</option>
+                <option value="@PanelLoginMfaRequirement.RequiredForRootAndStreamers" disabled="@IsLoginMfaOptionBlocked(PanelLoginMfaRequirement.RequiredForRootAndStreamers)">@FormatOptionLabel("Required for Streamers", IsLoginMfaOptionBlocked(PanelLoginMfaRequirement.RequiredForRootAndStreamers))</option>
+                <option value="@PanelLoginMfaRequirement.RequiredForModerators" disabled="@IsLoginMfaOptionBlocked(PanelLoginMfaRequirement.RequiredForModerators)">@FormatOptionLabel("Required for Moderators", IsLoginMfaOptionBlocked(PanelLoginMfaRequirement.RequiredForModerators))</option>
+                <option value="@PanelLoginMfaRequirement.RequiredForAll" disabled="@IsLoginMfaOptionBlocked(PanelLoginMfaRequirement.RequiredForAll)">@FormatOptionLabel("Required for All Users", IsLoginMfaOptionBlocked(PanelLoginMfaRequirement.RequiredForAll))</option>
             </select>
+            @if (IsLoginMfaPolicyFixedByRoot())
+            {
+                <span data-blocked-by-root-policy="true">(blocked by root policy)</span>
+            }
         </div>
         <div>
             <label for="ws-step-up-sudo-policy">Workspace Step-Up MFA Policy (Sudo Mode)</label>
-            <select id="ws-step-up-sudo-policy" @bind="_wsStepUpSudoPolicy">
-                <option value="@StepUpSudoPolicy.Optional">Optional</option>
-                <option value="@StepUpSudoPolicy.Required">Required</option>
+            <select id="ws-step-up-sudo-policy" disabled="@IsStepUpPolicyFixedByRoot()" @bind="_wsStepUpSudoPolicy">
+                <option value="@StepUpSudoPolicy.Optional" disabled="@IsStepUpOptionBlocked(StepUpSudoPolicy.Optional)">@FormatOptionLabel("Optional", IsStepUpOptionBlocked(StepUpSudoPolicy.Optional))</option>
+                <option value="@StepUpSudoPolicy.Required" disabled="@IsStepUpOptionBlocked(StepUpSudoPolicy.Required)">@FormatOptionLabel("Required", IsStepUpOptionBlocked(StepUpSudoPolicy.Required))</option>
             </select>
+            @if (IsStepUpPolicyFixedByRoot())
+            {
+                <span data-blocked-by-root-policy="true">(blocked by root policy)</span>
+            }
+        </div>
+        @{
+            bool externalOidcBlocked = IsExternalOidcBlockedByRoot();
+        }
+        <div>
+            <label for="ws-require-external-oidc">
+                <input id="ws-require-external-oidc"
+                       type="checkbox"
+                       disabled="@externalOidcBlocked"
+                       @bind="_wsRequireExternalOidcLogin" />
+                Require External OIDC login for non-admin workspace access@(externalOidcBlocked ? " (blocked by root policy)" : string.Empty)
+            </label>
         </div>
         <button type="button" @onclick="SaveWorkspaceMfaPoliciesAsync">Save Workspace MFA Policies</button>
     </section>
@@ -214,36 +244,53 @@ else
                         }
                     </div>
 
-                    @if (_oauthPolicy != InstanceOAuthAppPolicy.InstanceOnly)
-                    {
-                        <div data-custom-oauth="@platformId">
-                            <h4>Custom OAuth Application</h4>
-                            <p>
-                                Redirect / Callback URI:
-                                <code data-callback-uri="@platformId">@BuildCallbackUriDisplay(platformId)</code>
-                            </p>
-                            <div>
-                                <label for="custom-client-id-@platformId">Client ID</label>
-                                <input id="custom-client-id-@platformId"
-                                       type="text"
-                                       value="@GetClientIdInput(platformId)"
-                                       @onchange="(ChangeEventArgs args) => SetClientIdInput(platformId, args.Value?.ToString())"
-                                       autocomplete="off" />
-                            </div>
-                            <div>
-                                <label for="custom-client-secret-@platformId">
-                                    Client Secret (@(!string.IsNullOrWhiteSpace(card.Attachment.EncryptedCustomClientSecret) ? "configured; leave blank to keep existing" : "write-only"))
-                                </label>
-                                <input id="custom-client-secret-@platformId"
-                                       type="password"
-                                       value="@GetClientSecretInput(platformId)"
-                                       @onchange="(ChangeEventArgs args) => SetClientSecretInput(platformId, args.Value?.ToString())"
-                                       autocomplete="new-password" />
-                            </div>
-                            <button type="button" @onclick="() => SaveCustomOAuthAsync(platformId)">Save Custom OAuth</button>
-                            <button type="button" @onclick="() => ClearCustomOAuthAsync(platformId)">Clear Custom OAuth</button>
-                        </div>
+                    @{
+                        bool customOAuthBlocked = IsCustomOAuthBlockedByRoot(platformId);
                     }
+                    <div data-custom-oauth="@platformId">
+                        <h4>Custom OAuth Application</h4>
+                        @if (customOAuthBlocked)
+                        {
+                            <p role="note" data-custom-oauth-blocked="@platformId">
+                                Custom OAuth application credentials are disabled (blocked by root policy).
+                            </p>
+                        }
+                        <p>
+                            Redirect / Callback URI:
+                            <code data-callback-uri="@platformId">@BuildCallbackUriDisplay(platformId)</code>
+                        </p>
+                        <div>
+                            <label for="custom-client-id-@platformId">Client ID</label>
+                            <input id="custom-client-id-@platformId"
+                                   type="text"
+                                   disabled="@customOAuthBlocked"
+                                   value="@GetClientIdInput(platformId)"
+                                   @onchange="(ChangeEventArgs args) => SetClientIdInput(platformId, args.Value?.ToString())"
+                                   autocomplete="off" />
+                        </div>
+                        <div>
+                            <label for="custom-client-secret-@platformId">
+                                Client Secret (@(!string.IsNullOrWhiteSpace(card.Attachment.EncryptedCustomClientSecret) ? "configured; leave blank to keep existing" : "write-only"))
+                            </label>
+                            <input id="custom-client-secret-@platformId"
+                                   type="password"
+                                   disabled="@customOAuthBlocked"
+                                   value="@GetClientSecretInput(platformId)"
+                                   @onchange="(ChangeEventArgs args) => SetClientSecretInput(platformId, args.Value?.ToString())"
+                                   autocomplete="new-password" />
+                        </div>
+                        <div>
+                            <label for="custom-redirect-uri-@platformId">Custom Redirect URI (optional)</label>
+                            <input id="custom-redirect-uri-@platformId"
+                                   type="url"
+                                   disabled="@customOAuthBlocked"
+                                   value="@GetRedirectUriInput(platformId)"
+                                   @onchange="(ChangeEventArgs args) => SetRedirectUriInput(platformId, args.Value?.ToString())"
+                                   autocomplete="off" />
+                        </div>
+                        <button type="button" disabled="@customOAuthBlocked" @onclick="() => SaveCustomOAuthAsync(platformId)">Save Custom OAuth</button>
+                        <button type="button" disabled="@customOAuthBlocked" @onclick="() => ClearCustomOAuthAsync(platformId)">Clear Custom OAuth</button>
+                    </div>
                 </article>
             }
         }
@@ -313,6 +360,11 @@ else
     private readonly Dictionary<string, string> _customClientSecrets = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Cached UI inputs for custom OAuth redirect URIs keyed by platform identifier.
+    /// </summary>
+    private readonly Dictionary<string, string> _customRedirectUris = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Active workspace wrapper from <see cref="IWorkspaceSessionContext"/>.
     /// </summary>
     private AccessibleWorkspace? _activeWorkspace;
@@ -338,14 +390,29 @@ else
     private InstanceBotAccountPolicy _botPolicy = InstanceBotAccountPolicy.DefaultOnly;
 
     /// <summary>
-    /// Active instance OAuth application policy.
+    /// Active instance OAuth application policy default.
     /// </summary>
     private InstanceOAuthAppPolicy _oauthPolicy = InstanceOAuthAppPolicy.InstanceOnly;
+
+    /// <summary>
+    /// Loaded instance settings used for per-platform OAuth policy resolution and branding.
+    /// </summary>
+    private InstanceSettings? _settings;
+
+    /// <summary>
+    /// Operator-configured instance display name.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
 
     /// <summary>
     /// Indicates whether <see cref="BuiltInPermissionKeys.FeatureCustomBotAccount"/> is allowed for the active workspace.
     /// </summary>
     private bool _customBotFeatureAllowed;
+
+    /// <summary>
+    /// Indicates whether <see cref="BuiltInPermissionKeys.FeatureCustomOAuthApp"/> is allowed for the active workspace.
+    /// </summary>
+    private bool _customOAuthFeatureAllowed;
 
     /// <summary>
     /// Platform identifier input for attaching a new platform.
@@ -390,7 +457,12 @@ else
     /// <summary>
     /// Workspace-level step-up ("Sudo Mode") MFA policy selection.
     /// </summary>
-    private StepUpSudoPolicy _wsStepUpSudoPolicy = StepUpSudoPolicy.Optional;
+    private StepUpSudoPolicy _wsStepUpSudoPolicy = StepUpSudoPolicy.Required;
+
+    /// <summary>
+    /// Workspace-level requirement for External OIDC authentication.
+    /// </summary>
+    private bool _wsRequireExternalOidcLogin;
 
     /// <summary>
     /// Initializes platform connections, bot status, scope drift diagnostics, and linked identities.
@@ -441,6 +513,8 @@ else
         _activeWorkspace = WorkspaceSession.ActiveWorkspace;
 
         InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        _settings = settings;
+        _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         _botPolicy = AuthPolicyParser.ParseBotAccountPolicy(settings.InstanceBotAccountPolicy);
         _oauthPolicy = AuthPolicyParser.ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
 
@@ -452,16 +526,24 @@ else
 
         _platformStates = [];
         _customBotFeatureAllowed = false;
+        _customOAuthFeatureAllowed = false;
 
         if (_activeWorkspace is null)
         {
             return;
         }
 
-        _wsMfaPasskeyAvailability = _activeWorkspace.Workspace.MfaPasskeyAvailability;
-        _wsMfaTotpAvailability = _activeWorkspace.Workspace.MfaTotpAvailability;
-        _wsLoginMfaRequirement = _activeWorkspace.Workspace.LoginMfaRequirement;
-        _wsStepUpSudoPolicy = _activeWorkspace.Workspace.StepUpSudoPolicy;
+        _wsMfaPasskeyAvailability = IsPasskeyPolicyFixedByRoot()
+            ? _settings?.MfaPasskeyAvailability ?? MfaMethodAvailability.Allowed
+            : _activeWorkspace.Workspace.MfaPasskeyAvailability;
+        _wsMfaTotpAvailability = IsTotpPolicyFixedByRoot()
+            ? _settings?.MfaTotpAvailability ?? MfaMethodAvailability.Allowed
+            : _activeWorkspace.Workspace.MfaTotpAvailability;
+        PanelLoginMfaRequirement rootLoginMfa = _settings?.LoginMfaRequirement ?? PanelLoginMfaRequirement.Optional;
+        _wsLoginMfaRequirement = (PanelLoginMfaRequirement)Math.Max((int)rootLoginMfa, (int)_activeWorkspace.Workspace.LoginMfaRequirement);
+        StepUpSudoPolicy rootStepUp = _settings?.StepUpSudoPolicy ?? StepUpSudoPolicy.Required;
+        _wsStepUpSudoPolicy = (StepUpSudoPolicy)Math.Max((int)rootStepUp, (int)_activeWorkspace.Workspace.StepUpSudoPolicy);
+        _wsRequireExternalOidcLogin = _activeWorkspace.Workspace.RequireExternalOidcLogin;
 
         Guid workspaceId = _activeWorkspace.Workspace.Id;
         PlatformUserIdentity workspaceActor = new(
@@ -473,6 +555,9 @@ else
         _customBotFeatureAllowed = await PermissionService
             .IsAllowedAsync(workspaceId, workspaceActor, BuiltInPermissionKeys.FeatureCustomBotAccount)
             .ConfigureAwait(false);
+        _customOAuthFeatureAllowed = await PermissionService
+            .IsAllowedAsync(workspaceId, workspaceActor, BuiltInPermissionKeys.FeatureCustomOAuthApp)
+            .ConfigureAwait(false);
 
         IReadOnlyList<WorkspacePlatform> attachments = await WorkspaceStore
             .GetPlatformsAsync(workspaceId)
@@ -481,6 +566,7 @@ else
         foreach (WorkspacePlatform attachment in attachments)
         {
             _customClientIds[attachment.PlatformId] = attachment.CustomClientId ?? string.Empty;
+            _customRedirectUris[attachment.PlatformId] = attachment.CustomRedirectUri ?? string.Empty;
             _ = _customClientSecrets.TryAdd(attachment.PlatformId, string.Empty);
 
             (bool broadcasterFound, CredentialStatus broadcasterStatus, PlatformTokenPayload? broadcasterPayload) =
@@ -586,6 +672,12 @@ else
     private async Task ToggleCustomBotOverrideAsync(ChangeEventArgs args)
     {
         ClearMessages();
+        if (IsCustomBotOverrideBlockedByRoot())
+        {
+            _errorMessage = "Custom bot account override is blocked by root policy.";
+            return;
+        }
+
         if (_activeWorkspace is null || args.Value is not bool enabled)
         {
             return;
@@ -612,10 +704,30 @@ else
             return;
         }
 
-        _activeWorkspace.Workspace.MfaPasskeyAvailability = _wsMfaPasskeyAvailability;
-        _activeWorkspace.Workspace.MfaTotpAvailability = _wsMfaTotpAvailability;
-        _activeWorkspace.Workspace.LoginMfaRequirement = _wsLoginMfaRequirement;
-        _activeWorkspace.Workspace.StepUpSudoPolicy = _wsStepUpSudoPolicy;
+        if (!IsPasskeyPolicyFixedByRoot())
+        {
+            _activeWorkspace.Workspace.MfaPasskeyAvailability = _wsMfaPasskeyAvailability;
+        }
+
+        if (!IsTotpPolicyFixedByRoot())
+        {
+            _activeWorkspace.Workspace.MfaTotpAvailability = _wsMfaTotpAvailability;
+        }
+
+        if (!IsLoginMfaPolicyFixedByRoot() && !IsLoginMfaOptionBlocked(_wsLoginMfaRequirement))
+        {
+            _activeWorkspace.Workspace.LoginMfaRequirement = _wsLoginMfaRequirement;
+        }
+
+        if (!IsStepUpPolicyFixedByRoot() && !IsStepUpOptionBlocked(_wsStepUpSudoPolicy))
+        {
+            _activeWorkspace.Workspace.StepUpSudoPolicy = _wsStepUpSudoPolicy;
+        }
+
+        if (!IsExternalOidcBlockedByRoot())
+        {
+            _activeWorkspace.Workspace.RequireExternalOidcLogin = _wsRequireExternalOidcLogin;
+        }
 
         _ = await WorkspaceStore.UpdateWorkspaceAsync(_activeWorkspace.Workspace).ConfigureAwait(false);
         await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
@@ -659,12 +771,32 @@ else
             return;
         }
 
+        if (IsCustomOAuthBlockedByRoot(platformId))
+        {
+            _errorMessage = "Custom OAuth application configuration is blocked by root policy.";
+            return;
+        }
+
         string clientId = GetClientIdInput(platformId).Trim();
         string? clientSecret = GetClientSecretInput(platformId);
+        string rawRedirectUri = GetRedirectUriInput(platformId).Trim();
         if (string.IsNullOrWhiteSpace(clientId))
         {
             _errorMessage = "Custom OAuth Client ID is required.";
             return;
+        }
+
+        Uri? redirectUri = null;
+        if (!string.IsNullOrWhiteSpace(rawRedirectUri))
+        {
+            if (!Uri.TryCreate(rawRedirectUri, UriKind.Absolute, out Uri? parsedUri)
+                || (parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps))
+            {
+                _errorMessage = "Custom Redirect URI must be a valid HTTP or HTTPS URL.";
+                return;
+            }
+
+            redirectUri = parsedUri;
         }
 
         _ = await WorkspaceStore
@@ -672,7 +804,8 @@ else
                 _activeWorkspace.Workspace.Id,
                 platformId,
                 clientId,
-                string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret.Trim())
+                string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret.Trim(),
+                redirectUri)
             .ConfigureAwait(false);
 
         _customClientSecrets[platformId] = string.Empty;
@@ -693,12 +826,19 @@ else
             return;
         }
 
+        if (IsCustomOAuthBlockedByRoot(platformId))
+        {
+            _errorMessage = "Custom OAuth application configuration is blocked by root policy.";
+            return;
+        }
+
         _ = await WorkspaceStore
             .SetCustomOAuthAppAsync(_activeWorkspace.Workspace.Id, platformId, null, null)
             .ConfigureAwait(false);
 
         _customClientIds[platformId] = string.Empty;
         _customClientSecrets[platformId] = string.Empty;
+        _customRedirectUris[platformId] = string.Empty;
         await LoadDataAsync().ConfigureAwait(false);
         _statusMessage = $"Cleared custom OAuth credentials for '{platformId}'.";
     }
@@ -710,6 +850,140 @@ else
     /// <returns>The client ID string.</returns>
     private string GetClientIdInput(string platformId) =>
         _customClientIds.TryGetValue(platformId, out string? value) ? value : string.Empty;
+
+    /// <summary>
+    /// Gets the current custom redirect URI input value for <paramref name="platformId"/>.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The redirect URI string.</returns>
+    private string GetRedirectUriInput(string platformId) =>
+        _customRedirectUris.TryGetValue(platformId, out string? value) ? value : string.Empty;
+
+    /// <summary>
+    /// Updates the custom redirect URI input value for <paramref name="platformId"/>.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="value">The new redirect URI input value.</param>
+    private void SetRedirectUriInput(string platformId, string? value) =>
+        _customRedirectUris[platformId] = value ?? string.Empty;
+
+    /// <summary>
+    /// Resolves the effective <see cref="InstanceOAuthAppPolicy"/> for a specific platform.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The effective <see cref="InstanceOAuthAppPolicy"/>.</returns>
+    private InstanceOAuthAppPolicy GetEffectiveOAuthPolicy(string platformId) =>
+        _settings is null
+            ? _oauthPolicy
+            : AuthPolicyParser.ResolveOAuthAppPolicy(_settings, platformId);
+
+    /// <summary>
+    /// Determines whether the root instance policy fixes passkey availability.
+    /// </summary>
+    /// <returns><see langword="true"/> if root policy enforces Disabled or Required; otherwise, <see langword="false"/>.</returns>
+    private bool IsPasskeyPolicyFixedByRoot() =>
+        (_settings?.MfaPasskeyAvailability ?? MfaMethodAvailability.Allowed) != MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Determines whether a passkey availability option is blocked by the root instance policy.
+    /// </summary>
+    /// <param name="option">The workspace option value.</param>
+    /// <returns><see langword="true"/> if blocked by root policy; otherwise, <see langword="false"/>.</returns>
+    private bool IsPasskeyOptionBlocked(MfaMethodAvailability option)
+    {
+        MfaMethodAvailability root = _settings?.MfaPasskeyAvailability ?? MfaMethodAvailability.Allowed;
+        return root != MfaMethodAvailability.Allowed && option != root;
+    }
+
+    /// <summary>
+    /// Determines whether the root instance policy fixes TOTP availability.
+    /// </summary>
+    /// <returns><see langword="true"/> if root policy enforces Disabled or Required; otherwise, <see langword="false"/>.</returns>
+    private bool IsTotpPolicyFixedByRoot() =>
+        (_settings?.MfaTotpAvailability ?? MfaMethodAvailability.Allowed) != MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Determines whether a TOTP availability option is blocked by the root instance policy.
+    /// </summary>
+    /// <param name="option">The workspace option value.</param>
+    /// <returns><see langword="true"/> if blocked by root policy; otherwise, <see langword="false"/>.</returns>
+    private bool IsTotpOptionBlocked(MfaMethodAvailability option)
+    {
+        MfaMethodAvailability root = _settings?.MfaTotpAvailability ?? MfaMethodAvailability.Allowed;
+        return root != MfaMethodAvailability.Allowed && option != root;
+    }
+
+    /// <summary>
+    /// Determines whether the root instance policy fixes the panel login MFA requirement to its strictest level.
+    /// </summary>
+    /// <returns><see langword="true"/> if root policy requires MFA for all users; otherwise, <see langword="false"/>.</returns>
+    private bool IsLoginMfaPolicyFixedByRoot() =>
+        (_settings?.LoginMfaRequirement ?? PanelLoginMfaRequirement.Optional) == PanelLoginMfaRequirement.RequiredForAll;
+
+    /// <summary>
+    /// Determines whether a panel login MFA requirement option is weaker than (and therefore superseded by) root policy.
+    /// </summary>
+    /// <param name="option">The workspace option value.</param>
+    /// <returns><see langword="true"/> if blocked by root policy; otherwise, <see langword="false"/>.</returns>
+    private bool IsLoginMfaOptionBlocked(PanelLoginMfaRequirement option)
+    {
+        PanelLoginMfaRequirement root = _settings?.LoginMfaRequirement ?? PanelLoginMfaRequirement.Optional;
+        return (int)option < (int)root;
+    }
+
+    /// <summary>
+    /// Determines whether the root instance policy fixes the step-up Sudo Mode policy.
+    /// </summary>
+    /// <returns><see langword="true"/> if root policy enforces Required; otherwise, <see langword="false"/>.</returns>
+    private bool IsStepUpPolicyFixedByRoot() =>
+        (_settings?.StepUpSudoPolicy ?? StepUpSudoPolicy.Required) == StepUpSudoPolicy.Required;
+
+    /// <summary>
+    /// Determines whether a step-up Sudo Mode option is blocked by root policy.
+    /// </summary>
+    /// <param name="option">The workspace option value.</param>
+    /// <returns><see langword="true"/> if blocked by root policy; otherwise, <see langword="false"/>.</returns>
+    private bool IsStepUpOptionBlocked(StepUpSudoPolicy option)
+    {
+        StepUpSudoPolicy root = _settings?.StepUpSudoPolicy ?? StepUpSudoPolicy.Required;
+        return (int)option < (int)root;
+    }
+
+    /// <summary>
+    /// Determines whether workspace-level External OIDC enforcement is blocked or superseded by root policy.
+    /// </summary>
+    /// <returns><see langword="true"/> if root OIDC mode is not <see cref="ExternalOidcLoginMode.Allowed"/>; otherwise, <see langword="false"/>.</returns>
+    private bool IsExternalOidcBlockedByRoot() =>
+        _settings?.ExternalOidcLoginMode != ExternalOidcLoginMode.Allowed;
+
+    /// <summary>
+    /// Determines whether the custom bot account override toggle is blocked by root policy or Tier-1 SMF feature gate.
+    /// </summary>
+    /// <returns><see langword="true"/> if blocked; otherwise, <see langword="false"/>.</returns>
+    private bool IsCustomBotOverrideBlockedByRoot() =>
+        _botPolicy == InstanceBotAccountPolicy.DefaultOnly
+        || (_botPolicy == InstanceBotAccountPolicy.DefaultWithOptionalOverride && !_customBotFeatureAllowed);
+
+    /// <summary>
+    /// Determines whether custom OAuth app configuration for <paramref name="platformId"/> is blocked by root policy or Tier-1 SMF feature gate.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns><see langword="true"/> if blocked; otherwise, <see langword="false"/>.</returns>
+    private bool IsCustomOAuthBlockedByRoot(string platformId)
+    {
+        InstanceOAuthAppPolicy effectiveOAuthPolicy = GetEffectiveOAuthPolicy(platformId);
+        return effectiveOAuthPolicy == InstanceOAuthAppPolicy.InstanceOnly
+            || (effectiveOAuthPolicy == InstanceOAuthAppPolicy.InstanceWithOptionalOverride && !_customOAuthFeatureAllowed);
+    }
+
+    /// <summary>
+    /// Formats a dropdown option label, appending <c> (blocked by root policy)</c> when blocked.
+    /// </summary>
+    /// <param name="label">The base option label.</param>
+    /// <param name="isBlocked">Whether the option is blocked by root policy.</param>
+    /// <returns>The formatted option label.</returns>
+    private static string FormatOptionLabel(string label, bool isBlocked) =>
+        isBlocked ? $"{label} (blocked by root policy)" : label;
 
     /// <summary>
     /// Updates the client ID input value for <paramref name="platformId"/>.

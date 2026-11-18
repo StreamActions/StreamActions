@@ -19,14 +19,21 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.DependencyInjection
 @using StreamActions.Core.Abstractions
 @using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
 
 @inject IWorkspaceSessionContext WorkspaceSession
+@inject IInstanceSettingsService InstanceSettingsService
 @inject NavigationManager Navigation
+@inject IServiceProvider ServiceProvider
 
 <div class="page">
     <header class="top-nav px-4">
+        <a class="navbar-brand" href="/" data-instance-name="true">@_instanceName</a>
         <nav aria-label="Main navigation">
             <NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
             <NavLink href="/workspace/platforms">Platforms</NavLink>
@@ -55,8 +62,16 @@
                             <select id="workspace-switcher-select" name="workspaceId" onchange="this.form.submit()">
                                 @foreach (AccessibleWorkspace ws in WorkspaceSession.AccessibleWorkspaces)
                                 {
-                                    <option value="@ws.Workspace.Id.ToString("D")" selected="@(ws.Workspace.Id == WorkspaceSession.ActiveWorkspaceId)">
-                                        @ws.Workspace.Name (@ws.Workspace.PrimaryPlatformId)
+                                    bool requiresReauth = ws.AuthStatus != WorkspaceSessionAuthStatus.Ready;
+                                    string optionLabel = requiresReauth
+                                        ? $"{ws.Workspace.Name} ({ws.Workspace.PrimaryPlatformId}) (reauthenticate)"
+                                        : $"{ws.Workspace.Name} ({ws.Workspace.PrimaryPlatformId})";
+                                    <option value="@ws.Workspace.Id.ToString("D")"
+                                            selected="@(ws.Workspace.Id == WorkspaceSession.ActiveWorkspaceId)"
+                                            class="@(requiresReauth ? "workspace-option-reauth" : null)"
+                                            style="@(requiresReauth ? "color: #6c757d;" : null)"
+                                            data-workspace-auth-status="@ws.AuthStatus">
+                                        @optionLabel
                                     </option>
                                 }
                             </select>
@@ -77,6 +92,13 @@
     </header>
     <main>
         <article class="content px-4">
+            @if (_showMfaAdminResetNotice)
+            {
+                <div role="alert" data-mfa-admin-reset-notice="true">
+                    Your multi-factor authentication credentials were removed by an instance administrator.
+                    <a href="/account/mfa">Manage MFA</a>
+                </div>
+            }
             @Body
         </article>
     </main>
@@ -84,19 +106,62 @@
 
 @code {
     /// <summary>
-    /// Initializes the workspace session context for the layout switcher.
+    /// Display name rendered in the top navigation bar brand.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
+    /// Indicates whether an administrator removed the current user's MFA credentials and a notice banner should be shown.
+    /// </summary>
+    private bool _showMfaAdminResetNotice;
+
+    /// <summary>
+    /// Initializes the workspace session context and instance branding for the layout.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
     protected override async Task OnInitializedAsync()
     {
         WorkspaceSession.WorkspaceChanged += OnWorkspaceChanged;
+        InstanceSettingsService.SettingsChanged += OnSettingsChanged;
+
+        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+
+        AuthenticationStateProvider? authStateProvider = ServiceProvider.GetService<AuthenticationStateProvider>();
+        IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
+        if (authStateProvider is not null && panelUserStore is not null)
+        {
+            AuthenticationState authState = await authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            Guid? panelUserId = AuthClaims.GetPanelUserId(authState.User);
+            if (panelUserId.HasValue)
+            {
+                PanelUser? user = await panelUserStore.GetByIdAsync(panelUserId.Value).ConfigureAwait(false);
+                _showMfaAdminResetNotice = user?.MfaResetByAdminNoticePending == true;
+            }
+        }
+
         await WorkspaceSession.InitializeAsync().ConfigureAwait(false);
     }
 
     /// <summary>
     /// Releases layout event subscriptions.
     /// </summary>
-    public void Dispose() => WorkspaceSession.WorkspaceChanged -= OnWorkspaceChanged;
+    public void Dispose()
+    {
+        WorkspaceSession.WorkspaceChanged -= OnWorkspaceChanged;
+        InstanceSettingsService.SettingsChanged -= OnSettingsChanged;
+    }
+
+    /// <summary>
+    /// Updates the layout brand when instance settings change.
+    /// </summary>
+    /// <param name="sender">The event sender.</param>
+    /// <param name="args">The event arguments containing updated settings.</param>
+    private void OnSettingsChanged(object? sender, InstanceSettingsChangedEventArgs args)
+    {
+        _instanceName = AuthPolicyParser.ResolveInstanceName(args.Settings);
+        _ = InvokeAsync(StateHasChanged);
+    }
 
     /// <summary>
     /// Re-renders the layout when the active workspace selection changes.

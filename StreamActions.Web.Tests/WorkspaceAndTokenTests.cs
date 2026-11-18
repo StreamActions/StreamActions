@@ -221,6 +221,7 @@ public sealed partial class WorkspaceAndTokenTests
             Name = "Streamer Channel",
             PrimaryPlatformId = "twitch",
             AllowCustomBotAccountOverride = true,
+            StepUpSudoPolicy = StepUpSudoPolicy.Optional,
             CreatedAtUtc = DateTimeOffset.UtcNow,
         };
 
@@ -261,6 +262,7 @@ public sealed partial class WorkspaceAndTokenTests
         {
             InstanceOAuthAppPolicy = nameof(InstanceOAuthAppPolicy.InstanceWithOptionalOverride),
             InstanceBotAccountPolicy = nameof(InstanceBotAccountPolicy.DefaultWithOptionalOverride),
+            StepUpSudoPolicy = StepUpSudoPolicy.Optional,
         });
 
         ServiceCollection cacheServices = new();
@@ -329,6 +331,126 @@ public sealed partial class WorkspaceAndTokenTests
         _ = component.Markup.Should().Contain(nameof(BotCredentialSource.WorkspaceBroadcasterFallback));
     }
 
+    [Fact]
+    [Trait("Member", "WorkspacePlatforms")]
+    public void WorkspacePlatforms_WhenRootPoliciesBlockSettings_DisablesControlsAndAppendsBlockedMarkers()
+    {
+        Guid ownerId = Guid.NewGuid();
+        Guid workspaceId = Guid.NewGuid();
+        PanelUser owner = new() { Id = ownerId, DisplayName = "streamer_owner" };
+
+        Workspace workspace = new()
+        {
+            Id = workspaceId,
+            OwnerUserId = ownerId,
+            Name = "Blocked Policy Channel",
+            PrimaryPlatformId = "twitch",
+            StepUpSudoPolicy = StepUpSudoPolicy.Optional,
+            CreatedAtUtc = DateTimeOffset.UtcNow,
+        };
+
+        WorkspacePlatform twitchPlatform = new()
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = workspaceId,
+            PlatformId = "twitch",
+            Role = PlatformRole.Primary,
+            PlatformChannelId = "1001",
+            CustomClientId = "custom-cid",
+            Metadata = new PlatformMetadata(),
+        };
+
+        InMemoryWorkspaceStore workspaceStore = new();
+        workspaceStore.Workspaces[workspaceId] = workspace;
+        workspaceStore.Platforms[(workspaceId, "twitch")] = twitchPlatform;
+
+        InMemoryPanelUserStore userStore = new();
+        userStore.Users[ownerId] = owner;
+        userStore.Identities[ownerId] = [];
+
+        InMemoryCredentialStore credStore = new();
+        StubInstanceSettingsService settingsService = new(new InstanceSettings
+        {
+            InstanceOAuthAppPolicy = nameof(InstanceOAuthAppPolicy.InstanceOnly),
+            InstanceBotAccountPolicy = nameof(InstanceBotAccountPolicy.DefaultOnly),
+            ExternalOidcLoginMode = ExternalOidcLoginMode.Disabled,
+            MfaPasskeyAvailability = MfaMethodAvailability.Disabled,
+            MfaTotpAvailability = MfaMethodAvailability.Required,
+            LoginMfaRequirement = PanelLoginMfaRequirement.RequiredForModerators,
+            StepUpSudoPolicy = StepUpSudoPolicy.Required,
+        });
+
+        ServiceCollection cacheServices = new();
+        _ = cacheServices.AddHybridCache();
+        using ServiceProvider cacheProvider = cacheServices.BuildServiceProvider();
+        HybridCache cache = cacheProvider.GetRequiredService<HybridCache>();
+        using InMemoryEventBus bus = new(NullLogger<InMemoryEventBus>.Instance);
+        StubPermissionStore permStore = new(workspace);
+        PermissionService permService = new(permStore, new PermissionRegistry(), cache, bus);
+
+        PluginManager pluginManager = new([], cacheProvider, bus, NullLoggerFactory.Instance);
+        ScopeDriftDetector driftDetector = new(pluginManager, []);
+        BotCredentialResolver botResolver = new(settingsService, workspaceStore, credStore, permService);
+        StubWorkspaceSessionContext sessionContext = new(new AccessibleWorkspace(workspace, true, [twitchPlatform]));
+
+        using BunitContext context = new();
+        _ = context.AddAuthorization().SetAuthorized("streamer_owner").SetPolicies(AuthClaims.PanelAuthenticatedPolicy);
+        _ = context.Services.AddSingleton<AuthenticationStateProvider>(new StubAuthenticationStateProvider(
+            AuthClaims.BuildClaimsPrincipal(owner, mfaElevatedUntilUtc: DateTimeOffset.UtcNow.AddMinutes(10))));
+        _ = context.Services.AddSingleton<IWorkspaceSessionContext>(sessionContext);
+        _ = context.Services.AddSingleton<IWorkspaceStore>(workspaceStore);
+        _ = context.Services.AddSingleton<IPlatformCredentialStore>(credStore);
+        _ = context.Services.AddSingleton<IBotCredentialResolver>(botResolver);
+        _ = context.Services.AddSingleton<IScopeDriftDetector>(driftDetector);
+        _ = context.Services.AddSingleton<IInstanceSettingsService>(settingsService);
+        _ = context.Services.AddSingleton<IPanelUserStore>(userStore);
+        _ = context.Services.AddSingleton<IPermissionService>(permService);
+        _ = context.Services.AddSingleton<IPlatformOAuthProvider>(new StubPlatformOAuthProvider("twitch"));
+        _ = context.Services.AddSingleton<IMfaPolicyService>(new MfaPolicyService(
+            settingsService,
+            workspaceStore,
+            permStore,
+            new StubWorkspaceAccessService(new Dictionary<Guid, HashSet<Guid>> { [ownerId] = [workspaceId] }, workspaceStore)));
+        _ = context.Services.AddSingleton(TimeProvider.System);
+
+        IRenderedComponent<WorkspacePlatforms> component = context.Render<WorkspacePlatforms>();
+
+        // Custom bot override disabled with (blocked by root policy).
+        _ = component.Find("#allow-custom-bot-override").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("label[for='allow-custom-bot-override']").TextContent.Should().Contain("(blocked by root policy)");
+
+        // Workspace MFA dropdowns: passkey fixed Disabled, totp fixed Required, login MFA blocks weaker options, step-up fixed Required.
+        _ = component.Find("#ws-mfa-passkey-availability").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("#ws-mfa-passkey-availability option[value='Allowed']").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("#ws-mfa-passkey-availability option[value='Allowed']").TextContent.Should().Contain("(blocked by root policy)");
+        _ = component.Find("#ws-mfa-passkey-availability option[value='Disabled']").HasAttribute("disabled").Should().BeFalse();
+
+        _ = component.Find("#ws-mfa-totp-availability").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("#ws-mfa-totp-availability option[value='Allowed']").TextContent.Should().Contain("(blocked by root policy)");
+        _ = component.Find("#ws-mfa-totp-availability option[value='Required']").HasAttribute("disabled").Should().BeFalse();
+
+        _ = component.Find("#ws-login-mfa-requirement").HasAttribute("disabled").Should().BeFalse();
+        _ = component.Find("#ws-login-mfa-requirement option[value='Optional']").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("#ws-login-mfa-requirement option[value='Optional']").TextContent.Should().Contain("(blocked by root policy)");
+        _ = component.Find("#ws-login-mfa-requirement option[value='RequiredForRootAndStreamers']").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("#ws-login-mfa-requirement option[value='RequiredForModerators']").HasAttribute("disabled").Should().BeFalse();
+        _ = component.Find("#ws-login-mfa-requirement option[value='RequiredForAll']").HasAttribute("disabled").Should().BeFalse();
+
+        _ = component.Find("#ws-step-up-sudo-policy").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("#ws-step-up-sudo-policy option[value='Optional']").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("#ws-step-up-sudo-policy option[value='Optional']").TextContent.Should().Contain("(blocked by root policy)");
+
+        // External OIDC checkbox disabled with (blocked by root policy).
+        _ = component.Find("#ws-require-external-oidc").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("label[for='ws-require-external-oidc']").TextContent.Should().Contain("(blocked by root policy)");
+
+        // Custom OAuth section rendered with disabled inputs/buttons and (blocked by root policy) note.
+        _ = component.Find("[data-custom-oauth-blocked='twitch']").TextContent.Should().Contain("(blocked by root policy)");
+        _ = component.Find("#custom-client-id-twitch").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("#custom-client-secret-twitch").HasAttribute("disabled").Should().BeTrue();
+        _ = component.Find("#custom-redirect-uri-twitch").HasAttribute("disabled").Should().BeTrue();
+    }
+
     #endregion
 
     #region PermissionsComponent
@@ -376,6 +498,133 @@ public sealed partial class WorkspaceAndTokenTests
 
         _ = sessionContext.TriggerSelect(ws2Id);
         component.WaitForAssertion(() => _ = component.Markup.Should().Contain("Channel Two"));
+    }
+
+    [Fact]
+    [Trait("Member", "Permissions")]
+    public void Permissions_OmitsManualGuidInputRendersHierarchyGuideAndFiltersPermissionsAndMembers()
+    {
+        Guid wsId = Guid.NewGuid();
+        Guid modsGroupId = Guid.NewGuid();
+        Guid vipsGroupId = Guid.NewGuid();
+        Workspace ws = new() { Id = wsId, OwnerUserId = Guid.NewGuid(), Name = "Main Channel", PrimaryPlatformId = "twitch" };
+
+        StubWorkspaceSessionContext sessionContext = new(new AccessibleWorkspace(ws, true, []));
+        StubPermissionStore permStore = new(ws);
+        permStore.WorkspaceGroups.Add(new PermissionGroup { Id = modsGroupId, WorkspaceId = wsId, Name = "Moderators", MappedPlatformDesignation = "moderator" });
+        permStore.WorkspaceGroups.Add(new PermissionGroup { Id = vipsGroupId, WorkspaceId = wsId, Name = "VIPs" });
+        permStore.GroupMembers.Add(new PermissionGroupMember { Id = Guid.NewGuid(), GroupId = modsGroupId, PlatformId = "twitch", PlatformUserId = "42", LastKnownUsername = "alpha_mod" });
+        permStore.GroupMembers.Add(new PermissionGroupMember { Id = Guid.NewGuid(), GroupId = vipsGroupId, PlatformId = "kick", PlatformUserId = "99", LastKnownUsername = "beta_vip" });
+
+        ServiceCollection cacheServices = new();
+        _ = cacheServices.AddHybridCache();
+        using ServiceProvider cacheProvider = cacheServices.BuildServiceProvider();
+        HybridCache cache = cacheProvider.GetRequiredService<HybridCache>();
+        using InMemoryEventBus bus = new(NullLogger<InMemoryEventBus>.Instance);
+        PermissionRegistry registry = new();
+        PermissionService permService = new(permStore, registry, cache, bus);
+
+        using BunitContext context = new();
+        _ = context.AddAuthorization().SetAuthorized("streamer").SetPolicies(AuthClaims.PanelAuthenticatedPolicy);
+        _ = context.Services.AddSingleton<AuthenticationStateProvider>(new StubAuthenticationStateProvider(
+            AuthClaims.BuildClaimsPrincipal(new PanelUser { Id = ws.OwnerUserId, DisplayName = "streamer" }, mfaElevatedUntilUtc: DateTimeOffset.UtcNow.AddMinutes(10))));
+        _ = context.Services.AddSingleton<IWorkspaceSessionContext>(sessionContext);
+        _ = context.Services.AddSingleton<IPermissionStore>(permStore);
+        _ = context.Services.AddSingleton<IPermissionService>(permService);
+        _ = context.Services.AddSingleton<IPermissionRegistry>(registry);
+        _ = context.Services.AddSingleton<IEventBus>(bus);
+        _ = context.Services.AddSingleton<IMfaPolicyService>(new MfaPolicyService(
+            new StubInstanceSettingsService(new InstanceSettings { StepUpSudoPolicy = StepUpSudoPolicy.Optional }),
+            new InMemoryWorkspaceStore(),
+            permStore,
+            new StubWorkspaceAccessService([], new InMemoryWorkspaceStore())));
+        _ = context.Services.AddSingleton(TimeProvider.System);
+
+        IRenderedComponent<Permissions> component = context.Render<Permissions>();
+
+        _ = component.FindAll("#workspace-id-input").Should().BeEmpty();
+        _ = component.Markup.Should().NotContain("Load Workspace");
+        _ = component.Find("[data-permission-hierarchy-guide='true']").TextContent
+            .Should().Contain("Allow")
+            .And.Contain("Inherit")
+            .And.Contain("Explicit Deny");
+
+        // Filter permissions by key.
+        component.Find("#permissions-search").Input(BuiltInPermissionKeys.FeatureSoundboard);
+        _ = component.Markup.Should().Contain(BuiltInPermissionKeys.FeatureSoundboard);
+        _ = component.Markup.Should().NotContain(BuiltInPermissionKeys.UiDashboardView);
+
+        // Filter members by username.
+        component.Find("#permissions-search").Input("alpha_mod");
+        _ = component.Markup.Should().Contain("alpha_mod");
+        _ = component.Markup.Should().NotContain("beta_vip");
+    }
+
+    [Fact]
+    [Trait("Member", "GlobalPermissions")]
+    public void GlobalPermissions_PopulatesWorkspaceDropdownRendersGuideAndFiltersSearch()
+    {
+        Guid ws1Id = Guid.NewGuid();
+        Guid ws2Id = Guid.NewGuid();
+        Guid globalGroupId = Guid.NewGuid();
+
+        Workspace ws1 = new() { Id = ws1Id, OwnerUserId = Guid.NewGuid(), Name = "Alpha Studio", PrimaryPlatformId = "twitch" };
+        Workspace ws2 = new() { Id = ws2Id, OwnerUserId = Guid.NewGuid(), Name = "Beta Gaming", PrimaryPlatformId = "kick" };
+
+        InMemoryWorkspaceStore workspaceStore = new();
+        workspaceStore.Workspaces[ws1Id] = ws1;
+        workspaceStore.Workspaces[ws2Id] = ws2;
+
+        StubPermissionStore permStore = new(ws1, ws2);
+        permStore.GlobalGroups[globalGroupId] = new PermissionGroup { Id = globalGroupId, WorkspaceId = null, Name = "Pro Tier" };
+        permStore.WorkspaceGlobalAssignments.Add(new WorkspaceGlobalGroupAssignment
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = ws2Id,
+            GlobalGroupId = globalGroupId,
+        });
+
+        ServiceCollection cacheServices = new();
+        _ = cacheServices.AddHybridCache();
+        using ServiceProvider cacheProvider = cacheServices.BuildServiceProvider();
+        HybridCache cache = cacheProvider.GetRequiredService<HybridCache>();
+        using InMemoryEventBus bus = new(NullLogger<InMemoryEventBus>.Instance);
+        PermissionRegistry registry = new();
+        PermissionService permService = new(permStore, registry, cache, bus);
+
+        using BunitContext context = new();
+        _ = context.AddAuthorization().SetAuthorized("root").SetPolicies(AuthClaims.RootOrGlobalAdminPolicy);
+        _ = context.Services.AddSingleton<IPermissionStore>(permStore);
+        _ = context.Services.AddSingleton<IPermissionService>(permService);
+        _ = context.Services.AddSingleton<IPermissionRegistry>(registry);
+        _ = context.Services.AddSingleton<IEventBus>(bus);
+        _ = context.Services.AddSingleton<IWorkspaceStore>(workspaceStore);
+
+        IRenderedComponent<GlobalPermissions> component = context.Render<GlobalPermissions>();
+
+        _ = component.FindAll("#assignment-workspace-id").Should().BeEmpty();
+        _ = component.Find("[data-permission-hierarchy-guide='true']").TextContent
+            .Should().Contain("Allow")
+            .And.Contain("Inherit")
+            .And.Contain("Explicit Deny");
+
+        string selectText = component.Find("#assignment-workspace-select").TextContent;
+        _ = selectText.Should().Contain("Alpha Studio (twitch)").And.Contain("Beta Gaming (kick)");
+
+        // Selecting ws2 automatically loads ws2's assigned global groups.
+        component.Find("#assignment-workspace-select").Change(ws2Id.ToString("D"));
+        _ = component.Markup.Should().Contain("Assigned Global Groups for Beta Gaming (kick)");
+        _ = component.Markup.Should().Contain("Pro Tier");
+
+        // Search filters permissions and workspace dropdown options.
+        component.Find("#global-permissions-search").Input(BuiltInPermissionKeys.FeatureCustomOAuthApp);
+        _ = component.Markup.Should().Contain(BuiltInPermissionKeys.FeatureCustomOAuthApp);
+        _ = component.Markup.Should().NotContain(BuiltInPermissionKeys.UiDashboardView);
+
+        component.Find("#global-permissions-search").Input("Beta Gaming");
+        string filteredSelectText = component.Find("#assignment-workspace-select").TextContent;
+        _ = filteredSelectText.Should().Contain("Beta Gaming (kick)");
+        _ = filteredSelectText.Should().NotContain("Alpha Studio (twitch)");
     }
 
     #endregion
@@ -751,6 +1000,8 @@ public sealed partial class WorkspaceAndTokenTests
             PanelUser user,
             IReadOnlyList<UserLoginIdentity> identities,
             IReadOnlyCollection<string>? oidcGroupClaims = null,
+            string? authProvider = null,
+            bool isMfaVerified = false,
             CancellationToken ct = default)
         {
             HashSet<Guid> allowed = allowedWorkspacesByUser.GetValueOrDefault(user.Id) ?? [];
@@ -768,11 +1019,11 @@ public sealed partial class WorkspaceAndTokenTests
             return list;
         }
 
-        public ValueTask<bool> CanAccessWorkspaceAsync(Guid workspaceId, PanelUser user, IReadOnlyList<UserLoginIdentity> identities, IReadOnlyCollection<string>? oidcGroupClaims = null, CancellationToken ct = default) =>
+        public ValueTask<bool> CanAccessWorkspaceAsync(Guid workspaceId, PanelUser user, IReadOnlyList<UserLoginIdentity> identities, IReadOnlyCollection<string>? oidcGroupClaims = null, string? authProvider = null, bool isMfaVerified = false, CancellationToken ct = default) =>
             ValueTask.FromResult((allowedWorkspacesByUser.GetValueOrDefault(user.Id) ?? []).Contains(workspaceId));
 
         public ValueTask<bool> HasPermissionInWorkspaceAsync(Guid workspaceId, PanelUser user, IReadOnlyList<UserLoginIdentity> identities, string permissionKey, IReadOnlyCollection<string>? oidcGroupClaims = null, CancellationToken ct = default) =>
-            this.CanAccessWorkspaceAsync(workspaceId, user, identities, oidcGroupClaims, ct);
+            this.CanAccessWorkspaceAsync(workspaceId, user, identities, oidcGroupClaims, ct: ct);
     }
 
     private sealed class InMemoryPanelUserStore : IPanelUserStore
@@ -841,7 +1092,7 @@ public sealed partial class WorkspaceAndTokenTests
             return ValueTask.FromResult(platform);
         }
 
-        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, CancellationToken cancellationToken = default) =>
+        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(this.Platforms[(workspaceId, platformId.ToUpperInvariant())]);
 
         public ValueTask<PlatformOAuthAppCredentials?> GetCustomOAuthAppAsync(Guid workspaceId, string platformId, CancellationToken cancellationToken = default) =>
@@ -910,10 +1161,15 @@ public sealed partial class WorkspaceAndTokenTests
     {
         public Dictionary<Guid, Workspace> Workspaces { get; } = workspaces.ToDictionary(static w => w.Id);
         public Dictionary<Guid, PermissionGroup> GlobalGroups { get; } = [];
+        public List<PermissionGroup> WorkspaceGroups { get; } = [];
+        public List<PermissionGroupMember> GroupMembers { get; } = [];
         public List<WorkspaceGlobalGroupAssignment> WorkspaceGlobalAssignments { get; } = [];
         public List<PermissionGrant> Grants { get; } = [];
 
-        public ValueTask<IReadOnlyList<PermissionGroup>> GetGroupsAsync(Guid? workspaceId, CancellationToken cancellationToken = default) => ValueTask.FromResult<IReadOnlyList<PermissionGroup>>([]);
+        public ValueTask<IReadOnlyList<PermissionGroup>> GetGroupsAsync(Guid? workspaceId, CancellationToken cancellationToken = default) =>
+            workspaceId.HasValue
+                ? ValueTask.FromResult<IReadOnlyList<PermissionGroup>>([.. this.WorkspaceGroups.Where(g => g.WorkspaceId == workspaceId.Value)])
+                : ValueTask.FromResult<IReadOnlyList<PermissionGroup>>([.. this.GlobalGroups.Values]);
         public ValueTask<IReadOnlyList<PermissionGrant>> GetGrantsAsync(Guid groupId, CancellationToken cancellationToken = default) => ValueTask.FromResult<IReadOnlyList<PermissionGrant>>([.. this.Grants.Where(g => g.GroupId == groupId)]);
         public ValueTask<PermissionState> EvaluatePermissionAsync(Guid workspaceId, IReadOnlyCollection<Guid> groupIds, string permissionKey, CancellationToken cancellationToken = default) => ValueTask.FromResult(PermissionState.Inherit);
         public ValueTask<Workspace?> GetWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default) => ValueTask.FromResult(this.Workspaces.GetValueOrDefault(workspaceId));
@@ -931,7 +1187,8 @@ public sealed partial class WorkspaceAndTokenTests
         public ValueTask<PermissionGroup> UpsertGroupAsync(PermissionGroup group, CancellationToken cancellationToken = default) => ValueTask.FromResult(group);
         public ValueTask DeleteGroupAsync(Guid groupId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
         public ValueTask SetGrantAsync(Guid groupId, string permissionKey, PermissionState state, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-        public ValueTask<IReadOnlyList<PermissionGroupMember>> GetGroupMembersAsync(Guid groupId, CancellationToken cancellationToken = default) => ValueTask.FromResult<IReadOnlyList<PermissionGroupMember>>([]);
+        public ValueTask<IReadOnlyList<PermissionGroupMember>> GetGroupMembersAsync(Guid groupId, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<IReadOnlyList<PermissionGroupMember>>([.. this.GroupMembers.Where(m => m.GroupId == groupId)]);
         public ValueTask AddGroupMemberAsync(PermissionGroupMember member, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
         public ValueTask RemoveGroupMemberAsync(Guid groupId, string platformId, string platformUserId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
         public ValueTask SetUserOverrideAsync(UserPermissionOverride userOverride, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
@@ -956,6 +1213,9 @@ public sealed partial class WorkspaceAndTokenTests
     private sealed class StubPlatformOAuthProvider(string platformId) : IPlatformOAuthProvider
     {
         public string PlatformId { get; } = platformId;
+        public IReadOnlyList<string> DefaultLoginScopes => ["openid", "user:read:email"];
+        public IReadOnlyList<string> DefaultBroadcasterScopes => ["chat:read", "chat:edit"];
+        public IReadOnlyList<string> DefaultBotScopes => ["user:bot", "chat:read"];
         public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null) => throw new NotSupportedException();
         public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string clientSecret, string code, Uri redirectUri, string? expectedNonce = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();

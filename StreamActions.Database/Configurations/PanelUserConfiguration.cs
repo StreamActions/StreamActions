@@ -34,5 +34,6 @@ internal sealed class PanelUserConfiguration : IEntityTypeConfiguration<PanelUse
 
         _ = builder.HasKey(static x => x.Id);
         _ = builder.Property(static x => x.DisplayName).HasMaxLength(200).IsRequired();
+        _ = builder.Property(static x => x.MfaResetByAdminNoticePending);
     }
 }

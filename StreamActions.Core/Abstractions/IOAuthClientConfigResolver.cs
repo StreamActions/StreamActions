@@ -31,11 +31,13 @@ public interface IOAuthClientConfigResolver
     /// <param name="platformId">The platform identifier (for example, <c>twitch</c>).</param>
     /// <param name="workspaceId">The optional workspace identifier for workspace-scoped overrides.</param>
     /// <param name="actor">The optional actor identity used when evaluating permission-gated workspace overrides.</param>
+    /// <param name="flow">The optional OAuth flow identifier (for example, <c>login</c>, <c>link</c>, <c>stepup</c>, <c>broadcaster</c>, <c>bot</c>, or <c>instance-bot</c>).</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The resolved <see cref="ResolvedOAuthClientConfig"/>, or <see langword="null"/> if no eligible configuration exists.</returns>
     ValueTask<ResolvedOAuthClientConfig?> ResolveAsync(
         string platformId,
         Guid? workspaceId = null,
         PlatformUserIdentity? actor = null,
+        string? flow = null,
         CancellationToken cancellationToken = default);
 }

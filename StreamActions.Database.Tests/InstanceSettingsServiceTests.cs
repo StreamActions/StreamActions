@@ -18,6 +18,7 @@
 
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
+using StreamActions.Core.Models;
 using StreamActions.Core.Models.Entities;
 using StreamActions.Database.Services;
 using Xunit;
@@ -42,17 +43,35 @@ public sealed class InstanceSettingsServiceTests
         InstanceSettings initial = await service.GetAsync(ct);
         _ = initial.BackupIntervalHours.Should().Be(24);
         _ = initial.MaxBackupFiles.Should().Be(7);
+        _ = initial.InstanceName.Should().Be("StreamActions");
+        _ = initial.TotpIssuerName.Should().Be("StreamActions");
+        _ = initial.StepUpSudoPolicy.Should().Be(StepUpSudoPolicy.Required);
 
         initial.MaxBackupFiles = 14;
         initial.SentryEnabled = true;
+        initial.InstanceName = "  Custom Bot Panel  ";
+        initial.TotpIssuerName = "  Custom TOTP  ";
+        AuthPolicyParser.SetPlatformOAuthAppPolicy(initial, "twitch", InstanceOAuthAppPolicy.InstanceLoginWithStreamerApiOAuth);
         await service.UpdateAsync(initial, ct);
 
         _ = eventSettings.Should().NotBeNull();
         _ = eventSettings!.MaxBackupFiles.Should().Be(14);
         _ = eventSettings.SentryEnabled.Should().BeTrue();
+        _ = eventSettings.InstanceName.Should().Be("Custom Bot Panel");
+        _ = eventSettings.TotpIssuerName.Should().Be("Custom TOTP");
+        _ = AuthPolicyParser.ResolveOAuthAppPolicy(eventSettings, "twitch").Should().Be(InstanceOAuthAppPolicy.InstanceLoginWithStreamerApiOAuth);
 
         InstanceSettings cached = await service.GetAsync(ct);
         _ = cached.MaxBackupFiles.Should().Be(14);
+        _ = cached.InstanceName.Should().Be("Custom Bot Panel");
+
+        cached.InstanceName = "   ";
+        cached.TotpIssuerName = string.Empty;
+        await service.UpdateAsync(cached, ct);
+
+        InstanceSettings afterBlank = await service.GetAsync(ct);
+        _ = afterBlank.InstanceName.Should().Be("StreamActions");
+        _ = afterBlank.TotpIssuerName.Should().Be("StreamActions");
     }
     #endregion
 }

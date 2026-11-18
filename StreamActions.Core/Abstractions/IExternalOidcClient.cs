@@ -33,6 +33,7 @@ public interface IExternalOidcClient
     /// <param name="redirectUri">The local callback redirect URI.</param>
     /// <param name="state">Optional explicit state token; generated cryptographically when omitted.</param>
     /// <param name="nonce">Optional explicit nonce token; generated cryptographically when omitted.</param>
+    /// <param name="prompt">Optional OIDC <c>prompt</c> parameter (for example, <c>login</c> for forced re-authentication).</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The constructed <see cref="ExternalOidcAuthorizationRequest"/>.</returns>
     ValueTask<ExternalOidcAuthorizationRequest> BuildAuthorizationRequestAsync(
@@ -40,6 +41,7 @@ public interface IExternalOidcClient
         Uri redirectUri,
         string? state = null,
         string? nonce = null,
+        string? prompt = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

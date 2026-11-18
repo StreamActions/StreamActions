@@ -26,7 +26,13 @@ namespace StreamActions.Core.Models;
 /// <param name="Workspace">The accessible workspace.</param>
 /// <param name="IsOwner">A value indicating whether the user owns this workspace.</param>
 /// <param name="Platforms">The platforms attached to this workspace.</param>
+/// <param name="AuthStatus">The authentication readiness status of this workspace for the current session.</param>
+/// <param name="RequiredOidcProviderSlug">
+/// The slug of the external OIDC provider required to reauthenticate for this workspace, when <paramref name="AuthStatus"/> is <see cref="WorkspaceSessionAuthStatus.RequiresOidcReauth"/>.
+/// </param>
 public sealed record AccessibleWorkspace(
     Workspace Workspace,
     bool IsOwner,
-    IReadOnlyList<WorkspacePlatform> Platforms);
+    IReadOnlyList<WorkspacePlatform> Platforms,
+    WorkspaceSessionAuthStatus AuthStatus = WorkspaceSessionAuthStatus.Ready,
+    string? RequiredOidcProviderSlug = null);

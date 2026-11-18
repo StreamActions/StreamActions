@@ -80,6 +80,15 @@ public sealed class ExternalOidcClientTests
 
             string expectedChallenge = Base64UrlEncoder.Encode(SHA256.HashData(Encoding.ASCII.GetBytes(req.CodeVerifier)));
             _ = query["code_challenge"].ToString().Should().Be(expectedChallenge);
+            _ = query.ContainsKey("prompt").Should().BeFalse();
+
+            ExternalOidcAuthorizationRequest stepUpReq = await client.BuildAuthorizationRequestAsync(
+                provider,
+                redirectUri,
+                prompt: "login",
+                cancellationToken: ct);
+            Dictionary<string, StringValues> stepUpQuery = QueryHelpers.ParseQuery(stepUpReq.AuthorizationUri.Query);
+            _ = stepUpQuery["prompt"].ToString().Should().Be("login");
         }
     }
 

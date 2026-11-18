@@ -17,6 +17,7 @@
  */
 
 using StreamActions.Core.Models.Metadata;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Core.Models.Entities;
 
@@ -59,6 +60,12 @@ public sealed class WorkspacePlatform
     /// Gets or sets an optional Data Protection encrypted custom OAuth client secret.
     /// </summary>
     public string? EncryptedCustomClientSecret { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional per-workspace custom OAuth redirect URI override.
+    /// </summary>
+    [SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "Persisted as a nullable string column in EF Core.")]
+    public string? CustomRedirectUri { get; set; }
 
     /// <summary>
     /// Gets or sets the Tier A JSON metadata for platform-specific settings.

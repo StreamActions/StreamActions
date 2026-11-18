@@ -540,6 +540,140 @@ public sealed partial class AuthIntegrationTests
         }
     }
 
+    [Fact]
+    [Trait("Member", "MapAuthEndpoints")]
+    public async Task TwitchPlatformOAuthProvider_ExposesDefaultScopesUsedByAuthEndpoints()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using AuthWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions);
+
+            await SeedInstanceOAuthAndSettingsAsync(factory.Services, allowOpenRegistration: false, InstanceOAuthAppPolicy.InstanceOnly, ct);
+            Workspace ws = await SeedWorkspaceWithOwnerAsync(factory.Services, ct);
+
+            IPlatformOAuthProvider twitchProvider = factory.Services
+                .GetServices<IPlatformOAuthProvider>()
+                .Single(static p => string.Equals(p.PlatformId, "twitch", StringComparison.OrdinalIgnoreCase));
+
+            _ = twitchProvider.DefaultLoginScopes.Should().BeEquivalentTo(["openid", "user:read:email"]);
+            _ = twitchProvider.DefaultBroadcasterScopes.Should().Contain(["channel:bot", "moderator:manage:banned_users"]);
+            _ = twitchProvider.DefaultBotScopes.Should().BeEquivalentTo(["user:read:chat", "user:write:chat", "user:bot", "chat:read", "chat:edit"]);
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            HttpResponseMessage loginRedirect = await client.GetAsync(new Uri("/auth/twitch/login?flow=login", UriKind.Relative), ct);
+            Dictionary<string, StringValues> loginQuery = QueryHelpers.ParseQuery(loginRedirect.Headers.Location!.Query);
+            _ = loginQuery["scope"].ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Should().BeEquivalentTo(twitchProvider.DefaultLoginScopes);
+
+            string loginNonce = loginQuery["nonce"].ToString();
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+                issuer: baseUrl,
+                audience: "instance-cid",
+                subject: "owner-twitch-1",
+                preferredUsername: "owner_user",
+                nonce: loginNonce);
+            _ = await client.GetAsync(
+                new Uri($"/auth/twitch/callback?code=c1&state={Uri.EscapeDataString(loginQuery["state"].ToString())}", UriKind.Relative),
+                ct);
+
+            HttpResponseMessage broadcasterRedirect = await client.GetAsync(
+                new Uri($"/auth/twitch/login?flow=broadcaster&workspaceId={ws.Id}", UriKind.Relative),
+                ct);
+            Dictionary<string, StringValues> broadcasterQuery = QueryHelpers.ParseQuery(broadcasterRedirect.Headers.Location!.Query);
+            _ = broadcasterQuery["scope"].ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Should().BeEquivalentTo(twitchProvider.DefaultBroadcasterScopes);
+
+            HttpResponseMessage botRedirect = await client.GetAsync(
+                new Uri($"/auth/twitch/login?flow=bot&workspaceId={ws.Id}", UriKind.Relative),
+                ct);
+            Dictionary<string, StringValues> botQuery = QueryHelpers.ParseQuery(botRedirect.Headers.Location!.Query);
+            _ = botQuery["scope"].ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Should().BeEquivalentTo(twitchProvider.DefaultBotScopes);
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "MapAuthEndpoints")]
+    public async Task InstanceLoginWithStreamerApiOAuth_UsesInstanceCredentialsForLoginAndRequiresWorkspaceCredentialsForBroadcasterAndBot()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using AuthWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions);
+
+            await SeedInstanceOAuthAndSettingsAsync(
+                factory.Services,
+                allowOpenRegistration: false,
+                InstanceOAuthAppPolicy.InstanceLoginWithStreamerApiOAuth,
+                ct);
+            Workspace ws = await SeedWorkspaceWithOwnerAsync(factory.Services, ct);
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            // 1. Login flow succeeds using instance-cid without workspace custom OAuth app.
+            HttpResponseMessage loginRedirect = await client.GetAsync(new Uri("/auth/twitch/login?flow=login", UriKind.Relative), ct);
+            _ = loginRedirect.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            Dictionary<string, StringValues> loginQuery = QueryHelpers.ParseQuery(loginRedirect.Headers.Location!.Query);
+            _ = loginQuery["client_id"].ToString().Should().Be("instance-cid");
+
+            string loginNonce = loginQuery["nonce"].ToString();
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+                issuer: baseUrl,
+                audience: "instance-cid",
+                subject: "owner-twitch-1",
+                preferredUsername: "owner_user",
+                nonce: loginNonce);
+            _ = await client.GetAsync(
+                new Uri($"/auth/twitch/callback?code=c1&state={Uri.EscapeDataString(loginQuery["state"].ToString())}", UriKind.Relative),
+                ct);
+
+            // 2. Without workspace custom OAuth app, broadcaster and bot flows do not fall back to instance-cid.
+            HttpResponseMessage missingBroadcaster = await client.GetAsync(
+                new Uri($"/auth/twitch/login?flow=broadcaster&workspaceId={ws.Id}", UriKind.Relative),
+                ct);
+            _ = missingBroadcaster.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = missingBroadcaster.Headers.Location!.ToString().Should().Contain("error=oauth_not_configured");
+
+            HttpResponseMessage missingBot = await client.GetAsync(
+                new Uri($"/auth/twitch/login?flow=bot&workspaceId={ws.Id}", UriKind.Relative),
+                ct);
+            _ = missingBot.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = missingBot.Headers.Location!.ToString().Should().Contain("error=oauth_not_configured");
+
+            // 3. Once workspace custom OAuth app is configured, broadcaster and bot flows use workspace client_id.
+            IWorkspaceStore wsStore = factory.Services.GetRequiredService<IWorkspaceStore>();
+            _ = await wsStore.SetCustomOAuthAppAsync(ws.Id, "twitch", "streamer-api-cid", "streamer-api-secret", cancellationToken: ct);
+
+            HttpResponseMessage broadcasterStart = await client.GetAsync(
+                new Uri($"/auth/twitch/login?flow=broadcaster&workspaceId={ws.Id}", UriKind.Relative),
+                ct);
+            _ = broadcasterStart.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            Dictionary<string, StringValues> broadcasterQuery = QueryHelpers.ParseQuery(broadcasterStart.Headers.Location!.Query);
+            _ = broadcasterQuery["client_id"].ToString().Should().Be("streamer-api-cid");
+
+            HttpResponseMessage botStart = await client.GetAsync(
+                new Uri($"/auth/twitch/login?flow=bot&workspaceId={ws.Id}", UriKind.Relative),
+                ct);
+            _ = botStart.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            Dictionary<string, StringValues> botQuery = QueryHelpers.ParseQuery(botStart.Headers.Location!.Query);
+            _ = botQuery["client_id"].ToString().Should().Be("streamer-api-cid");
+        }
+    }
+
     #endregion
 
     private static async Task SeedInstanceOAuthAndSettingsAsync(

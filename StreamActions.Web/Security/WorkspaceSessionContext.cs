@@ -133,7 +133,7 @@ public sealed class WorkspaceSessionContext : IWorkspaceSessionContext, IDisposa
         try
         {
             AccessibleWorkspace? match = this.AccessibleWorkspaces
-                .FirstOrDefault(w => w.Workspace.Id == workspaceId);
+                .FirstOrDefault(w => w.Workspace.Id == workspaceId && w.AuthStatus == WorkspaceSessionAuthStatus.Ready);
 
             if (match is null)
             {
@@ -204,8 +204,10 @@ public sealed class WorkspaceSessionContext : IWorkspaceSessionContext, IDisposa
                         .GetLoginIdentitiesAsync(user.Id, cancellationToken)
                         .ConfigureAwait(false);
                     IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(principal);
+                    string? authProvider = principal.FindFirstValue(AuthClaims.AuthProviderClaimType);
+                    bool isMfaVerified = AuthClaims.HasTrueClaim(principal, AuthClaims.MfaVerifiedClaimType);
                     IReadOnlyList<AccessibleWorkspace> accessible = await this._workspaceAccessService
-                        .GetAccessibleWorkspacesAsync(user, identities, oidcGroups, cancellationToken)
+                        .GetAccessibleWorkspacesAsync(user, identities, oidcGroups, authProvider, isMfaVerified, cancellationToken)
                         .ConfigureAwait(false);
 
                     AccessibleWorkspace? selected = this.ResolvePreferredWorkspace(principal, accessible, previousActiveId);
@@ -262,7 +264,8 @@ public sealed class WorkspaceSessionContext : IWorkspaceSessionContext, IDisposa
 
         if (previousActiveId.HasValue)
         {
-            AccessibleWorkspace? existing = accessible.FirstOrDefault(w => w.Workspace.Id == previousActiveId.Value);
+            AccessibleWorkspace? existing = accessible.FirstOrDefault(w =>
+                w.Workspace.Id == previousActiveId.Value && w.AuthStatus == WorkspaceSessionAuthStatus.Ready);
             if (existing is not null)
             {
                 return existing;
@@ -274,7 +277,8 @@ public sealed class WorkspaceSessionContext : IWorkspaceSessionContext, IDisposa
             && httpContext.Request.Cookies.TryGetValue(AuthClaims.WorkspaceCookieName, out string? rawCookieId)
             && Guid.TryParse(rawCookieId, out Guid cookieWorkspaceId))
         {
-            AccessibleWorkspace? fromCookie = accessible.FirstOrDefault(w => w.Workspace.Id == cookieWorkspaceId);
+            AccessibleWorkspace? fromCookie = accessible.FirstOrDefault(w =>
+                w.Workspace.Id == cookieWorkspaceId && w.AuthStatus == WorkspaceSessionAuthStatus.Ready);
             if (fromCookie is not null)
             {
                 return fromCookie;
@@ -285,7 +289,8 @@ public sealed class WorkspaceSessionContext : IWorkspaceSessionContext, IDisposa
         if (!string.IsNullOrWhiteSpace(authProvider))
         {
             AccessibleWorkspace? ownedForPlatform = accessible.FirstOrDefault(w =>
-                w.IsOwner
+                w.AuthStatus == WorkspaceSessionAuthStatus.Ready
+                && w.IsOwner
                 && string.Equals(w.Workspace.PrimaryPlatformId, authProvider.Trim(), StringComparison.OrdinalIgnoreCase));
             if (ownedForPlatform is not null)
             {
@@ -293,6 +298,6 @@ public sealed class WorkspaceSessionContext : IWorkspaceSessionContext, IDisposa
             }
         }
 
-        return accessible[0];
+        return accessible.FirstOrDefault(static w => w.AuthStatus == WorkspaceSessionAuthStatus.Ready);
     }
 }

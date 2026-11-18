@@ -36,6 +36,7 @@ internal sealed class WorkspacePlatformConfiguration : IEntityTypeConfiguration<
         _ = builder.Property(static x => x.PlatformId).HasMaxLength(64).IsRequired();
         _ = builder.Property(static x => x.PlatformChannelId).HasMaxLength(128).IsRequired();
         _ = builder.Property(static x => x.CustomClientId).HasMaxLength(256);
+        _ = builder.Property(static x => x.CustomRedirectUri).HasMaxLength(2048);
 
         _ = builder.ComplexProperty(static x => x.Metadata, static b =>
         {

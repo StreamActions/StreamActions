@@ -19,16 +19,21 @@
 @page "/login"
 
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.DataProtection
+@using Microsoft.AspNetCore.Http
+@using Microsoft.Extensions.DependencyInjection
 @using StreamActions.Core.Abstractions
 @using StreamActions.Core.Models
 @using StreamActions.Core.Models.Entities
+@using StreamActions.Web.Security
 @using System.Globalization
 
 @inject IEnumerable<IPlatformOAuthProvider> PlatformProviders
 @inject IInstanceSettingsService InstanceSettingsService
 @inject IExternalOidcProviderStore OidcProviderStore
+@inject IServiceProvider ServiceProvider
 
-<PageTitle>Sign In - StreamActions</PageTitle>
+<PageTitle>@AuthPolicyParser.FormatPageTitle("Sign In", _instanceName)</PageTitle>
 
 <h1>Sign In</h1>
 
@@ -39,7 +44,40 @@
     </p>
 }
 
-@if (_oidcLoginMode != ExternalOidcLoginMode.Required)
+@if (_oidcLoginMode != ExternalOidcLoginMode.Required && _passkeyAvailability != MfaMethodAvailability.Disabled)
+{
+    <section aria-labelledby="passkey-login-heading" data-passkey-login-section="true">
+        <h2 id="passkey-login-heading">Passkey Sign In</h2>
+        <button type="button"
+                data-passkey-login="true"
+                data-return-url="@_safeReturnUrl"
+                onclick="window.streamActionsWebAuthn && window.streamActionsWebAuthn.loginWithPasskey(this.dataset.returnUrl, 'passkey-login-error')">
+            Sign in with a Passkey
+        </button>
+        <p id="passkey-login-error" role="alert" hidden></p>
+    </section>
+}
+
+@if (_oidcLoginMode != ExternalOidcLoginMode.Required && _showLoginHint && _loginHint is not null && _loginHintPlatform is not null)
+{
+    <section aria-labelledby="login-hint-heading" data-login-hint-section="true">
+        <h2 id="login-hint-heading">Welcome Back</h2>
+        <form method="post" action="/auth/@_loginHintPlatform.PlatformId/login" data-login-hint-form="@_loginHintPlatform.PlatformId">
+            <AntiforgeryToken />
+            <input type="hidden" name="flow" value="login" />
+            <input type="hidden" name="useLoginHint" value="true" />
+            @if (!string.IsNullOrWhiteSpace(ReturnUrl))
+            {
+                <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+            }
+            <button type="submit">Continue as @_loginHint.DisplayName</button>
+        </form>
+        <p>
+            <a href="@BuildUseDifferentAccountHref()" data-use-different-account="true">Use a different account</a>
+        </p>
+    </section>
+}
+else if (_oidcLoginMode != ExternalOidcLoginMode.Required)
 {
     <section aria-labelledby="platform-login-heading">
         <h2 id="platform-login-heading">Platform Sign In</h2>
@@ -47,44 +85,83 @@
         {
             <p>No streaming platform OAuth providers are currently registered.</p>
         }
-        else if (_oauthAppPolicy == InstanceOAuthAppPolicy.RequireStreamerOAuthApp)
-        {
-            <p>This instance requires your own OAuth application credentials to sign in with a streaming platform.</p>
-            @foreach (IPlatformOAuthProvider provider in _providers)
-            {
-                string displayName = FormatPlatformName(provider.PlatformId);
-                <form method="post" action="/auth/@provider.PlatformId/login" data-streamer-oauth-form="@provider.PlatformId">
-                    <AntiforgeryToken />
-                    <input type="hidden" name="flow" value="login" />
-                    @if (!string.IsNullOrWhiteSpace(ReturnUrl))
-                    {
-                        <input type="hidden" name="returnUrl" value="@ReturnUrl" />
-                    }
-                    <h3>@displayName</h3>
-                    <div>
-                        <label for="custom-client-id-@provider.PlatformId">Custom OAuth Client ID</label>
-                        <input id="custom-client-id-@provider.PlatformId" name="customClientId" type="text" autocomplete="off" required />
-                    </div>
-                    <div>
-                        <label for="custom-client-secret-@provider.PlatformId">Custom OAuth Client Secret</label>
-                        <input id="custom-client-secret-@provider.PlatformId" name="customClientSecret" type="password" autocomplete="new-password" required />
-                    </div>
-                    <button type="submit">Continue with @displayName</button>
-                </form>
-            }
-        }
         else
         {
-            <ul>
-                @foreach (IPlatformOAuthProvider provider in _providers)
+            List<IPlatformOAuthProvider> linkProviders = [];
+            List<IPlatformOAuthProvider> customOAuthProviders = [];
+            foreach (IPlatformOAuthProvider provider in _providers)
+            {
+                if (GetEffectiveOAuthPolicy(provider.PlatformId) == InstanceOAuthAppPolicy.RequireStreamerOAuthApp)
+                {
+                    customOAuthProviders.Add(provider);
+                }
+                else
+                {
+                    linkProviders.Add(provider);
+                }
+            }
+
+            @if (linkProviders.Count > 0)
+            {
+                <ul>
+                    @foreach (IPlatformOAuthProvider provider in linkProviders)
+                    {
+                        string displayName = FormatPlatformName(provider.PlatformId);
+                        string loginHref = BuildPlatformLoginHref(provider.PlatformId);
+                        <li>
+                            <a href="@loginHref">Sign in with @displayName</a>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (customOAuthProviders.Count > 0)
+            {
+                <p>This instance requires your own OAuth application credentials to sign in with a streaming platform.</p>
+                @foreach (IPlatformOAuthProvider provider in customOAuthProviders)
                 {
                     string displayName = FormatPlatformName(provider.PlatformId);
-                    string loginHref = BuildPlatformLoginHref(provider.PlatformId);
-                    <li>
-                        <a href="@loginHref">Sign in with @displayName</a>
-                    </li>
+                    <h3>@displayName</h3>
+                    <form method="post" action="/auth/@provider.PlatformId/login" data-identifier-login-form="@provider.PlatformId">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="flow" value="login" />
+                        @if (!string.IsNullOrWhiteSpace(ReturnUrl))
+                        {
+                            <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                        }
+                        <div>
+                            <label for="login-identifier-@provider.PlatformId">Workspace Slug, Workspace Name, or @displayName Username</label>
+                            <input id="login-identifier-@provider.PlatformId" name="identifier" type="text" autocomplete="username" required />
+                        </div>
+                        <button type="submit">Continue with @displayName</button>
+                    </form>
+
+                    <details data-first-time-oauth-setup="@provider.PlatformId">
+                        <summary>First-time channel setup: Enter OAuth App credentials</summary>
+                        <form method="post" action="/auth/@provider.PlatformId/login" data-streamer-oauth-form="@provider.PlatformId">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="flow" value="login" />
+                            @if (!string.IsNullOrWhiteSpace(ReturnUrl))
+                            {
+                                <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                            }
+                            <div>
+                                <label for="custom-client-id-@provider.PlatformId">Custom OAuth Client ID</label>
+                                <input id="custom-client-id-@provider.PlatformId" name="customClientId" type="text" autocomplete="off" required />
+                            </div>
+                            <div>
+                                <label for="custom-client-secret-@provider.PlatformId">Custom OAuth Client Secret</label>
+                                <input id="custom-client-secret-@provider.PlatformId" name="customClientSecret" type="password" autocomplete="new-password" required />
+                            </div>
+                            <div>
+                                <label for="custom-redirect-uri-@provider.PlatformId">Custom Redirect URI (optional)</label>
+                                <input id="custom-redirect-uri-@provider.PlatformId" name="customRedirectUri" type="url" autocomplete="off" />
+                            </div>
+                            <button type="submit">Continue with @displayName</button>
+                        </form>
+                    </details>
                 }
-            </ul>
+            }
         }
     </section>
 }
@@ -102,7 +179,7 @@
             <ul>
                 @foreach (ExternalOidcProvider provider in _oidcProviders)
                 {
-                    string oidcHref = BuildOidcLoginHref(provider.Slug);
+                    string oidcHref = BuildOidcLoginHref(provider);
                     <li>
                         <a href="@oidcHref">Sign in with @provider.DisplayName</a>
                     </li>
@@ -126,19 +203,49 @@
     private IReadOnlyList<IPlatformOAuthProvider> _providers = [];
 
     /// <summary>
-    /// Enabled instance-wide external OIDC providers.
+    /// Enabled instance-wide and optional workspace-scoped external OIDC providers.
     /// </summary>
     private IReadOnlyList<ExternalOidcProvider> _oidcProviders = [];
 
     /// <summary>
-    /// Effective instance OAuth application policy.
+    /// Loaded instance settings used for per-platform OAuth policy resolution and branding.
     /// </summary>
-    private InstanceOAuthAppPolicy _oauthAppPolicy = InstanceOAuthAppPolicy.InstanceOnly;
+    private InstanceSettings? _settings;
+
+    /// <summary>
+    /// Display name for this instance used in the page title.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
 
     /// <summary>
     /// Effective external OIDC login mode.
     /// </summary>
     private ExternalOidcLoginMode _oidcLoginMode = ExternalOidcLoginMode.Allowed;
+
+    /// <summary>
+    /// Instance-wide WebAuthn passkey availability policy.
+    /// </summary>
+    private MfaMethodAvailability _passkeyAvailability = MfaMethodAvailability.Allowed;
+
+    /// <summary>
+    /// Validated safe local return URL for passkey sign-in.
+    /// </summary>
+    private string _safeReturnUrl = "/";
+
+    /// <summary>
+    /// Decrypted Tier 2 returning-user login hint payload, if present.
+    /// </summary>
+    private LoginHintPayload? _loginHint;
+
+    /// <summary>
+    /// Matching platform provider for <see cref="_loginHint"/>, if available.
+    /// </summary>
+    private IPlatformOAuthProvider? _loginHintPlatform;
+
+    /// <summary>
+    /// Indicates whether the Tier 2 returning-user hint UI should be shown.
+    /// </summary>
+    private bool _showLoginHint;
 
     /// <summary>
     /// Gets or sets the optional authentication error code supplied on query redirect.
@@ -159,24 +266,76 @@
     public string? ReturnUrl { get; set; }
 
     /// <summary>
-    /// Loads instance authentication policies and enabled login providers.
+    /// Gets or sets a value indicating whether the user opted to bypass the Tier 2 login hint.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "useDifferentAccount")]
+    public bool? UseDifferentAccount { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional workspace identifier used to surface workspace-scoped OIDC providers.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "workspaceId")]
+    public Guid? WorkspaceId { get; set; }
+
+    /// <summary>
+    /// Loads instance authentication policies, login hint state, and enabled login providers.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
     protected override async Task OnInitializedAsync()
     {
         _providers = [.. PlatformProviders.OrderBy(static p => p.PlatformId, StringComparer.OrdinalIgnoreCase)];
+        _safeReturnUrl = AuthClaims.SafeReturnUrlOrDefault(ReturnUrl, "/");
 
         InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
-        _oauthAppPolicy = AuthPolicyParser.ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
+        _settings = settings;
+        _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         _oidcLoginMode = settings.ExternalOidcLoginMode;
+        _passkeyAvailability = settings.MfaPasskeyAvailability;
+
+        IHttpContextAccessor? httpContextAccessor = ServiceProvider.GetService<IHttpContextAccessor>();
+        IDataProtectionProvider? dataProtectionProvider = ServiceProvider.GetService<IDataProtectionProvider>();
+        if (httpContextAccessor?.HttpContext is HttpContext httpContext && dataProtectionProvider is not null)
+        {
+            _loginHint = AuthClaims.TryReadLoginHint(httpContext, dataProtectionProvider);
+            if (_loginHint is not null && UseDifferentAccount != true && !string.IsNullOrWhiteSpace(_loginHint.PlatformId))
+            {
+                _loginHintPlatform = _providers.FirstOrDefault(p =>
+                    string.Equals(p.PlatformId, _loginHint.PlatformId, StringComparison.OrdinalIgnoreCase));
+                _showLoginHint = _loginHintPlatform is not null;
+            }
+        }
 
         if (_oidcLoginMode != ExternalOidcLoginMode.Disabled)
         {
-            _oidcProviders = await OidcProviderStore
-                .GetProvidersAsync(workspaceId: null, enabledOnly: true)
-                .ConfigureAwait(false);
+            List<ExternalOidcProvider> combinedOidc =
+            [
+                .. await OidcProviderStore
+                    .GetProvidersAsync(workspaceId: null, enabledOnly: true)
+                    .ConfigureAwait(false),
+            ];
+
+            Guid? targetWorkspaceId = WorkspaceId ?? _loginHint?.WorkspaceId;
+            if (targetWorkspaceId.HasValue && targetWorkspaceId.Value != Guid.Empty)
+            {
+                IReadOnlyList<ExternalOidcProvider> workspaceOidc = await OidcProviderStore
+                    .GetProvidersAsync(targetWorkspaceId.Value, enabledOnly: true)
+                    .ConfigureAwait(false);
+                combinedOidc.AddRange(workspaceOidc);
+            }
+
+            _oidcProviders = combinedOidc;
         }
     }
+
+    /// <summary>
+    /// Resolves the effective <see cref="InstanceOAuthAppPolicy"/> for a specific platform.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The effective <see cref="InstanceOAuthAppPolicy"/>.</returns>
+    private InstanceOAuthAppPolicy GetEffectiveOAuthPolicy(string platformId) =>
+        _settings is null
+            ? InstanceOAuthAppPolicy.InstanceOnly
+            : AuthPolicyParser.ResolveOAuthAppPolicy(_settings, platformId);
 
     /// <summary>
     /// Builds the platform login link with an optional safe return URL.
@@ -189,14 +348,37 @@
             : $"/auth/{Uri.EscapeDataString(platformId)}/login?flow=login";
 
     /// <summary>
-    /// Builds the OIDC login link with an optional safe return URL.
+    /// Builds the link that switches out of the Tier 2 returning-user login hint view.
     /// </summary>
-    /// <param name="slug">The OIDC provider slug.</param>
-    /// <returns>The OIDC login endpoint URL.</returns>
-    private string BuildOidcLoginHref(string slug) =>
+    /// <returns>The login URL with <c>useDifferentAccount=true</c>.</returns>
+    private string BuildUseDifferentAccountHref() =>
         AuthClaims.IsSafeLocalRedirect(ReturnUrl)
-            ? $"/auth/oidc/{Uri.EscapeDataString(slug)}/login?returnUrl={Uri.EscapeDataString(ReturnUrl!.Trim())}"
-            : $"/auth/oidc/{Uri.EscapeDataString(slug)}/login";
+            ? $"/login?useDifferentAccount=true&returnUrl={Uri.EscapeDataString(ReturnUrl!.Trim())}"
+            : "/login?useDifferentAccount=true";
+
+    /// <summary>
+    /// Builds the OIDC login link with optional workspace scope and safe return URL.
+    /// </summary>
+    /// <param name="provider">The OIDC provider configuration.</param>
+    /// <returns>The OIDC login endpoint URL.</returns>
+    private string BuildOidcLoginHref(ExternalOidcProvider provider)
+    {
+        List<string> query = [];
+        if (provider.WorkspaceId.HasValue && provider.WorkspaceId.Value != Guid.Empty)
+        {
+            query.Add($"workspaceId={provider.WorkspaceId.Value:D}");
+        }
+
+        if (AuthClaims.IsSafeLocalRedirect(ReturnUrl))
+        {
+            query.Add($"returnUrl={Uri.EscapeDataString(ReturnUrl!.Trim())}");
+        }
+
+        string basePath = $"/auth/oidc/{Uri.EscapeDataString(provider.Slug)}/login";
+        return query.Count == 0
+            ? basePath
+            : $"{basePath}?{string.Join('&', query)}";
+    }
 
     /// <summary>
     /// Formats a platform identifier into a title-cased display label.
@@ -217,7 +399,9 @@
         "oauth_not_configured" => string.IsNullOrWhiteSpace(platform)
             ? "OAuth application credentials are not configured for this platform."
             : $"OAuth application credentials are not configured for {FormatPlatformName(platform)}.",
+        "invalid_redirect_uri" => "The supplied custom OAuth redirect URI must be a valid HTTP or HTTPS URL.",
         "oidc_required" => "External OIDC SSO is required for panel login on this instance.",
+        "workspace_oidc_required" => "Your workspace requires signing in via an external OpenID Connect (OIDC) provider.",
         "oidc_secret_unavailable" => "External OIDC provider credentials could not be decrypted.",
         "identity_missing" => "The identity provider did not return a valid user identifier.",
         _ => "Authentication could not be completed. Please try again.",

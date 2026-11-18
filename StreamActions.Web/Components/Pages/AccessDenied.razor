@@ -18,10 +18,38 @@
 
 @page "/access-denied"
 
-<PageTitle>Access Denied - StreamActions</PageTitle>
+@using Microsoft.Extensions.DependencyInjection
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
+
+@inject IServiceProvider ServiceProvider
+
+<PageTitle>@AuthPolicyParser.FormatPageTitle("Access Denied", _instanceName)</PageTitle>
 
 <h1>Access Denied</h1>
 <p role="alert">Access Denied — Ask a channel owner to grant your account panel access</p>
 <p>
     <a href="/login">Return to Sign In</a> | <a href="/">Home</a>
 </p>
+
+@code {
+    /// <summary>
+    /// Operator-configured instance display name.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
+    /// Loads the configured instance display name for the page title.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
+        if (settingsService is not null)
+        {
+            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        }
+    }
+}

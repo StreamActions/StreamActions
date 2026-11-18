@@ -34,6 +34,7 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
 
         _ = builder.HasKey(static x => x.Id);
         _ = builder.Property(static x => x.Name).HasMaxLength(200).IsRequired();
+        _ = builder.Property(static x => x.Slug).HasMaxLength(128).IsRequired();
         _ = builder.Property(static x => x.PrimaryPlatformId).HasMaxLength(64).IsRequired();
 
         _ = builder.HasOne<PanelUser>()
@@ -42,5 +43,6 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
             .OnDelete(DeleteBehavior.Restrict);
 
         _ = builder.HasIndex(static x => x.OwnerUserId);
+        _ = builder.HasIndex(static x => x.Slug).IsUnique();
     }
 }

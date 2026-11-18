@@ -67,6 +67,7 @@ internal sealed class TestSqliteContextFactory : IDbContextFactory<StreamActions
                 Id = workspaceId,
                 OwnerUserId = userId,
                 Name = "Test Workspace",
+                Slug = $"test-workspace-{workspaceId:N}",
                 PrimaryPlatformId = "twitch",
                 CreatedAtUtc = DateTimeOffset.UtcNow,
             });

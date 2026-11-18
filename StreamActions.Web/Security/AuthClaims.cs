@@ -17,10 +17,14 @@
  */
 
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using StreamActions.Core.Models.Entities;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace StreamActions.Web.Security;
 
@@ -50,6 +54,16 @@ public static class AuthClaims
     public const string MfaStateCookieName = "StreamActions.MfaState";
 
     /// <summary>
+    /// Cookie name for short-lived protected discoverable passkey-first sign-in state payloads.
+    /// </summary>
+    public const string PasskeyLoginStateCookieName = "StreamActions.PasskeyLogin";
+
+    /// <summary>
+    /// Cookie name storing the DataProtection-signed 90-day login hint payload for Tier 2 returning-user sign-in.
+    /// </summary>
+    public const string LoginHintCookieName = "StreamActions.LoginHint";
+
+    /// <summary>
     /// Data protection purpose string for <see cref="AuthFlowCookieName"/> payloads.
     /// </summary>
     public const string AuthFlowProtectorPurpose = "StreamActions.AuthFlow.v1";
@@ -58,6 +72,16 @@ public static class AuthClaims
     /// Data protection purpose string for <see cref="MfaStateCookieName"/> payloads.
     /// </summary>
     public const string MfaStateProtectorPurpose = "StreamActions.MfaState.v1";
+
+    /// <summary>
+    /// Data protection purpose string for <see cref="PasskeyLoginStateCookieName"/> payloads.
+    /// </summary>
+    public const string PasskeyLoginStateProtectorPurpose = "StreamActions.PasskeyLogin.v1";
+
+    /// <summary>
+    /// Data protection purpose string for <see cref="LoginHintCookieName"/> payloads.
+    /// </summary>
+    public const string LoginHintProtectorPurpose = "StreamActions.LoginHint.v1";
 
     /// <summary>
     /// Authorization policy allowing authenticated users whose MFA challenge or enrollment is still pending.
@@ -115,9 +139,19 @@ public static class AuthClaims
     public const string AuthProviderClaimType = "sa:auth_provider";
 
     /// <summary>
+    /// Claim type indicating that MFA verification has been completed in the current session.
+    /// </summary>
+    public const string MfaVerifiedClaimType = "sa:mfa_verified";
+
+    /// <summary>
     /// Duration for which a completed MFA challenge or enrollment grants step-up ("Sudo Mode") elevation.
     /// </summary>
     public static readonly TimeSpan StepUpWindow = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Sliding lifetime for the DataProtection-signed <see cref="LoginHintCookieName"/> cookie.
+    /// </summary>
+    public static readonly TimeSpan LoginHintLifetime = TimeSpan.FromDays(90);
 
     /// <summary>
     /// Builds a <see cref="ClaimsPrincipal"/> for the cookie authentication scheme from a <see cref="PanelUser"/>.
@@ -128,6 +162,7 @@ public static class AuthClaims
     /// <param name="mfaPending"><see langword="true"/> if an MFA challenge is pending; otherwise, <see langword="false"/>.</param>
     /// <param name="mfaEnrollmentRequired"><see langword="true"/> if the user must enroll MFA before completing authentication; otherwise, <see langword="false"/>.</param>
     /// <param name="mfaElevatedUntilUtc">Optional UTC expiration timestamp for step-up MFA elevation.</param>
+    /// <param name="mfaVerified"><see langword="true"/> if MFA has been verified in this session; otherwise, <see langword="false"/>.</param>
     /// <returns>The constructed <see cref="ClaimsPrincipal"/>.</returns>
     public static ClaimsPrincipal BuildClaimsPrincipal(
         PanelUser user,
@@ -135,7 +170,8 @@ public static class AuthClaims
         string? authProvider = null,
         bool mfaPending = false,
         bool mfaEnrollmentRequired = false,
-        DateTimeOffset? mfaElevatedUntilUtc = null)
+        DateTimeOffset? mfaElevatedUntilUtc = null,
+        bool mfaVerified = false)
     {
         ArgumentNullException.ThrowIfNull(user);
 
@@ -155,6 +191,11 @@ public static class AuthClaims
         if (mfaEnrollmentRequired)
         {
             claims.Add(new Claim(MfaEnrollmentRequiredClaimType, "true"));
+        }
+
+        if (mfaVerified)
+        {
+            claims.Add(new Claim(MfaVerifiedClaimType, "true"));
         }
 
         if (mfaElevatedUntilUtc.HasValue)
@@ -224,7 +265,43 @@ public static class AuthClaims
         {
             if (string.Equals(claim.Type, MfaPendingClaimType, StringComparison.Ordinal)
                 || string.Equals(claim.Type, MfaEnrollmentRequiredClaimType, StringComparison.Ordinal)
-                || string.Equals(claim.Type, MfaElevatedUntilClaimType, StringComparison.Ordinal))
+                || string.Equals(claim.Type, MfaElevatedUntilClaimType, StringComparison.Ordinal)
+                || string.Equals(claim.Type, MfaVerifiedClaimType, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            claims.Add(new Claim(claim.Type, claim.Value, claim.ValueType, claim.Issuer, claim.OriginalIssuer));
+        }
+
+        claims.Add(new Claim(MfaVerifiedClaimType, "true"));
+        claims.Add(new Claim(
+            MfaElevatedUntilClaimType,
+            elevatedUntilUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)));
+
+        ClaimsIdentity? existingIdentity = existing.Identity as ClaimsIdentity;
+        string authenticationType = existingIdentity?.AuthenticationType ?? CookieAuthenticationDefaults.AuthenticationScheme;
+        string nameClaimType = existingIdentity?.NameClaimType ?? ClaimsIdentity.DefaultNameClaimType;
+        string roleClaimType = existingIdentity?.RoleClaimType ?? ClaimsIdentity.DefaultRoleClaimType;
+
+        ClaimsIdentity updatedIdentity = new(claims, authenticationType, nameClaimType, roleClaimType);
+        return new ClaimsPrincipal(updatedIdentity);
+    }
+
+    /// <summary>
+    /// Produces a new <see cref="ClaimsPrincipal"/> updating <see cref="MfaElevatedUntilClaimType"/> while preserving pending MFA and enrollment-required claims.
+    /// </summary>
+    /// <param name="existing">The existing authenticated <see cref="ClaimsPrincipal"/>.</param>
+    /// <param name="elevatedUntilUtc">The UTC expiration timestamp for the granted step-up window.</param>
+    /// <returns>The updated <see cref="ClaimsPrincipal"/>.</returns>
+    public static ClaimsPrincipal WithStepUpElevated(ClaimsPrincipal existing, DateTimeOffset elevatedUntilUtc)
+    {
+        ArgumentNullException.ThrowIfNull(existing);
+
+        List<Claim> claims = [];
+        foreach (Claim claim in existing.Claims)
+        {
+            if (string.Equals(claim.Type, MfaElevatedUntilClaimType, StringComparison.Ordinal))
             {
                 continue;
             }
@@ -334,4 +411,110 @@ public static class AuthClaims
     [SuppressMessage("Design", "CA1055:URI-like return values should not be strings", Justification = "Results.Redirect accepts a string URL.")]
     public static string SafeReturnUrlOrDefault(string? returnUrl, string fallback = "/") =>
         IsSafeLocalRedirect(returnUrl) ? returnUrl!.Trim() : fallback;
+
+    /// <summary>
+    /// Encrypts and writes the 90-day sliding <see cref="LoginHintCookieName"/> cookie.
+    /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="payload">The login hint payload to protect.</param>
+    internal static void WriteLoginHintCookie(
+        HttpContext httpContext,
+        IDataProtectionProvider dataProtectionProvider,
+        LoginHintPayload payload)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(dataProtectionProvider);
+        ArgumentNullException.ThrowIfNull(payload);
+
+        string json = JsonSerializer.Serialize(payload);
+        ITimeLimitedDataProtector protector = dataProtectionProvider
+            .CreateProtector(LoginHintProtectorPurpose)
+            .ToTimeLimitedDataProtector();
+        string protectedValue = protector.Protect(json, LoginHintLifetime);
+
+        httpContext.Response.Cookies.Append(
+            LoginHintCookieName,
+            protectedValue,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = httpContext.Request.IsHttps,
+                IsEssential = true,
+                MaxAge = LoginHintLifetime,
+                Path = "/",
+            });
+    }
+
+    /// <summary>
+    /// Attempts to read and validate the DataProtection-signed <see cref="LoginHintCookieName"/> cookie.
+    /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <returns>The validated <see cref="LoginHintPayload"/>, or <see langword="null"/> if absent, expired, or invalid.</returns>
+    internal static LoginHintPayload? TryReadLoginHint(
+        HttpContext httpContext,
+        IDataProtectionProvider dataProtectionProvider)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(dataProtectionProvider);
+
+        if (!httpContext.Request.Cookies.TryGetValue(LoginHintCookieName, out string? protectedValue)
+            || string.IsNullOrWhiteSpace(protectedValue))
+        {
+            return null;
+        }
+
+        try
+        {
+            ITimeLimitedDataProtector protector = dataProtectionProvider
+                .CreateProtector(LoginHintProtectorPurpose)
+                .ToTimeLimitedDataProtector();
+            string json = protector.Unprotect(protectedValue);
+            LoginHintPayload? payload = JsonSerializer.Deserialize<LoginHintPayload>(json);
+            return payload is null || payload.PanelUserId == Guid.Empty || string.IsNullOrWhiteSpace(payload.DisplayName)
+                ? null
+                : payload;
+        }
+        catch (CryptographicException)
+        {
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Deletes the <see cref="LoginHintCookieName"/> cookie with matching security and path attributes.
+    /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    internal static void DeleteLoginHintCookie(HttpContext httpContext)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        httpContext.Response.Cookies.Delete(LoginHintCookieName, new CookieOptions
+        {
+            HttpOnly = true,
+            SameSite = SameSiteMode.Lax,
+            Secure = httpContext.Request.IsHttps,
+            IsEssential = true,
+            Path = "/",
+        });
+    }
 }
+
+/// <summary>
+/// Represents the DataProtection-signed payload stored inside the <c>StreamActions.LoginHint</c> cookie.
+/// </summary>
+/// <param name="PanelUserId">The remembered panel user identifier.</param>
+/// <param name="WorkspaceId">The optional last active workspace identifier.</param>
+/// <param name="PlatformId">The optional platform identifier associated with the workspace or user.</param>
+/// <param name="DisplayName">The user's display name shown on the returning-user sign-in button.</param>
+internal sealed record LoginHintPayload(
+    Guid PanelUserId,
+    Guid? WorkspaceId,
+    string? PlatformId,
+    string DisplayName);

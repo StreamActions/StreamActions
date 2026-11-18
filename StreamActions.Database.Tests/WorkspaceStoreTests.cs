@@ -74,6 +74,58 @@ public sealed class WorkspaceStoreTests
         _ = groups.Select(static g => g.Name).Should().Contain(["Broadcaster", "Moderator", "VIP", "Subscriber", "Regular", "Follower", "Everyone"]);
     }
 
+    [Fact]
+    [Trait("Member", "CreateWorkspaceAsync")]
+    public async Task CreateWorkspaceAsync_GeneratesUniqueNormalizedSlugsAndPersistsRequireExternalOidcLogin()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TestSqliteContextFactory factory = new();
+        (Guid userId, _) = await factory.SeedWorkspaceAsync(ct);
+
+        SecretProtectionService protection = new(new EphemeralDataProtectionProvider(), NullLogger<SecretProtectionService>.Instance);
+        FakeTimeProvider timeProvider = new();
+        using InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
+        PermissionStore permissionStore = new(factory, timeProvider, eventBus);
+        WorkspaceStore store = new(factory, protection, permissionStore, timeProvider);
+
+        Workspace first = await store.CreateWorkspaceAsync(
+            new Workspace
+            {
+                OwnerUserId = userId,
+                Name = "My Awesome Stream!",
+                PrimaryPlatformId = "twitch",
+                RequireExternalOidcLogin = true,
+            },
+            cancellationToken: ct);
+        Workspace second = await store.CreateWorkspaceAsync(
+            new Workspace
+            {
+                OwnerUserId = userId,
+                Name = "My Awesome Stream!",
+                PrimaryPlatformId = "twitch",
+            },
+            cancellationToken: ct);
+        Workspace explicitSlug = await store.CreateWorkspaceAsync(
+            new Workspace
+            {
+                OwnerUserId = userId,
+                Name = "Custom",
+                Slug = "  Custom-Slug  ",
+                PrimaryPlatformId = "twitch",
+            },
+            cancellationToken: ct);
+
+        _ = first.Slug.Should().Be("my-awesome-stream");
+        _ = first.RequireExternalOidcLogin.Should().BeTrue();
+        _ = second.Slug.Should().Be("my-awesome-stream-2");
+        _ = second.RequireExternalOidcLogin.Should().BeFalse();
+        _ = explicitSlug.Slug.Should().Be("custom-slug");
+
+        second.RequireExternalOidcLogin = true;
+        Workspace updatedSecond = await store.UpdateWorkspaceAsync(second, ct);
+        _ = updatedSecond.RequireExternalOidcLogin.Should().BeTrue();
+    }
+
     #endregion
 
     #region CustomOAuthApp
@@ -102,7 +154,7 @@ public sealed class WorkspaceStoreTests
             },
             cancellationToken: ct);
 
-        WorkspacePlatform updated = await storeA.SetCustomOAuthAppAsync(workspaceId, "TWITCH", "custom-cid", "custom-secret", ct);
+        WorkspacePlatform updated = await storeA.SetCustomOAuthAppAsync(workspaceId, "TWITCH", "custom-cid", "custom-secret", cancellationToken: ct);
         _ = updated.PlatformId.Should().Be("twitch");
         _ = updated.CustomClientId.Should().Be("custom-cid");
         _ = updated.EncryptedCustomClientSecret.Should().NotBeNullOrWhiteSpace().And.NotContain("custom-secret");
@@ -117,6 +169,65 @@ public sealed class WorkspaceStoreTests
 
         PlatformOAuthAppCredentials? mismatch = await storeB.GetCustomOAuthAppAsync(workspaceId, "twitch", ct);
         _ = mismatch.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "SetCustomOAuthAppAsync")]
+    public async Task SetAndGetCustomOAuthAppAsync_PreservesCustomRedirectUriAndAllowsSharedClientIdAcrossWorkspaces()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TestSqliteContextFactory factory = new();
+        (Guid userId, Guid workspace1Id) = await factory.SeedWorkspaceAsync(ct);
+
+        FakeTimeProvider timeProvider = new();
+        using InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
+        PermissionStore permissionStore = new(factory, timeProvider, eventBus);
+        SecretProtectionService protection = new(new EphemeralDataProtectionProvider(), NullLogger<SecretProtectionService>.Instance);
+        WorkspaceStore store = new(factory, protection, permissionStore, timeProvider);
+
+        Uri customRedirect = new("https://panel.example.com/auth/twitch/callback");
+        _ = await store.UpsertPlatformAsync(
+            new WorkspacePlatform
+            {
+                WorkspaceId = workspace1Id,
+                PlatformId = "twitch",
+                Role = PlatformRole.Primary,
+                PlatformChannelId = "100",
+            },
+            cancellationToken: ct);
+        _ = await store.SetCustomOAuthAppAsync(workspace1Id, "twitch", "shared-cid", "secret-1", customRedirect, ct);
+
+        Workspace workspace2 = await store.CreateWorkspaceAsync(
+            new Workspace
+            {
+                OwnerUserId = userId,
+                Name = "Second Channel",
+                PrimaryPlatformId = "twitch",
+            },
+            new WorkspacePlatform
+            {
+                PlatformId = "twitch",
+                Role = PlatformRole.Primary,
+                PlatformChannelId = "200",
+                CustomRedirectUri = customRedirect.ToString(),
+            },
+            ct);
+        _ = await store.SetCustomOAuthAppAsync(workspace2.Id, "twitch", "shared-cid", "secret-2", customRedirect, ct);
+
+        PlatformOAuthAppCredentials? creds1 = await store.GetCustomOAuthAppAsync(workspace1Id, "twitch", ct);
+        PlatformOAuthAppCredentials? creds2 = await store.GetCustomOAuthAppAsync(workspace2.Id, "twitch", ct);
+        _ = creds1.Should().NotBeNull();
+        _ = creds1!.RedirectUri.Should().Be(customRedirect);
+        _ = creds2.Should().NotBeNull();
+        _ = creds2!.ClientId.Should().Be("shared-cid");
+        _ = creds2.RedirectUri.Should().Be(customRedirect);
+
+        // UpsertPlatformAsync preserves CustomRedirectUri.
+        WorkspacePlatform? platform1 = await store.GetPlatformAsync(workspace1Id, "twitch", ct);
+        _ = platform1.Should().NotBeNull();
+        platform1!.Role = PlatformRole.SimulcastPeer;
+        WorkspacePlatform updated = await store.UpsertPlatformAsync(platform1, cancellationToken: ct);
+        _ = updated.CustomRedirectUri.Should().Be(customRedirect.ToString());
     }
 
     #endregion

@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using StreamActions.Core.Abstractions;
 using StreamActions.Core.Models;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -141,6 +142,7 @@ internal static class SetupEndpoints
     /// <param name="antiforgery">The antiforgery service used to validate browser form submissions.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>An <see cref="IResult"/> representing the verification outcome.</returns>
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Platform identifiers are normalized to lowercase invariant.")]
     private static async Task<IResult> HandleVerifyAsync(
         HttpContext httpContext,
         IBootstrapTokenService bootstrapTokenService,
@@ -165,16 +167,17 @@ internal static class SetupEndpoints
             return Results.Unauthorized();
         }
 
+        string selectedPlatformId = string.IsNullOrWhiteSpace(request.PlatformId)
+            ? _defaultPlatformId
+            : request.PlatformId.Trim().ToLowerInvariant();
+
         bool oauthCredentialsSaved = false;
         if (!string.IsNullOrWhiteSpace(request.ClientId) && !string.IsNullOrWhiteSpace(request.ClientSecret))
         {
-            string platformId = string.IsNullOrWhiteSpace(request.PlatformId)
-                ? _defaultPlatformId
-                : request.PlatformId.Trim();
             PlatformOAuthAppCredentials credentials = new(
                 request.ClientId.Trim(),
                 request.ClientSecret.Trim());
-            await oauthConfigService.SetAsync(platformId, credentials, cancellationToken).ConfigureAwait(false);
+            await oauthConfigService.SetAsync(selectedPlatformId, credentials, cancellationToken).ConfigureAwait(false);
             oauthCredentialsSaved = true;
         }
 
@@ -191,6 +194,8 @@ internal static class SetupEndpoints
             IssuedAtUtc = issuedAtUtc,
             ExpiresAtUtc = expiresAtUtc,
             IsRootRecovery = isRootRecovery,
+            PlatformId = selectedPlatformId,
+            ResetRootMfa = isRootRecovery ? (request.ResetMfa ?? true) : null,
         };
 
         string ticketJson = JsonSerializer.Serialize(ticketPayload);
@@ -263,12 +268,26 @@ internal static class SetupEndpoints
             }
 
             IFormCollection form = await httpContext.Request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
+            string? rawResetMfaSubmitted = form["resetMfaSubmitted"].FirstOrDefault() ?? form["ResetMfaSubmitted"].FirstOrDefault();
+            string? rawResetMfa = form["resetMfa"].FirstOrDefault() ?? form["ResetMfa"].FirstOrDefault();
+            bool? resetMfa = null;
+            if (string.Equals(rawResetMfaSubmitted, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                resetMfa = string.Equals(rawResetMfa, "true", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(rawResetMfa, "on", StringComparison.OrdinalIgnoreCase);
+            }
+            else if (!string.IsNullOrWhiteSpace(rawResetMfa) && bool.TryParse(rawResetMfa, out bool parsedResetMfa))
+            {
+                resetMfa = parsedResetMfa;
+            }
+
             SetupVerifyRequest formRequest = new()
             {
                 BootstrapToken = form["bootstrapToken"].FirstOrDefault() ?? form["BootstrapToken"].FirstOrDefault(),
                 PlatformId = form["platformId"].FirstOrDefault() ?? form["PlatformId"].FirstOrDefault(),
                 ClientId = form["clientId"].FirstOrDefault() ?? form["ClientId"].FirstOrDefault(),
                 ClientSecret = form["clientSecret"].FirstOrDefault() ?? form["ClientSecret"].FirstOrDefault(),
+                ResetMfa = resetMfa,
             };
             return (true, null, formRequest);
         }
@@ -333,6 +352,11 @@ internal sealed record SetupVerifyRequest
     /// Gets the optional OAuth application client secret.
     /// </summary>
     public string? ClientSecret { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether root recovery should reset the root operator's enrolled MFA credentials.
+    /// </summary>
+    public bool? ResetMfa { get; init; }
 }
 
 /// <summary>
@@ -396,4 +420,14 @@ internal sealed record SetupTicketPayload
     /// Gets a value indicating whether the node already had a root user when the ticket was issued.
     /// </summary>
     public bool? IsRootRecovery { get; init; }
+
+    /// <summary>
+    /// Gets the selected platform identifier for continuing setup OAuth.
+    /// </summary>
+    public string? PlatformId { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether root recovery should clear the root operator's enrolled MFA credentials.
+    /// </summary>
+    public bool? ResetRootMfa { get; init; }
 }

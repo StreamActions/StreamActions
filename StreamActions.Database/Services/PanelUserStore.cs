@@ -165,6 +165,7 @@ public sealed class PanelUserStore : IPanelUserStore
             DisplayName = user.DisplayName.Trim(),
             IsRoot = user.IsRoot,
             IsGlobalAdmin = user.IsGlobalAdmin,
+            MfaResetByAdminNoticePending = user.MfaResetByAdminNoticePending,
             CreatedAtUtc = user.CreatedAtUtc == default ? this._timeProvider.GetUtcNow() : user.CreatedAtUtc,
         };
 
@@ -221,6 +222,7 @@ public sealed class PanelUserStore : IPanelUserStore
             existing.DisplayName = user.DisplayName.Trim();
             existing.IsRoot = user.IsRoot;
             existing.IsGlobalAdmin = user.IsGlobalAdmin;
+            existing.MfaResetByAdminNoticePending = user.MfaResetByAdminNoticePending;
 
             _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return existing;

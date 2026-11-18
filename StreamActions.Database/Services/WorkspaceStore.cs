@@ -22,6 +22,7 @@ using StreamActions.Core.Models;
 using StreamActions.Core.Models.Entities;
 using StreamActions.Core.Models.Metadata;
 using StreamActions.Database.Security;
+using System.Text;
 
 namespace StreamActions.Database.Services;
 
@@ -137,23 +138,50 @@ public sealed class WorkspaceStore : IWorkspaceStore
         }
 
         Guid workspaceId = workspace.Id == Guid.Empty ? Guid.CreateVersion7() : workspace.Id;
-        Workspace persisted = new()
-        {
-            Id = workspaceId,
-            OwnerUserId = workspace.OwnerUserId,
-            Name = workspace.Name.Trim(),
-            PrimaryPlatformId = NormalizePlatformId(workspace.PrimaryPlatformId),
-            AllowCustomBotAccountOverride = workspace.AllowCustomBotAccountOverride,
-            MfaPasskeyAvailability = workspace.MfaPasskeyAvailability,
-            MfaTotpAvailability = workspace.MfaTotpAvailability,
-            LoginMfaRequirement = workspace.LoginMfaRequirement,
-            StepUpSudoPolicy = workspace.StepUpSudoPolicy,
-            CreatedAtUtc = workspace.CreatedAtUtc == default ? this._timeProvider.GetUtcNow() : workspace.CreatedAtUtc,
-        };
+        bool hasExplicitSlug = !string.IsNullOrWhiteSpace(workspace.Slug);
+        string resolvedBaseSlug = hasExplicitSlug
+            ? NormalizeExplicitSlug(workspace.Slug)
+            : GenerateSlugFromName(workspace.Name);
 
         StreamActionsDbContext db = await this._dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         await using (db.ConfigureAwait(false))
         {
+            string resolvedSlug = resolvedBaseSlug;
+            if (!hasExplicitSlug)
+            {
+                int suffix = 2;
+                while (await db.Workspaces.AnyAsync(x => x.Slug == resolvedSlug, cancellationToken).ConfigureAwait(false))
+                {
+                    string suffixText = $"-{suffix++}";
+                    int maxBaseLength = 128 - suffixText.Length;
+                    string prefix = resolvedBaseSlug.Length > maxBaseLength
+                        ? resolvedBaseSlug[..maxBaseLength].TrimEnd('-')
+                        : resolvedBaseSlug;
+                    if (prefix.Length == 0)
+                    {
+                        prefix = "workspace";
+                    }
+
+                    resolvedSlug = $"{prefix}{suffixText}";
+                }
+            }
+
+            Workspace persisted = new()
+            {
+                Id = workspaceId,
+                OwnerUserId = workspace.OwnerUserId,
+                Name = workspace.Name.Trim(),
+                Slug = resolvedSlug,
+                PrimaryPlatformId = NormalizePlatformId(workspace.PrimaryPlatformId),
+                AllowCustomBotAccountOverride = workspace.AllowCustomBotAccountOverride,
+                RequireExternalOidcLogin = workspace.RequireExternalOidcLogin,
+                MfaPasskeyAvailability = workspace.MfaPasskeyAvailability,
+                MfaTotpAvailability = workspace.MfaTotpAvailability,
+                LoginMfaRequirement = workspace.LoginMfaRequirement,
+                StepUpSudoPolicy = workspace.StepUpSudoPolicy,
+                CreatedAtUtc = workspace.CreatedAtUtc == default ? this._timeProvider.GetUtcNow() : workspace.CreatedAtUtc,
+            };
+
             _ = db.Workspaces.Add(persisted);
 
             if (primaryPlatform is not null)
@@ -168,15 +196,16 @@ public sealed class WorkspaceStore : IWorkspaceStore
                     PlatformChannelId = primaryPlatform.PlatformChannelId.Trim(),
                     CustomClientId = NormalizeOptionalClientId(primaryPlatform.CustomClientId),
                     EncryptedCustomClientSecret = null,
+                    CustomRedirectUri = NormalizeOptionalRedirectUri(primaryPlatform.CustomRedirectUri),
                     Metadata = CloneMetadata(primaryPlatform.Metadata),
                 });
             }
 
             _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
 
-        await this._permissionStore.SeedBuiltInWorkspaceGroupsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
-        return persisted;
+            await this._permissionStore.SeedBuiltInWorkspaceGroupsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+            return persisted;
+        }
     }
 
     /// <inheritdoc />
@@ -195,8 +224,14 @@ public sealed class WorkspaceStore : IWorkspaceStore
                 .ConfigureAwait(false) ?? throw new KeyNotFoundException($"Workspace '{workspace.Id}' was not found.");
 
             existing.Name = workspace.Name.Trim();
+            if (!string.IsNullOrWhiteSpace(workspace.Slug))
+            {
+                existing.Slug = NormalizeExplicitSlug(workspace.Slug);
+            }
+
             existing.PrimaryPlatformId = NormalizePlatformId(workspace.PrimaryPlatformId);
             existing.AllowCustomBotAccountOverride = workspace.AllowCustomBotAccountOverride;
+            existing.RequireExternalOidcLogin = workspace.RequireExternalOidcLogin;
             existing.MfaPasskeyAvailability = workspace.MfaPasskeyAvailability;
             existing.MfaTotpAvailability = workspace.MfaTotpAvailability;
             existing.LoginMfaRequirement = workspace.LoginMfaRequirement;
@@ -294,6 +329,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
                 existing.Role = platform.Role;
                 existing.PlatformChannelId = platform.PlatformChannelId.Trim();
                 existing.CustomClientId = normalizedClientId;
+                existing.CustomRedirectUri = NormalizeOptionalRedirectUri(platform.CustomRedirectUri);
                 existing.Metadata = CloneMetadata(platform.Metadata);
 
                 if (encryptedSecret is not null)
@@ -314,6 +350,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
                 PlatformChannelId = platform.PlatformChannelId.Trim(),
                 CustomClientId = normalizedClientId,
                 EncryptedCustomClientSecret = encryptedSecret is { Length: > 0 } ? encryptedSecret : null,
+                CustomRedirectUri = NormalizeOptionalRedirectUri(platform.CustomRedirectUri),
                 Metadata = CloneMetadata(platform.Metadata),
             };
 
@@ -329,6 +366,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
         string platformId,
         string? clientId,
         string? clientSecret,
+        Uri? redirectUri = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
@@ -349,6 +387,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
             {
                 existing.CustomClientId = null;
                 existing.EncryptedCustomClientSecret = null;
+                existing.CustomRedirectUri = null;
             }
             else
             {
@@ -358,6 +397,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
                 }
 
                 existing.CustomClientId = clientId.Trim();
+                existing.CustomRedirectUri = NormalizeOptionalRedirectUri(redirectUri?.ToString());
                 if (!string.IsNullOrWhiteSpace(clientSecret))
                 {
                     existing.EncryptedCustomClientSecret = this._secretProtection.ProtectWorkspaceOAuth(
@@ -393,8 +433,13 @@ public sealed class WorkspaceStore : IWorkspaceStore
             platform.PlatformId,
             platform.EncryptedCustomClientSecret);
 
+        Uri? redirectUri = !string.IsNullOrWhiteSpace(platform.CustomRedirectUri)
+            && Uri.TryCreate(platform.CustomRedirectUri, UriKind.Absolute, out Uri? parsedRedirectUri)
+            ? parsedRedirectUri
+            : null;
+
         return success && !string.IsNullOrWhiteSpace(plaintextSecret)
-            ? new PlatformOAuthAppCredentials(platform.CustomClientId, plaintextSecret)
+            ? new PlatformOAuthAppCredentials(platform.CustomClientId, plaintextSecret, redirectUri)
             : null;
     }
 
@@ -425,6 +470,54 @@ public sealed class WorkspaceStore : IWorkspaceStore
     /// <param name="platformId">The raw platform identifier.</param>
     /// <returns>The normalized platform identifier.</returns>
     private static string NormalizePlatformId(string platformId) => platformId.Trim().ToLowerInvariant();
+
+    /// <summary>
+    /// Normalizes an explicitly supplied workspace slug to trimmed lowercase invariant form, enforcing max length 128.
+    /// </summary>
+    /// <param name="slug">The raw workspace slug.</param>
+    /// <returns>The normalized lowercase slug.</returns>
+    private static string NormalizeExplicitSlug(string slug)
+    {
+        string normalized = slug.Trim().ToLowerInvariant();
+        return normalized.Length > 128 ? normalized[..128] : normalized;
+    }
+
+    /// <summary>
+    /// Generates a URL-friendly lowercase slug from a workspace display name, bounded to 128 characters.
+    /// </summary>
+    /// <param name="name">The workspace display name.</param>
+    /// <returns>The generated slug.</returns>
+    private static string GenerateSlugFromName(string name)
+    {
+        string lowered = name.Trim().ToLowerInvariant();
+        StringBuilder builder = new(lowered.Length);
+        bool previousHyphen = true;
+
+        foreach (char ch in lowered)
+        {
+            if (char.IsAsciiLetterOrDigit(ch))
+            {
+                _ = builder.Append(ch);
+                previousHyphen = false;
+            }
+            else if (!previousHyphen)
+            {
+                _ = builder.Append('-');
+                previousHyphen = true;
+            }
+        }
+
+        string generated = builder.ToString().Trim('-');
+        return generated.Length == 0 ? "workspace" : generated.Length > 128 ? generated[..128].TrimEnd('-') : generated;
+    }
+
+    /// <summary>
+    /// Normalizes an optional custom OAuth redirect URI string by trimming whitespace or returning <see langword="null"/>.
+    /// </summary>
+    /// <param name="redirectUri">The raw redirect URI string.</param>
+    /// <returns>The trimmed redirect URI string, or <see langword="null"/>.</returns>
+    private static string? NormalizeOptionalRedirectUri(string? redirectUri) =>
+        string.IsNullOrWhiteSpace(redirectUri) ? null : redirectUri.Trim();
 
     /// <summary>
     /// Normalizes an optional custom client identifier by trimming whitespace or returning <see langword="null"/>.

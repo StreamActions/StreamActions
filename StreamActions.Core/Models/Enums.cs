@@ -16,6 +16,10 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Core.Models.Entities;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+
 namespace StreamActions.Core.Models;
 
 /// <summary>
@@ -369,9 +373,14 @@ public enum InstanceOAuthAppPolicy
     InstanceWithOptionalOverride = 1,
 
     /// <summary>
+    /// Panel sign-in, linking, and step-up flows use the instance-wide OAuth application, while workspace broadcaster and bot API OAuth flows require streamer-supplied OAuth application credentials.
+    /// </summary>
+    InstanceLoginWithStreamerApiOAuth = 2,
+
+    /// <summary>
     /// Workspaces must supply their own OAuth application credentials and never fall back to instance credentials.
     /// </summary>
-    RequireStreamerOAuthApp = 2,
+    RequireStreamerOAuthApp = 3,
 }
 
 /// <summary>
@@ -480,6 +489,27 @@ public enum StepUpSudoPolicy
 }
 
 /// <summary>
+/// Defines the authentication readiness status of an accessible workspace for the current user session.
+/// </summary>
+public enum WorkspaceSessionAuthStatus
+{
+    /// <summary>
+    /// The workspace meets all authentication requirements and is ready for active use.
+    /// </summary>
+    Ready = 0,
+
+    /// <summary>
+    /// The workspace requires signing in via an external OpenID Connect provider before activation.
+    /// </summary>
+    RequiresOidcReauth = 1,
+
+    /// <summary>
+    /// The workspace requires multi-factor authentication verification before activation.
+    /// </summary>
+    RequiresMfaChallenge = 2,
+}
+
+/// <summary>
 /// Parses persisted authentication policy strings into strongly typed policy enums.
 /// </summary>
 public static class AuthPolicyParser
@@ -488,6 +518,62 @@ public static class AuthPolicyParser
     /// Seeded legacy string value representing the default instance-only policy.
     /// </summary>
     public const string InstanceDefaultValue = "instance_default";
+
+    /// <summary>
+    /// Default display name and TOTP issuer used when <see cref="InstanceSettings"/> values are blank.
+    /// </summary>
+    public const string DefaultInstanceName = "StreamActions";
+
+    /// <summary>
+    /// Resolves the effective display name for the instance, falling back to <see cref="DefaultInstanceName"/> when blank.
+    /// </summary>
+    /// <param name="settings">The instance settings, or <see langword="null"/>.</param>
+    /// <returns>The trimmed instance name or <see cref="DefaultInstanceName"/>.</returns>
+    public static string ResolveInstanceName(InstanceSettings? settings) =>
+        string.IsNullOrWhiteSpace(settings?.InstanceName)
+            ? DefaultInstanceName
+            : settings.InstanceName.Trim();
+
+    /// <summary>
+    /// Resolves the effective TOTP issuer label for <c>otpauth://</c> provisioning URIs, falling back to <see cref="DefaultInstanceName"/> when blank.
+    /// </summary>
+    /// <param name="settings">The instance settings, or <see langword="null"/>.</param>
+    /// <returns>The trimmed TOTP issuer name or <see cref="DefaultInstanceName"/>.</returns>
+    public static string ResolveTotpIssuerName(InstanceSettings? settings) =>
+        string.IsNullOrWhiteSpace(settings?.TotpIssuerName)
+            ? DefaultInstanceName
+            : settings.TotpIssuerName.Trim();
+
+    /// <summary>
+    /// Formats a browser page title using the optional <paramref name="pageName"/> and <paramref name="instanceName"/>, always ending with <see cref="DefaultInstanceName"/> without duplicating it.
+    /// </summary>
+    /// <param name="pageName">The page-specific title segment, or <see langword="null"/>/whitespace for the home page.</param>
+    /// <param name="instanceName">The configured instance display name, or <see langword="null"/>/whitespace when unset.</param>
+    /// <returns>The formatted browser page title.</returns>
+    public static string FormatPageTitle(string? pageName, string? instanceName)
+    {
+        string? trimmedPageName = string.IsNullOrWhiteSpace(pageName) ? null : pageName.Trim();
+        string? trimmedInstanceName = string.IsNullOrWhiteSpace(instanceName) ? null : instanceName.Trim();
+        bool hasCustomInstanceName = trimmedInstanceName is not null &&
+            !string.Equals(trimmedInstanceName, DefaultInstanceName, StringComparison.OrdinalIgnoreCase);
+
+        return trimmedPageName is not null
+            ? hasCustomInstanceName
+                ? $"{trimmedPageName} - {trimmedInstanceName} - {DefaultInstanceName}"
+                : $"{trimmedPageName} - {DefaultInstanceName}"
+            : hasCustomInstanceName
+            ? $"{trimmedInstanceName} - {DefaultInstanceName}"
+            : DefaultInstanceName;
+    }
+
+    /// <summary>
+    /// Formats a browser page title using the optional <paramref name="pageName"/> and the configured instance name in <paramref name="settings"/>.
+    /// </summary>
+    /// <param name="pageName">The page-specific title segment, or <see langword="null"/>/whitespace for the home page.</param>
+    /// <param name="settings">The instance settings, or <see langword="null"/>.</param>
+    /// <returns>The formatted browser page title.</returns>
+    public static string FormatPageTitle(string? pageName, InstanceSettings? settings) =>
+        FormatPageTitle(pageName, settings?.InstanceName);
 
     /// <summary>
     /// Parses a persisted OAuth application policy string into an <see cref="InstanceOAuthAppPolicy"/> value.
@@ -528,6 +614,12 @@ public static class AuthPolicyParser
             return true;
         }
 
+        if (string.Equals(trimmed, "instance_login_with_streamer_api_oauth", StringComparison.OrdinalIgnoreCase))
+        {
+            policy = InstanceOAuthAppPolicy.InstanceLoginWithStreamerApiOAuth;
+            return true;
+        }
+
         if (string.Equals(trimmed, "require_streamer_oauth_app", StringComparison.OrdinalIgnoreCase))
         {
             policy = InstanceOAuthAppPolicy.RequireStreamerOAuthApp;
@@ -542,6 +634,126 @@ public static class AuthPolicyParser
 
         policy = InstanceOAuthAppPolicy.InstanceOnly;
         return false;
+    }
+
+    /// <summary>
+    /// Reads all valid per-platform <see cref="InstanceOAuthAppPolicy"/> overrides from <see cref="InstanceSettings.PlatformOAuthAppPoliciesJson"/>.
+    /// </summary>
+    /// <param name="settings">The instance settings.</param>
+    /// <returns>A case-insensitive dictionary mapping normalized platform identifiers to their overridden policies.</returns>
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "StreamActions normalizes platform identifiers to lowercase invariant.")]
+    public static IReadOnlyDictionary<string, InstanceOAuthAppPolicy> GetPlatformOAuthAppPolicies(InstanceSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        Dictionary<string, InstanceOAuthAppPolicy> result = new(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(settings.PlatformOAuthAppPoliciesJson))
+        {
+            return result;
+        }
+
+        Dictionary<string, string>? raw;
+        try
+        {
+            raw = JsonSerializer.Deserialize<Dictionary<string, string>>(settings.PlatformOAuthAppPoliciesJson);
+        }
+        catch (JsonException)
+        {
+            return result;
+        }
+
+        if (raw is null)
+        {
+            return result;
+        }
+
+        foreach (KeyValuePair<string, string> entry in raw)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Key) || string.IsNullOrWhiteSpace(entry.Value))
+            {
+                continue;
+            }
+
+            if (TryParseOAuthAppPolicy(entry.Value, out InstanceOAuthAppPolicy parsed))
+            {
+                result[entry.Key.Trim().ToLowerInvariant()] = parsed;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve an explicit per-platform <see cref="InstanceOAuthAppPolicy"/> override from <paramref name="settings"/>.
+    /// </summary>
+    /// <param name="settings">The instance settings.</param>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="policy">When this method returns <see langword="true"/>, contains the explicit platform policy override.</param>
+    /// <returns><see langword="true"/> if an explicit override exists for <paramref name="platformId"/>; otherwise, <see langword="false"/>.</returns>
+    public static bool TryGetPlatformOAuthAppPolicyOverride(
+        InstanceSettings settings,
+        string platformId,
+        out InstanceOAuthAppPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
+
+        IReadOnlyDictionary<string, InstanceOAuthAppPolicy> overrides = GetPlatformOAuthAppPolicies(settings);
+        return overrides.TryGetValue(platformId.Trim(), out policy);
+    }
+
+    /// <summary>
+    /// Resolves the effective <see cref="InstanceOAuthAppPolicy"/> for a specific platform, falling back to <see cref="InstanceSettings.InstanceOAuthAppPolicy"/> when no override exists.
+    /// </summary>
+    /// <param name="settings">The instance settings.</param>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The effective <see cref="InstanceOAuthAppPolicy"/> for <paramref name="platformId"/>.</returns>
+    public static InstanceOAuthAppPolicy ResolveOAuthAppPolicy(InstanceSettings settings, string platformId)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
+
+        return TryGetPlatformOAuthAppPolicyOverride(settings, platformId, out InstanceOAuthAppPolicy overridePolicy)
+            ? overridePolicy
+            : ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
+    }
+
+    /// <summary>
+    /// Sets or clears a per-platform <see cref="InstanceOAuthAppPolicy"/> override in <see cref="InstanceSettings.PlatformOAuthAppPoliciesJson"/>.
+    /// </summary>
+    /// <param name="settings">The instance settings to update.</param>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="policy">The override policy to store, or <see langword="null"/> to remove the override and fall back to the instance default.</param>
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "StreamActions normalizes platform identifiers to lowercase invariant.")]
+    public static void SetPlatformOAuthAppPolicy(
+        InstanceSettings settings,
+        string platformId,
+        InstanceOAuthAppPolicy? policy)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
+
+        string normalizedPlatformId = platformId.Trim().ToLowerInvariant();
+        IReadOnlyDictionary<string, InstanceOAuthAppPolicy> existing = GetPlatformOAuthAppPolicies(settings);
+        Dictionary<string, string> updated = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (KeyValuePair<string, InstanceOAuthAppPolicy> entry in existing)
+        {
+            updated[entry.Key] = entry.Value.ToString();
+        }
+
+        if (policy.HasValue)
+        {
+            updated[normalizedPlatformId] = policy.Value.ToString();
+        }
+        else
+        {
+            _ = updated.Remove(normalizedPlatformId);
+        }
+
+        settings.PlatformOAuthAppPoliciesJson = updated.Count == 0
+            ? null
+            : JsonSerializer.Serialize(updated);
     }
 
     /// <summary>

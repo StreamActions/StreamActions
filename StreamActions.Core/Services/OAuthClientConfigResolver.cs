@@ -79,13 +79,14 @@ public sealed class OAuthClientConfigResolver : IOAuthClientConfigResolver
         string platformId,
         Guid? workspaceId = null,
         PlatformUserIdentity? actor = null,
+        string? flow = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
 
         string normalizedPlatformId = platformId.Trim().ToLowerInvariant();
         InstanceSettings settings = await this._instanceSettingsService.GetAsync(cancellationToken).ConfigureAwait(false);
-        InstanceOAuthAppPolicy policy = AuthPolicyParser.ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
+        InstanceOAuthAppPolicy policy = AuthPolicyParser.ResolveOAuthAppPolicy(settings, normalizedPlatformId);
 
         switch (policy)
         {
@@ -126,29 +127,72 @@ public sealed class OAuthClientConfigResolver : IOAuthClientConfigResolver
 
                 return await this.ResolveInstanceAsync(normalizedPlatformId, workspaceId, cancellationToken).ConfigureAwait(false);
 
+            case InstanceOAuthAppPolicy.InstanceLoginWithStreamerApiOAuth:
+                return ShouldUseInstanceCredentialsForSplitPolicy(flow, workspaceId)
+                    ? await this.ResolveInstanceAsync(normalizedPlatformId, workspaceId, cancellationToken).ConfigureAwait(false)
+                    : await this.ResolveRequiredWorkspaceAsync(normalizedPlatformId, workspaceId, cancellationToken).ConfigureAwait(false);
+
             case InstanceOAuthAppPolicy.RequireStreamerOAuthApp:
-                if (!workspaceId.HasValue)
-                {
-                    return null;
-                }
-
-                PlatformOAuthAppCredentials? requiredCredentials = await this._workspaceStore
-                    .GetCustomOAuthAppAsync(workspaceId.Value, normalizedPlatformId, cancellationToken)
-                    .ConfigureAwait(false);
-
-                return requiredCredentials is null
-                    ? null
-                    : new ResolvedOAuthClientConfig(
-                        normalizedPlatformId,
-                        requiredCredentials.ClientId,
-                        requiredCredentials.ClientSecret,
-                        requiredCredentials.RedirectUri,
-                        IsWorkspaceOverride: true,
-                        WorkspaceId: workspaceId);
+                return await this.ResolveRequiredWorkspaceAsync(normalizedPlatformId, workspaceId, cancellationToken).ConfigureAwait(false);
 
             default:
                 throw new InvalidOperationException($"Unsupported OAuth application policy: {policy}.");
         }
+    }
+
+    /// <summary>
+    /// Determines whether <see cref="InstanceOAuthAppPolicy.InstanceLoginWithStreamerApiOAuth"/> uses instance-wide credentials for the given flow and workspace context.
+    /// </summary>
+    /// <param name="flow">The optional OAuth flow identifier.</param>
+    /// <param name="workspaceId">The optional workspace identifier.</param>
+    /// <returns><see langword="true"/> to resolve instance-wide credentials; <see langword="false"/> to require workspace custom credentials.</returns>
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "OAuth flow names are normalized to lowercase invariant.")]
+    private static bool ShouldUseInstanceCredentialsForSplitPolicy(string? flow, Guid? workspaceId)
+    {
+        if (string.IsNullOrWhiteSpace(flow))
+        {
+            return !workspaceId.HasValue;
+        }
+
+        string normalizedFlow = flow.Trim().ToLowerInvariant();
+        return normalizedFlow switch
+        {
+            "login" or "link" or "stepup" or "setup" or "instance-bot" => true,
+            "broadcaster" or "bot" => false,
+            _ => !workspaceId.HasValue,
+        };
+    }
+
+    /// <summary>
+    /// Resolves mandatory streamer-supplied workspace OAuth application credentials without falling back to instance credentials.
+    /// </summary>
+    /// <param name="normalizedPlatformId">The normalized lowercase platform identifier.</param>
+    /// <param name="workspaceId">The optional workspace identifier.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>The resolved workspace <see cref="ResolvedOAuthClientConfig"/>, or <see langword="null"/> if unavailable.</returns>
+    private async ValueTask<ResolvedOAuthClientConfig?> ResolveRequiredWorkspaceAsync(
+        string normalizedPlatformId,
+        Guid? workspaceId,
+        CancellationToken cancellationToken)
+    {
+        if (!workspaceId.HasValue)
+        {
+            return null;
+        }
+
+        PlatformOAuthAppCredentials? requiredCredentials = await this._workspaceStore
+            .GetCustomOAuthAppAsync(workspaceId.Value, normalizedPlatformId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return requiredCredentials is null
+            ? null
+            : new ResolvedOAuthClientConfig(
+                normalizedPlatformId,
+                requiredCredentials.ClientId,
+                requiredCredentials.ClientSecret,
+                requiredCredentials.RedirectUri,
+                IsWorkspaceOverride: true,
+                WorkspaceId: workspaceId);
     }
 
     /// <summary>

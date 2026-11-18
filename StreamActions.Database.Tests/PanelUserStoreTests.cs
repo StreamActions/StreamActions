@@ -178,20 +178,24 @@ public sealed class PanelUserStoreTests
         CancellationToken ct = TestContext.Current.CancellationToken;
 
         PanelUser user = await store.CreateUserAsync(
-            new PanelUser { DisplayName = "Initial", IsRoot = false, IsGlobalAdmin = false },
+            new PanelUser { DisplayName = "Initial", IsRoot = false, IsGlobalAdmin = false, MfaResetByAdminNoticePending = true },
             cancellationToken: ct);
+        _ = user.MfaResetByAdminNoticePending.Should().BeTrue();
 
         user.DisplayName = "  Promoted  ";
         user.IsGlobalAdmin = true;
+        user.MfaResetByAdminNoticePending = false;
         PanelUser updated = await store.UpdateUserAsync(user, ct);
 
         _ = updated.DisplayName.Should().Be("Promoted");
         _ = updated.IsGlobalAdmin.Should().BeTrue();
+        _ = updated.MfaResetByAdminNoticePending.Should().BeFalse();
 
         PanelUser? persisted = await store.GetByIdAsync(user.Id, ct);
         _ = persisted.Should().NotBeNull();
         _ = persisted!.DisplayName.Should().Be("Promoted");
         _ = persisted.IsGlobalAdmin.Should().BeTrue();
+        _ = persisted.MfaResetByAdminNoticePending.Should().BeFalse();
     }
 
     [Fact]

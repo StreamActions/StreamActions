@@ -27,6 +27,7 @@
 @using StreamActions.Core.Abstractions
 @using StreamActions.Core.Models
 @using StreamActions.Core.Models.Entities
+@using StreamActions.Web.Components.Security
 
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IMfaCredentialStore MfaCredentialStore
@@ -35,7 +36,7 @@
 @inject IJSRuntime JS
 @inject IServiceProvider ServiceProvider
 
-<PageTitle>Security &amp; MFA - StreamActions</PageTitle>
+<PageTitle>@AuthPolicyParser.FormatPageTitle("Security & MFA", _instanceName)</PageTitle>
 
 <h1>Security &amp; Multi-Factor Authentication</h1>
 
@@ -49,6 +50,13 @@
     </div>
 }
 
+@if (_mfaResetByAdminNoticePending)
+{
+    <div role="alert" data-mfa-admin-reset-notice="true">
+        <p>Your multi-factor authentication credentials were removed by an instance administrator.</p>
+    </div>
+}
+
 @if (!string.IsNullOrWhiteSpace(_statusMessage))
 {
     <p role="status" data-account-mfa-status="true">@_statusMessage</p>
@@ -59,6 +67,8 @@
     <p role="alert" data-account-mfa-error="true">@_errorMessage</p>
 }
 
+<StepUpMfaGuard RequireEvenIfPolicyOptional="true"
+                OperationDescription="Verify your identity before viewing or modifying your multi-factor authentication credentials and linked accounts.">
 <section aria-labelledby="enrolled-mfa-heading">
     <h2 id="enrolled-mfa-heading">Enrolled MFA Credentials</h2>
     @if (_summaries.Count == 0)
@@ -114,7 +124,14 @@
         else
         {
             <div data-totp-pending="true">
-                <p>Add this key to your authenticator app:</p>
+                <p>Scan this QR code or add the key below to your authenticator app:</p>
+                @if (!string.IsNullOrWhiteSpace(_pendingTotpQrSvg))
+                {
+                    <div data-totp-qr="true" aria-label="Authenticator App QR Code">
+                        @((MarkupString)_pendingTotpQrSvg)
+                    </div>
+                }
+                <p>Issuer: <strong data-totp-issuer="true">@_totpIssuerName</strong></p>
                 <p>Secret Key: <code data-totp-secret="true">@_pendingTotpSecret</code></p>
                 @if (!string.IsNullOrWhiteSpace(_pendingOtpAuthUri))
                 {
@@ -178,6 +195,7 @@
         </div>
     }
 </section>
+</StepUpMfaGuard>
 
 @code {
     /// <summary>
@@ -213,6 +231,11 @@
     private bool _isEnrollmentRequiredClaim;
 
     /// <summary>
+    /// Indicates whether an administrator recently removed this user's MFA credentials.
+    /// </summary>
+    private bool _mfaResetByAdminNoticePending;
+
+    /// <summary>
     /// Validated safe local return URL.
     /// </summary>
     private string _safeReturnUrl = "/";
@@ -224,7 +247,7 @@
         MfaMethodAvailability.Allowed,
         MfaMethodAvailability.Allowed,
         PanelLoginMfaRequirement.Optional,
-        StepUpSudoPolicy.Optional);
+        StepUpSudoPolicy.Required);
 
     /// <summary>
     /// Enrolled MFA credential metadata summaries.
@@ -252,6 +275,11 @@
     private string? _pendingOtpAuthUri;
 
     /// <summary>
+    /// Pending inline SVG QR code rendered from <see cref="_pendingOtpAuthUri"/>.
+    /// </summary>
+    private string? _pendingTotpQrSvg;
+
+    /// <summary>
     /// User-entered 6-digit TOTP confirmation code.
     /// </summary>
     private string _totpConfirmCode = string.Empty;
@@ -272,11 +300,28 @@
     private string? _errorMessage;
 
     /// <summary>
+    /// Operator-configured instance display name.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
+    /// Operator-configured TOTP issuer display name.
+    /// </summary>
+    private string _totpIssuerName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
     /// Initializes enrolled credentials, effective MFA policy, and linked external identities.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
     protected override async Task OnInitializedAsync()
     {
+        IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
+        if (settingsService is not null)
+        {
+            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+            _totpIssuerName = AuthPolicyParser.ResolveTotpIssuerName(settings);
+        }
         List<string> discoveredPlatforms = [.. PlatformProviders
             .Select(static p => p.PlatformId)
             .Where(static p => !string.IsNullOrWhiteSpace(p))
@@ -302,6 +347,7 @@
 
         if (user is not null && panelUserStore is not null)
         {
+            _mfaResetByAdminNoticePending = user.MfaResetByAdminNoticePending;
             _linkedIdentities = await panelUserStore
                 .GetLoginIdentitiesAsync(user.Id)
                 .ConfigureAwait(false);
@@ -370,6 +416,14 @@
 
             _pendingTotpSecret = result.SecretBase32;
             _pendingOtpAuthUri = result.OtpAuthUri;
+            if (!string.IsNullOrWhiteSpace(result.IssuerName))
+            {
+                _totpIssuerName = result.IssuerName.Trim();
+            }
+
+            _pendingTotpQrSvg = !string.IsNullOrWhiteSpace(_pendingOtpAuthUri)
+                ? QrCodeSvgGenerator.GenerateSvg(_pendingOtpAuthUri)
+                : null;
             _totpConfirmCode = string.Empty;
         }
         catch (JSException ex)
@@ -399,6 +453,7 @@
 
             _pendingTotpSecret = null;
             _pendingOtpAuthUri = null;
+            _pendingTotpQrSvg = null;
             _totpConfirmCode = string.Empty;
             _revealedRecoveryCodes = result.RecoveryCodes ?? [];
             _isMfaPending = false;
@@ -419,6 +474,7 @@
     {
         _pendingTotpSecret = null;
         _pendingOtpAuthUri = null;
+        _pendingTotpQrSvg = null;
         _totpConfirmCode = string.Empty;
     }
 
@@ -462,7 +518,7 @@
     /// <summary>
     /// Deserialized response returned from <c>POST /auth/mfa/totp/enroll/begin</c>.
     /// </summary>
-    private sealed record TotpEnrollBeginDto
+    internal sealed record TotpEnrollBeginDto
     {
         /// <summary>
         /// Gets the Base32 shared secret.
@@ -475,6 +531,12 @@
         /// </summary>
         [JsonPropertyName("otpAuthUri")]
         public string? OtpAuthUri { get; init; }
+
+        /// <summary>
+        /// Gets the resolved TOTP issuer label.
+        /// </summary>
+        [JsonPropertyName("issuerName")]
+        public string? IssuerName { get; init; }
     }
 
     /// <summary>

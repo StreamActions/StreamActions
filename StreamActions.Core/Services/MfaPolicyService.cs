@@ -72,7 +72,50 @@ public sealed class MfaPolicyService : IMfaPolicyService
     }
 
     /// <inheritdoc/>
-    public EffectiveMfaPolicy ComputeEffectivePolicy(InstanceSettings instanceSettings, Workspace? workspace = null)
+    public EffectiveMfaPolicy ComputeEffectivePolicy(InstanceSettings instanceSettings, Workspace? workspace = null) =>
+        CombinePolicies(instanceSettings, workspace);
+
+    /// <summary>
+    /// Evaluates whether login MFA is required for <paramref name="user"/> within a specific <paramref name="workspace"/> without invoking <see cref="IWorkspaceAccessService"/>.
+    /// </summary>
+    /// <param name="settings">The global instance settings.</param>
+    /// <param name="workspace">The target workspace.</param>
+    /// <param name="permissionStore">The permission persistence store.</param>
+    /// <param name="user">The authenticated panel user.</param>
+    /// <param name="identities">The external login identities linked to <paramref name="user"/>.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> if login MFA is required for <paramref name="user"/> in <paramref name="workspace"/>; otherwise, <see langword="false"/>.</returns>
+    internal static ValueTask<bool> IsWorkspaceLoginMfaRequiredAsync(
+        InstanceSettings settings,
+        Workspace workspace,
+        IPermissionStore permissionStore,
+        PanelUser user,
+        IReadOnlyList<UserLoginIdentity> identities,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(workspace);
+        ArgumentNullException.ThrowIfNull(permissionStore);
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(identities);
+
+        EffectiveMfaPolicy explicitPolicy = CombinePolicies(settings, workspace);
+        return EvaluateLoginRequirementAsync(
+            explicitPolicy,
+            permissionStore,
+            user,
+            identities,
+            [workspace],
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Combines <paramref name="instanceSettings"/> and an optional <paramref name="workspace"/> into an <see cref="EffectiveMfaPolicy"/>.
+    /// </summary>
+    /// <param name="instanceSettings">The global instance settings.</param>
+    /// <param name="workspace">An optional workspace whose stricter overrides apply.</param>
+    /// <returns>The combined <see cref="EffectiveMfaPolicy"/>.</returns>
+    private static EffectiveMfaPolicy CombinePolicies(InstanceSettings instanceSettings, Workspace? workspace = null)
     {
         ArgumentNullException.ThrowIfNull(instanceSettings);
 
@@ -156,8 +199,9 @@ public sealed class MfaPolicyService : IMfaPolicyService
         {
             Workspace? workspace = await this._workspaceStore.GetByIdAsync(workspaceId.Value, cancellationToken).ConfigureAwait(false);
             EffectiveMfaPolicy explicitPolicy = this.ComputeEffectivePolicy(settings, workspace);
-            return await this.EvaluateLoginRequirementAsync(
+            return await EvaluateLoginRequirementAsync(
                 explicitPolicy,
+                this._permissionStore,
                 user,
                 identities,
                 workspace is null ? [] : [workspace],
@@ -169,8 +213,9 @@ public sealed class MfaPolicyService : IMfaPolicyService
             .GetRelevantWorkspacesAsync(user, identities, oidcGroupClaims, cancellationToken)
             .ConfigureAwait(false);
 
-        if (await this.EvaluateLoginRequirementAsync(
+        if (await EvaluateLoginRequirementAsync(
             instancePolicy,
+            this._permissionStore,
             user,
             identities,
             relevantWorkspaces,
@@ -182,8 +227,9 @@ public sealed class MfaPolicyService : IMfaPolicyService
         foreach (Workspace workspace in relevantWorkspaces)
         {
             EffectiveMfaPolicy workspacePolicy = this.ComputeEffectivePolicy(settings, workspace);
-            if (await this.EvaluateLoginRequirementAsync(
+            if (await EvaluateLoginRequirementAsync(
                 workspacePolicy,
+                this._permissionStore,
                 user,
                 identities,
                 [workspace],
@@ -204,20 +250,12 @@ public sealed class MfaPolicyService : IMfaPolicyService
     /// <returns>The effective <see cref="MfaMethodAvailability"/>.</returns>
     private static MfaMethodAvailability CombineWithInstance(
         MfaMethodAvailability instanceValue,
-        MfaMethodAvailability? workspaceValue)
-    {
-        if (instanceValue == MfaMethodAvailability.Disabled)
-        {
-            return MfaMethodAvailability.Disabled;
-        }
-
-        if (instanceValue == MfaMethodAvailability.Required)
-        {
-            return MfaMethodAvailability.Required;
-        }
-
-        return workspaceValue ?? MfaMethodAvailability.Allowed;
-    }
+        MfaMethodAvailability? workspaceValue) =>
+        instanceValue == MfaMethodAvailability.Disabled
+            ? MfaMethodAvailability.Disabled
+            : instanceValue == MfaMethodAvailability.Required
+            ? MfaMethodAvailability.Required
+            : workspaceValue ?? MfaMethodAvailability.Allowed;
 
     /// <summary>
     /// Merges two effective policies across multiple relevant workspaces using strictest-wins precedence.
@@ -240,20 +278,12 @@ public sealed class MfaPolicyService : IMfaPolicyService
     /// <returns>The strictest availability value.</returns>
     private static MfaMethodAvailability CombineSiblingMethodAvailability(
         MfaMethodAvailability first,
-        MfaMethodAvailability second)
-    {
-        if (first == MfaMethodAvailability.Disabled || second == MfaMethodAvailability.Disabled)
-        {
-            return MfaMethodAvailability.Disabled;
-        }
-
-        if (first == MfaMethodAvailability.Required || second == MfaMethodAvailability.Required)
-        {
-            return MfaMethodAvailability.Required;
-        }
-
-        return MfaMethodAvailability.Allowed;
-    }
+        MfaMethodAvailability second) =>
+        first == MfaMethodAvailability.Disabled || second == MfaMethodAvailability.Disabled
+            ? MfaMethodAvailability.Disabled
+            : first == MfaMethodAvailability.Required || second == MfaMethodAvailability.Required
+            ? MfaMethodAvailability.Required
+            : MfaMethodAvailability.Allowed;
 
     /// <summary>
     /// Retrieves the workspaces owned by or accessible to <paramref name="user"/> without letting unrelated workspaces override root/global-admin settings.
@@ -275,7 +305,7 @@ public sealed class MfaPolicyService : IMfaPolicyService
         }
 
         IReadOnlyList<AccessibleWorkspace> accessible = await this._workspaceAccessService
-            .GetAccessibleWorkspacesAsync(user, identities, oidcGroupClaims, cancellationToken)
+            .GetAccessibleWorkspacesAsync(user, identities, oidcGroupClaims, ct: cancellationToken)
             .ConfigureAwait(false);
 
         return [.. accessible.Select(static aw => aw.Workspace)];
@@ -285,13 +315,15 @@ public sealed class MfaPolicyService : IMfaPolicyService
     /// Evaluates whether a specific <see cref="EffectiveMfaPolicy"/> requires login MFA for <paramref name="user"/> across the supplied workspaces.
     /// </summary>
     /// <param name="policy">The effective MFA policy to evaluate.</param>
+    /// <param name="permissionStore">The permission persistence store.</param>
     /// <param name="user">The panel user.</param>
     /// <param name="identities">The user's linked login identities.</param>
     /// <param name="workspaces">The workspaces in scope for role inspection.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> if login MFA is required; otherwise, <see langword="false"/>.</returns>
-    private async ValueTask<bool> EvaluateLoginRequirementAsync(
+    private static async ValueTask<bool> EvaluateLoginRequirementAsync(
         EffectiveMfaPolicy policy,
+        IPermissionStore permissionStore,
         PanelUser user,
         IReadOnlyList<UserLoginIdentity> identities,
         IReadOnlyList<Workspace> workspaces,
@@ -321,7 +353,7 @@ public sealed class MfaPolicyService : IMfaPolicyService
 
         foreach (Workspace workspace in workspaces)
         {
-            if (await this.IsModeratorInWorkspaceAsync(workspace.Id, identities, cancellationToken).ConfigureAwait(false))
+            if (await IsModeratorInWorkspaceAsync(permissionStore, workspace.Id, identities, cancellationToken).ConfigureAwait(false))
             {
                 return true;
             }
@@ -333,11 +365,13 @@ public sealed class MfaPolicyService : IMfaPolicyService
     /// <summary>
     /// Determines whether any linked identity holds a moderator or broadcaster designation in the specified workspace.
     /// </summary>
+    /// <param name="permissionStore">The permission persistence store.</param>
     /// <param name="workspaceId">The workspace identifier.</param>
     /// <param name="identities">The user's linked login identities.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> if the user has moderator or higher designation in the workspace; otherwise, <see langword="false"/>.</returns>
-    private async ValueTask<bool> IsModeratorInWorkspaceAsync(
+    private static async ValueTask<bool> IsModeratorInWorkspaceAsync(
+        IPermissionStore permissionStore,
         Guid workspaceId,
         IReadOnlyList<UserLoginIdentity> identities,
         CancellationToken cancellationToken)
@@ -346,7 +380,7 @@ public sealed class MfaPolicyService : IMfaPolicyService
 
         foreach (UserLoginIdentity identity in identities)
         {
-            WorkspacePlatformRoleRoster? roster = await this._permissionStore
+            WorkspacePlatformRoleRoster? roster = await permissionStore
                 .GetPlatformRoleRosterAsync(workspaceId, identity.ProviderId, identity.ProviderUserId, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -357,7 +391,7 @@ public sealed class MfaPolicyService : IMfaPolicyService
                 return true;
             }
 
-            IReadOnlyList<Guid> groupIds = await this._permissionStore
+            IReadOnlyList<Guid> groupIds = await permissionStore
                 .GetUserGroupIdsAsync(workspaceId, identity.ProviderId, identity.ProviderUserId, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -366,7 +400,7 @@ public sealed class MfaPolicyService : IMfaPolicyService
                 continue;
             }
 
-            groups ??= await this._permissionStore.GetGroupsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+            groups ??= await permissionStore.GetGroupsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
             foreach (PermissionGroup group in groups)
             {
                 if (!groupIds.Contains(group.Id))

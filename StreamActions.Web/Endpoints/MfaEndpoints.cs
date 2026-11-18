@@ -61,11 +61,6 @@ internal static class MfaEndpoints
     private const string _totpEnrollKind = "totp-enroll";
 
     /// <summary>
-    /// Issuer label displayed in generated <c>otpauth://</c> provisioning URIs.
-    /// </summary>
-    private const string _totpIssuer = "StreamActions";
-
-    /// <summary>
     /// Number of one-time recovery codes generated during TOTP enrollment.
     /// </summary>
     private const int _recoveryCodeCount = 10;
@@ -115,14 +110,21 @@ internal static class MfaEndpoints
         IDataProtectionProvider dataProtectionProvider,
         CancellationToken cancellationToken)
     {
+        Guid? workspaceId = ParseOptionalWorkspaceId(httpContext.Request.Query["workspaceId"].FirstOrDefault());
         (PanelUser? user, EffectiveMfaPolicy? policy) = await LoadUserAndPolicyAsync(
             httpContext,
             panelUserStore,
             mfaPolicyService,
+            workspaceId,
             cancellationToken).ConfigureAwait(false);
         if (user is null || policy is null)
         {
             return Results.Unauthorized();
+        }
+
+        if (!AuthClaims.IsStepUpElevated(httpContext.User, GetTimeProvider(httpContext)))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
         if (!policy.IsPasskeyAllowed)
@@ -161,6 +163,8 @@ internal static class MfaEndpoints
     /// <param name="httpContext">The current HTTP context.</param>
     /// <param name="panelUserStore">The panel user persistence store.</param>
     /// <param name="mfaPolicyService">The effective MFA policy evaluator.</param>
+    /// <param name="workspaceStore">The workspace persistence store.</param>
+    /// <param name="workspaceAccessService">The workspace access evaluation service.</param>
     /// <param name="passkeyHandler">The ASP.NET Core Identity passkey handler.</param>
     /// <param name="userManager">The ASP.NET Core Identity user manager.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
@@ -171,27 +175,14 @@ internal static class MfaEndpoints
         HttpContext httpContext,
         IPanelUserStore panelUserStore,
         IMfaPolicyService mfaPolicyService,
+        IWorkspaceStore workspaceStore,
+        IWorkspaceAccessService workspaceAccessService,
         IPasskeyHandler<PanelUser> passkeyHandler,
         UserManager<PanelUser> userManager,
         IDataProtectionProvider dataProtectionProvider,
         IAntiforgery antiforgery,
         CancellationToken cancellationToken)
     {
-        (PanelUser? user, EffectiveMfaPolicy? policy) = await LoadUserAndPolicyAsync(
-            httpContext,
-            panelUserStore,
-            mfaPolicyService,
-            cancellationToken).ConfigureAwait(false);
-        if (user is null || policy is null)
-        {
-            return Results.Unauthorized();
-        }
-
-        if (!policy.IsPasskeyAllowed)
-        {
-            return Results.StatusCode(StatusCodes.Status403Forbidden);
-        }
-
         (bool parsed, IResult? errorResult, PasskeySubmissionRequest? request) = await TryReadPasskeyRequestAsync(
             httpContext,
             antiforgery,
@@ -199,6 +190,28 @@ internal static class MfaEndpoints
         if (!parsed || request is null || string.IsNullOrWhiteSpace(request.CredentialJson))
         {
             return errorResult ?? Results.BadRequest("Credential payload is required.");
+        }
+
+        Guid? workspaceId = ParseOptionalWorkspaceId(request.WorkspaceId);
+        (PanelUser? user, EffectiveMfaPolicy? policy) = await LoadUserAndPolicyAsync(
+            httpContext,
+            panelUserStore,
+            mfaPolicyService,
+            workspaceId,
+            cancellationToken).ConfigureAwait(false);
+        if (user is null || policy is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        if (!AuthClaims.IsStepUpElevated(httpContext.User, GetTimeProvider(httpContext)))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        if (!policy.IsPasskeyAllowed)
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
         MfaStateCookiePayload? statePayload = ReadAndDeleteMfaStateCookie(httpContext, dataProtectionProvider);
@@ -237,7 +250,15 @@ internal static class MfaEndpoints
             return Results.BadRequest("Failed to persist passkey credential.");
         }
 
-        await SignInElevatedAsync(httpContext).ConfigureAwait(false);
+        await SignInElevatedAsync(
+            httpContext,
+            user,
+            workspaceId,
+            panelUserStore,
+            workspaceStore,
+            workspaceAccessService,
+            dataProtectionProvider,
+            cancellationToken).ConfigureAwait(false);
         return Results.Ok(new MfaActionResponse { Succeeded = true });
     }
 
@@ -259,10 +280,12 @@ internal static class MfaEndpoints
         IDataProtectionProvider dataProtectionProvider,
         CancellationToken cancellationToken)
     {
+        Guid? workspaceId = ParseOptionalWorkspaceId(httpContext.Request.Query["workspaceId"].FirstOrDefault());
         (PanelUser? user, EffectiveMfaPolicy? policy) = await LoadUserAndPolicyAsync(
             httpContext,
             panelUserStore,
             mfaPolicyService,
+            workspaceId,
             cancellationToken).ConfigureAwait(false);
         if (user is null || policy is null)
         {
@@ -298,6 +321,8 @@ internal static class MfaEndpoints
     /// <param name="httpContext">The current HTTP context.</param>
     /// <param name="panelUserStore">The panel user persistence store.</param>
     /// <param name="mfaPolicyService">The effective MFA policy evaluator.</param>
+    /// <param name="workspaceStore">The workspace persistence store.</param>
+    /// <param name="workspaceAccessService">The workspace access evaluation service.</param>
     /// <param name="passkeyHandler">The ASP.NET Core Identity passkey handler.</param>
     /// <param name="userManager">The ASP.NET Core Identity user manager.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
@@ -308,16 +333,29 @@ internal static class MfaEndpoints
         HttpContext httpContext,
         IPanelUserStore panelUserStore,
         IMfaPolicyService mfaPolicyService,
+        IWorkspaceStore workspaceStore,
+        IWorkspaceAccessService workspaceAccessService,
         IPasskeyHandler<PanelUser> passkeyHandler,
         UserManager<PanelUser> userManager,
         IDataProtectionProvider dataProtectionProvider,
         IAntiforgery antiforgery,
         CancellationToken cancellationToken)
     {
+        (bool parsed, IResult? errorResult, PasskeySubmissionRequest? request) = await TryReadPasskeyRequestAsync(
+            httpContext,
+            antiforgery,
+            cancellationToken).ConfigureAwait(false);
+        if (!parsed || request is null || string.IsNullOrWhiteSpace(request.CredentialJson))
+        {
+            return errorResult ?? Results.BadRequest("Credential payload is required.");
+        }
+
+        Guid? workspaceId = ParseOptionalWorkspaceId(request.WorkspaceId);
         (PanelUser? user, EffectiveMfaPolicy? policy) = await LoadUserAndPolicyAsync(
             httpContext,
             panelUserStore,
             mfaPolicyService,
+            workspaceId,
             cancellationToken).ConfigureAwait(false);
         if (user is null || policy is null)
         {
@@ -327,15 +365,6 @@ internal static class MfaEndpoints
         if (!policy.IsPasskeyAllowed)
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
-        }
-
-        (bool parsed, IResult? errorResult, PasskeySubmissionRequest? request) = await TryReadPasskeyRequestAsync(
-            httpContext,
-            antiforgery,
-            cancellationToken).ConfigureAwait(false);
-        if (!parsed || request is null || string.IsNullOrWhiteSpace(request.CredentialJson))
-        {
-            return errorResult ?? Results.BadRequest("Credential payload is required.");
         }
 
         MfaStateCookiePayload? statePayload = ReadAndDeleteMfaStateCookie(httpContext, dataProtectionProvider);
@@ -379,7 +408,15 @@ internal static class MfaEndpoints
             _ = await userManager.AddOrUpdatePasskeyAsync(assertionResult.User, assertionResult.Passkey).ConfigureAwait(false);
         }
 
-        await SignInElevatedAsync(httpContext).ConfigureAwait(false);
+        await SignInElevatedAsync(
+            httpContext,
+            user,
+            workspaceId,
+            panelUserStore,
+            workspaceStore,
+            workspaceAccessService,
+            dataProtectionProvider,
+            cancellationToken).ConfigureAwait(false);
         return CreateVerificationSuccessResult(httpContext, request.ReturnUrl);
     }
 
@@ -389,6 +426,7 @@ internal static class MfaEndpoints
     /// <param name="httpContext">The current HTTP context.</param>
     /// <param name="panelUserStore">The panel user persistence store.</param>
     /// <param name="mfaPolicyService">The effective MFA policy evaluator.</param>
+    /// <param name="instanceSettingsService">The instance settings service supplying the configured TOTP issuer label.</param>
     /// <param name="totpService">The TOTP cryptography service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
@@ -397,18 +435,26 @@ internal static class MfaEndpoints
         HttpContext httpContext,
         IPanelUserStore panelUserStore,
         IMfaPolicyService mfaPolicyService,
+        IInstanceSettingsService instanceSettingsService,
         ITotpService totpService,
         IDataProtectionProvider dataProtectionProvider,
         CancellationToken cancellationToken)
     {
+        Guid? workspaceId = ParseOptionalWorkspaceId(httpContext.Request.Query["workspaceId"].FirstOrDefault());
         (PanelUser? user, EffectiveMfaPolicy? policy) = await LoadUserAndPolicyAsync(
             httpContext,
             panelUserStore,
             mfaPolicyService,
+            workspaceId,
             cancellationToken).ConfigureAwait(false);
         if (user is null || policy is null)
         {
             return Results.Unauthorized();
+        }
+
+        if (!AuthClaims.IsStepUpElevated(httpContext.User, GetTimeProvider(httpContext)))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
         if (!policy.IsTotpAllowed)
@@ -416,8 +462,11 @@ internal static class MfaEndpoints
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
+        InstanceSettings settings = await instanceSettingsService.GetAsync(cancellationToken).ConfigureAwait(false);
+        string totpIssuer = AuthPolicyParser.ResolveTotpIssuerName(settings);
+
         string secretBase32 = totpService.GenerateSecretBase32();
-        Uri otpAuthUri = totpService.BuildOtpAuthUri(_totpIssuer, user.DisplayName, secretBase32);
+        Uri otpAuthUri = totpService.BuildOtpAuthUri(totpIssuer, user.DisplayName, secretBase32);
 
         WriteMfaStateCookie(
             httpContext,
@@ -434,6 +483,7 @@ internal static class MfaEndpoints
         {
             SecretBase32 = secretBase32,
             OtpAuthUri = otpAuthUri,
+            IssuerName = totpIssuer,
         });
     }
 
@@ -444,6 +494,8 @@ internal static class MfaEndpoints
     /// <param name="panelUserStore">The panel user persistence store.</param>
     /// <param name="mfaPolicyService">The effective MFA policy evaluator.</param>
     /// <param name="mfaCredentialStore">The MFA credential persistence store.</param>
+    /// <param name="workspaceStore">The workspace persistence store.</param>
+    /// <param name="workspaceAccessService">The workspace access evaluation service.</param>
     /// <param name="totpService">The TOTP cryptography service.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="antiforgery">The antiforgery validation service.</param>
@@ -454,26 +506,13 @@ internal static class MfaEndpoints
         IPanelUserStore panelUserStore,
         IMfaPolicyService mfaPolicyService,
         IMfaCredentialStore mfaCredentialStore,
+        IWorkspaceStore workspaceStore,
+        IWorkspaceAccessService workspaceAccessService,
         ITotpService totpService,
         IDataProtectionProvider dataProtectionProvider,
         IAntiforgery antiforgery,
         CancellationToken cancellationToken)
     {
-        (PanelUser? user, EffectiveMfaPolicy? policy) = await LoadUserAndPolicyAsync(
-            httpContext,
-            panelUserStore,
-            mfaPolicyService,
-            cancellationToken).ConfigureAwait(false);
-        if (user is null || policy is null)
-        {
-            return Results.Unauthorized();
-        }
-
-        if (!policy.IsTotpAllowed)
-        {
-            return Results.StatusCode(StatusCodes.Status403Forbidden);
-        }
-
         (bool parsed, IResult? errorResult, MfaCodeRequest? request) = await TryReadCodeRequestAsync(
             httpContext,
             antiforgery,
@@ -481,6 +520,28 @@ internal static class MfaEndpoints
         if (!parsed || request is null)
         {
             return errorResult ?? Results.BadRequest();
+        }
+
+        Guid? workspaceId = ParseOptionalWorkspaceId(request.WorkspaceId);
+        (PanelUser? user, EffectiveMfaPolicy? policy) = await LoadUserAndPolicyAsync(
+            httpContext,
+            panelUserStore,
+            mfaPolicyService,
+            workspaceId,
+            cancellationToken).ConfigureAwait(false);
+        if (user is null || policy is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        if (!AuthClaims.IsStepUpElevated(httpContext.User, GetTimeProvider(httpContext)))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        if (!policy.IsTotpAllowed)
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
         MfaStateCookiePayload? statePayload = TryReadMfaStateCookie(httpContext, dataProtectionProvider);
@@ -517,7 +578,15 @@ internal static class MfaEndpoints
             .SaveTotpAsync(user.Id, secretPayload, recoveryCodeHashes, cancellationToken)
             .ConfigureAwait(false);
 
-        await SignInElevatedAsync(httpContext).ConfigureAwait(false);
+        await SignInElevatedAsync(
+            httpContext,
+            user,
+            workspaceId,
+            panelUserStore,
+            workspaceStore,
+            workspaceAccessService,
+            dataProtectionProvider,
+            cancellationToken).ConfigureAwait(false);
         return Results.Ok(new TotpEnrollConfirmResponse
         {
             RecoveryCodes = recoveryCodes,
@@ -531,7 +600,10 @@ internal static class MfaEndpoints
     /// <param name="panelUserStore">The panel user persistence store.</param>
     /// <param name="mfaPolicyService">The effective MFA policy evaluator.</param>
     /// <param name="mfaCredentialStore">The MFA credential persistence store.</param>
+    /// <param name="workspaceStore">The workspace persistence store.</param>
+    /// <param name="workspaceAccessService">The workspace access evaluation service.</param>
     /// <param name="totpService">The TOTP cryptography service.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="antiforgery">The antiforgery validation service.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A redirect or JSON verification response on success, <c>403</c> if TOTP is disallowed, or <c>401</c> on invalid code.</returns>
@@ -540,14 +612,28 @@ internal static class MfaEndpoints
         IPanelUserStore panelUserStore,
         IMfaPolicyService mfaPolicyService,
         IMfaCredentialStore mfaCredentialStore,
+        IWorkspaceStore workspaceStore,
+        IWorkspaceAccessService workspaceAccessService,
         ITotpService totpService,
+        IDataProtectionProvider dataProtectionProvider,
         IAntiforgery antiforgery,
         CancellationToken cancellationToken)
     {
+        (bool parsed, IResult? errorResult, MfaCodeRequest? request) = await TryReadCodeRequestAsync(
+            httpContext,
+            antiforgery,
+            cancellationToken).ConfigureAwait(false);
+        if (!parsed || request is null)
+        {
+            return errorResult ?? Results.BadRequest();
+        }
+
+        Guid? workspaceId = ParseOptionalWorkspaceId(request.WorkspaceId);
         (PanelUser? user, EffectiveMfaPolicy? policy) = await LoadUserAndPolicyAsync(
             httpContext,
             panelUserStore,
             mfaPolicyService,
+            workspaceId,
             cancellationToken).ConfigureAwait(false);
         if (user is null || policy is null)
         {
@@ -557,15 +643,6 @@ internal static class MfaEndpoints
         if (!policy.IsTotpAllowed)
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
-        }
-
-        (bool parsed, IResult? errorResult, MfaCodeRequest? request) = await TryReadCodeRequestAsync(
-            httpContext,
-            antiforgery,
-            cancellationToken).ConfigureAwait(false);
-        if (!parsed || request is null)
-        {
-            return errorResult ?? Results.BadRequest();
         }
 
         TotpSecretPayload? totpPayload = await mfaCredentialStore
@@ -579,7 +656,15 @@ internal static class MfaEndpoints
             return Results.Unauthorized();
         }
 
-        await SignInElevatedAsync(httpContext).ConfigureAwait(false);
+        await SignInElevatedAsync(
+            httpContext,
+            user,
+            workspaceId,
+            panelUserStore,
+            workspaceStore,
+            workspaceAccessService,
+            dataProtectionProvider,
+            cancellationToken).ConfigureAwait(false);
         return CreateVerificationSuccessResult(httpContext, request.ReturnUrl);
     }
 
@@ -589,6 +674,9 @@ internal static class MfaEndpoints
     /// <param name="httpContext">The current HTTP context.</param>
     /// <param name="panelUserStore">The panel user persistence store.</param>
     /// <param name="mfaCredentialStore">The MFA credential persistence store.</param>
+    /// <param name="workspaceStore">The workspace persistence store.</param>
+    /// <param name="workspaceAccessService">The workspace access evaluation service.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="antiforgery">The antiforgery validation service.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A redirect or JSON verification response on success, or <c>401</c> on invalid code.</returns>
@@ -596,6 +684,9 @@ internal static class MfaEndpoints
         HttpContext httpContext,
         IPanelUserStore panelUserStore,
         IMfaCredentialStore mfaCredentialStore,
+        IWorkspaceStore workspaceStore,
+        IWorkspaceAccessService workspaceAccessService,
+        IDataProtectionProvider dataProtectionProvider,
         IAntiforgery antiforgery,
         CancellationToken cancellationToken)
     {
@@ -633,7 +724,16 @@ internal static class MfaEndpoints
             return Results.Unauthorized();
         }
 
-        await SignInElevatedAsync(httpContext).ConfigureAwait(false);
+        Guid? workspaceId = ParseOptionalWorkspaceId(request.WorkspaceId);
+        await SignInElevatedAsync(
+            httpContext,
+            user,
+            workspaceId,
+            panelUserStore,
+            workspaceStore,
+            workspaceAccessService,
+            dataProtectionProvider,
+            cancellationToken).ConfigureAwait(false);
         return CreateVerificationSuccessResult(httpContext, request.ReturnUrl);
     }
 
@@ -663,6 +763,11 @@ internal static class MfaEndpoints
         if (user is null)
         {
             return Results.Unauthorized();
+        }
+
+        if (!AuthClaims.IsStepUpElevated(httpContext.User, GetTimeProvider(httpContext)))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
         (bool parsed, IResult? errorResult, MfaDeleteRequest? request) = await TryReadDeleteRequestAsync(
@@ -695,12 +800,14 @@ internal static class MfaEndpoints
     /// <param name="httpContext">The current HTTP context.</param>
     /// <param name="panelUserStore">The panel user persistence store.</param>
     /// <param name="mfaPolicyService">The effective MFA policy evaluator.</param>
+    /// <param name="workspaceId">The optional workspace identifier in scope.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The resolved user and policy, or nulls when the user cannot be resolved.</returns>
     private static async ValueTask<(PanelUser? User, EffectiveMfaPolicy? Policy)> LoadUserAndPolicyAsync(
         HttpContext httpContext,
         IPanelUserStore panelUserStore,
         IMfaPolicyService mfaPolicyService,
+        Guid? workspaceId,
         CancellationToken cancellationToken)
     {
         Guid? userId = AuthClaims.GetPanelUserId(httpContext.User);
@@ -720,25 +827,102 @@ internal static class MfaEndpoints
             .ConfigureAwait(false);
         IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(httpContext.User);
         EffectiveMfaPolicy policy = await mfaPolicyService
-            .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, workspaceId: null, cancellationToken)
+            .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, workspaceId: workspaceId, cancellationToken)
             .ConfigureAwait(false);
 
         return (user, policy);
     }
 
     /// <summary>
-    /// Signs in an updated <see cref="ClaimsPrincipal"/> with pending MFA flags removed and step-up elevation granted.
+    /// Signs in an updated <see cref="ClaimsPrincipal"/> with pending MFA flags removed, MFA verification stamped,
+    /// step-up elevation granted, optional workspace cookie persisted, and login hint refreshed.
     /// </summary>
     /// <param name="httpContext">The current HTTP context.</param>
-    private static async Task SignInElevatedAsync(HttpContext httpContext)
+    /// <param name="user">The authenticated panel user.</param>
+    /// <param name="workspaceId">The optional workspace identifier associated with the MFA flow.</param>
+    /// <param name="panelUserStore">The panel user persistence store.</param>
+    /// <param name="workspaceStore">The workspace persistence store.</param>
+    /// <param name="workspaceAccessService">The workspace access evaluation service.</param>
+    /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    private static async Task SignInElevatedAsync(
+        HttpContext httpContext,
+        PanelUser user,
+        Guid? workspaceId,
+        IPanelUserStore panelUserStore,
+        IWorkspaceStore workspaceStore,
+        IWorkspaceAccessService workspaceAccessService,
+        IDataProtectionProvider dataProtectionProvider,
+        CancellationToken cancellationToken)
     {
+        if (user.MfaResetByAdminNoticePending)
+        {
+            user.MfaResetByAdminNoticePending = false;
+            user = await panelUserStore.UpdateUserAsync(user, cancellationToken).ConfigureAwait(false);
+        }
+
         DateTimeOffset elevatedUntilUtc = GetTimeProvider(httpContext).GetUtcNow() + AuthClaims.StepUpWindow;
         ClaimsPrincipal elevatedPrincipal = AuthClaims.WithMfaCompletedAndElevated(httpContext.User, elevatedUntilUtc);
 
         await httpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
             elevatedPrincipal).ConfigureAwait(false);
+
+        IReadOnlyList<UserLoginIdentity> identities = await panelUserStore
+            .GetLoginIdentitiesAsync(user.Id, cancellationToken)
+            .ConfigureAwait(false);
+        string? authProvider = elevatedPrincipal.FindFirstValue(AuthClaims.AuthProviderClaimType);
+        IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(elevatedPrincipal);
+
+        Guid? persistedWorkspaceId = null;
+        if (workspaceId.HasValue && workspaceId.Value != Guid.Empty)
+        {
+            bool canAccess = await workspaceAccessService
+                .CanAccessWorkspaceAsync(
+                    workspaceId.Value,
+                    user,
+                    identities,
+                    oidcGroups,
+                    authProvider,
+                    isMfaVerified: true,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (canAccess)
+            {
+                persistedWorkspaceId = workspaceId.Value;
+                httpContext.Response.Cookies.Append(
+                    AuthClaims.WorkspaceCookieName,
+                    workspaceId.Value.ToString("D"),
+                    new CookieOptions
+                    {
+                        HttpOnly = true,
+                        SameSite = SameSiteMode.Lax,
+                        Secure = httpContext.Request.IsHttps,
+                        IsEssential = true,
+                        MaxAge = TimeSpan.FromDays(30),
+                        Path = "/",
+                    });
+            }
+        }
+
+        await AuthEndpoints.IssueLoginHintForUserAsync(
+            httpContext,
+            user,
+            identities,
+            authProvider,
+            persistedWorkspaceId,
+            workspaceStore,
+            dataProtectionProvider,
+            cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Parses an optional non-empty workspace <see cref="Guid"/> string.
+    /// </summary>
+    /// <param name="rawWorkspaceId">The raw workspace identifier string.</param>
+    /// <returns>The parsed <see cref="Guid"/>, or <see langword="null"/> if absent or invalid.</returns>
+    private static Guid? ParseOptionalWorkspaceId(string? rawWorkspaceId) =>
+        Guid.TryParse(rawWorkspaceId, out Guid parsed) && parsed != Guid.Empty ? parsed : null;
 
     /// <summary>
     /// Produces an HTML redirect or JSON verification response depending on the request <c>Accept</c> header.
@@ -787,6 +971,7 @@ internal static class MfaEndpoints
                 CredentialJson = form["credentialJson"].FirstOrDefault() ?? form["CredentialJson"].FirstOrDefault(),
                 Name = form["name"].FirstOrDefault() ?? form["Name"].FirstOrDefault(),
                 ReturnUrl = form["returnUrl"].FirstOrDefault() ?? form["ReturnUrl"].FirstOrDefault(),
+                WorkspaceId = form["workspaceId"].FirstOrDefault() ?? form["WorkspaceId"].FirstOrDefault(),
             });
         }
 
@@ -811,21 +996,25 @@ internal static class MfaEndpoints
                 {
                     _ = TryGetStringProperty(document.RootElement, "name", out string? name);
                     _ = TryGetStringProperty(document.RootElement, "returnUrl", out string? returnUrl);
+                    _ = TryGetStringProperty(document.RootElement, "workspaceId", out string? workspaceId);
                     return (true, null, new PasskeySubmissionRequest
                     {
                         CredentialJson = wrappedCredentialJson,
                         Name = name,
                         ReturnUrl = returnUrl,
+                        WorkspaceId = workspaceId,
                     });
                 }
 
                 _ = TryGetStringProperty(document.RootElement, "name", out string? rawName);
                 _ = TryGetStringProperty(document.RootElement, "returnUrl", out string? rawReturnUrl);
+                _ = TryGetStringProperty(document.RootElement, "workspaceId", out string? rawWorkspaceId);
                 return (true, null, new PasskeySubmissionRequest
                 {
                     CredentialJson = rawBody,
                     Name = rawName,
                     ReturnUrl = rawReturnUrl,
+                    WorkspaceId = rawWorkspaceId,
                 });
             }
             catch (JsonException)
@@ -865,6 +1054,7 @@ internal static class MfaEndpoints
             {
                 Code = form["code"].FirstOrDefault() ?? form["Code"].FirstOrDefault(),
                 ReturnUrl = form["returnUrl"].FirstOrDefault() ?? form["ReturnUrl"].FirstOrDefault(),
+                WorkspaceId = form["workspaceId"].FirstOrDefault() ?? form["WorkspaceId"].FirstOrDefault(),
             });
         }
 
@@ -1135,6 +1325,11 @@ internal sealed record PasskeySubmissionRequest
     /// Gets the optional safe local redirect target after verification.
     /// </summary>
     public string? ReturnUrl { get; init; }
+
+    /// <summary>
+    /// Gets the optional workspace identifier associated with the MFA flow.
+    /// </summary>
+    public string? WorkspaceId { get; init; }
 }
 
 /// <summary>
@@ -1151,6 +1346,11 @@ internal sealed record MfaCodeRequest
     /// Gets the optional safe local redirect target after verification.
     /// </summary>
     public string? ReturnUrl { get; init; }
+
+    /// <summary>
+    /// Gets the optional workspace identifier associated with the MFA flow.
+    /// </summary>
+    public string? WorkspaceId { get; init; }
 }
 
 /// <summary>
@@ -1178,6 +1378,11 @@ internal sealed record TotpEnrollBeginResponse
     /// Gets the <c>otpauth://totp/...</c> provisioning URI.
     /// </summary>
     public Uri? OtpAuthUri { get; init; }
+
+    /// <summary>
+    /// Gets the resolved TOTP issuer label included in <see cref="OtpAuthUri"/>.
+    /// </summary>
+    public string? IssuerName { get; init; }
 }
 
 /// <summary>

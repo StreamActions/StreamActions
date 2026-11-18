@@ -33,6 +33,31 @@ public sealed class MfaPolicyServiceTests
     #region ComputeEffectivePolicy
 
     /// <summary>
+    /// Verifies that <see cref="InstanceSettings"/> and <see cref="Workspace"/> default <see cref="StepUpSudoPolicy"/> to <see cref="StepUpSudoPolicy.Required"/>.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ComputeEffectivePolicy")]
+    public void ComputeEffectivePolicyWhenUsingDefaultEntitiesDefaultsStepUpSudoPolicyToRequired()
+    {
+        (MfaPolicyService service, _, _, _, _) = CreateSut();
+        InstanceSettings instanceSettings = new();
+        Workspace workspace = new()
+        {
+            Id = Guid.NewGuid(),
+            OwnerUserId = Guid.NewGuid(),
+            Name = "Default Channel",
+            PrimaryPlatformId = "twitch",
+        };
+
+        EffectiveMfaPolicy effective = service.ComputeEffectivePolicy(instanceSettings, workspace);
+
+        _ = instanceSettings.StepUpSudoPolicy.Should().Be(StepUpSudoPolicy.Required);
+        _ = workspace.StepUpSudoPolicy.Should().Be(StepUpSudoPolicy.Required);
+        _ = effective.StepUpSudoPolicy.Should().Be(StepUpSudoPolicy.Required);
+        _ = effective.IsStepUpRequired.Should().BeTrue();
+    }
+
+    /// <summary>
     /// Verifies that instance-level method disabling cannot be overridden by a workspace and yields passkeys-only when passkeys remain allowed.
     /// </summary>
     [Fact]
@@ -403,7 +428,7 @@ public sealed class MfaPolicyServiceTests
             throw new NotSupportedException();
 
         /// <inheritdoc />
-        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, CancellationToken cancellationToken = default) =>
+        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
         /// <inheritdoc />
@@ -529,6 +554,8 @@ public sealed class MfaPolicyServiceTests
             PanelUser user,
             IReadOnlyList<UserLoginIdentity> identities,
             IReadOnlyCollection<string>? oidcGroupClaims = null,
+            string? authProvider = null,
+            bool isMfaVerified = false,
             CancellationToken ct = default) =>
             ValueTask.FromResult(this.AccessibleWorkspaces);
 
@@ -538,6 +565,8 @@ public sealed class MfaPolicyServiceTests
             PanelUser user,
             IReadOnlyList<UserLoginIdentity> identities,
             IReadOnlyCollection<string>? oidcGroupClaims = null,
+            string? authProvider = null,
+            bool isMfaVerified = false,
             CancellationToken ct = default) =>
             throw new NotSupportedException();
 

@@ -125,6 +125,58 @@ public sealed partial class MfaIntegrationTests
         }
     }
 
+    [Fact]
+    [Trait("Member", "MapMfaEndpoints")]
+    public async Task TotpEnrollBegin_UsesConfiguredTotpIssuerNameInOtpAuthUri()
+    {
+        CancellationToken ct = XunitTestContext.Current.CancellationToken;
+        FakeTimeProvider fakeTime = new(new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero));
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using MfaWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions, fakeTime);
+
+            IInstanceSettingsService settingsService = factory.Services.GetRequiredService<IInstanceSettingsService>();
+            InstanceSettings settings = await settingsService.GetAsync(ct);
+            settings.TotpIssuerName = "My Custom Panel";
+            await settingsService.UpdateAsync(settings, ct);
+
+            _ = await SeedUserWithOAuthAsync(factory.Services, "twitch", "totp-issuer-1", "issuer_user", isRoot: false, ct);
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            HttpResponseMessage callback = await SignInViaMockTwitchAsync(client, mockTwitch, "totp-issuer-1", "issuer_user", ct);
+            _ = callback.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+            using JsonContent emptyBody = JsonContent.Create(new { });
+            HttpResponseMessage unElevatedBegin = await client.PostAsync(
+                new Uri("/auth/mfa/totp/enroll/begin", UriKind.Relative),
+                emptyBody,
+                ct);
+            _ = unElevatedBegin.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            HttpResponseMessage stepUpCallback = await StepUpViaMockTwitchAsync(client, mockTwitch, "totp-issuer-1", "issuer_user", ct);
+            _ = stepUpCallback.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+            HttpResponseMessage beginResponse = await client.PostAsync(
+                new Uri("/auth/mfa/totp/enroll/begin", UriKind.Relative),
+                emptyBody,
+                ct);
+            _ = beginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            using JsonDocument doc = JsonDocument.Parse(await beginResponse.Content.ReadAsStringAsync(ct));
+            string otpAuthUri = doc.RootElement.GetProperty("otpAuthUri").GetString()!;
+            _ = otpAuthUri.Should().StartWith("otpauth://totp/");
+            _ = otpAuthUri.Should().Contain("issuer=My%20Custom%20Panel");
+            _ = otpAuthUri.Should().NotContain("issuer=StreamActions");
+        }
+    }
+
     #endregion
 
     #region PasskeysOnlyPolicy
@@ -342,6 +394,76 @@ public sealed partial class MfaIntegrationTests
         }
     }
 
+    [Fact]
+    [Trait("Member", "MapAuthEndpoints")]
+    public async Task BreakGlassRootRecovery_WhenResetMfaFalseAndMfaEnrolled_PreservesMfaAndRedirectsToChallenge()
+    {
+        CancellationToken ct = XunitTestContext.Current.CancellationToken;
+        FakeTimeProvider fakeTime = new(new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero));
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using MfaWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions, fakeTime);
+
+            PanelUser rootUser = await SeedUserWithOAuthAsync(factory.Services, "twitch", "root-keep-1", "root_keeper", isRoot: true, ct);
+            ITotpService totpService = factory.Services.GetRequiredService<ITotpService>();
+            IMfaCredentialStore credentialStore = factory.Services.GetRequiredService<IMfaCredentialStore>();
+            string secret = totpService.GenerateSecretBase32();
+            _ = await credentialStore.SaveTotpAsync(
+                rootUser.Id,
+                new TotpSecretPayload(secret, rootUser.DisplayName, fakeTime.GetUtcNow()),
+                [],
+                ct);
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            HttpResponseMessage setupGet = await client.GetAsync(new Uri("/setup-recovery", UriKind.Relative), ct);
+            _ = setupGet.StatusCode.Should().Be(HttpStatusCode.OK);
+            string setupHtml = await setupGet.Content.ReadAsStringAsync(ct);
+            _ = setupHtml.Should().Contain("name=\"resetMfaSubmitted\" value=\"true\"");
+            _ = setupHtml.Should().Contain("id=\"reset-mfa\"");
+            string antiforgery = ExtractAntiforgeryToken(setupHtml);
+
+            IBootstrapTokenService bootstrapTokens = factory.Services.GetRequiredService<IBootstrapTokenService>();
+            string rawToken = bootstrapTokens.RequestOrReuseActiveToken().Token!;
+
+            // Submit form with resetMfaSubmitted=true and resetMfa OMITTED (checkbox unchecked -> false).
+            using FormUrlEncodedContent setupForm = new(
+            [
+                new KeyValuePair<string, string>("__RequestVerificationToken", antiforgery),
+                new KeyValuePair<string, string>("bootstrapToken", rawToken),
+                new KeyValuePair<string, string>("platformId", "twitch"),
+                new KeyValuePair<string, string>("resetMfaSubmitted", "true"),
+            ]);
+            HttpResponseMessage verifyResponse = await client.PostAsync(new Uri("/setup/verify", UriKind.Relative), setupForm, ct);
+            _ = verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            HttpResponseMessage setupLogin = await client.GetAsync(new Uri("/auth/twitch/login?flow=setup", UriKind.Relative), ct);
+            _ = setupLogin.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            Dictionary<string, StringValues> query = QueryHelpers.ParseQuery(setupLogin.Headers.Location!.Query);
+            string state = query["state"].ToString();
+            string nonce = query["nonce"].ToString();
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(baseUrl, "instance-cid", "root-keep-1", "root_keeper", nonce);
+
+            HttpResponseMessage callbackResponse = await client.GetAsync(
+                new Uri($"/auth/twitch/callback?code=recovery-keep-mfa&state={Uri.EscapeDataString(state)}", UriKind.Relative),
+                ct);
+            _ = callbackResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = callbackResponse.Headers.Location!.ToString().Should().Be("/auth/mfa");
+
+            // MFA credentials remain intact and panel routes stay blocked until MFA verification completes.
+            _ = (await credentialStore.HasAnyCredentialsAsync(rootUser.Id, ct)).Should().BeTrue();
+            HttpResponseMessage blockedAdmin = await client.GetAsync(new Uri("/admin/auth", UriKind.Relative), ct);
+            _ = blockedAdmin.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = blockedAdmin.Headers.Location!.AbsolutePath.Should().Be("/access-denied");
+        }
+    }
+
     #endregion
 
     #region RecoveryCodeSingleUse
@@ -441,6 +563,15 @@ public sealed partial class MfaIntegrationTests
             _ = await SignInViaMockTwitchAsync(enrollClient, mockTwitch, "pk-user-1", "passkey_owner", ct);
 
             using JsonContent createOptionsBody = JsonContent.Create(new { });
+            HttpResponseMessage blockedCreateOptions = await enrollClient.PostAsync(
+                new Uri("/auth/mfa/passkey/create-options", UriKind.Relative),
+                createOptionsBody,
+                ct);
+            _ = blockedCreateOptions.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            HttpResponseMessage stepUpCallback = await StepUpViaMockTwitchAsync(enrollClient, mockTwitch, "pk-user-1", "passkey_owner", ct);
+            _ = stepUpCallback.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
             HttpResponseMessage createOptionsResponse = await enrollClient.PostAsync(
                 new Uri("/auth/mfa/passkey/create-options", UriKind.Relative),
                 createOptionsBody,
@@ -532,6 +663,261 @@ public sealed partial class MfaIntegrationTests
             string adminHtml = await adminAuthResponse.Content.ReadAsStringAsync(ct);
             _ = adminHtml.Should().Contain("Instance Authentication Policies");
             _ = adminHtml.Should().NotContain("data-step-up-guard=\"true\"");
+        }
+    }
+
+    #endregion
+
+    #region MandatoryMfaStepUpAndReauth
+
+    [Fact]
+    [Trait("Member", "MapMfaEndpoints")]
+    public async Task MfaMutationEndpoints_WhenNotStepUpElevated_Return403Forbidden()
+    {
+        CancellationToken ct = XunitTestContext.Current.CancellationToken;
+        DateTimeOffset t0 = new(2026, 6, 1, 12, 0, 0, TimeSpan.Zero);
+        FakeTimeProvider fakeTime = new(t0);
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using MfaWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions, fakeTime);
+
+            PanelUser user = await SeedUserWithOAuthAsync(factory.Services, "twitch", "mfa-guard-1", "guard_user", isRoot: false, ct);
+
+            // Verify AuthClaims.WithStepUpElevated preserves MfaPending and MfaEnrollmentRequired.
+            ClaimsPrincipal pendingPrincipal = AuthClaims.BuildClaimsPrincipal(
+                user,
+                authProvider: "twitch",
+                mfaPending: true,
+                mfaEnrollmentRequired: true);
+            ClaimsPrincipal elevatedPending = AuthClaims.WithStepUpElevated(pendingPrincipal, t0 + AuthClaims.StepUpWindow);
+            _ = AuthClaims.HasTrueClaim(elevatedPending, AuthClaims.MfaPendingClaimType).Should().BeTrue();
+            _ = AuthClaims.HasTrueClaim(elevatedPending, AuthClaims.MfaEnrollmentRequiredClaimType).Should().BeTrue();
+            _ = AuthClaims.IsStepUpElevated(elevatedPending, fakeTime).Should().BeTrue();
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            _ = await SignInViaMockTwitchAsync(client, mockTwitch, "mfa-guard-1", "guard_user", ct);
+
+            using JsonContent emptyBody = JsonContent.Create(new { });
+            HttpResponseMessage createOpts = await client.PostAsync(new Uri("/auth/mfa/passkey/create-options", UriKind.Relative), emptyBody, ct);
+            _ = createOpts.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            HttpResponseMessage pkRegister = await client.PostAsJsonAsync(
+                new Uri("/auth/mfa/passkey/register", UriKind.Relative),
+                new { credentialJson = "{}" },
+                ct);
+            _ = pkRegister.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            HttpResponseMessage totpBegin = await client.PostAsync(new Uri("/auth/mfa/totp/enroll/begin", UriKind.Relative), emptyBody, ct);
+            _ = totpBegin.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            HttpResponseMessage totpConfirm = await client.PostAsJsonAsync(
+                new Uri("/auth/mfa/totp/enroll/confirm", UriKind.Relative),
+                new { code = "123456" },
+                ct);
+            _ = totpConfirm.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            HttpResponseMessage deleteCred = await client.PostAsJsonAsync(
+                new Uri("/auth/mfa/delete", UriKind.Relative),
+                new { credentialId = Guid.NewGuid().ToString("D") },
+                ct);
+            _ = deleteCred.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "MapAuthEndpoints")]
+    public async Task StepUpReauth_PlatformAndOidc_GrantsStepUpWhenZeroCredentials_RejectsMismatchAndBlocksOnceEnrolled()
+    {
+        CancellationToken ct = XunitTestContext.Current.CancellationToken;
+        DateTimeOffset t0 = new(2026, 6, 1, 12, 0, 0, TimeSpan.Zero);
+        FakeTimeProvider fakeTime = new(t0);
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using MfaWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions, fakeTime);
+
+            IInstanceSettingsService settingsService = factory.Services.GetRequiredService<IInstanceSettingsService>();
+            InstanceSettings settings = await settingsService.GetAsync(ct);
+            settings.LoginMfaRequirement = PanelLoginMfaRequirement.RequiredForAll;
+            settings.ExternalOidcLoginMode = ExternalOidcLoginMode.Allowed;
+            await settingsService.UpdateAsync(settings, ct);
+
+            PanelUser platformUser = await SeedUserWithOAuthAsync(factory.Services, "twitch", "stepup-plat-1", "stepup_plat", isRoot: true, ct);
+            platformUser.MfaResetByAdminNoticePending = true;
+            IPanelUserStore userStore = factory.Services.GetRequiredService<IPanelUserStore>();
+            _ = await userStore.UpdateUserAsync(platformUser, ct);
+
+            // 1. Platform user with MfaEnrollmentRequired signs in -> redirected to /account/mfa?enrollRequired=true.
+            using HttpClient platformClient = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            HttpResponseMessage loginCb = await SignInViaMockTwitchAsync(platformClient, mockTwitch, "stepup-plat-1", "stepup_plat", ct);
+            _ = loginCb.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = loginCb.Headers.Location!.ToString().Should().Be("/account/mfa?enrollRequired=true");
+
+            // Identity mismatch during flow=stepup is rejected with /access-denied and does not grant elevation.
+            HttpResponseMessage mismatchStart = await platformClient.GetAsync(
+                new Uri("/auth/twitch/login?flow=stepup&returnUrl=%2Faccount%2Fmfa", UriKind.Relative),
+                ct);
+            _ = mismatchStart.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            Dictionary<string, StringValues> mismatchQuery = QueryHelpers.ParseQuery(mismatchStart.Headers.Location!.Query);
+            _ = mismatchQuery["force_verify"].ToString().Should().Be("true");
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+                baseUrl,
+                "instance-cid",
+                "different-attacker-id",
+                "attacker",
+                mismatchQuery["nonce"].ToString());
+            HttpResponseMessage mismatchCb = await platformClient.GetAsync(
+                new Uri($"/auth/twitch/callback?code=mismatch&state={Uri.EscapeDataString(mismatchQuery["state"].ToString())}", UriKind.Relative),
+                ct);
+            _ = mismatchCb.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = mismatchCb.Headers.Location!.ToString().Should().Be("/access-denied");
+
+            // Matching identity completes flow=stepup -> clears MfaResetByAdminNoticePending, keeps mfaEnrollmentRequired, unlocks /account/mfa enrollment!
+            HttpResponseMessage validStepUpCb = await StepUpViaMockTwitchAsync(platformClient, mockTwitch, "stepup-plat-1", "stepup_plat", ct);
+            _ = validStepUpCb.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = validStepUpCb.Headers.Location!.ToString().Should().Be("/account/mfa");
+
+            PanelUser? refreshedPlatformUser = await userStore.GetByIdAsync(platformUser.Id, ct);
+            _ = refreshedPlatformUser!.MfaResetByAdminNoticePending.Should().BeFalse();
+
+            // Panel routes remain blocked until MFA enrollment actually completes.
+            HttpResponseMessage stillBlockedPerms = await platformClient.GetAsync(new Uri("/permissions", UriKind.Relative), ct);
+            _ = stillBlockedPerms.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = stillBlockedPerms.Headers.Location!.AbsolutePath.Should().Be("/access-denied");
+
+            // Enroll TOTP now that step-up elevation is active.
+            using JsonContent emptyBody = JsonContent.Create(new { });
+            HttpResponseMessage totpBegin = await platformClient.PostAsync(new Uri("/auth/mfa/totp/enroll/begin", UriKind.Relative), emptyBody, ct);
+            _ = totpBegin.StatusCode.Should().Be(HttpStatusCode.OK);
+            using JsonDocument totpBeginDoc = JsonDocument.Parse(await totpBegin.Content.ReadAsStringAsync(ct));
+            string totpSecret = totpBeginDoc.RootElement.GetProperty("secretBase32").GetString()!;
+
+            ITotpService totpService = factory.Services.GetRequiredService<ITotpService>();
+            string validTotpCode = totpService.ComputeCode(totpSecret, fakeTime.GetUtcNow());
+            HttpResponseMessage totpConfirm = await platformClient.PostAsJsonAsync(
+                new Uri("/auth/mfa/totp/enroll/confirm", UriKind.Relative),
+                new { code = validTotpCode },
+                ct);
+            _ = totpConfirm.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // Once >= 1 MFA credential is enrolled, flow=stepup is blocked with 403 Forbidden.
+            HttpResponseMessage blockedStepUp = await platformClient.GetAsync(
+                new Uri("/auth/twitch/login?flow=stepup&returnUrl=%2Fadmin%2Fauth", UriKind.Relative),
+                ct);
+            _ = blockedStepUp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            // 2. OIDC flow=stepup sends prompt=login, verifies identity, clears MfaResetByAdminNoticePending, and blocks once enrolled.
+            IExternalOidcProviderStore oidcStore = factory.Services.GetRequiredService<IExternalOidcProviderStore>();
+            _ = await oidcStore.UpsertAsync(
+                new ExternalOidcProvider
+                {
+                    Slug = "authentik",
+                    DisplayName = "Authentik",
+                    AuthorityUrl = mockTwitch.BaseUrl,
+                    ClientId = "oidc-stepup-cid",
+                    ScopesJson = "[\"openid\",\"profile\"]",
+                    IsEnabled = true,
+                },
+                plaintextClientSecret: "oidc-stepup-secret",
+                ct);
+
+            settings.LoginMfaRequirement = PanelLoginMfaRequirement.Optional;
+            await settingsService.UpdateAsync(settings, ct);
+
+            PanelUser oidcUser = await userStore.CreateUserAsync(
+                new PanelUser { DisplayName = "OidcUser", MfaResetByAdminNoticePending = true },
+                new UserLoginIdentity { ProviderId = "oidc:authentik", ProviderUserId = "oidc-stepup-sub", ProviderUsername = "oidc_stepup" },
+                ct);
+
+            using HttpClient oidcClient = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            HttpResponseMessage oidcLoginStart = await oidcClient.GetAsync(new Uri("/auth/oidc/authentik/login", UriKind.Relative), ct);
+            _ = oidcLoginStart.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            Dictionary<string, StringValues> oidcLoginQuery = QueryHelpers.ParseQuery(oidcLoginStart.Headers.Location!.Query);
+            _ = oidcLoginQuery.ContainsKey("prompt").Should().BeFalse();
+
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+                baseUrl,
+                "oidc-stepup-cid",
+                "oidc-stepup-sub",
+                "oidc_stepup",
+                oidcLoginQuery["nonce"].ToString());
+            HttpResponseMessage oidcLoginCb = await oidcClient.GetAsync(
+                new Uri($"/auth/oidc/authentik/callback?code=oidc-login&state={Uri.EscapeDataString(oidcLoginQuery["state"].ToString())}", UriKind.Relative),
+                ct);
+            _ = oidcLoginCb.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = oidcLoginCb.Headers.Location!.ToString().Should().Be("/");
+
+            // Initiate OIDC flow=stepup -> prompt=login must be included.
+            HttpResponseMessage oidcStepUpStart = await oidcClient.GetAsync(
+                new Uri("/auth/oidc/authentik/login?flow=stepup&returnUrl=%2Faccount%2Fmfa", UriKind.Relative),
+                ct);
+            _ = oidcStepUpStart.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            Dictionary<string, StringValues> oidcStepUpQuery = QueryHelpers.ParseQuery(oidcStepUpStart.Headers.Location!.Query);
+            _ = oidcStepUpQuery["prompt"].ToString().Should().Be("login");
+
+            // Identity mismatch on OIDC step-up callback -> /access-denied.
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+                baseUrl,
+                "oidc-stepup-cid",
+                "wrong-oidc-sub",
+                "attacker",
+                oidcStepUpQuery["nonce"].ToString());
+            HttpResponseMessage oidcMismatchCb = await oidcClient.GetAsync(
+                new Uri($"/auth/oidc/authentik/callback?code=oidc-bad&state={Uri.EscapeDataString(oidcStepUpQuery["state"].ToString())}", UriKind.Relative),
+                ct);
+            _ = oidcMismatchCb.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = oidcMismatchCb.Headers.Location!.ToString().Should().Be("/access-denied");
+
+            // Matching OIDC identity completes flow=stepup.
+            HttpResponseMessage oidcStepUpStart2 = await oidcClient.GetAsync(
+                new Uri("/auth/oidc/authentik/login?flow=stepup&returnUrl=%2Faccount%2Fmfa", UriKind.Relative),
+                ct);
+            Dictionary<string, StringValues> oidcStepUpQuery2 = QueryHelpers.ParseQuery(oidcStepUpStart2.Headers.Location!.Query);
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+                baseUrl,
+                "oidc-stepup-cid",
+                "oidc-stepup-sub",
+                "oidc_stepup",
+                oidcStepUpQuery2["nonce"].ToString());
+            HttpResponseMessage oidcStepUpCb = await oidcClient.GetAsync(
+                new Uri($"/auth/oidc/authentik/callback?code=oidc-ok&state={Uri.EscapeDataString(oidcStepUpQuery2["state"].ToString())}", UriKind.Relative),
+                ct);
+            _ = oidcStepUpCb.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = oidcStepUpCb.Headers.Location!.ToString().Should().Be("/account/mfa");
+
+            PanelUser? refreshedOidcUser = await userStore.GetByIdAsync(oidcUser.Id, ct);
+            _ = refreshedOidcUser!.MfaResetByAdminNoticePending.Should().BeFalse();
+
+            // Enroll TOTP for oidcUser -> then OIDC flow=stepup must return 403 Forbidden.
+            IMfaCredentialStore credStore = factory.Services.GetRequiredService<IMfaCredentialStore>();
+            _ = await credStore.SaveTotpAsync(
+                oidcUser.Id,
+                new TotpSecretPayload(totpService.GenerateSecretBase32(), oidcUser.DisplayName, fakeTime.GetUtcNow()),
+                [],
+                ct);
+
+            HttpResponseMessage blockedOidcStepUp = await oidcClient.GetAsync(
+                new Uri("/auth/oidc/authentik/login?flow=stepup&returnUrl=%2Faccount%2Fmfa", UriKind.Relative),
+                ct);
+            _ = blockedOidcStepUp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
     }
 
@@ -748,6 +1134,36 @@ public sealed partial class MfaIntegrationTests
 
         return await client.GetAsync(
             new Uri($"/auth/twitch/callback?code=code-{Uri.EscapeDataString(subject)}&state={Uri.EscapeDataString(state)}", UriKind.Relative),
+            ct).ConfigureAwait(false);
+    }
+
+    private static async Task<HttpResponseMessage> StepUpViaMockTwitchAsync(
+        HttpClient client,
+        MockTwitchOAuthServer mockTwitch,
+        string subject,
+        string username,
+        CancellationToken ct,
+        string returnUrl = "/account/mfa")
+    {
+        HttpResponseMessage stepUpRedirect = await client.GetAsync(
+            new Uri($"/auth/twitch/login?flow=stepup&returnUrl={Uri.EscapeDataString(returnUrl)}", UriKind.Relative),
+            ct).ConfigureAwait(false);
+        _ = stepUpRedirect.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+        Dictionary<string, StringValues> query = QueryHelpers.ParseQuery(stepUpRedirect.Headers.Location!.Query);
+        _ = query["force_verify"].ToString().Should().Be("true");
+        string state = query["state"].ToString();
+        string nonce = query["nonce"].ToString();
+
+        mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+            issuer: baseUrl,
+            audience: "instance-cid",
+            subject: subject,
+            preferredUsername: username,
+            nonce: nonce);
+
+        return await client.GetAsync(
+            new Uri($"/auth/twitch/callback?code=stepup-{Uri.EscapeDataString(subject)}&state={Uri.EscapeDataString(state)}", UriKind.Relative),
             ct).ConfigureAwait(false);
     }
 

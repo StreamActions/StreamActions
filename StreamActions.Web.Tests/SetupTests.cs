@@ -21,6 +21,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using StreamActions.Core.Abstractions;
@@ -98,6 +99,59 @@ public sealed partial class SetupTests
         _ = component.Markup.Should().Contain("cooldown");
         _ = component.Markup.Should().Contain("42");
         _ = component.Markup.Should().NotContain("action=\"/setup/verify\"");
+    }
+
+    [Fact]
+    [Trait("Member", "Setup")]
+    public void Setup_WhenRootRecoveryWithMultiplePlatformsAndStoredOAuth_RendersDynamicPlatformsOptionalLabelsResetCheckboxAndTicketLink()
+    {
+        EphemeralDataProtectionProvider dataProtection = new();
+        DefaultHttpContext httpContext = new()
+        {
+            RequestServices = new ServiceCollection()
+                .AddSingleton<IDataProtectionProvider>(dataProtection)
+                .BuildServiceProvider(),
+        };
+
+        string ticketJson = JsonSerializer.Serialize(new SetupTicketPayload
+        {
+            Nonce = "abc123",
+            IssuedAtUtc = DateTimeOffset.UtcNow,
+            ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(15),
+            IsRootRecovery = true,
+            PlatformId = "kick",
+            ResetRootMfa = false,
+        });
+        string protectedTicket = dataProtection
+            .CreateProtector(SetupEndpoints.SetupTicketProtectorPurpose)
+            .ToTimeLimitedDataProtector()
+            .Protect(ticketJson, SetupEndpoints.SetupTicketLifetime);
+        httpContext.Request.Headers.Cookie = $"{SetupEndpoints.SetupTicketCookieName}={Uri.EscapeDataString(protectedTicket)}";
+
+        using BunitContext context = new();
+        _ = context.Services.AddSingleton<IBootstrapTokenService>(
+            new StubBootstrapTokenService(new BootstrapTokenRequestResult(true, "token123", null)));
+        _ = context.Services.AddSingleton<IPanelUserStore>(new StubPanelUserStore(hasRootUser: true));
+        _ = context.Services.AddSingleton<AntiforgeryStateProvider>(new StubAntiforgeryStateProvider());
+        _ = context.Services.AddSingleton<IPlatformOAuthProvider>(new StubPlatformOAuthProvider("twitch"));
+        _ = context.Services.AddSingleton<IPlatformOAuthProvider>(new StubPlatformOAuthProvider("kick"));
+        _ = context.Services.AddSingleton<IInstanceOAuthConfigService>(new StubInstanceOAuthConfigService(
+            new Dictionary<string, PlatformOAuthAppCredentials>
+            {
+                ["twitch"] = new("existing-cid", "existing-secret"),
+            }));
+
+        IRenderedComponent<Setup> component = context.Render<Setup>(parameters =>
+            parameters.AddCascadingValue(httpContext));
+
+        _ = component.Markup.Should().Contain("value=\"kick\"");
+        _ = component.Markup.Should().Contain("value=\"twitch\"");
+        _ = component.Markup.Should().Contain("Continue with Kick");
+        _ = component.Markup.Should().Contain("/auth/kick/login?flow=setup");
+        _ = component.Markup.Should().Contain("OAuth Client ID (optional");
+        _ = component.Markup.Should().Contain("OAuth Client Secret (optional");
+        _ = component.Markup.Should().Contain("name=\"resetMfaSubmitted\" value=\"true\"");
+        _ = component.Markup.Should().Contain("id=\"reset-mfa\"");
     }
     #endregion
 
@@ -334,6 +388,64 @@ public sealed partial class SetupTests
         /// <inheritdoc/>
         public override AntiforgeryRequestToken? GetAntiforgeryToken() =>
             new("test-antiforgery-token", "__RequestVerificationToken");
+    }
+
+    /// <summary>
+    /// Minimal <see cref="IPlatformOAuthProvider"/> stub for multi-platform setup dropdown tests.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    private sealed class StubPlatformOAuthProvider(string platformId) : IPlatformOAuthProvider
+    {
+        /// <inheritdoc/>
+        public string PlatformId { get; } = platformId;
+
+        /// <inheritdoc/>
+        public IReadOnlyList<string> DefaultLoginScopes => ["openid"];
+
+        /// <inheritdoc/>
+        public IReadOnlyList<string> DefaultBroadcasterScopes => ["openid"];
+
+        /// <inheritdoc/>
+        public IReadOnlyList<string> DefaultBotScopes => ["openid"];
+
+        /// <inheritdoc/>
+        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string clientSecret, string code, Uri redirectUri, string? expectedNonce = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public ValueTask<PlatformTokenValidationResult> ValidateTokenAsync(string accessToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public ValueTask RevokeTokenAsync(string clientId, string token, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// Minimal <see cref="IInstanceOAuthConfigService"/> stub for root recovery optional-label tests.
+    /// </summary>
+    /// <param name="stored">Pre-configured OAuth credentials.</param>
+    private sealed class StubInstanceOAuthConfigService(
+        IReadOnlyDictionary<string, PlatformOAuthAppCredentials> stored) : IInstanceOAuthConfigService
+    {
+        /// <inheritdoc/>
+        public ValueTask<IReadOnlyDictionary<string, PlatformOAuthAppCredentials>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(stored);
+
+        /// <inheritdoc/>
+        public ValueTask<PlatformOAuthAppCredentials?> GetAsync(string platformId, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(stored.GetValueOrDefault(platformId));
+
+        /// <inheritdoc/>
+        public ValueTask SetAsync(string platformId, PlatformOAuthAppCredentials credentials, CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        /// <inheritdoc/>
+        public ValueTask<bool> RemoveAsync(string platformId, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(false);
     }
 
     /// <summary>

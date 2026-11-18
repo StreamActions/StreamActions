@@ -144,7 +144,8 @@ public sealed class OidcAuthIntegrationTests
                 oidcUser,
                 identities,
                 _oidcGroupsClaim,
-                ct);
+                authProvider: "oidc:authentik",
+                ct: ct);
             _ = accessible.Should().ContainSingle().Which.Workspace.Id.Should().Be(ws.Id);
 
             HttpResponseMessage permissionsResponse = await client.GetAsync(new Uri("/permissions", UriKind.Relative), ct);

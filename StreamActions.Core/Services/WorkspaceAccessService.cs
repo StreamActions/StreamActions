@@ -49,19 +49,43 @@ public sealed class WorkspaceAccessService : IWorkspaceAccessService
     private readonly IPermissionService _permissionService;
 
     /// <summary>
+    /// The optional instance settings service used for external OIDC and MFA policy evaluation.
+    /// </summary>
+    private readonly IInstanceSettingsService? _instanceSettingsService;
+
+    /// <summary>
+    /// The optional external OIDC provider store used to check workspace-scoped and instance-wide OIDC providers.
+    /// </summary>
+    private readonly IExternalOidcProviderStore? _oidcProviderStore;
+
+    /// <summary>
+    /// The optional permission persistence store used for workspace login MFA requirement evaluation.
+    /// </summary>
+    private readonly IPermissionStore? _permissionStore;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="WorkspaceAccessService"/> class.
     /// </summary>
     /// <param name="workspaceStore">The workspace persistence store.</param>
     /// <param name="permissionService">The permission evaluation service.</param>
+    /// <param name="instanceSettingsService">Optional instance settings service.</param>
+    /// <param name="oidcProviderStore">Optional external OIDC provider store.</param>
+    /// <param name="permissionStore">Optional permission persistence store.</param>
     public WorkspaceAccessService(
         IWorkspaceStore workspaceStore,
-        IPermissionService permissionService)
+        IPermissionService permissionService,
+        IInstanceSettingsService? instanceSettingsService = null,
+        IExternalOidcProviderStore? oidcProviderStore = null,
+        IPermissionStore? permissionStore = null)
     {
         ArgumentNullException.ThrowIfNull(workspaceStore);
         ArgumentNullException.ThrowIfNull(permissionService);
 
         this._workspaceStore = workspaceStore;
         this._permissionService = permissionService;
+        this._instanceSettingsService = instanceSettingsService;
+        this._oidcProviderStore = oidcProviderStore;
+        this._permissionStore = permissionStore;
     }
 
     /// <inheritdoc />
@@ -69,12 +93,18 @@ public sealed class WorkspaceAccessService : IWorkspaceAccessService
         PanelUser user,
         IReadOnlyList<UserLoginIdentity> identities,
         IReadOnlyCollection<string>? oidcGroupClaims = null,
+        string? authProvider = null,
+        bool isMfaVerified = false,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(identities);
 
         IReadOnlyList<Workspace> workspaces = await this._workspaceStore.GetAllAsync(ct).ConfigureAwait(false);
+        InstanceSettings? settings = this._instanceSettingsService is not null
+            ? await this._instanceSettingsService.GetAsync(ct).ConfigureAwait(false)
+            : null;
+        IReadOnlyList<ExternalOidcProvider>? instanceOidcProviders = null;
         List<AccessibleWorkspace> accessible = [];
 
         foreach (Workspace workspace in workspaces)
@@ -96,29 +126,84 @@ public sealed class WorkspaceAccessService : IWorkspaceAccessService
                 .GetPlatformsAsync(workspace.Id, ct)
                 .ConfigureAwait(false);
 
+            (WorkspaceSessionAuthStatus authStatus, string? requiredOidcSlug, instanceOidcProviders) = await this
+                .EvaluateWorkspaceAuthStatusAsync(
+                    workspace,
+                    user,
+                    identities,
+                    authProvider,
+                    isMfaVerified,
+                    settings,
+                    instanceOidcProviders,
+                    ct)
+                .ConfigureAwait(false);
+
             accessible.Add(new AccessibleWorkspace(
                 workspace,
                 workspace.OwnerUserId == user.Id,
-                platforms));
+                platforms,
+                authStatus,
+                requiredOidcSlug));
         }
 
         return accessible;
     }
 
     /// <inheritdoc />
-    public ValueTask<bool> CanAccessWorkspaceAsync(
+    public async ValueTask<bool> CanAccessWorkspaceAsync(
         Guid workspaceId,
         PanelUser user,
         IReadOnlyList<UserLoginIdentity> identities,
         IReadOnlyCollection<string>? oidcGroupClaims = null,
-        CancellationToken ct = default) =>
-        this.HasPermissionInWorkspaceAsync(
-            workspaceId,
+        string? authProvider = null,
+        bool isMfaVerified = false,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(identities);
+
+        if (workspaceId == Guid.Empty)
+        {
+            return false;
+        }
+
+        Workspace? workspace = await this._workspaceStore.GetByIdAsync(workspaceId, ct).ConfigureAwait(false);
+        if (workspace is null)
+        {
+            return user.IsRoot || user.IsGlobalAdmin;
+        }
+
+        bool allowed = await this.EvaluateWorkspacePermissionAsync(
+            workspace,
             user,
             identities,
             BuiltInPermissionKeys.UiPanelAccess,
             oidcGroupClaims,
-            ct);
+            ct).ConfigureAwait(false);
+
+        if (!allowed)
+        {
+            return false;
+        }
+
+        InstanceSettings? settings = this._instanceSettingsService is not null
+            ? await this._instanceSettingsService.GetAsync(ct).ConfigureAwait(false)
+            : null;
+
+        (WorkspaceSessionAuthStatus authStatus, _, _) = await this
+            .EvaluateWorkspaceAuthStatusAsync(
+                workspace,
+                user,
+                identities,
+                authProvider,
+                isMfaVerified,
+                settings,
+                instanceOidcProviders: null,
+                ct)
+            .ConfigureAwait(false);
+
+        return authStatus == WorkspaceSessionAuthStatus.Ready;
+    }
 
     /// <inheritdoc />
     public async ValueTask<bool> HasPermissionInWorkspaceAsync(
@@ -264,5 +349,108 @@ public sealed class WorkspaceAccessService : IWorkspaceAccessService
         }
 
         return actors;
+    }
+
+    /// <summary>
+    /// Evaluates external OIDC and MFA readiness requirements for a <see cref="PanelUser"/> accessing <paramref name="workspace"/>.
+    /// </summary>
+    /// <param name="workspace">The target workspace.</param>
+    /// <param name="user">The authenticated panel user.</param>
+    /// <param name="identities">The user's linked external login identities.</param>
+    /// <param name="authProvider">The authentication provider identifier for the current session.</param>
+    /// <param name="isMfaVerified"><see langword="true"/> if the current session has completed MFA verification.</param>
+    /// <param name="instanceSettings">The loaded instance settings, if available.</param>
+    /// <param name="instanceOidcProviders">Cached enabled instance-wide OIDC providers, if already loaded.</param>
+    /// <param name="ct">A token to monitor for cancellation requests.</param>
+    /// <returns>The resulting <see cref="WorkspaceSessionAuthStatus"/>, optional required OIDC provider slug, and cached instance OIDC providers.</returns>
+    private async ValueTask<(WorkspaceSessionAuthStatus AuthStatus, string? RequiredOidcProviderSlug, IReadOnlyList<ExternalOidcProvider>? InstanceOidcProviders)> EvaluateWorkspaceAuthStatusAsync(
+        Workspace workspace,
+        PanelUser user,
+        IReadOnlyList<UserLoginIdentity> identities,
+        string? authProvider,
+        bool isMfaVerified,
+        InstanceSettings? instanceSettings,
+        IReadOnlyList<ExternalOidcProvider>? instanceOidcProviders,
+        CancellationToken ct)
+    {
+        if (instanceSettings is not null
+            && !user.IsRoot
+            && !user.IsGlobalAdmin
+            && instanceSettings.ExternalOidcLoginMode != ExternalOidcLoginMode.Disabled)
+        {
+            IReadOnlyList<ExternalOidcProvider> workspaceProviders = this._oidcProviderStore is not null
+                ? await this._oidcProviderStore.GetProvidersAsync(workspace.Id, enabledOnly: true, ct).ConfigureAwait(false)
+                : [];
+
+            bool requiresExternalOidc = instanceSettings.ExternalOidcLoginMode == ExternalOidcLoginMode.Required
+                || (instanceSettings.ExternalOidcLoginMode == ExternalOidcLoginMode.Allowed
+                    && (workspace.RequireExternalOidcLogin || workspaceProviders.Count > 0));
+
+            if (requiresExternalOidc)
+            {
+                string? sessionOidcSlug = ExtractOidcSlug(authProvider);
+                if (workspaceProviders.Count > 0)
+                {
+                    bool matchesWorkspaceProvider = sessionOidcSlug is not null
+                        && workspaceProviders.Any(p => string.Equals(p.Slug, sessionOidcSlug, StringComparison.OrdinalIgnoreCase));
+
+                    if (!matchesWorkspaceProvider)
+                    {
+                        return (WorkspaceSessionAuthStatus.RequiresOidcReauth, workspaceProviders[0].Slug, instanceOidcProviders);
+                    }
+                }
+                else if (sessionOidcSlug is null)
+                {
+                    if (instanceOidcProviders is null && this._oidcProviderStore is not null)
+                    {
+                        instanceOidcProviders = await this._oidcProviderStore
+                            .GetProvidersAsync(workspaceId: null, enabledOnly: true, ct)
+                            .ConfigureAwait(false);
+                    }
+
+                    string? fallbackSlug = instanceOidcProviders is { Count: > 0 }
+                        ? instanceOidcProviders[0].Slug
+                        : null;
+
+                    return (WorkspaceSessionAuthStatus.RequiresOidcReauth, fallbackSlug, instanceOidcProviders);
+                }
+            }
+        }
+
+        if (!isMfaVerified && instanceSettings is not null && this._permissionStore is not null)
+        {
+            bool mfaRequired = await MfaPolicyService
+                .IsWorkspaceLoginMfaRequiredAsync(instanceSettings, workspace, this._permissionStore, user, identities, ct)
+                .ConfigureAwait(false);
+
+            if (mfaRequired)
+            {
+                return (WorkspaceSessionAuthStatus.RequiresMfaChallenge, null, instanceOidcProviders);
+            }
+        }
+
+        return (WorkspaceSessionAuthStatus.Ready, null, instanceOidcProviders);
+    }
+
+    /// <summary>
+    /// Extracts the external OIDC provider slug from an <c>oidc:&lt;slug&gt;</c> authentication provider claim.
+    /// </summary>
+    /// <param name="authProvider">The raw authentication provider identifier.</param>
+    /// <returns>The trimmed OIDC provider slug, or <see langword="null"/> if the session did not authenticate via external OIDC.</returns>
+    private static string? ExtractOidcSlug(string? authProvider)
+    {
+        if (string.IsNullOrWhiteSpace(authProvider))
+        {
+            return null;
+        }
+
+        string trimmed = authProvider.Trim();
+        if (!trimmed.StartsWith(_oidcIdentityPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string slug = trimmed[_oidcIdentityPrefix.Length..].Trim();
+        return slug.Length == 0 ? null : slug;
     }
 }

@@ -30,7 +30,7 @@
 @inject IMfaPolicyService MfaPolicyService
 @inject IServiceProvider ServiceProvider
 
-<PageTitle>Two-Factor Authentication - StreamActions</PageTitle>
+<PageTitle>@AuthPolicyParser.FormatPageTitle("Two-Factor Authentication", _instanceName)</PageTitle>
 
 <h1>Two-Factor Authentication</h1>
 
@@ -49,6 +49,7 @@ else if (_policy.IsMfaDisabled)
 }
 else
 {
+    <div data-mfa-challenge="true">
     <p>Verify your identity to complete signing in to StreamActions.</p>
 
     @if (_policy.IsPasskeyAllowed)
@@ -58,7 +59,8 @@ else
             <button type="button"
                     data-mfa-passkey="true"
                     data-return-url="@_safeReturnUrl"
-                    onclick="window.streamActionsWebAuthn && window.streamActionsWebAuthn.verifyPasskey(this.dataset.returnUrl, 'mfa-passkey-error')">
+                    data-workspace-id="@(WorkspaceId.HasValue ? WorkspaceId.Value.ToString("D") : string.Empty)"
+                    onclick="window.streamActionsWebAuthn && window.streamActionsWebAuthn.verifyPasskey(this.dataset.returnUrl, 'mfa-passkey-error', this.dataset.workspaceId)">
                 Verify with Passkey
             </button>
             <p id="mfa-passkey-error" role="alert" hidden></p>
@@ -69,12 +71,24 @@ else
     {
         <section aria-labelledby="mfa-totp-heading">
             <h2 id="mfa-totp-heading">Authenticator App (TOTP)</h2>
-            <form method="post" action="/auth/mfa/totp/verify" data-mfa-totp="true">
+            <button type="button"
+                    data-mfa-toggle-totp="true"
+                    data-mfa-target-method="totp"
+                    data-mfa-container="[data-mfa-challenge]"
+                    aria-expanded="@(_activeMethod == "totp" ? "true" : "false")"
+                    @onclick="ShowTotpForm">
+                Use Authenticator App (TOTP)
+            </button>
+            <form method="post" action="/auth/mfa/totp/verify" data-mfa-totp="true" hidden="@(_activeMethod != "totp")">
                 <AntiforgeryToken />
                 <input type="hidden" name="returnUrl" value="@_safeReturnUrl" />
+                @if (WorkspaceId.HasValue && WorkspaceId.Value != Guid.Empty)
+                {
+                    <input type="hidden" name="workspaceId" value="@WorkspaceId.Value.ToString("D")" />
+                }
                 <div>
                     <label for="mfa-totp-code">6-digit code</label>
-                    <input id="mfa-totp-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required />
+                    <input id="mfa-totp-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" @bind="_totpCode" @bind:event="oninput" required />
                 </div>
                 <button type="submit">Verify Code</button>
             </form>
@@ -83,16 +97,29 @@ else
 
     <section aria-labelledby="mfa-recovery-heading">
         <h2 id="mfa-recovery-heading">One-Time Recovery Code</h2>
-        <form method="post" action="/auth/mfa/recovery/verify" data-mfa-recovery="true">
+        <button type="button"
+                data-mfa-toggle-recovery="true"
+                data-mfa-target-method="recovery"
+                data-mfa-container="[data-mfa-challenge]"
+                aria-expanded="@(_activeMethod == "recovery" ? "true" : "false")"
+                @onclick="ShowRecoveryForm">
+            Use a Recovery Code
+        </button>
+        <form method="post" action="/auth/mfa/recovery/verify" data-mfa-recovery="true" hidden="@(_activeMethod != "recovery")">
             <AntiforgeryToken />
             <input type="hidden" name="returnUrl" value="@_safeReturnUrl" />
+            @if (WorkspaceId.HasValue && WorkspaceId.Value != Guid.Empty)
+            {
+                <input type="hidden" name="workspaceId" value="@WorkspaceId.Value.ToString("D")" />
+            }
             <div>
                 <label for="mfa-recovery-code">Recovery Code</label>
-                <input id="mfa-recovery-code" name="code" type="text" autocomplete="off" required />
+                <input id="mfa-recovery-code" name="code" type="text" autocomplete="off" @bind="_recoveryCode" @bind:event="oninput" required />
             </div>
             <button type="submit">Verify Recovery Code</button>
         </form>
     </section>
+    </div>
 }
 
 @code {
@@ -107,6 +134,12 @@ else
     /// </summary>
     [SupplyParameterFromQuery(Name = "error")]
     public string? Error { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional target workspace identifier triggering this MFA challenge.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "workspaceId")]
+    public Guid? WorkspaceId { get; set; }
 
     /// <summary>
     /// Indicates whether policy evaluation has completed.
@@ -125,7 +158,32 @@ else
         MfaMethodAvailability.Allowed,
         MfaMethodAvailability.Allowed,
         PanelLoginMfaRequirement.Optional,
-        StepUpSudoPolicy.Optional);
+        StepUpSudoPolicy.Required);
+
+    /// <summary>
+    /// Operator-configured instance display name.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
+    /// Indicates whether the user currently has at least one enrolled WebAuthn passkey.
+    /// </summary>
+    private bool _hasPasskeyEnrolled;
+
+    /// <summary>
+    /// Currently revealed secondary input method (<c>"totp"</c>, <c>"recovery"</c>, or <see langword="null"/> when collapsed).
+    /// </summary>
+    private string? _activeMethod;
+
+    /// <summary>
+    /// Bound TOTP verification code input value.
+    /// </summary>
+    private string _totpCode = string.Empty;
+
+    /// <summary>
+    /// Bound recovery code input value.
+    /// </summary>
+    private string _recoveryCode = string.Empty;
 
     /// <summary>
     /// Loads the current user's effective MFA policy to determine which verification methods may be presented.
@@ -133,12 +191,19 @@ else
     /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
     protected override async Task OnInitializedAsync()
     {
+        IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
+        if (settingsService is not null)
+        {
+            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        }
         _safeReturnUrl = AuthClaims.SafeReturnUrlOrDefault(ReturnUrl, "/");
 
         AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
         ClaimsPrincipal principal = authState.User;
 
         IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
+        IMfaCredentialStore? mfaCredentialStore = ServiceProvider.GetService<IMfaCredentialStore>();
         Guid? userId = AuthClaims.GetPanelUserId(principal);
         PanelUser? user = panelUserStore is not null && userId.HasValue
             ? await panelUserStore.GetByIdAsync(userId.Value).ConfigureAwait(false)
@@ -152,17 +217,53 @@ else
             IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(principal);
 
             _policy = await MfaPolicyService
-                .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, workspaceId: null)
+                .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, workspaceId: WorkspaceId)
                 .ConfigureAwait(false);
         }
         else
         {
             _policy = await MfaPolicyService
-                .GetEffectivePolicyAsync(workspaceId: null)
+                .GetEffectivePolicyAsync(workspaceId: WorkspaceId)
                 .ConfigureAwait(false);
         }
 
+        if (mfaCredentialStore is not null && userId.HasValue)
+        {
+            IReadOnlyList<MfaCredentialSummary> summaries = await mfaCredentialStore
+                .GetSummariesAsync(userId.Value)
+                .ConfigureAwait(false);
+            _hasPasskeyEnrolled = summaries.Any(static s => s.Method == MfaMethod.Passkey);
+        }
+        else
+        {
+            _hasPasskeyEnrolled = false;
+        }
+
+        _activeMethod = (_hasPasskeyEnrolled && _policy.IsPasskeyAllowed && _policy.IsTotpAllowed)
+            ? null
+            : (_policy.IsTotpAllowed ? "totp" : null);
+
         _loaded = true;
+    }
+
+    /// <summary>
+    /// Reveals the TOTP verification form, hides the recovery code form, and clears both code inputs.
+    /// </summary>
+    private void ShowTotpForm()
+    {
+        _totpCode = string.Empty;
+        _recoveryCode = string.Empty;
+        _activeMethod = "totp";
+    }
+
+    /// <summary>
+    /// Reveals the recovery code verification form, hides the TOTP form, and clears both code inputs.
+    /// </summary>
+    private void ShowRecoveryForm()
+    {
+        _totpCode = string.Empty;
+        _recoveryCode = string.Empty;
+        _activeMethod = "recovery";
     }
 }
 

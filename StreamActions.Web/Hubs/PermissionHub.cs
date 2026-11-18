@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.SignalR;
 using StreamActions.Core.Abstractions;
 using StreamActions.Core.Models.Entities;
 using StreamActions.Web.Security;
+using System.Security.Claims;
 
 namespace StreamActions.Web.Hubs;
 
@@ -91,9 +92,11 @@ public sealed class PermissionHub : Hub<IPermissionClient>
             .GetLoginIdentitiesAsync(user.Id, this.Context.ConnectionAborted)
             .ConfigureAwait(false);
         IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(this.Context.User);
+        string? authProvider = this.Context.User?.FindFirstValue(AuthClaims.AuthProviderClaimType);
+        bool isMfaVerified = AuthClaims.HasTrueClaim(this.Context.User, AuthClaims.MfaVerifiedClaimType);
 
         bool canAccess = await this._workspaceAccessService
-            .CanAccessWorkspaceAsync(workspaceId, user, identities, oidcGroups, this.Context.ConnectionAborted)
+            .CanAccessWorkspaceAsync(workspaceId, user, identities, oidcGroups, authProvider, isMfaVerified, this.Context.ConnectionAborted)
             .ConfigureAwait(false);
 
         if (!canAccess)

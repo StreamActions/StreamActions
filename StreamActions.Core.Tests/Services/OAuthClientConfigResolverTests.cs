@@ -151,6 +151,78 @@ public sealed class OAuthClientConfigResolverTests
         }
     }
 
+    [Fact]
+    [Trait("Member", "ResolveAsync")]
+    public async Task ResolveAsyncWhenPolicyIsInstanceLoginWithStreamerApiOAuthUsesInstanceForIdentityFlowsAndWorkspaceForApiFlows()
+    {
+        (OAuthClientConfigResolver resolver, FakeInstanceSettingsService settingsService, FakeInstanceOAuthConfigService instanceOAuth, FakeWorkspaceStore workspaceStore, _, InMemoryEventBus eventBus, ServiceProvider provider) = CreateSut();
+        await using (provider.ConfigureAwait(false))
+        using (eventBus)
+        {
+            settingsService.Settings.InstanceOAuthAppPolicy = nameof(InstanceOAuthAppPolicy.InstanceLoginWithStreamerApiOAuth);
+            instanceOAuth.Credentials["twitch"] = new PlatformOAuthAppCredentials("inst-id", "inst-secret");
+
+            ResolvedOAuthClientConfig? loginResult = await resolver.ResolveAsync("twitch", _workspaceId, flow: "login", cancellationToken: TestContext.Current.CancellationToken);
+            ResolvedOAuthClientConfig? linkResult = await resolver.ResolveAsync("twitch", _workspaceId, flow: "link", cancellationToken: TestContext.Current.CancellationToken);
+            ResolvedOAuthClientConfig? stepUpResult = await resolver.ResolveAsync("twitch", null, flow: "stepup", cancellationToken: TestContext.Current.CancellationToken);
+            ResolvedOAuthClientConfig? instanceBotResult = await resolver.ResolveAsync("twitch", null, flow: "instance-bot", cancellationToken: TestContext.Current.CancellationToken);
+            ResolvedOAuthClientConfig? nullFlowNoWorkspace = await resolver.ResolveAsync("twitch", workspaceId: null, flow: null, cancellationToken: TestContext.Current.CancellationToken);
+
+            _ = loginResult!.ClientId.Should().Be("inst-id");
+            _ = loginResult.IsWorkspaceOverride.Should().BeFalse();
+            _ = linkResult!.ClientId.Should().Be("inst-id");
+            _ = stepUpResult!.ClientId.Should().Be("inst-id");
+            _ = instanceBotResult!.ClientId.Should().Be("inst-id");
+            _ = nullFlowNoWorkspace!.ClientId.Should().Be("inst-id");
+
+            // Without workspace custom credentials, broadcaster/bot/null-with-workspace never fall back to instance credentials.
+            ResolvedOAuthClientConfig? missingBroadcaster = await resolver.ResolveAsync("twitch", _workspaceId, flow: "broadcaster", cancellationToken: TestContext.Current.CancellationToken);
+            ResolvedOAuthClientConfig? missingBot = await resolver.ResolveAsync("twitch", _workspaceId, flow: "bot", cancellationToken: TestContext.Current.CancellationToken);
+            ResolvedOAuthClientConfig? missingNullFlowWithWorkspace = await resolver.ResolveAsync("twitch", _workspaceId, flow: null, cancellationToken: TestContext.Current.CancellationToken);
+
+            _ = missingBroadcaster.Should().BeNull();
+            _ = missingBot.Should().BeNull();
+            _ = missingNullFlowWithWorkspace.Should().BeNull();
+
+            // With workspace custom credentials, broadcaster/bot/null-with-workspace resolve workspace credentials.
+            workspaceStore.CustomApps[(_workspaceId, "twitch")] = new PlatformOAuthAppCredentials("ws-id", "ws-secret");
+            ResolvedOAuthClientConfig? broadcasterResult = await resolver.ResolveAsync("twitch", _workspaceId, flow: "broadcaster", cancellationToken: TestContext.Current.CancellationToken);
+            ResolvedOAuthClientConfig? botResult = await resolver.ResolveAsync("twitch", _workspaceId, flow: "bot", cancellationToken: TestContext.Current.CancellationToken);
+            ResolvedOAuthClientConfig? nullFlowWithWorkspace = await resolver.ResolveAsync("twitch", _workspaceId, flow: null, cancellationToken: TestContext.Current.CancellationToken);
+
+            _ = broadcasterResult!.ClientId.Should().Be("ws-id");
+            _ = broadcasterResult.IsWorkspaceOverride.Should().BeTrue();
+            _ = botResult!.ClientId.Should().Be("ws-id");
+            _ = botResult.IsWorkspaceOverride.Should().BeTrue();
+            _ = nullFlowWithWorkspace!.ClientId.Should().Be("ws-id");
+            _ = nullFlowWithWorkspace.IsWorkspaceOverride.Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "ResolveAsync")]
+    public async Task ResolveAsyncUsesPerPlatformOAuthAppPolicyOverrideWhenConfigured()
+    {
+        (OAuthClientConfigResolver resolver, FakeInstanceSettingsService settingsService, FakeInstanceOAuthConfigService instanceOAuth, FakeWorkspaceStore workspaceStore, _, InMemoryEventBus eventBus, ServiceProvider provider) = CreateSut();
+        await using (provider.ConfigureAwait(false))
+        using (eventBus)
+        {
+            settingsService.Settings.InstanceOAuthAppPolicy = nameof(InstanceOAuthAppPolicy.InstanceOnly);
+            AuthPolicyParser.SetPlatformOAuthAppPolicy(settingsService.Settings, "twitch", InstanceOAuthAppPolicy.RequireStreamerOAuthApp);
+
+            instanceOAuth.Credentials["twitch"] = new PlatformOAuthAppCredentials("inst-twitch", "inst-secret");
+            instanceOAuth.Credentials["kick"] = new PlatformOAuthAppCredentials("inst-kick", "inst-secret");
+            workspaceStore.CustomApps[(_workspaceId, "kick")] = new PlatformOAuthAppCredentials("ws-kick", "ws-secret");
+
+            ResolvedOAuthClientConfig? twitchWithoutCustom = await resolver.ResolveAsync("twitch", _workspaceId, flow: "login", cancellationToken: TestContext.Current.CancellationToken);
+            ResolvedOAuthClientConfig? kickUsesInstanceDefault = await resolver.ResolveAsync("kick", _workspaceId, flow: "broadcaster", cancellationToken: TestContext.Current.CancellationToken);
+
+            _ = twitchWithoutCustom.Should().BeNull();
+            _ = kickUsesInstanceDefault!.ClientId.Should().Be("inst-kick");
+            _ = kickUsesInstanceDefault.IsWorkspaceOverride.Should().BeFalse();
+        }
+    }
+
     #endregion
 
     private static void GrantGlobalFeature(FakePermissionStore permissionStore, string permissionKey, PermissionState state)
@@ -269,7 +341,7 @@ public sealed class OAuthClientConfigResolverTests
         public ValueTask<WorkspacePlatform> UpsertPlatformAsync(WorkspacePlatform platform, string? plaintextCustomClientSecret = null, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(platform);
 
-        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, CancellationToken cancellationToken = default) =>
+        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
         public ValueTask<PlatformOAuthAppCredentials?> GetCustomOAuthAppAsync(Guid workspaceId, string platformId, CancellationToken cancellationToken = default)

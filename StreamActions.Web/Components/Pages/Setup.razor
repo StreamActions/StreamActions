@@ -19,17 +19,21 @@
 @page "/setup"
 @page "/setup-recovery"
 
+@using System.Globalization
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.DataProtection
 @using Microsoft.AspNetCore.Http
 @using Microsoft.Extensions.DependencyInjection
 @using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
 @using StreamActions.Web.Endpoints
 
 @inject IBootstrapTokenService BootstrapTokenService
 @inject IPanelUserStore PanelUserStore
+@inject IServiceProvider ServiceProvider
 
-<PageTitle>@(_isRootRecovery ? "Root Recovery" : "Initial Setup") - StreamActions</PageTitle>
+<PageTitle>@AuthPolicyParser.FormatPageTitle(_isRootRecovery ? "Root Recovery" : "Initial Setup", _instanceName)</PageTitle>
 
 <h1>@(_isRootRecovery ? "Root Recovery" : "Initial Setup")</h1>
 
@@ -46,7 +50,7 @@ else
 {
     <p role="status">
         Bootstrap token verified. Setup session cookie has been issued.
-        <a href="/auth/twitch/login?flow=setup">Continue with Twitch</a>
+        <a href="/auth/@Uri.EscapeDataString(_ticketPlatformId)/login?flow=setup">Continue with @FormatPlatformName(_ticketPlatformId)</a>
     </p>
 }
 
@@ -68,22 +72,56 @@ else
         <div>
             <label for="platform-id">Platform</label>
             <select id="platform-id" name="platformId">
-                <option value="twitch" selected>Twitch</option>
+                @foreach (string platformId in _availablePlatforms)
+                {
+                    <option value="@platformId" selected="@string.Equals(platformId, _selectedPlatformId, StringComparison.OrdinalIgnoreCase)">@FormatPlatformName(platformId)</option>
+                }
             </select>
         </div>
         <div>
-            <label for="client-id">OAuth Client ID</label>
+            <label for="client-id">@(_isRootRecovery && _hasStoredOAuthCredentials ? "OAuth Client ID (optional — existing instance credentials configured)" : "OAuth Client ID")</label>
             <input id="client-id" name="clientId" type="text" autocomplete="off" />
         </div>
         <div>
-            <label for="client-secret">OAuth Client Secret</label>
+            <label for="client-secret">@(_isRootRecovery && _hasStoredOAuthCredentials ? "OAuth Client Secret (optional — leave blank to keep existing)" : "OAuth Client Secret")</label>
             <input id="client-secret" name="clientSecret" type="password" autocomplete="new-password" />
         </div>
+        @if (_isRootRecovery)
+        {
+            <div data-setup-reset-mfa="true">
+                <input type="hidden" name="resetMfaSubmitted" value="true" />
+                <label for="reset-mfa">
+                    <input id="reset-mfa" name="resetMfa" type="checkbox" value="true" checked />
+                    Reset Root MFA credentials during recovery
+                </label>
+                <p>Recommended if you lost access to your passkey or authenticator app. Uncheck to keep existing MFA credentials and require an MFA challenge after OAuth verification.</p>
+            </div>
+        }
         <button type="submit">Verify &amp; Continue</button>
     </form>
 }
 
 @code {
+    /// <summary>
+    /// Available streaming platform identifiers discovered from DI.
+    /// </summary>
+    private List<string> _availablePlatforms = ["twitch"];
+
+    /// <summary>
+    /// Default selected platform identifier in the verification form.
+    /// </summary>
+    private string _selectedPlatformId = "twitch";
+
+    /// <summary>
+    /// Platform identifier stored in the active setup ticket (used for the Continue link).
+    /// </summary>
+    private string _ticketPlatformId = "twitch";
+
+    /// <summary>
+    /// Indicates whether at least one platform OAuth credential set is already stored in instance settings.
+    /// </summary>
+    private bool _hasStoredOAuthCredentials;
+
     /// <summary>
     /// Indicates whether an active bootstrap token is available for verification.
     /// </summary>
@@ -105,6 +143,11 @@ else
     private bool _hasValidSetupTicket;
 
     /// <summary>
+    /// Operator-configured instance display name.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
     /// Gets or sets the ambient HTTP context during static SSR rendering.
     /// </summary>
     [CascadingParameter]
@@ -122,19 +165,70 @@ else
     /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
     protected override async Task OnInitializedAsync()
     {
+        List<string> discoveredPlatforms = [.. ServiceProvider
+            .GetServices<IPlatformOAuthProvider>()
+            .Select(static p => p.PlatformId)
+            .Where(static p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static p => p, StringComparer.OrdinalIgnoreCase)];
+        if (discoveredPlatforms.Count > 0)
+        {
+            _availablePlatforms = discoveredPlatforms;
+            _selectedPlatformId = discoveredPlatforms.FirstOrDefault(static p => string.Equals(p, "twitch", StringComparison.OrdinalIgnoreCase))
+                ?? discoveredPlatforms[0];
+            _ticketPlatformId = _selectedPlatformId;
+        }
+
+        IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
+        if (settingsService is not null)
+        {
+            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        }
+
         BootstrapTokenRequestResult tokenResult = BootstrapTokenService.RequestOrReuseActiveToken();
         _tokenAvailable = tokenResult.Succeeded;
         _cooldownRemaining = tokenResult.CooldownRemaining;
         _isRootRecovery = await PanelUserStore.HasRootUserAsync().ConfigureAwait(false);
-        _hasValidSetupTicket = Verified == true;
 
-        if (!_hasValidSetupTicket && HttpContext is not null)
+        if (_isRootRecovery)
         {
-            IDataProtectionProvider? dataProtectionProvider = HttpContext.RequestServices.GetService<IDataProtectionProvider>();
-            if (dataProtectionProvider is not null)
+            IInstanceOAuthConfigService? oauthConfigService = ServiceProvider.GetService<IInstanceOAuthConfigService>();
+            if (oauthConfigService is not null)
             {
-                _hasValidSetupTicket = SetupEndpoints.TryReadSetupTicket(HttpContext, dataProtectionProvider, out _);
+                IReadOnlyDictionary<string, PlatformOAuthAppCredentials> stored = await oauthConfigService.GetAllAsync().ConfigureAwait(false);
+                _hasStoredOAuthCredentials = stored.Count > 0;
             }
         }
+
+        SetupTicketPayload? ticket = null;
+        if (HttpContext is not null)
+        {
+            IDataProtectionProvider? dataProtectionProvider = HttpContext.RequestServices.GetService<IDataProtectionProvider>();
+            if (dataProtectionProvider is not null
+                && SetupEndpoints.TryReadSetupTicket(HttpContext, dataProtectionProvider, out SetupTicketPayload? parsedTicket))
+            {
+                ticket = parsedTicket;
+                _hasValidSetupTicket = true;
+            }
+        }
+
+        if (!_hasValidSetupTicket)
+        {
+            _hasValidSetupTicket = Verified == true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(ticket?.PlatformId))
+        {
+            _ticketPlatformId = ticket.PlatformId.Trim();
+        }
     }
+
+    /// <summary>
+    /// Formats a lowercase platform identifier into a title-cased display name.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The formatted display name.</returns>
+    private static string FormatPlatformName(string platformId) =>
+        CultureInfo.InvariantCulture.TextInfo.ToTitleCase(platformId.Trim());
 }

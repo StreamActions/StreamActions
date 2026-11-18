@@ -18,7 +18,35 @@
 
 @page "/"
 
-<PageTitle>StreamActions</PageTitle>
+@using Microsoft.Extensions.DependencyInjection
+@using StreamActions.Core.Abstractions
+@using StreamActions.Core.Models
+@using StreamActions.Core.Models.Entities
 
-<h1>StreamActions</h1>
+@inject IServiceProvider ServiceProvider
+
+<PageTitle>@AuthPolicyParser.FormatPageTitle(null, _instanceName)</PageTitle>
+
+<h1>@_instanceName</h1>
 <p>Bot engine and plugin host is running.</p>
+
+@code {
+    /// <summary>
+    /// Operator-configured instance display name.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
+    /// Loads the configured instance display name for the home page title.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
+    protected override async Task OnInitializedAsync()
+    {
+        IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
+        if (settingsService is not null)
+        {
+            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        }
+    }
+}

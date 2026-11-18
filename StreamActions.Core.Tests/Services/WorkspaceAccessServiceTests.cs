@@ -49,6 +49,33 @@ public sealed class WorkspaceAccessServiceTests
         return (service, workspaceStore, permissionStore, provider, eventBus);
     }
 
+    private static async Task<(
+        WorkspaceAccessService Service,
+        InMemoryWorkspaceStore WorkspaceStore,
+        InMemoryPermissionStore PermissionStore,
+        InMemoryInstanceSettingsService SettingsService,
+        InMemoryOidcProviderStore OidcStore,
+        ServiceProvider Provider,
+        InMemoryEventBus EventBus)> CreateFullSutAsync()
+    {
+        ServiceCollection services = new();
+        _ = services.AddHybridCache();
+        ServiceProvider provider = services.BuildServiceProvider();
+        HybridCache cache = provider.GetRequiredService<HybridCache>();
+
+        InMemoryWorkspaceStore workspaceStore = new();
+        InMemoryPermissionStore permissionStore = new(workspaceStore);
+        InMemoryInstanceSettingsService settingsService = new();
+        InMemoryOidcProviderStore oidcStore = new();
+        PermissionRegistry registry = new();
+        InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
+        PermissionService permissionService = new(permissionStore, registry, cache, eventBus);
+        WorkspaceAccessService service = new(workspaceStore, permissionService, settingsService, oidcStore, permissionStore);
+
+        await Task.CompletedTask.ConfigureAwait(false);
+        return (service, workspaceStore, permissionStore, settingsService, oidcStore, provider, eventBus);
+    }
+
     #region GetAccessibleWorkspacesAsync
 
     [Fact]
@@ -152,8 +179,100 @@ public sealed class WorkspaceAccessServiceTests
                 new UserLoginIdentity { Id = Guid.NewGuid(), PanelUserId = oidcUserId, ProviderId = "oidc:authentik", ProviderUserId = "sub-123", ProviderUsername = "oidc_user" },
             ];
 
-            IReadOnlyList<AccessibleWorkspace> result = await service.GetAccessibleWorkspacesAsync(oidcUser, identities, ["stream-staff"], ct);
+            IReadOnlyList<AccessibleWorkspace> result = await service.GetAccessibleWorkspacesAsync(oidcUser, identities, ["stream-staff"], ct: ct);
             _ = result.Should().ContainSingle().Which.Workspace.Id.Should().Be(ws.Id);
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "GetAccessibleWorkspacesAsync")]
+    public async Task GetAccessibleWorkspacesAsyncEvaluatesOidcAndMfaAuthStatusAndCanAccessRequiresReady()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        (
+            WorkspaceAccessService service,
+            InMemoryWorkspaceStore wsStore,
+            InMemoryPermissionStore permStore,
+            InMemoryInstanceSettingsService settingsService,
+            InMemoryOidcProviderStore oidcStore,
+            ServiceProvider provider,
+            InMemoryEventBus eventBus) = await CreateFullSutAsync();
+        await using (provider.ConfigureAwait(false))
+        using (eventBus)
+        {
+            settingsService.Settings = new InstanceSettings
+            {
+                ExternalOidcLoginMode = ExternalOidcLoginMode.Allowed,
+                LoginMfaRequirement = PanelLoginMfaRequirement.Optional,
+            };
+
+            Guid ownerId = Guid.NewGuid();
+            Guid userId = Guid.NewGuid();
+            Workspace readyWs = new() { Id = Guid.NewGuid(), OwnerUserId = ownerId, Name = "Ready", Slug = "ready", PrimaryPlatformId = "twitch" };
+            Workspace flagOidcWs = new() { Id = Guid.NewGuid(), OwnerUserId = ownerId, Name = "Flag OIDC", Slug = "flag-oidc", PrimaryPlatformId = "twitch", RequireExternalOidcLogin = true };
+            Workspace scopedOidcWs = new() { Id = Guid.NewGuid(), OwnerUserId = ownerId, Name = "Scoped OIDC", Slug = "scoped-oidc", PrimaryPlatformId = "twitch" };
+            Workspace mfaWs = new() { Id = Guid.NewGuid(), OwnerUserId = ownerId, Name = "MFA WS", Slug = "mfa-ws", PrimaryPlatformId = "twitch", LoginMfaRequirement = PanelLoginMfaRequirement.RequiredForAll };
+
+            foreach (Workspace ws in new[] { readyWs, flagOidcWs, scopedOidcWs, mfaWs })
+            {
+                wsStore.Workspaces[ws.Id] = ws;
+                wsStore.Platforms[ws.Id] = [];
+                Guid groupId = Guid.NewGuid();
+                permStore.Groups.Add(new PermissionGroup { Id = groupId, WorkspaceId = ws.Id, Name = "Mods", MappedPlatformDesignation = nameof(PlatformUserDesignations.Moderator) });
+                permStore.Grants.Add(new PermissionGrant { Id = Guid.NewGuid(), GroupId = groupId, PermissionKey = BuiltInPermissionKeys.UiPanelAccess, State = PermissionState.Allow });
+                permStore.Roster.Add(new WorkspacePlatformRoleRoster { Id = Guid.NewGuid(), WorkspaceId = ws.Id, PlatformId = "twitch", PlatformUserId = "u-1", Designations = PlatformUserDesignations.Moderator });
+            }
+
+            oidcStore.Providers.Add(new ExternalOidcProvider { Id = Guid.NewGuid(), WorkspaceId = null, Slug = "instance-sso", DisplayName = "Instance SSO", IsEnabled = true });
+            oidcStore.Providers.Add(new ExternalOidcProvider { Id = Guid.NewGuid(), WorkspaceId = scopedOidcWs.Id, Slug = "corp-okta", DisplayName = "Corp Okta", IsEnabled = true });
+
+            PanelUser modUser = new() { Id = userId, DisplayName = "ModUser" };
+            List<UserLoginIdentity> identities =
+            [
+                new UserLoginIdentity { Id = Guid.NewGuid(), PanelUserId = userId, ProviderId = "twitch", ProviderUserId = "u-1", ProviderUsername = "mod_user" },
+            ];
+
+            // Non-OIDC, non-MFA session: readyWs=Ready, flagOidcWs/scopedOidcWs=RequiresOidcReauth, mfaWs=RequiresMfaChallenge.
+            IReadOnlyList<AccessibleWorkspace> twitchSession = await service.GetAccessibleWorkspacesAsync(
+                modUser,
+                identities,
+                authProvider: "twitch",
+                isMfaVerified: false,
+                ct: ct);
+
+            _ = twitchSession.Should().ContainSingle(w => w.Workspace.Id == readyWs.Id && w.AuthStatus == WorkspaceSessionAuthStatus.Ready);
+            _ = twitchSession.Should().ContainSingle(w => w.Workspace.Id == flagOidcWs.Id
+                && w.AuthStatus == WorkspaceSessionAuthStatus.RequiresOidcReauth
+                && w.RequiredOidcProviderSlug == "instance-sso");
+            _ = twitchSession.Should().ContainSingle(w => w.Workspace.Id == scopedOidcWs.Id
+                && w.AuthStatus == WorkspaceSessionAuthStatus.RequiresOidcReauth
+                && w.RequiredOidcProviderSlug == "corp-okta");
+            _ = twitchSession.Should().ContainSingle(w => w.Workspace.Id == mfaWs.Id && w.AuthStatus == WorkspaceSessionAuthStatus.RequiresMfaChallenge);
+
+            _ = (await service.CanAccessWorkspaceAsync(readyWs.Id, modUser, identities, authProvider: "twitch", isMfaVerified: false, ct: ct)).Should().BeTrue();
+            _ = (await service.CanAccessWorkspaceAsync(flagOidcWs.Id, modUser, identities, authProvider: "twitch", isMfaVerified: false, ct: ct)).Should().BeFalse();
+            _ = (await service.CanAccessWorkspaceAsync(mfaWs.Id, modUser, identities, authProvider: "twitch", isMfaVerified: false, ct: ct)).Should().BeFalse();
+
+            // Instance OIDC session satisfies flagOidcWs, NOT scopedOidcWs (requires "corp-okta").
+            IReadOnlyList<AccessibleWorkspace> instanceOidcSession = await service.GetAccessibleWorkspacesAsync(
+                modUser,
+                identities,
+                authProvider: "oidc:instance-sso",
+                isMfaVerified: true,
+                ct: ct);
+
+            _ = instanceOidcSession.Should().ContainSingle(w => w.Workspace.Id == flagOidcWs.Id && w.AuthStatus == WorkspaceSessionAuthStatus.Ready);
+            _ = instanceOidcSession.Should().ContainSingle(w => w.Workspace.Id == scopedOidcWs.Id
+                && w.AuthStatus == WorkspaceSessionAuthStatus.RequiresOidcReauth
+                && w.RequiredOidcProviderSlug == "corp-okta");
+            _ = instanceOidcSession.Should().ContainSingle(w => w.Workspace.Id == mfaWs.Id && w.AuthStatus == WorkspaceSessionAuthStatus.Ready);
+
+            // Workspace-scoped OIDC session satisfies scopedOidcWs.
+            _ = (await service.CanAccessWorkspaceAsync(scopedOidcWs.Id, modUser, identities, authProvider: "oidc:corp-okta", isMfaVerified: true, ct: ct)).Should().BeTrue();
+
+            // Root user bypasses External OIDC requirement.
+            PanelUser rootUser = new() { Id = Guid.NewGuid(), DisplayName = "Root", IsRoot = true };
+            _ = (await service.CanAccessWorkspaceAsync(scopedOidcWs.Id, rootUser, [], authProvider: "twitch", isMfaVerified: false, ct: ct)).Should().BeTrue();
         }
     }
 
@@ -248,7 +367,7 @@ public sealed class WorkspaceAccessServiceTests
 
         public ValueTask<WorkspacePlatform?> GetPlatformAsync(Guid workspaceId, string platformId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<WorkspacePlatform> UpsertPlatformAsync(WorkspacePlatform platform, string? plaintextCustomClientSecret = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<PlatformOAuthAppCredentials?> GetCustomOAuthAppAsync(Guid workspaceId, string platformId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<bool> RemovePlatformAsync(Guid workspaceId, string platformId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
@@ -305,5 +424,49 @@ public sealed class WorkspaceAccessServiceTests
         public ValueTask SetUserOverrideAsync(UserPermissionOverride userOverride, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
         public ValueTask UpsertRoleRosterAsync(WorkspacePlatformRoleRoster entry, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
         public ValueTask SeedBuiltInWorkspaceGroupsAsync(Guid workspaceId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+    }
+
+    private sealed class InMemoryInstanceSettingsService : IInstanceSettingsService
+    {
+        public InstanceSettings Settings { get; set; } = new();
+
+        public event EventHandler<InstanceSettingsChangedEventArgs>? SettingsChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public ValueTask<InstanceSettings> GetAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(this.Settings);
+
+        public ValueTask UpdateAsync(InstanceSettings settings, CancellationToken cancellationToken = default)
+        {
+            this.Settings = settings;
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class InMemoryOidcProviderStore : IExternalOidcProviderStore
+    {
+        public List<ExternalOidcProvider> Providers { get; } = [];
+
+        public ValueTask<ExternalOidcProvider?> GetByIdAsync(Guid providerId, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(this.Providers.FirstOrDefault(p => p.Id == providerId));
+
+        public ValueTask<ExternalOidcProvider?> GetBySlugAsync(Guid? workspaceId, string slug, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(this.Providers.FirstOrDefault(p => p.WorkspaceId == workspaceId && string.Equals(p.Slug, slug, StringComparison.OrdinalIgnoreCase)));
+
+        public ValueTask<IReadOnlyList<ExternalOidcProvider>> GetProvidersAsync(Guid? workspaceId, bool enabledOnly = false, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<IReadOnlyList<ExternalOidcProvider>>([.. this.Providers
+                .Where(p => p.WorkspaceId == workspaceId && (!enabledOnly || p.IsEnabled))]);
+
+        public ValueTask<ExternalOidcProvider> UpsertAsync(ExternalOidcProvider provider, string? plaintextClientSecret = null, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask<(bool Success, string? ClientSecret, CredentialStatus Status)> TryGetClientSecretAsync(Guid providerId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask<bool> DeleteAsync(Guid providerId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

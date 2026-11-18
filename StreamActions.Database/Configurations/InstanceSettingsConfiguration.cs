@@ -33,7 +33,10 @@ internal sealed class InstanceSettingsConfiguration : IEntityTypeConfiguration<I
         ArgumentNullException.ThrowIfNull(builder);
 
         _ = builder.HasKey(static x => x.Id);
+        _ = builder.Property(static x => x.InstanceName).HasMaxLength(200).IsRequired();
+        _ = builder.Property(static x => x.TotpIssuerName).HasMaxLength(200).IsRequired();
         _ = builder.Property(static x => x.InstanceOAuthAppPolicy).HasMaxLength(64).IsRequired();
         _ = builder.Property(static x => x.InstanceBotAccountPolicy).HasMaxLength(64).IsRequired();
+        _ = builder.Property(static x => x.PlatformOAuthAppPoliciesJson).HasMaxLength(4096);
     }
 }

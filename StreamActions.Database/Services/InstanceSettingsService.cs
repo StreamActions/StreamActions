@@ -18,6 +18,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using StreamActions.Core.Abstractions;
+using StreamActions.Core.Models;
 using StreamActions.Core.Models.Entities;
 
 namespace StreamActions.Database.Services;
@@ -100,13 +101,20 @@ public sealed class InstanceSettingsService : IInstanceSettingsService, IDisposa
                         AnonymousInstallId = Guid.NewGuid(),
                         BackupIntervalHours = 24,
                         MaxBackupFiles = 7,
+                        InstanceName = AuthPolicyParser.DefaultInstanceName,
+                        TotpIssuerName = AuthPolicyParser.DefaultInstanceName,
                         InstanceOAuthAppPolicy = "instance_default",
                         InstanceBotAccountPolicy = "instance_default",
+                        StepUpSudoPolicy = StepUpSudoPolicy.Required,
                         UpdatedAtUtc = this._timeProvider.GetUtcNow(),
                     };
 
                     _ = dbContext.InstanceSettings.Add(existing);
                     _ = await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    NormalizeBrandingDefaults(existing);
                 }
 
                 this._cachedSettings = existing;
@@ -127,6 +135,7 @@ public sealed class InstanceSettingsService : IInstanceSettingsService, IDisposa
         await this._gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            NormalizeBrandingDefaults(settings);
             settings.UpdatedAtUtc = this._timeProvider.GetUtcNow();
 
             StreamActionsDbContext dbContext = await this._contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
@@ -164,4 +173,14 @@ public sealed class InstanceSettingsService : IInstanceSettingsService, IDisposa
 
     /// <inheritdoc/>
     public void Dispose() => this._gate.Dispose();
+
+    /// <summary>
+    /// Ensures <see cref="InstanceSettings.InstanceName"/> and <see cref="InstanceSettings.TotpIssuerName"/> are trimmed and non-blank.
+    /// </summary>
+    /// <param name="settings">The instance settings entity to normalize.</param>
+    private static void NormalizeBrandingDefaults(InstanceSettings settings)
+    {
+        settings.InstanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        settings.TotpIssuerName = AuthPolicyParser.ResolveTotpIssuerName(settings);
+    }
 }

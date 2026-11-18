@@ -69,9 +69,24 @@ public sealed class InstanceSettings
     public int MaxBackupFiles { get; set; }
 
     /// <summary>
+    /// Gets or sets the operator-configured display name for this instance.
+    /// </summary>
+    public string InstanceName { get; set; } = "StreamActions";
+
+    /// <summary>
+    /// Gets or sets the issuer label displayed in generated <c>otpauth://</c> TOTP provisioning URIs.
+    /// </summary>
+    public string TotpIssuerName { get; set; } = "StreamActions";
+
+    /// <summary>
     /// Gets or sets the instance-wide OAuth application policy.
     /// </summary>
     public string InstanceOAuthAppPolicy { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the optional serialized JSON map of per-platform OAuth application policy overrides (<c>platformId -&gt; policy</c>).
+    /// </summary>
+    public string? PlatformOAuthAppPoliciesJson { get; set; }
 
     /// <summary>
     /// Gets or sets the instance-wide bot account policy.
@@ -111,7 +126,7 @@ public sealed class InstanceSettings
     /// <summary>
     /// Gets or sets the instance-wide step-up ("Sudo Mode") MFA policy for sensitive actions.
     /// </summary>
-    public StepUpSudoPolicy StepUpSudoPolicy { get; set; } = StepUpSudoPolicy.Optional;
+    public StepUpSudoPolicy StepUpSudoPolicy { get; set; } = StepUpSudoPolicy.Required;
 
     /// <summary>
     /// Gets or sets the UTC timestamp when settings were last updated.

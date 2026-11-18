@@ -20,17 +20,21 @@
 @attribute [Authorize(Policy = AuthClaims.RootOrGlobalAdminPolicy)]
 @rendermode InteractiveServer
 
+@using System.Security.Claims
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.DependencyInjection
 @using StreamActions.Core.Abstractions
 @using StreamActions.Core.Models
 @using StreamActions.Core.Models.Entities
-@using System.Text.Json
 
 @inject IInstanceSettingsService InstanceSettingsService
 @inject IInstanceOAuthConfigService InstanceOAuthConfigService
 @inject IExternalOidcProviderStore OidcProviderStore
 @inject IEnumerable<IPlatformOAuthProvider> PlatformProviders
+@inject IServiceProvider ServiceProvider
 
-<PageTitle>Authentication Administration - StreamActions</PageTitle>
+<PageTitle>@AuthPolicyParser.FormatPageTitle("Authentication Administration", _pageInstanceName)</PageTitle>
 
 <h1>Authentication Administration</h1>
 
@@ -48,13 +52,40 @@
 <section aria-labelledby="auth-policies-heading">
     <h2 id="auth-policies-heading">Instance Authentication Policies</h2>
     <div>
+        <label for="instance-name">Instance Name</label>
+        <input id="instance-name" type="text" @bind="_instanceName" autocomplete="off" />
+    </div>
+    <div>
+        <label for="totp-issuer-name">TOTP Issuer Name</label>
+        <input id="totp-issuer-name" type="text" @bind="_totpIssuerName" autocomplete="off" />
+    </div>
+    <div>
         <label for="oauth-app-policy">Instance OAuth App Policy</label>
         <select id="oauth-app-policy" @bind="_oauthAppPolicy">
             <option value="@InstanceOAuthAppPolicy.InstanceOnly">Instance Only</option>
             <option value="@InstanceOAuthAppPolicy.InstanceWithOptionalOverride">Instance With Optional Override</option>
+            <option value="@InstanceOAuthAppPolicy.InstanceLoginWithStreamerApiOAuth">Instance Login With Streamer API OAuth</option>
             <option value="@InstanceOAuthAppPolicy.RequireStreamerOAuthApp">Require Streamer OAuth App</option>
         </select>
     </div>
+    <fieldset>
+        <legend>Per-Platform OAuth App Policy Overrides</legend>
+        @foreach (string platformId in _availablePlatforms)
+        {
+            <div>
+                <label for="platform-oauth-policy-@platformId">@platformId</label>
+                <select id="platform-oauth-policy-@platformId"
+                        value="@GetPlatformOAuthPolicyOverrideValue(platformId)"
+                        @onchange="(ChangeEventArgs args) => SetPlatformOAuthPolicyOverride(platformId, args.Value?.ToString())">
+                    <option value="">Use Instance Default</option>
+                    <option value="@InstanceOAuthAppPolicy.InstanceOnly">Instance Only</option>
+                    <option value="@InstanceOAuthAppPolicy.InstanceWithOptionalOverride">Instance With Optional Override</option>
+                    <option value="@InstanceOAuthAppPolicy.InstanceLoginWithStreamerApiOAuth">Instance Login With Streamer API OAuth</option>
+                    <option value="@InstanceOAuthAppPolicy.RequireStreamerOAuthApp">Require Streamer OAuth App</option>
+                </select>
+            </div>
+        }
+    </fieldset>
     <div>
         <label for="bot-account-policy">Instance Bot Account Policy</label>
         <select id="bot-account-policy" @bind="_botAccountPolicy">
@@ -204,6 +235,50 @@
         <button type="button" @onclick="ResetOidcForm">Reset Form</button>
     </div>
 </section>
+
+@if (_hasUserManagementStores)
+{
+    <section aria-labelledby="panel-users-mfa-heading" data-admin-users-mfa="true">
+        <h2 id="panel-users-mfa-heading">Panel Users &amp; MFA Management</h2>
+        @if (_panelUserMfaEntries.Count == 0)
+        {
+            <p>No panel users found.</p>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Roles</th>
+                        <th>MFA Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (PanelUserMfaEntry entry in _panelUserMfaEntries)
+                    {
+                        <tr data-admin-user-row="@entry.User.Id.ToString("D")">
+                            <td>@entry.User.DisplayName</td>
+                            <td>@FormatUserRoles(entry.User)</td>
+                            <td>@(entry.CredentialCount > 0 ? $"Enrolled ({entry.CredentialCount})" : "Not Enrolled")</td>
+                            <td>
+                                @if (entry.CredentialCount > 0 && (!entry.User.IsRoot || _currentUserIsRoot))
+                                {
+                                    <button type="button"
+                                            data-admin-reset-mfa="@entry.User.Id.ToString("D")"
+                                            @onclick="() => RemoveUserMfaAsync(entry.User.Id)">
+                                        Remove MFA
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+}
 </StepUpMfaGuard>
 
 @code {
@@ -216,6 +291,26 @@
     /// Selected platform identifier for OAuth app editing.
     /// </summary>
     private string _selectedPlatformId = "twitch";
+
+    /// <summary>
+    /// Instance display name rendered in the page title.
+    /// </summary>
+    private string _pageInstanceName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
+    /// Operator-configured instance display name input.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
+    /// Operator-configured TOTP authenticator issuer label input.
+    /// </summary>
+    private string _totpIssuerName = AuthPolicyParser.DefaultInstanceName;
+
+    /// <summary>
+    /// Per-platform OAuth app policy overrides (<see langword="null"/> means inherit the instance default).
+    /// </summary>
+    private readonly Dictionary<string, InstanceOAuthAppPolicy?> _platformOAuthPolicyOverrides = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Current instance OAuth app policy selection.
@@ -255,7 +350,7 @@
     /// <summary>
     /// Current instance-wide step-up ("Sudo Mode") MFA policy selection.
     /// </summary>
-    private StepUpSudoPolicy _stepUpSudoPolicy = StepUpSudoPolicy.Optional;
+    private StepUpSudoPolicy _stepUpSudoPolicy = StepUpSudoPolicy.Required;
 
     /// <summary>
     /// Platform OAuth client identifier input.
@@ -333,6 +428,26 @@
     private string? _errorMessage;
 
     /// <summary>
+    /// Indicates whether <see cref="IPanelUserStore"/> and <see cref="IMfaCredentialStore"/> are registered.
+    /// </summary>
+    private bool _hasUserManagementStores;
+
+    /// <summary>
+    /// Indicates whether the current signed-in operator holds root privileges.
+    /// </summary>
+    private bool _currentUserIsRoot;
+
+    /// <summary>
+    /// Indicates whether the current signed-in operator holds global administrator privileges.
+    /// </summary>
+    private bool _currentUserIsGlobalAdmin;
+
+    /// <summary>
+    /// Loaded panel users paired with their enrolled MFA credential counts.
+    /// </summary>
+    private List<PanelUserMfaEntry> _panelUserMfaEntries = [];
+
+    /// <summary>
     /// Loads current instance authentication policies, platform OAuth metadata, and OIDC providers.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
@@ -349,7 +464,21 @@
         }
 
         InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        _pageInstanceName = _instanceName;
+        _totpIssuerName = AuthPolicyParser.ResolveTotpIssuerName(settings);
         _oauthAppPolicy = AuthPolicyParser.ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
+        _platformOAuthPolicyOverrides.Clear();
+        foreach (string platformId in _availablePlatforms)
+        {
+            _platformOAuthPolicyOverrides[platformId] = AuthPolicyParser.TryGetPlatformOAuthAppPolicyOverride(
+                settings,
+                platformId,
+                out InstanceOAuthAppPolicy overridePolicy)
+                ? overridePolicy
+                : null;
+        }
+
         _botAccountPolicy = AuthPolicyParser.ParseBotAccountPolicy(settings.InstanceBotAccountPolicy);
         _oidcLoginMode = settings.ExternalOidcLoginMode;
         _allowOpenRegistration = settings.AllowOpenRegistration;
@@ -360,6 +489,7 @@
 
         await LoadSelectedPlatformOAuthAsync().ConfigureAwait(false);
         await ReloadOidcProvidersAsync().ConfigureAwait(false);
+        await ReloadPanelUsersMfaAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -370,7 +500,19 @@
     {
         ClearMessages();
         InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        settings.InstanceName = string.IsNullOrWhiteSpace(_instanceName)
+            ? AuthPolicyParser.DefaultInstanceName
+            : _instanceName.Trim();
+        settings.TotpIssuerName = string.IsNullOrWhiteSpace(_totpIssuerName)
+            ? AuthPolicyParser.DefaultInstanceName
+            : _totpIssuerName.Trim();
         settings.InstanceOAuthAppPolicy = _oauthAppPolicy.ToString();
+        foreach (string platformId in _availablePlatforms)
+        {
+            InstanceOAuthAppPolicy? overridePolicy = _platformOAuthPolicyOverrides.GetValueOrDefault(platformId);
+            AuthPolicyParser.SetPlatformOAuthAppPolicy(settings, platformId, overridePolicy);
+        }
+
         settings.InstanceBotAccountPolicy = _botAccountPolicy.ToString();
         settings.ExternalOidcLoginMode = _oidcLoginMode;
         settings.AllowOpenRegistration = _allowOpenRegistration;
@@ -380,8 +522,31 @@
         settings.StepUpSudoPolicy = _stepUpSudoPolicy;
 
         await InstanceSettingsService.UpdateAsync(settings).ConfigureAwait(false);
+        _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        _pageInstanceName = _instanceName;
+        _totpIssuerName = AuthPolicyParser.ResolveTotpIssuerName(settings);
         _statusMessage = "Authentication policies updated.";
     }
+
+    /// <summary>
+    /// Gets the current select-option value for a platform's OAuth app policy override.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The enum name string when overridden, or an empty string for <c>Use Instance Default</c>.</returns>
+    private string GetPlatformOAuthPolicyOverrideValue(string platformId) =>
+        _platformOAuthPolicyOverrides.TryGetValue(platformId, out InstanceOAuthAppPolicy? policy) && policy.HasValue
+            ? policy.Value.ToString()
+            : string.Empty;
+
+    /// <summary>
+    /// Updates the in-memory per-platform OAuth app policy override from a select change event.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="rawValue">The selected option value.</param>
+    private void SetPlatformOAuthPolicyOverride(string platformId, string? rawValue) =>
+        _platformOAuthPolicyOverrides[platformId] = string.IsNullOrWhiteSpace(rawValue)
+            ? null
+            : AuthPolicyParser.ParseOAuthAppPolicy(rawValue);
 
     /// <summary>
     /// Loads client ID metadata for the selected platform while keeping the secret field write-only.
@@ -582,4 +747,124 @@
         _statusMessage = null;
         _errorMessage = null;
     }
+
+    /// <summary>
+    /// Loads panel users and their enrolled MFA credential counts when optional user and MFA stores are available.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
+    private async Task ReloadPanelUsersMfaAsync()
+    {
+        IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
+        IMfaCredentialStore? mfaCredentialStore = ServiceProvider.GetService<IMfaCredentialStore>();
+        if (panelUserStore is null || mfaCredentialStore is null)
+        {
+            _hasUserManagementStores = false;
+            _panelUserMfaEntries = [];
+            return;
+        }
+
+        _hasUserManagementStores = true;
+
+        AuthenticationStateProvider? authStateProvider = ServiceProvider.GetService<AuthenticationStateProvider>();
+        if (authStateProvider is not null)
+        {
+            AuthenticationState authState = await authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            ClaimsPrincipal principal = authState.User;
+            _currentUserIsRoot = AuthClaims.HasTrueClaim(principal, AuthClaims.IsRootClaimType);
+            _currentUserIsGlobalAdmin = AuthClaims.HasTrueClaim(principal, AuthClaims.IsGlobalAdminClaimType);
+
+            Guid? currentUserId = AuthClaims.GetPanelUserId(principal);
+            if (currentUserId.HasValue)
+            {
+                PanelUser? currentUser = await panelUserStore.GetByIdAsync(currentUserId.Value).ConfigureAwait(false);
+                if (currentUser is not null)
+                {
+                    _currentUserIsRoot = _currentUserIsRoot || currentUser.IsRoot;
+                    _currentUserIsGlobalAdmin = _currentUserIsGlobalAdmin || currentUser.IsGlobalAdmin;
+                }
+            }
+        }
+
+        IReadOnlyList<PanelUser> users = await panelUserStore.GetAllUsersAsync().ConfigureAwait(false);
+        List<PanelUserMfaEntry> entries = new(users.Count);
+        foreach (PanelUser user in users)
+        {
+            IReadOnlyList<MfaCredentialSummary> summaries = await mfaCredentialStore
+                .GetSummariesAsync(user.Id)
+                .ConfigureAwait(false);
+            entries.Add(new PanelUserMfaEntry(user, summaries.Count));
+        }
+
+        _panelUserMfaEntries = entries;
+    }
+
+    /// <summary>
+    /// Removes all enrolled MFA credentials for the specified user and marks <see cref="PanelUser.MfaResetByAdminNoticePending"/>.
+    /// </summary>
+    /// <param name="targetUserId">The target panel user identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous removal operation.</returns>
+    private async Task RemoveUserMfaAsync(Guid targetUserId)
+    {
+        ClearMessages();
+        IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
+        IMfaCredentialStore? mfaCredentialStore = ServiceProvider.GetService<IMfaCredentialStore>();
+        if (panelUserStore is null || mfaCredentialStore is null)
+        {
+            return;
+        }
+
+        if (!_currentUserIsRoot && !_currentUserIsGlobalAdmin)
+        {
+            _errorMessage = "Administrator privileges are required to remove MFA credentials.";
+            return;
+        }
+
+        PanelUser? targetUser = await panelUserStore.GetByIdAsync(targetUserId).ConfigureAwait(false);
+        if (targetUser is null)
+        {
+            _errorMessage = "Target panel user was not found.";
+            return;
+        }
+
+        if (targetUser.IsRoot && !_currentUserIsRoot)
+        {
+            _errorMessage = "Only the root operator may remove MFA credentials for a root account.";
+            return;
+        }
+
+        _ = await mfaCredentialStore.ClearAllForUserAsync(targetUser.Id).ConfigureAwait(false);
+        targetUser.MfaResetByAdminNoticePending = true;
+        _ = await panelUserStore.UpdateUserAsync(targetUser).ConfigureAwait(false);
+
+        await ReloadPanelUsersMfaAsync().ConfigureAwait(false);
+        _statusMessage = $"Removed MFA credentials for {targetUser.DisplayName}.";
+    }
+
+    /// <summary>
+    /// Formats a human-readable role summary for a <see cref="PanelUser"/>.
+    /// </summary>
+    /// <param name="user">The panel user.</param>
+    /// <returns>The role summary string.</returns>
+    private static string FormatUserRoles(PanelUser user)
+    {
+        List<string> roles = [];
+        if (user.IsRoot)
+        {
+            roles.Add("Root");
+        }
+
+        if (user.IsGlobalAdmin)
+        {
+            roles.Add("GlobalAdmin");
+        }
+
+        return roles.Count > 0 ? string.Join(", ", roles) : "User";
+    }
+
+    /// <summary>
+    /// Pairs a <see cref="PanelUser"/> with its count of enrolled MFA credentials.
+    /// </summary>
+    /// <param name="User">The panel user.</param>
+    /// <param name="CredentialCount">The number of enrolled MFA credentials.</param>
+    private sealed record PanelUserMfaEntry(PanelUser User, int CredentialCount);
 }

@@ -21,6 +21,7 @@
 @rendermode InteractiveServer
 @implements IDisposable
 
+@using Microsoft.Extensions.DependencyInjection
 @using StreamActions.Core.Abstractions
 @using StreamActions.Core.Models
 @using StreamActions.Core.Models.Entities
@@ -31,39 +32,60 @@
 @inject IPermissionRegistry PermissionRegistry
 @inject IEventBus EventBus
 @inject IWorkspaceSessionContext WorkspaceSession
-@inject AuthenticationStateProvider AuthStateProvider
+@inject IServiceProvider ServiceProvider
 
-<PageTitle>Workspace Permissions</PageTitle>
+<PageTitle>@AuthPolicyParser.FormatPageTitle("Workspace Permissions", _instanceName)</PageTitle>
 
 <h1>Workspace Permissions</h1>
 
 <section aria-labelledby="workspace-selector-heading">
     <h2 id="workspace-selector-heading">Workspace</h2>
-    <div>
-        <label for="workspace-id-input">Workspace ID:</label>
-        <input id="workspace-id-input" type="text" @bind="_workspaceIdInput" placeholder="Enter Workspace GUID" />
-        <button type="button" @onclick="SelectWorkspaceAsync">Load Workspace</button>
-        @if (_workspaceId is not null)
-        {
-            <button type="button" @onclick="SeedBuiltInGroupsAsync">Seed Built-in Groups</button>
-        }
-    </div>
     @if (_workspace is not null)
     {
-        <p>Loaded workspace: <strong>@_workspace.Name</strong> (@_workspace.Id)</p>
+        <p>Active workspace: <strong>@_workspace.Name</strong> (@_workspace.Id)</p>
     }
     else if (_workspaceId is not null)
     {
         <p>Workspace ID: <code>@_workspaceId</code></p>
     }
+    else
+    {
+        <p>No accessible workspace is currently selected.</p>
+    }
+
+    @if (_workspaceId is not null)
+    {
+        <div>
+            <button type="button" @onclick="SeedBuiltInGroupsAsync">Seed Built-in Groups</button>
+        </div>
+    }
+
     @if (!string.IsNullOrWhiteSpace(_statusMessage))
     {
         <p role="status">@_statusMessage</p>
     }
 </section>
 
+<p data-permission-hierarchy-guide="true">
+    <strong>Permission Hierarchy (Allow / Inherit / Explicit Deny):</strong>
+    <strong>Explicit Deny</strong> always wins over <strong>Allow</strong> across all matching groups.
+    <strong>Allow</strong> grants a permission when no Explicit Deny exists.
+    <strong>Inherit</strong> defers to other groups and defaults to Deny if no group grants Allow.
+    Tier 1 Global Groups govern <code>[Globally Gated]</code> features before Tier 2 Workspace Groups are evaluated.
+</p>
+
 @if (_workspaceId is not null)
 {
+    <div>
+        <label for="permissions-search">Search Permissions &amp; Members:</label>
+        <input id="permissions-search"
+               data-permissions-search="true"
+               type="search"
+               @bind="_searchQuery"
+               @bind:event="oninput"
+               placeholder="Filter permissions or group members..." />
+    </div>
+
     <StepUpMfaGuard WorkspaceId="@_workspaceId"
                     OperationDescription="Confirm MFA verification to modify workspace permission groups, grants, or group members.">
     <section aria-labelledby="custom-groups-heading">
@@ -108,14 +130,16 @@
         }
         else
         {
+            bool anyPermissionRendered = false;
             @foreach (string category in _categories)
             {
-                IReadOnlyList<PermissionDescriptor> descriptors = PermissionRegistry.GetByCategory(category);
+                List<PermissionDescriptor> descriptors = [.. PermissionRegistry.GetByCategory(category).Where(MatchesPermissionSearch)];
                 if (descriptors.Count == 0)
                 {
                     continue;
                 }
 
+                anyPermissionRendered = true;
                 <h3>@category</h3>
                 <table>
                     <thead>
@@ -158,6 +182,11 @@
                     </tbody>
                 </table>
             }
+
+            @if (!anyPermissionRendered)
+            {
+                <p>No permissions match the current search.</p>
+            }
         }
     </section>
 
@@ -188,7 +217,7 @@
 
             @foreach (PermissionGroup group in _groups)
             {
-                IReadOnlyList<PermissionGroupMember> members = GetMembersForGroup(group.Id);
+                List<PermissionGroupMember> members = [.. GetMembersForGroup(group.Id).Where(MatchesMemberSearch)];
                 if (members.Count == 0)
                 {
                     continue;
@@ -215,25 +244,91 @@
 }
 
 @code {
+    /// <summary>
+    /// Cached permission grant states keyed by group and permission key.
+    /// </summary>
     private readonly Dictionary<(Guid GroupId, string PermissionKey), PermissionState> _grantStates = [];
+
+    /// <summary>
+    /// Cached group member lists keyed by group identifier.
+    /// </summary>
     private readonly Dictionary<Guid, IReadOnlyList<PermissionGroupMember>> _groupMembers = [];
 
-    private string _workspaceIdInput = string.Empty;
+    /// <summary>
+    /// Active workspace identifier from <see cref="IWorkspaceSessionContext"/>.
+    /// </summary>
     private Guid? _workspaceId;
+
+    /// <summary>
+    /// Loaded active workspace entity.
+    /// </summary>
     private Workspace? _workspace;
+
+    /// <summary>
+    /// Permission groups belonging to the active workspace.
+    /// </summary>
     private IReadOnlyList<PermissionGroup> _groups = [];
+
+    /// <summary>
+    /// Registered permission categories.
+    /// </summary>
     private IReadOnlyList<string> _categories = [];
+
+    /// <summary>
+    /// Page-level search query filtering permissions and group members.
+    /// </summary>
+    private string _searchQuery = string.Empty;
+
+    /// <summary>
+    /// New custom group name input.
+    /// </summary>
     private string _newGroupName = string.Empty;
+
+    /// <summary>
+    /// Target group identifier for adding a new member.
+    /// </summary>
     private Guid _selectedMemberGroupId;
+
+    /// <summary>
+    /// Platform identifier for adding a new group member.
+    /// </summary>
     private string _newMemberPlatformId = "twitch";
+
+    /// <summary>
+    /// Platform user identifier for adding a new group member.
+    /// </summary>
     private string _newMemberPlatformUserId = string.Empty;
+
+    /// <summary>
+    /// Optional username for adding a new group member.
+    /// </summary>
     private string _newMemberUsername = string.Empty;
+
+    /// <summary>
+    /// Status banner message.
+    /// </summary>
     private string? _statusMessage;
+
+    /// <summary>
+    /// Event bus subscription for permission invalidation notifications.
+    /// </summary>
     private IDisposable? _eventSubscription;
+
+    /// <summary>
+    /// Operator-configured instance display name.
+    /// </summary>
+    private string _instanceName = AuthPolicyParser.DefaultInstanceName;
 
     /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
     {
+        IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
+        if (settingsService is not null)
+        {
+            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        }
+
         _categories = PermissionRegistry.GetCategories();
         _eventSubscription = EventBus.Subscribe<PermissionsInvalidatedEvent>(OnPermissionsInvalidatedAsync);
         WorkspaceSession.WorkspaceChanged += OnActiveWorkspaceChanged;
@@ -242,7 +337,6 @@
         if (WorkspaceSession.ActiveWorkspaceId is Guid activeWorkspaceId)
         {
             _workspaceId = activeWorkspaceId;
-            _workspaceIdInput = activeWorkspaceId.ToString("D");
             await LoadWorkspaceDataAsync().ConfigureAwait(false);
         }
     }
@@ -263,22 +357,81 @@
     private void OnActiveWorkspaceChanged(object? sender, EventArgs args) =>
         _ = InvokeAsync(async () =>
         {
-            if (WorkspaceSession.ActiveWorkspaceId is Guid activeWorkspaceId && _workspaceId != activeWorkspaceId)
+            Guid? activeWorkspaceId = WorkspaceSession.ActiveWorkspaceId;
+            if (_workspaceId != activeWorkspaceId)
             {
                 _workspaceId = activeWorkspaceId;
-                _workspaceIdInput = activeWorkspaceId.ToString("D");
                 _statusMessage = null;
-                await LoadWorkspaceDataAsync();
+                if (_workspaceId.HasValue)
+                {
+                    await LoadWorkspaceDataAsync();
+                }
+                else
+                {
+                    _workspace = null;
+                    _groups = [];
+                    _grantStates.Clear();
+                    _groupMembers.Clear();
+                }
+
                 StateHasChanged();
             }
         });
 
+    /// <summary>
+    /// Determines whether a permission descriptor matches the current <see cref="_searchQuery"/>.
+    /// </summary>
+    /// <param name="descriptor">The permission descriptor.</param>
+    /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
+    private bool MatchesPermissionSearch(PermissionDescriptor descriptor)
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            return true;
+        }
+
+        string term = _searchQuery.Trim();
+        return descriptor.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Key.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Description.Contains(term, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Determines whether a group member matches the current <see cref="_searchQuery"/>.
+    /// </summary>
+    /// <param name="member">The group member.</param>
+    /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
+    private bool MatchesMemberSearch(PermissionGroupMember member)
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            return true;
+        }
+
+        string term = _searchQuery.Trim();
+        return member.PlatformId.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || member.PlatformUserId.Contains(term, StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(member.LastKnownUsername)
+                && member.LastKnownUsername.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Determines whether a permission group is a built-in role or OIDC-mapped group.
+    /// </summary>
+    /// <param name="group">The permission group.</param>
+    /// <returns><see langword="true"/> if built-in; otherwise, <see langword="false"/>.</returns>
     private static bool IsBuiltInGroup(PermissionGroup group)
     {
         return !string.IsNullOrWhiteSpace(group.MappedPlatformDesignation)
             || !string.IsNullOrWhiteSpace(group.MappedOidcGroupClaim);
     }
 
+    /// <summary>
+    /// Retrieves the cached permission grant state for a group and permission key.
+    /// </summary>
+    /// <param name="groupId">The group identifier.</param>
+    /// <param name="permissionKey">The permission key.</param>
+    /// <returns>The configured <see cref="PermissionState"/>, defaulting to <see cref="PermissionState.Inherit"/>.</returns>
     private PermissionState GetGrantState(Guid groupId, string permissionKey)
     {
         return _grantStates.TryGetValue((groupId, permissionKey), out PermissionState state)
@@ -286,41 +439,16 @@
             : PermissionState.Inherit;
     }
 
+    /// <summary>
+    /// Retrieves the cached members for a permission group.
+    /// </summary>
+    /// <param name="groupId">The group identifier.</param>
+    /// <returns>The group's member list.</returns>
     private IReadOnlyList<PermissionGroupMember> GetMembersForGroup(Guid groupId)
     {
         return _groupMembers.TryGetValue(groupId, out IReadOnlyList<PermissionGroupMember>? members)
             ? members
             : [];
-    }
-
-    private async Task SelectWorkspaceAsync()
-    {
-        if (!Guid.TryParse(_workspaceIdInput.Trim(), out Guid parsedWorkspaceId) || parsedWorkspaceId == Guid.Empty)
-        {
-            _statusMessage = "Please enter a valid Workspace GUID.";
-            return;
-        }
-
-        bool isAccessible = WorkspaceSession.AccessibleWorkspaces.Any(w => w.Workspace.Id == parsedWorkspaceId);
-        if (isAccessible)
-        {
-            _ = await WorkspaceSession.SelectWorkspaceAsync(parsedWorkspaceId).ConfigureAwait(false);
-        }
-        else
-        {
-            AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
-            bool isRootOrAdmin = AuthClaims.HasTrueClaim(authState.User, AuthClaims.IsRootClaimType)
-                || AuthClaims.HasTrueClaim(authState.User, AuthClaims.IsGlobalAdminClaimType);
-            if (!isRootOrAdmin)
-            {
-                _statusMessage = "You do not have access to the requested workspace.";
-                return;
-            }
-        }
-
-        _workspaceId = parsedWorkspaceId;
-        _statusMessage = null;
-        await LoadWorkspaceDataAsync();
     }
 
     private async Task SeedBuiltInGroupsAsync()

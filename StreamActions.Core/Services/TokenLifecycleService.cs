@@ -409,13 +409,21 @@ public sealed partial class TokenLifecycleService : ITokenLifecycleService, IDis
                 ErrorMessage: "Stored credential does not contain a refresh token.");
         }
 
+        string flow = (workspaceId, tokenRole) switch
+        {
+            (_, TokenRole.Broadcaster) => "broadcaster",
+            (not null, TokenRole.BotChat) => "bot",
+            (null, TokenRole.BotChat) => "instance-bot",
+            _ => "login",
+        };
+
         AsyncServiceScope scope = this._scopeFactory.CreateAsyncScope();
         ResolvedOAuthClientConfig? clientConfig;
         await using (scope.ConfigureAwait(false))
         {
             IOAuthClientConfigResolver configResolver = scope.ServiceProvider.GetRequiredService<IOAuthClientConfigResolver>();
             clientConfig = await configResolver
-                .ResolveAsync(normalizedPlatformId, workspaceId, cancellationToken: cancellationToken)
+                .ResolveAsync(normalizedPlatformId, workspaceId, flow: flow, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
         }
 

@@ -238,6 +238,59 @@ public sealed class TokenLifecycleServiceTests
         }
     }
 
+    [Fact]
+    [Trait("Member", "EnsureValidTokenAsync")]
+    public async Task EnsureValidTokenAsyncPassesExpectedFlowToOAuthClientConfigResolver()
+    {
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero));
+        InMemoryCredentialStore credStore = new(timeProvider);
+        MockOAuthProvider oauthProvider = new(timeProvider);
+        FakeOAuthClientConfigResolver resolver = new();
+        ServiceCollection services = new();
+        _ = services.AddScoped<IOAuthClientConfigResolver>(_ => resolver);
+        ServiceProvider sp = services.BuildServiceProvider();
+
+        await using (sp.ConfigureAwait(false))
+        using (TokenLifecycleService service = new(
+            credStore,
+            [oauthProvider],
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            timeProvider,
+            NullLogger<TokenLifecycleService>.Instance))
+        {
+            _ = await credStore.SaveTokenAsync(
+                _workspaceId,
+                "twitch",
+                TokenRole.Broadcaster,
+                new PlatformTokenPayload("a1", "r1", timeProvider.GetUtcNow().AddMinutes(5)),
+                CredentialStatus.Active,
+                TestContext.Current.CancellationToken);
+            _ = await credStore.SaveTokenAsync(
+                _workspaceId,
+                "twitch",
+                TokenRole.BotChat,
+                new PlatformTokenPayload("a2", "r2", timeProvider.GetUtcNow().AddMinutes(5)),
+                CredentialStatus.Active,
+                TestContext.Current.CancellationToken);
+            _ = await credStore.SaveTokenAsync(
+                null,
+                "twitch",
+                TokenRole.BotChat,
+                new PlatformTokenPayload("a3", "r3", timeProvider.GetUtcNow().AddMinutes(5)),
+                CredentialStatus.Active,
+                TestContext.Current.CancellationToken);
+
+            _ = await service.EnsureValidTokenAsync(_workspaceId, "twitch", TokenRole.Broadcaster, cancellationToken: TestContext.Current.CancellationToken);
+            _ = await service.EnsureValidTokenAsync(_workspaceId, "twitch", TokenRole.BotChat, cancellationToken: TestContext.Current.CancellationToken);
+            _ = await service.EnsureValidTokenAsync(null, "twitch", TokenRole.BotChat, cancellationToken: TestContext.Current.CancellationToken);
+
+            _ = resolver.CapturedCalls.Should().ContainInOrder(
+                ("twitch", _workspaceId, "broadcaster"),
+                ("twitch", _workspaceId, "bot"),
+                ("twitch", null, "instance-bot"));
+        }
+    }
+
     #endregion
 
     private static ServiceProvider BuildScopeProvider()
@@ -249,16 +302,22 @@ public sealed class TokenLifecycleServiceTests
 
     private sealed class FakeOAuthClientConfigResolver : IOAuthClientConfigResolver
     {
+        public List<(string PlatformId, Guid? WorkspaceId, string? Flow)> CapturedCalls { get; } = [];
+
         public ValueTask<ResolvedOAuthClientConfig?> ResolveAsync(
             string platformId,
             Guid? workspaceId = null,
             PlatformUserIdentity? actor = null,
-            CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult<ResolvedOAuthClientConfig?>(new ResolvedOAuthClientConfig(
+            string? flow = null,
+            CancellationToken cancellationToken = default)
+        {
+            this.CapturedCalls.Add((platformId, workspaceId, flow));
+            return ValueTask.FromResult<ResolvedOAuthClientConfig?>(new ResolvedOAuthClientConfig(
                 platformId,
                 "test-client-id",
                 "test-client-secret",
                 WorkspaceId: workspaceId));
+        }
     }
 
     private sealed class MockOAuthProvider(TimeProvider timeProvider) : IPlatformOAuthProvider
@@ -267,6 +326,9 @@ public sealed class TokenLifecycleServiceTests
         private int _validateCallCount;
 
         public string PlatformId => "twitch";
+        public IReadOnlyList<string> DefaultLoginScopes => ["openid", "user:read:email"];
+        public IReadOnlyList<string> DefaultBroadcasterScopes => ["chat:read", "chat:edit"];
+        public IReadOnlyList<string> DefaultBotScopes => ["user:bot", "chat:read"];
         public int RefreshCallCount => Volatile.Read(ref this._refreshCallCount);
         public int ValidateCallCount => Volatile.Read(ref this._validateCallCount);
         public TimeSpan RefreshDelay { get; init; } = TimeSpan.Zero;

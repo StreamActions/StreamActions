@@ -144,6 +144,13 @@ public static class WebServiceCollectionExtensions
                 limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
                 limiterOptions.QueueLimit = 0;
             });
+            _ = options.AddFixedWindowLimiter(AuthEndpoints.LoginRateLimitPolicyName, static limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 30;
+                limiterOptions.Window = TimeSpan.FromMinutes(1);
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = 0;
+            });
         });
         _ = services.AddHealthChecks()
             .AddCheck<PluginReadinessHealthCheck>("plugins", tags: ["ready"]);

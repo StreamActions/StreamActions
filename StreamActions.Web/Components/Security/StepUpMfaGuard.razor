@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  *@
 
+@using System.Globalization
 @using System.Security.Claims
 @using Microsoft.Extensions.DependencyInjection
 @using StreamActions.Core.Abstractions
@@ -32,7 +33,7 @@
 {
     <p>Checking security policy…</p>
 }
-else if (!_policy.IsStepUpRequired || _isElevated)
+else if ((!_policy.IsStepUpRequired && !RequireEvenIfPolicyOptional) || _isElevated)
 {
     @ChildContent
 }
@@ -47,6 +48,14 @@ else
         else
         {
             <p>Recent multi-factor authentication verification is required before performing this sensitive action.</p>
+        }
+
+        @if (_canForceReauth && !string.IsNullOrWhiteSpace(_reauthHref))
+        {
+            <div data-step-up-reauth-section="true">
+                <p>No multi-factor authentication methods are currently enrolled. Re-authenticate with your login provider to continue.</p>
+                <a href="@_reauthHref" data-step-up-reauth="true">@_reauthLabel</a>
+            </div>
         }
 
         @if (_policy.IsMfaDisabled)
@@ -70,26 +79,42 @@ else
 
             @if (_policy.IsTotpAllowed)
             {
-                <form method="post" action="/auth/mfa/totp/verify" data-step-up-totp="true">
+                <div>
+                    <button type="button"
+                            data-step-up-toggle-totp="true"
+                            aria-expanded="@(_activeMethod == "totp" ? "true" : "false")"
+                            @onclick="ShowTotpForm">
+                        Use Authenticator App (TOTP)
+                    </button>
+                    <form method="post" action="/auth/mfa/totp/verify" data-step-up-totp="true" hidden="@(_activeMethod != "totp")">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="returnUrl" value="@_returnUrl" />
+                        <div>
+                            <label for="step-up-totp-code">Authenticator Code (TOTP)</label>
+                            <input id="step-up-totp-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" @bind="_totpCode" @bind:event="oninput" required />
+                        </div>
+                        <button type="submit">Verify Code</button>
+                    </form>
+                </div>
+            }
+
+            <div>
+                <button type="button"
+                        data-step-up-toggle-recovery="true"
+                        aria-expanded="@(_activeMethod == "recovery" ? "true" : "false")"
+                        @onclick="ShowRecoveryForm">
+                    Use a Recovery Code
+                </button>
+                <form method="post" action="/auth/mfa/recovery/verify" data-step-up-recovery="true" hidden="@(_activeMethod != "recovery")">
                     <AntiforgeryToken />
                     <input type="hidden" name="returnUrl" value="@_returnUrl" />
                     <div>
-                        <label for="step-up-totp-code">Authenticator Code (TOTP)</label>
-                        <input id="step-up-totp-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" required />
+                        <label for="step-up-recovery-code">Recovery Code</label>
+                        <input id="step-up-recovery-code" name="code" type="text" autocomplete="off" @bind="_recoveryCode" @bind:event="oninput" required />
                     </div>
-                    <button type="submit">Verify Code</button>
+                    <button type="submit">Use Recovery Code</button>
                 </form>
-            }
-
-            <form method="post" action="/auth/mfa/recovery/verify" data-step-up-recovery="true">
-                <AntiforgeryToken />
-                <input type="hidden" name="returnUrl" value="@_returnUrl" />
-                <div>
-                    <label for="step-up-recovery-code">Recovery Code</label>
-                    <input id="step-up-recovery-code" name="code" type="text" autocomplete="off" required />
-                </div>
-                <button type="submit">Use Recovery Code</button>
-            </form>
+            </div>
 
             <p>
                 <a href="/account/mfa">Manage MFA credentials</a>
@@ -118,6 +143,12 @@ else
     public string? OperationDescription { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether step-up verification is required even when <see cref="StepUpSudoPolicy.Optional"/> is configured.
+    /// </summary>
+    [Parameter]
+    public bool RequireEvenIfPolicyOptional { get; set; }
+
+    /// <summary>
     /// Indicates whether policy evaluation has completed.
     /// </summary>
     private bool _loaded;
@@ -126,6 +157,51 @@ else
     /// Indicates whether the current principal holds an active step-up elevation claim.
     /// </summary>
     private bool _isElevated;
+
+    /// <summary>
+    /// Indicates whether the current user has at least one enrolled MFA credential.
+    /// </summary>
+    private bool _hasAnyCredentials = true;
+
+    /// <summary>
+    /// Indicates whether the current user has at least one enrolled WebAuthn passkey.
+    /// </summary>
+    private bool _hasPasskeyEnrolled;
+
+    /// <summary>
+    /// Currently revealed secondary input method (<c>"totp"</c>, <c>"recovery"</c>, or <see langword="null"/> when collapsed).
+    /// </summary>
+    private string? _activeMethod;
+
+    /// <summary>
+    /// Bound TOTP verification code input value.
+    /// </summary>
+    private string _totpCode = string.Empty;
+
+    /// <summary>
+    /// Bound recovery code input value.
+    /// </summary>
+    private string _recoveryCode = string.Empty;
+
+    /// <summary>
+    /// Indicates whether login MFA is required for the current user.
+    /// </summary>
+    private bool _requiresLoginMfa;
+
+    /// <summary>
+    /// Indicates whether forced re-authentication with the login provider is allowed for step-up elevation.
+    /// </summary>
+    private bool _canForceReauth;
+
+    /// <summary>
+    /// Step-up re-authentication link href when <see cref="_canForceReauth"/> is <see langword="true"/>.
+    /// </summary>
+    private string? _reauthHref;
+
+    /// <summary>
+    /// Step-up re-authentication link text.
+    /// </summary>
+    private string _reauthLabel = "Re-authenticate with Login Provider";
 
     /// <summary>
     /// Safe local return URL for post-verification redirects.
@@ -139,7 +215,7 @@ else
         MfaMethodAvailability.Allowed,
         MfaMethodAvailability.Allowed,
         PanelLoginMfaRequirement.Optional,
-        StepUpSudoPolicy.Optional);
+        StepUpSudoPolicy.Required);
 
     /// <summary>
     /// Re-evaluates step-up elevation and effective MFA policy whenever parameters change.
@@ -147,21 +223,26 @@ else
     /// <returns>A <see cref="Task"/> representing the asynchronous evaluation operation.</returns>
     protected override async Task OnParametersSetAsync()
     {
+        bool wasLoaded = _loaded;
         AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
         ClaimsPrincipal principal = authState.User;
 
         _isElevated = AuthClaims.IsStepUpElevated(principal, TimeProvider);
         _returnUrl = GetCurrentLocalPath();
+        _canForceReauth = false;
+        _reauthHref = null;
 
         IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
+        IMfaCredentialStore? mfaCredentialStore = ServiceProvider.GetService<IMfaCredentialStore>();
         Guid? userId = AuthClaims.GetPanelUserId(principal);
         PanelUser? user = panelUserStore is not null && userId.HasValue
             ? await panelUserStore.GetByIdAsync(userId.Value).ConfigureAwait(false)
             : null;
 
+        IReadOnlyList<UserLoginIdentity> identities = [];
         if (user is not null && panelUserStore is not null)
         {
-            IReadOnlyList<UserLoginIdentity> identities = await panelUserStore
+            identities = await panelUserStore
                 .GetLoginIdentitiesAsync(user.Id)
                 .ConfigureAwait(false);
             IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(principal);
@@ -169,15 +250,166 @@ else
             _policy = await MfaPolicyService
                 .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, WorkspaceId)
                 .ConfigureAwait(false);
+            _requiresLoginMfa = await MfaPolicyService
+                .IsLoginMfaRequiredAsync(user, identities, oidcGroups, WorkspaceId)
+                .ConfigureAwait(false);
         }
         else
         {
             _policy = await MfaPolicyService
                 .GetEffectivePolicyAsync(WorkspaceId)
                 .ConfigureAwait(false);
+            _requiresLoginMfa = false;
+        }
+
+        _hasAnyCredentials = mfaCredentialStore is null || !userId.HasValue
+            || await mfaCredentialStore.HasAnyCredentialsAsync(userId.Value).ConfigureAwait(false);
+
+        if (mfaCredentialStore is not null && userId.HasValue)
+        {
+            IReadOnlyList<MfaCredentialSummary> summaries = await mfaCredentialStore
+                .GetSummariesAsync(userId.Value)
+                .ConfigureAwait(false);
+            _hasPasskeyEnrolled = summaries.Any(static s => s.Method == MfaMethod.Passkey);
+        }
+        else
+        {
+            _hasPasskeyEnrolled = false;
+        }
+
+        if (!wasLoaded)
+        {
+            _activeMethod = (_hasPasskeyEnrolled && _policy.IsPasskeyAllowed && _policy.IsTotpAllowed)
+                ? null
+                : (_policy.IsTotpAllowed ? "totp" : null);
+        }
+        else if (_activeMethod == "totp" && !_policy.IsTotpAllowed)
+        {
+            _activeMethod = null;
+        }
+
+        bool allowForceReauth = !_hasAnyCredentials
+            && (!_requiresLoginMfa
+                || _policy.IsMfaDisabled
+                || RequireEvenIfPolicyOptional
+                || _returnUrl.StartsWith("/account/mfa", StringComparison.OrdinalIgnoreCase));
+
+        if (allowForceReauth)
+        {
+            (string? href, string label) = await ResolveForceReauthTargetAsync(principal, identities).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(href))
+            {
+                _canForceReauth = true;
+                _reauthHref = href;
+                _reauthLabel = label;
+            }
         }
 
         _loaded = true;
+    }
+
+    /// <summary>
+    /// Resolves the <c>flow=stepup</c> re-authentication URL and display label from the session's auth provider claim or linked identities.
+    /// </summary>
+    /// <param name="principal">The current claims principal.</param>
+    /// <param name="identities">The user's linked external identities.</param>
+    /// <returns>The step-up re-authentication URL and button/link label.</returns>
+    private async ValueTask<(string? Href, string Label)> ResolveForceReauthTargetAsync(
+        ClaimsPrincipal principal,
+        IReadOnlyList<UserLoginIdentity> identities)
+    {
+        string? provider = principal.FindFirstValue(AuthClaims.AuthProviderClaimType);
+        if (string.IsNullOrWhiteSpace(provider) && identities.Count > 0)
+        {
+            provider = identities[0].ProviderId;
+        }
+
+        if (string.IsNullOrWhiteSpace(provider)
+            || string.Equals(provider.Trim(), "passkey", StringComparison.OrdinalIgnoreCase))
+        {
+            return (null, string.Empty);
+        }
+
+        string trimmedProvider = provider.Trim();
+        string escapedReturnUrl = Uri.EscapeDataString(_returnUrl);
+
+        if (trimmedProvider.StartsWith("oidc:", StringComparison.OrdinalIgnoreCase))
+        {
+            string slug = trimmedProvider["oidc:".Length..].Trim();
+            if (string.IsNullOrWhiteSpace(slug))
+            {
+                return (null, string.Empty);
+            }
+
+            Guid? oidcWorkspaceId = WorkspaceId;
+            string providerDisplayName = slug;
+            IExternalOidcProviderStore? oidcStore = ServiceProvider.GetService<IExternalOidcProviderStore>();
+            if (oidcStore is not null)
+            {
+                ExternalOidcProvider? instanceProvider = await oidcStore
+                    .GetBySlugAsync(workspaceId: null, slug)
+                    .ConfigureAwait(false);
+                if (instanceProvider is not null && instanceProvider.IsEnabled)
+                {
+                    providerDisplayName = instanceProvider.DisplayName;
+                }
+                else
+                {
+                    Guid? candidateWorkspaceId = oidcWorkspaceId ?? ServiceProvider.GetService<IWorkspaceSessionContext>()?.ActiveWorkspaceId;
+                    if (candidateWorkspaceId.HasValue && candidateWorkspaceId.Value != Guid.Empty)
+                    {
+                        ExternalOidcProvider? wsProvider = await oidcStore
+                            .GetBySlugAsync(candidateWorkspaceId.Value, slug)
+                            .ConfigureAwait(false);
+                        if (wsProvider is not null && wsProvider.IsEnabled)
+                        {
+                            oidcWorkspaceId = candidateWorkspaceId.Value;
+                            providerDisplayName = wsProvider.DisplayName;
+                        }
+                    }
+                }
+            }
+
+            string oidcHref = oidcWorkspaceId.HasValue && oidcWorkspaceId.Value != Guid.Empty
+                ? $"/auth/oidc/{Uri.EscapeDataString(slug)}/login?flow=stepup&workspaceId={oidcWorkspaceId.Value:D}&returnUrl={escapedReturnUrl}"
+                : $"/auth/oidc/{Uri.EscapeDataString(slug)}/login?flow=stepup&returnUrl={escapedReturnUrl}";
+
+            return (oidcHref, $"Re-authenticate with {providerDisplayName}");
+        }
+
+        string platformHref = WorkspaceId.HasValue && WorkspaceId.Value != Guid.Empty
+            ? $"/auth/{Uri.EscapeDataString(trimmedProvider)}/login?flow=stepup&workspaceId={WorkspaceId.Value:D}&returnUrl={escapedReturnUrl}"
+            : $"/auth/{Uri.EscapeDataString(trimmedProvider)}/login?flow=stepup&returnUrl={escapedReturnUrl}";
+
+        return (platformHref, $"Re-authenticate with {FormatProviderDisplayName(trimmedProvider)}");
+    }
+
+    /// <summary>
+    /// Formats a lowercase platform identifier into a title-cased display name.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns>The formatted display name.</returns>
+    private static string FormatProviderDisplayName(string platformId) =>
+        CultureInfo.InvariantCulture.TextInfo.ToTitleCase(platformId.Trim());
+
+    /// <summary>
+    /// Reveals the TOTP verification form, hides the recovery code form, and clears both code inputs.
+    /// </summary>
+    private void ShowTotpForm()
+    {
+        _totpCode = string.Empty;
+        _recoveryCode = string.Empty;
+        _activeMethod = "totp";
+    }
+
+    /// <summary>
+    /// Reveals the recovery code verification form, hides the TOTP form, and clears both code inputs.
+    /// </summary>
+    private void ShowRecoveryForm()
+    {
+        _totpCode = string.Empty;
+        _recoveryCode = string.Empty;
+        _activeMethod = "recovery";
     }
 
     /// <summary>
