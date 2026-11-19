@@ -16,6 +16,7 @@ trigger: always_on
 	- `dotnet build|test`: use `-v q -nologo`, target a specific `.csproj` instead of the solution, and use `--filter` with `dotnet test`
 	- `dotnet format`: use `--include <files>`
 	- `git diff`: run `git diff --stat` before a full diff
+	- Coverage runs (`dotnet test --collect:"XPlat Code Coverage"`) may target `StreamActions.sln`. Always pass `--results-directory ./CollectedTestResults -v q -nologo`, and read results only through the `cobertura-summary` skill
 
 ## Auto-approved commands (outside the sandbox)
 <!-- BEGIN SYNCED ALLOWLIST: managed by skill sync-command-permissions. Do not hand-edit. -->

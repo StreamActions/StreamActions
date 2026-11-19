@@ -6,7 +6,7 @@ globs: "**/*.py, **/pyproject.toml, **/uv.lock"
 # Python / uv Standards
 
 ## Execution
-- Always run Python through `uv` from the repository root with `--project`, for example `uv run --project Diff Diff/parsers/twitch/TwitchReferenceParser.py --url <url>`. Never call `python` or `pip` directly, and never activate a virtual environment
+- Always run Python through `uv` from the repository root with `--project`, for example `uv run --project Diff Diff/parsers/twitch/TwitchReferenceParser.py --url <url>`. Standard-library modules run the same way (`uv run --project <Folder> python -m unittest ...`). Never call `python` or `pip` directly, and never activate a virtual environment
 - `uv` always runs outside the sandbox (see `05-sandbox-execution.md`). `uv run` and `uv sync` are auto-approved in the synced allowlist; `uv add`, `uv remove`, and `uv lock` prompt the operator and must be skipped in unattended runs
 - Manage dependencies only with `uv add --project <folder> <package>` or `uv remove --project <folder> <package>`, so that `pyproject.toml` and `uv.lock` change together. Never hand-edit `uv.lock`. CI runs `uv sync --locked`, so a stale lock fails the workflow
 - Keep `requires-python = ">=3.13"`. `.py` files use the `.py` section of `StreamActions.sln.licenseheader`
@@ -22,6 +22,18 @@ globs: "**/*.py, **/pyproject.toml, **/uv.lock"
 - Write JSON as UTF-8 with `json.dump`. Indent only with `--pretty` or `--diffpretty`. Write to stdout when `--out` or `--diffout` is omitted
 - Strip non-printable characters with `BaseParser.printable` before parsing. Keep the `streamactions.diff.parser/1` User-Agent
 - When agents use the parsers for research, either omit `--out` (stdout) or write only under `.agents/scratch/docparser/`
+
+## Tests (`unittest`)
+- Python tests use the standard-library `unittest` only (no `pytest`). Suites live in `<Folder>/tests/test_*.py` with a `tests/__init__.py`, as in `DependencyUpdater/tests/`. `/Diff` and `/TldRegexUpdater` follow the same layout when they add tests
+- Run from the repository root: `uv run --project <Folder> python -m unittest discover -s <Folder>/tests -t <Folder>`
+- Tests are offline and isolated: patch network, `subprocess`, and filesystem side effects with `unittest.mock.patch` scoped to the test, use `tempfile.TemporaryDirectory` for file I/O, and use `self.subTest()` for boundary tables
+
+## Dependency updater (`/DependencyUpdater`)
+- `DependencyUpdater/DependencyUpdater.py` is the CLI entry point used by `.github/workflows/update-dependencies.yml`. Ecosystem modules live in `DependencyUpdater/updaters/<Ecosystem>Updater.py` (`DotNetUpdater`, `PythonUpdater`, `DockerUpdater`, `GitHubActionsUpdater`) and subclass `updaters/BaseUpdater.py`
+- Tests mock every external CLI and network call; never perform a real update from a test
+
+## Agent helper scripts (`.agents/skills/*/scripts/`)
+- Standalone PEP 723 scripts that use only the standard library, run with `uv run --script <path>`. They have no `pyproject.toml`/`uv.lock`, and the `.agents` license-header exemption applies. Docstrings are still required
 
 ## TLD regex generator (`/TldRegexUpdater`)
 - The source is `https://data.iana.org/TLD/tlds-alpha-by-domain.txt`. The output is a single named group `(?<tld>...)` written to `tldregex.txt`
