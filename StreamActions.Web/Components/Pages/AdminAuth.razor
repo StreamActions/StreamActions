@@ -240,43 +240,48 @@
 {
     <section aria-labelledby="panel-users-mfa-heading" data-admin-users-mfa="true">
         <h2 id="panel-users-mfa-heading">Panel Users &amp; MFA Management</h2>
-        @if (_panelUserMfaEntries.Count == 0)
-        {
-            <p>No panel users found.</p>
-        }
-        else
-        {
-            <table>
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Roles</th>
-                        <th>MFA Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (PanelUserMfaEntry entry in _panelUserMfaEntries)
-                    {
-                        <tr data-admin-user-row="@entry.User.Id.ToString("D")">
-                            <td>@entry.User.DisplayName</td>
-                            <td>@FormatUserRoles(entry.User)</td>
-                            <td>@(entry.CredentialCount > 0 ? $"Enrolled ({entry.CredentialCount})" : "Not Enrolled")</td>
-                            <td>
-                                @if (entry.CredentialCount > 0 && (!entry.User.IsRoot || _currentUserIsRoot))
-                                {
-                                    <button type="button"
-                                            data-admin-reset-mfa="@entry.User.Id.ToString("D")"
-                                            @onclick="() => RemoveUserMfaAsync(entry.User.Id)">
-                                        Remove MFA
-                                    </button>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
+        <DataTableGrid TItem="PanelUserMfaEntry"
+                       GridId="admin-panel-users-grid"
+                       Items="@_panelUserMfaEntries"
+                       FilterPredicate="MatchesPanelUserSearch"
+                       SearchPlaceholder="Filter users by display name or role...">
+            <EmptyContent>
+                <p>No panel users found.</p>
+            </EmptyContent>
+            <HeaderContent>
+                <tr>
+                    <th>User</th>
+                    <th>Roles</th>
+                    <th>MFA Status</th>
+                    <th>Actions</th>
+                </tr>
+            </HeaderContent>
+            <RowTemplate Context="entry">
+                <tr @key="entry.User.Id" data-admin-user-row="@entry.User.Id.ToString("D")">
+                    <td>@entry.User.DisplayName</td>
+                    <td>@FormatUserRoles(entry.User)</td>
+                    <td>@(entry.CredentialCount > 0 ? $"Enrolled ({entry.CredentialCount})" : "Not Enrolled")</td>
+                    <td>
+                        @if (entry.CredentialCount > 0 && (!entry.User.IsRoot || _currentUserIsRoot))
+                        {
+                            <button type="button"
+                                    data-admin-reset-mfa="@entry.User.Id.ToString("D")"
+                                    @onclick="() => RemoveUserMfaAsync(entry.User.Id)">
+                                Remove MFA
+                            </button>
+                        }
+                        @if (!entry.User.IsRoot || _currentUserIsRoot)
+                        {
+                            <button type="button"
+                                    data-admin-force-logout="@entry.User.Id.ToString("D")"
+                                    @onclick="() => ForceLogoutAllSessionsAsync(entry.User.Id)">
+                                Force Logout All Sessions
+                            </button>
+                        }
+                    </td>
+                </tr>
+            </RowTemplate>
+        </DataTableGrid>
     </section>
 }
 </StepUpMfaGuard>
@@ -838,6 +843,66 @@
 
         await ReloadPanelUsersMfaAsync().ConfigureAwait(false);
         _statusMessage = $"Removed MFA credentials for {targetUser.DisplayName}.";
+    }
+
+    /// <summary>
+    /// Revokes all active panel sessions for the specified user and broadcasts a live revocation event to terminate open Blazor circuits.
+    /// </summary>
+    /// <param name="targetUserId">The target panel user identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous revocation operation.</returns>
+    private async Task ForceLogoutAllSessionsAsync(Guid targetUserId)
+    {
+        ClearMessages();
+        IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
+        if (panelUserStore is null)
+        {
+            return;
+        }
+
+        if (!_currentUserIsRoot && !_currentUserIsGlobalAdmin)
+        {
+            _errorMessage = "Administrator privileges are required to force logout sessions.";
+            return;
+        }
+
+        PanelUser? targetUser = await panelUserStore.GetByIdAsync(targetUserId).ConfigureAwait(false);
+        if (targetUser is null)
+        {
+            _errorMessage = "Target panel user was not found.";
+            return;
+        }
+
+        if (targetUser.IsRoot && !_currentUserIsRoot)
+        {
+            _errorMessage = "Only the root operator may force logout sessions for a root account.";
+            return;
+        }
+
+        IPanelSessionService? sessionService = ServiceProvider.GetService<IPanelSessionService>();
+        if (sessionService is not null)
+        {
+            _ = await sessionService.RevokeAllSessionsForUserAsync(targetUser.Id).ConfigureAwait(false);
+        }
+
+        _statusMessage = $"Forced logout of all sessions for {targetUser.DisplayName}.";
+    }
+
+    /// <summary>
+    /// Evaluates whether a <see cref="PanelUserMfaEntry"/> matches the user table search query.
+    /// </summary>
+    /// <param name="entry">The panel user MFA entry.</param>
+    /// <param name="query">The search query text.</param>
+    /// <returns><see langword="true"/> if the user's display name or roles match <paramref name="query"/>; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesPanelUserSearch(PanelUserMfaEntry entry, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        string trimmed = query.Trim();
+        return entry.User.DisplayName.Contains(trimmed, StringComparison.OrdinalIgnoreCase)
+            || FormatUserRoles(entry.User).Contains(trimmed, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

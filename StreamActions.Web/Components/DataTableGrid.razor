@@ -1,0 +1,562 @@
+@*
+ * This file is part of StreamActions.
+ * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
+ *
+ * StreamActions is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * StreamActions is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
+ *@
+
+@typeparam TItem
+@using System.Globalization
+@using StreamActions.Core.Models
+
+<div class="sa-datatable-grid" data-datatable-grid="@GridId">
+    <div class="sa-datatable-controls" data-datatable-controls="true">
+        <div class="sa-datatable-page-size">
+            <label>
+                Show
+                <select data-datatable-page-size="true"
+                        aria-label="Entries per page"
+                        value="@_pageSize.ToString(CultureInfo.InvariantCulture)"
+                        @onchange="OnPageSizeChangedAsync">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="@PagedRequest.ShowAllPageSize.ToString(CultureInfo.InvariantCulture)">All</option>
+                </select>
+                entries
+            </label>
+        </div>
+
+        @if (ShowSearchInput)
+        {
+            <div class="sa-datatable-search">
+                <label>
+                    Search:
+                    <input type="search"
+                           data-datatable-search="true"
+                           aria-label="@SearchPlaceholder"
+                           value="@CurrentSearchQuery"
+                           placeholder="@SearchPlaceholder"
+                           @oninput="OnSearchInputAsync" />
+                </label>
+            </div>
+        }
+
+        @if (ToolbarContent is not null)
+        {
+            <div class="sa-datatable-toolbar" data-datatable-toolbar="true">
+                @ToolbarContent
+            </div>
+        }
+
+        @if (FilterContent is not null)
+        {
+            <div class="sa-datatable-filter" data-datatable-filter="true">
+                @FilterContent
+            </div>
+        }
+    </div>
+
+    @if (_totalFilteredCount == 0)
+    {
+        <div class="sa-datatable-empty" data-datatable-empty="true">
+            @if (EmptyContent is not null)
+            {
+                @EmptyContent
+            }
+            else
+            {
+                <p>No matching entries found.</p>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="sa-datatable-table-container"
+             data-datatable-infinite-scroll="@(IsInfiniteScroll ? "true" : "false")"
+             style="@(IsInfiniteScroll ? "max-height: 70vh; overflow-y: auto;" : string.Empty)">
+            <table class="sa-datatable-table">
+                @if (HeaderContent is not null)
+                {
+                    <thead>
+                        @HeaderContent
+                    </thead>
+                }
+                <tbody>
+                    @if (IsInfiniteScroll)
+                    {
+                        <Virtualize @ref="_virtualizeComponent"
+                                    TItem="TItem"
+                                    ItemsProvider="ProvideVirtualizedItemsAsync"
+                                    OverscanCount="10">
+                            <ItemContent Context="item">
+                                @if (RowTemplate is not null)
+                                {
+                                    @RowTemplate(item)
+                                }
+                            </ItemContent>
+                        </Virtualize>
+                    }
+                    else
+                    {
+                        @foreach (TItem item in _visibleItems)
+                        {
+                            @if (RowTemplate is not null)
+                            {
+                                @RowTemplate(item)
+                            }
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <div class="sa-datatable-footer" data-datatable-footer="true">
+        <div class="sa-datatable-status" data-datatable-status="true">
+            @if (IsInfiniteScroll)
+            {
+                <span>Showing all @_totalFilteredCount matching entries (infinite scroll)</span>
+            }
+            else
+            {
+                <span>Showing @ShowingStart to @ShowingEnd of @_totalFilteredCount entries</span>
+            }
+            @if (IsFiltered)
+            {
+                <span> (filtered from @_totalUnfilteredCount total entries)</span>
+            }
+        </div>
+
+        @if (!IsInfiniteScroll)
+        {
+            <nav class="sa-datatable-pagination" aria-label="Table pagination" data-datatable-pagination="true">
+                <button type="button"
+                        data-datatable-page-first="true"
+                        disabled="@(_pageNumber <= 1)"
+                        @onclick="() => GoToPageAsync(1)">
+                    First
+                </button>
+                <button type="button"
+                        data-datatable-page-prev="true"
+                        disabled="@(_pageNumber <= 1)"
+                        @onclick="() => GoToPageAsync(_pageNumber - 1)">
+                    Previous
+                </button>
+                @foreach (int pageIndex in GetWindowedPageNumbers())
+                {
+                    int targetPage = pageIndex;
+                    <button type="button"
+                            data-datatable-page-number="@targetPage"
+                            aria-current="@(targetPage == _pageNumber ? "page" : null)"
+                            disabled="@(targetPage == _pageNumber)"
+                            @onclick="() => GoToPageAsync(targetPage)">
+                        @targetPage
+                    </button>
+                }
+                <button type="button"
+                        data-datatable-page-next="true"
+                        disabled="@(_pageNumber >= TotalPages)"
+                        @onclick="() => GoToPageAsync(_pageNumber + 1)">
+                    Next
+                </button>
+                <button type="button"
+                        data-datatable-page-last="true"
+                        disabled="@(_pageNumber >= TotalPages)"
+                        @onclick="() => GoToPageAsync(TotalPages)">
+                    Last
+                </button>
+            </nav>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Reference to the Blazor <see cref="Virtualize{TItem}"/> component when in infinite-scroll mode.
+    /// </summary>
+    private Virtualize<TItem>? _virtualizeComponent;
+
+    /// <summary>
+    /// Currently visible items for numbered pagination mode, or the full filtered list in infinite-scroll mode.
+    /// </summary>
+    private IReadOnlyList<TItem> _visibleItems = [];
+
+    /// <summary>
+    /// Current 1-based page number.
+    /// </summary>
+    private int _pageNumber = 1;
+
+    /// <summary>
+    /// Current page size, or <see cref="PagedRequest.ShowAllPageSize"/> (<c>-1</c>) for infinite scroll.
+    /// </summary>
+    private int _pageSize = 25;
+
+    /// <summary>
+    /// Internal search query used when <see cref="SearchQuery"/> is not externally controlled.
+    /// </summary>
+    private string _internalSearchQuery = string.Empty;
+
+    /// <summary>
+    /// Last observed search query used to detect external search query changes and reset to page 1.
+    /// </summary>
+    private string? _lastObservedSearchQuery;
+
+    /// <summary>
+    /// Resolved total filtered item count.
+    /// </summary>
+    private int _totalFilteredCount;
+
+    /// <summary>
+    /// Resolved total unfiltered item count.
+    /// </summary>
+    private int _totalUnfilteredCount;
+
+    /// <summary>
+    /// Monotonically incremented token bumped whenever the data source or filter changes so <see cref="Virtualize{TItem}"/> refreshes.
+    /// </summary>
+    private bool _pendingVirtualizeRefresh;
+
+    /// <summary>
+    /// Gets or sets an optional identifier for this data table grid instance.
+    /// </summary>
+    [Parameter]
+    public string? GridId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the in-memory item collection to display when <see cref="ServerItemsProvider"/> is not used.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<TItem>? Items { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional server-side asynchronous data provider that accepts a <see cref="PagedRequest"/>.
+    /// </summary>
+    [Parameter]
+    public Func<PagedRequest, CancellationToken, ValueTask<PagedResult<TItem>>>? ServerItemsProvider { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional predicate used to filter in-memory <see cref="Items"/> by the active search query.
+    /// </summary>
+    [Parameter]
+    public Func<TItem, string, bool>? FilterPredicate { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional explicit total unfiltered count when <see cref="Items"/> is pre-filtered by the parent component.
+    /// </summary>
+    [Parameter]
+    public int? TotalUnfilteredCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the initial or externally bound page size (defaults to <c>25</c>; <c>-1</c> for infinite scroll).
+    /// </summary>
+    [Parameter]
+    public int PageSize { get; set; } = 25;
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user changes the page size.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> PageSizeChanged { get; set; }
+
+    /// <summary>
+    /// Gets or sets the externally bound search query string.
+    /// </summary>
+    [Parameter]
+    public string? SearchQuery { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the search query changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string?> SearchQueryChanged { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the built-in search input box is rendered in the top control bar.
+    /// </summary>
+    [Parameter]
+    public bool ShowSearchInput { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the placeholder text for the built-in search input box.
+    /// </summary>
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Filter entries...";
+
+    /// <summary>
+    /// Gets or sets the table header row template (<c>&lt;tr&gt;...&lt;/tr&gt;</c>) rendered inside <c>&lt;thead&gt;</c>.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? HeaderContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the table row template rendered for each item inside <c>&lt;tbody&gt;</c>.
+    /// </summary>
+    [Parameter]
+    public RenderFragment<TItem>? RowTemplate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the template rendered when zero items match the current query.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? EmptyContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional toolbar render fragment placed in the top control bar.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ToolbarContent { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional filter render fragment placed in the top control bar.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? FilterContent { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the table is currently in virtualized infinite-scroll mode (<c>PageSize == -1</c>).
+    /// </summary>
+    private bool IsInfiniteScroll => _pageSize == PagedRequest.ShowAllPageSize;
+
+    /// <summary>
+    /// Gets the active search query string (preferring <see cref="SearchQuery"/> when supplied).
+    /// </summary>
+    private string CurrentSearchQuery => SearchQuery ?? _internalSearchQuery;
+
+    /// <summary>
+    /// Gets a value indicating whether a search filter or pre-filter is currently reducing the item count.
+    /// </summary>
+    private bool IsFiltered =>
+        !string.IsNullOrWhiteSpace(CurrentSearchQuery)
+        || (_totalUnfilteredCount > _totalFilteredCount);
+
+    /// <summary>
+    /// Gets the total number of available pages in numbered pagination mode.
+    /// </summary>
+    private int TotalPages =>
+        IsInfiniteScroll || _pageSize <= 0 || _totalFilteredCount == 0
+            ? 1
+            : (int)Math.Ceiling((double)_totalFilteredCount / _pageSize);
+
+    /// <summary>
+    /// Gets the 1-based index of the first item shown on the current page.
+    /// </summary>
+    private int ShowingStart =>
+        _totalFilteredCount == 0
+            ? 0
+            : IsInfiniteScroll
+                ? 1
+                : ((_pageNumber - 1) * _pageSize) + 1;
+
+    /// <summary>
+    /// Gets the 1-based index of the last item shown on the current page.
+    /// </summary>
+    private int ShowingEnd =>
+        _totalFilteredCount == 0
+            ? 0
+            : IsInfiniteScroll
+                ? _totalFilteredCount
+                : Math.Min(_pageNumber * _pageSize, _totalFilteredCount);
+
+    /// <inheritdoc/>
+    protected override void OnInitialized()
+    {
+        _pageSize = PageSize;
+        _lastObservedSearchQuery = CurrentSearchQuery;
+    }
+
+    /// <inheritdoc/>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (PageSize != _pageSize && PageSizeChanged.HasDelegate)
+        {
+            _pageSize = PageSize;
+            _pageNumber = 1;
+        }
+
+        string activeSearch = CurrentSearchQuery;
+        if (!string.Equals(_lastObservedSearchQuery, activeSearch, StringComparison.Ordinal))
+        {
+            _lastObservedSearchQuery = activeSearch;
+            _pageNumber = 1;
+        }
+
+        await RefreshDataCoreAsync().ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingVirtualizeRefresh && _virtualizeComponent is not null)
+        {
+            _pendingVirtualizeRefresh = false;
+            await _virtualizeComponent.RefreshDataAsync().ConfigureAwait(false);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Reloads the grid data from <see cref="ServerItemsProvider"/> or in-memory <see cref="Items"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous refresh operation.</returns>
+    public async Task RefreshDataAsync()
+    {
+        await RefreshDataCoreAsync().ConfigureAwait(false);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Evaluates the current paging and search state against <see cref="ServerItemsProvider"/> or in-memory <see cref="Items"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous evaluation.</returns>
+    private async Task RefreshDataCoreAsync()
+    {
+        PagedRequest request = new(
+            PageNumber: _pageNumber,
+            PageSize: _pageSize,
+            SearchQuery: CurrentSearchQuery);
+
+        PagedResult<TItem> result;
+        if (ServerItemsProvider is not null)
+        {
+            result = await ServerItemsProvider(request, CancellationToken.None).ConfigureAwait(false);
+        }
+        else
+        {
+            IReadOnlyList<TItem> source = Items ?? [];
+            result = PagedResult<TItem>.FromEnumerable(source, request, FilterPredicate, TotalUnfilteredCount);
+        }
+
+        _visibleItems = result.Items;
+        _totalFilteredCount = result.TotalFilteredCount;
+        _totalUnfilteredCount = TotalUnfilteredCount ?? result.TotalUnfilteredCount;
+        _pageNumber = result.PageNumber;
+
+        if (IsInfiniteScroll)
+        {
+            _pendingVirtualizeRefresh = true;
+        }
+    }
+
+    /// <summary>
+    /// Supplies virtualized item slices to the Blazor <see cref="Virtualize{TItem}"/> component in infinite-scroll mode.
+    /// </summary>
+    /// <param name="request">The virtualization slice request.</param>
+    /// <returns>A <see cref="ValueTask{TResult}"/> containing the requested slice and total item count.</returns>
+    private async ValueTask<ItemsProviderResult<TItem>> ProvideVirtualizedItemsAsync(ItemsProviderRequest request)
+    {
+        if (ServerItemsProvider is not null && _visibleItems.Count == 0 && _totalFilteredCount == 0)
+        {
+            await RefreshDataCoreAsync().ConfigureAwait(false);
+        }
+
+        int totalCount = _visibleItems.Count;
+        if (totalCount == 0 || request.StartIndex >= totalCount)
+        {
+            return new ItemsProviderResult<TItem>([], totalCount);
+        }
+
+        int count = Math.Min(request.Count, totalCount - request.StartIndex);
+        List<TItem> slice = new(count);
+        for (int index = 0; index < count; index++)
+        {
+            slice.Add(_visibleItems[request.StartIndex + index]);
+        }
+
+        return new ItemsProviderResult<TItem>(slice, totalCount);
+    }
+
+    /// <summary>
+    /// Handles changes to the page-size selector dropdown and resets the current page to 1.
+    /// </summary>
+    /// <param name="args">The change event arguments.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task OnPageSizeChangedAsync(ChangeEventArgs args)
+    {
+        if (!int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int newPageSize))
+        {
+            return;
+        }
+
+        _pageSize = newPageSize;
+        _pageNumber = 1;
+
+        if (PageSizeChanged.HasDelegate)
+        {
+            await PageSizeChanged.InvokeAsync(newPageSize).ConfigureAwait(false);
+        }
+
+        await RefreshDataCoreAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles changes to the built-in search input and resets the current page to 1.
+    /// </summary>
+    /// <param name="args">The change event arguments.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task OnSearchInputAsync(ChangeEventArgs args)
+    {
+        string newQuery = args.Value?.ToString() ?? string.Empty;
+        _internalSearchQuery = newQuery;
+        _lastObservedSearchQuery = newQuery;
+        _pageNumber = 1;
+
+        if (SearchQueryChanged.HasDelegate)
+        {
+            await SearchQueryChanged.InvokeAsync(newQuery).ConfigureAwait(false);
+        }
+
+        await RefreshDataCoreAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Navigates to the specified 1-based page number in numbered pagination mode.
+    /// </summary>
+    /// <param name="targetPage">The target 1-based page number.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task GoToPageAsync(int targetPage)
+    {
+        int clamped = Math.Clamp(targetPage, 1, TotalPages);
+        if (clamped == _pageNumber)
+        {
+            return;
+        }
+
+        _pageNumber = clamped;
+        await RefreshDataCoreAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Computes a windowed list of 1-based page numbers around the active page.
+    /// </summary>
+    /// <returns>A read-only list of page numbers to render as buttons.</returns>
+    private IReadOnlyList<int> GetWindowedPageNumbers()
+    {
+        int total = TotalPages;
+        const int maxButtons = 5;
+        int start = Math.Max(1, _pageNumber - 2);
+        int end = Math.Min(total, start + maxButtons - 1);
+        start = Math.Max(1, end - maxButtons + 1);
+
+        List<int> pages = new((end - start) + 1);
+        for (int p = start; p <= end; p++)
+        {
+            pages.Add(p);
+        }
+
+        return pages;
+    }
+}
+

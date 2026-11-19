@@ -58,4 +58,9 @@ public enum PlatformUserDesignations
     /// A channel follower.
     /// </summary>
     Follower = 1 << 5,
+
+    /// <summary>
+    /// Any user or viewer in the workspace channel, regardless of platform roles.
+    /// </summary>
+    Everyone = 1 << 6,
 }

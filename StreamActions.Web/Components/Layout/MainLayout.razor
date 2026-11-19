@@ -116,6 +116,11 @@
     private bool _showMfaAdminResetNotice;
 
     /// <summary>
+    /// Active subscription handle for <see cref="UserSessionsRevokedEvent"/> notifications on <see cref="IEventBus"/>.
+    /// </summary>
+    private IDisposable? _sessionRevocationSubscription;
+
+    /// <summary>
     /// Initializes the workspace session context and instance branding for the layout.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous initialization operation.</returns>
@@ -123,6 +128,12 @@
     {
         WorkspaceSession.WorkspaceChanged += OnWorkspaceChanged;
         InstanceSettingsService.SettingsChanged += OnSettingsChanged;
+
+        IEventBus? eventBus = ServiceProvider.GetService<IEventBus>();
+        if (eventBus is not null)
+        {
+            _sessionRevocationSubscription = eventBus.Subscribe<UserSessionsRevokedEvent>(HandleUserSessionsRevokedAsync);
+        }
 
         InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
         _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
@@ -150,6 +161,36 @@
     {
         WorkspaceSession.WorkspaceChanged -= OnWorkspaceChanged;
         InstanceSettingsService.SettingsChanged -= OnSettingsChanged;
+        _sessionRevocationSubscription?.Dispose();
+        _sessionRevocationSubscription = null;
+    }
+
+    /// <summary>
+    /// Redirects the active Blazor circuit to <c>/login?error=session_revoked</c> when the current user's session is revoked.
+    /// </summary>
+    /// <param name="evt">The session revocation event payload.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the asynchronous handler execution.</returns>
+    private async ValueTask HandleUserSessionsRevokedAsync(
+        UserSessionsRevokedEvent evt,
+        CancellationToken cancellationToken)
+    {
+        AuthenticationStateProvider? authStateProvider = ServiceProvider.GetService<AuthenticationStateProvider>();
+        if (authStateProvider is null)
+        {
+            return;
+        }
+
+        await InvokeAsync(async () =>
+        {
+            AuthenticationState authState = await authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            ClaimsPrincipal user = authState.User;
+            if (AuthClaims.GetPanelUserId(user) == evt.PanelUserId
+                && (evt.ExcludedSessionId is null || AuthClaims.GetSessionId(user) != evt.ExcludedSessionId))
+            {
+                Navigation.NavigateTo("/login?error=session_revoked", forceLoad: true);
+            }
+        }).ConfigureAwait(false);
     }
 
     /// <summary>

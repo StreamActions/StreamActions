@@ -17,6 +17,7 @@
  */
 
 using FluentAssertions;
+using StreamActions.Core.Models;
 using StreamActions.Core.Permissions;
 using Xunit;
 
@@ -51,19 +52,38 @@ public sealed class PermissionRegistryTests
     }
 
     [Theory]
-    [InlineData(BuiltInPermissionKeys.FeatureCustomCommands, true)]
-    [InlineData(BuiltInPermissionKeys.FeatureCustomOAuthApp, true)]
-    [InlineData(BuiltInPermissionKeys.FeatureCustomBotAccount, true)]
-    [InlineData(BuiltInPermissionKeys.FeatureCustomOidcProvider, true)]
-    [InlineData(BuiltInPermissionKeys.UiPanelAccess, false)]
-    [InlineData(BuiltInPermissionKeys.UiDashboardView, false)]
-    [InlineData(BuiltInPermissionKeys.UiSecretsView, false)]
-    [InlineData(BuiltInPermissionKeys.UiSecretsManage, false)]
-    [InlineData(BuiltInPermissionKeys.UiCommandsScriptEdit, false)]
-    [InlineData(BuiltInPermissionKeys.ModerationTimeout, false)]
-    [InlineData(BuiltInPermissionKeys.ActionRunCommand, false)]
+    [InlineData(BuiltInPermissionKeys.FeatureCustomCommands, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureTimers, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureQuotes, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureCounters, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureModeration, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureLoyalty, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureOverlays, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureSoundboard, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureAlerts, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeaturePublicAnonymousAccess, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeaturePublicViewerLogin, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureAddonDiscord, true, false, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureScriptingClearScript, true, true, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeaturePlugins, true, true, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureCustomOAuthApp, true, true, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureCustomBotAccount, true, true, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.FeatureCustomOidcProvider, true, true, PlatformUserDesignations.None)]
+    [InlineData(BuiltInPermissionKeys.UiPanelAccess, false, false, PlatformUserDesignations.Broadcaster | PlatformUserDesignations.Moderator)]
+    [InlineData(BuiltInPermissionKeys.UiDashboardView, false, false, PlatformUserDesignations.Broadcaster | PlatformUserDesignations.Moderator)]
+    [InlineData(BuiltInPermissionKeys.UiSecretsView, false, false, PlatformUserDesignations.Broadcaster)]
+    [InlineData(BuiltInPermissionKeys.UiSecretsManage, false, false, PlatformUserDesignations.Broadcaster)]
+    [InlineData(BuiltInPermissionKeys.UiCommandsScriptEdit, false, false, PlatformUserDesignations.Broadcaster)]
+    [InlineData(BuiltInPermissionKeys.UiPermissionsManage, false, false, PlatformUserDesignations.Broadcaster)]
+    [InlineData(BuiltInPermissionKeys.UiSettingsManage, false, false, PlatformUserDesignations.Broadcaster)]
+    [InlineData(BuiltInPermissionKeys.ModerationTimeout, false, false, PlatformUserDesignations.Broadcaster | PlatformUserDesignations.Moderator)]
+    [InlineData(BuiltInPermissionKeys.ActionRunCommand, false, false, PlatformUserDesignations.Everyone)]
     [Trait("Member", "GetByKey")]
-    public void GetByKeyForBuiltInKeyReturnsExpectedDescriptor(string key, bool expectedGloballyGated)
+    public void GetByKeyForBuiltInKeyReturnsExpectedDescriptor(
+        string key,
+        bool expectedGloballyGated,
+        bool expectedDangerous,
+        PlatformUserDesignations expectedDefaultDesignations)
     {
         PermissionRegistry registry = new();
 
@@ -72,6 +92,8 @@ public sealed class PermissionRegistryTests
         _ = descriptor.Should().NotBeNull();
         _ = descriptor!.Key.Should().Be(key);
         _ = descriptor.IsGloballyGated.Should().Be(expectedGloballyGated);
+        _ = descriptor.IsDangerousGlobalFeature.Should().Be(expectedDangerous);
+        _ = descriptor.DefaultAllowedDesignations.Should().Be(expectedDefaultDesignations);
     }
 
     #endregion
@@ -107,6 +129,48 @@ public sealed class PermissionRegistryTests
         Action action = () => registry.Register(null!);
 
         _ = action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    [Trait("Member", "Register")]
+    public void RegisterWhenDefaultStateIsDenyThrowsArgumentException()
+    {
+        PermissionRegistry registry = new();
+        PermissionDescriptor invalid = new(
+            "plugin.bad.deny_default",
+            "Bad Plugin",
+            "Invalid Deny Default",
+            "Plugin default must never be Deny.",
+            DefaultState: PermissionState.Deny);
+
+        Action action = () => registry.Register(invalid);
+
+        _ = action.Should().Throw<ArgumentException>()
+            .WithParameterName("descriptor");
+    }
+
+    [Theory]
+    [InlineData(false, PermissionState.Inherit)]
+    [InlineData(true, PermissionState.Allow)]
+    [Trait("Member", "Register")]
+    public void RegisterWhenDangerousGlobalFeatureIsNotGloballyGatedOrDefaultsToAllowThrowsArgumentException(
+        bool isGloballyGated,
+        PermissionState defaultState)
+    {
+        PermissionRegistry registry = new();
+        PermissionDescriptor invalid = new(
+            "feature.plugin.dangerous",
+            PermissionCategories.Features,
+            "Dangerous Feature",
+            "High-risk feature.",
+            IsGloballyGated: isGloballyGated,
+            IsDangerousGlobalFeature: true,
+            DefaultState: defaultState);
+
+        Action action = () => registry.Register(invalid);
+
+        _ = action.Should().Throw<ArgumentException>()
+            .WithParameterName("descriptor");
     }
 
     #endregion

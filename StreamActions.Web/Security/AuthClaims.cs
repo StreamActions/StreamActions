@@ -144,6 +144,16 @@ public static class AuthClaims
     public const string MfaVerifiedClaimType = "sa:mfa_verified";
 
     /// <summary>
+    /// Claim type storing the unique <see cref="PanelUserSession.Id"/> identifier for the active session.
+    /// </summary>
+    public const string SessionIdClaimType = "sid";
+
+    /// <summary>
+    /// Alias for <see cref="SessionIdClaimType"/> storing the unique <see cref="PanelUserSession.Id"/> identifier.
+    /// </summary>
+    public const string SessionIdType = "sid";
+
+    /// <summary>
     /// Duration for which a completed MFA challenge or enrollment grants step-up ("Sudo Mode") elevation.
     /// </summary>
     public static readonly TimeSpan StepUpWindow = TimeSpan.FromMinutes(15);
@@ -163,6 +173,7 @@ public static class AuthClaims
     /// <param name="mfaEnrollmentRequired"><see langword="true"/> if the user must enroll MFA before completing authentication; otherwise, <see langword="false"/>.</param>
     /// <param name="mfaElevatedUntilUtc">Optional UTC expiration timestamp for step-up MFA elevation.</param>
     /// <param name="mfaVerified"><see langword="true"/> if MFA has been verified in this session; otherwise, <see langword="false"/>.</param>
+    /// <param name="sessionId">Optional <see cref="PanelUserSession.Id"/> to embed as the <see cref="SessionIdClaimType"/> claim.</param>
     /// <returns>The constructed <see cref="ClaimsPrincipal"/>.</returns>
     public static ClaimsPrincipal BuildClaimsPrincipal(
         PanelUser user,
@@ -171,7 +182,8 @@ public static class AuthClaims
         bool mfaPending = false,
         bool mfaEnrollmentRequired = false,
         DateTimeOffset? mfaElevatedUntilUtc = null,
-        bool mfaVerified = false)
+        bool mfaVerified = false,
+        Guid? sessionId = null)
     {
         ArgumentNullException.ThrowIfNull(user);
 
@@ -182,6 +194,11 @@ public static class AuthClaims
             new(IsRootClaimType, user.IsRoot ? "true" : "false"),
             new(IsGlobalAdminClaimType, user.IsGlobalAdmin ? "true" : "false"),
         ];
+
+        if (sessionId.HasValue && sessionId.Value != Guid.Empty)
+        {
+            claims.Add(new Claim(SessionIdClaimType, sessionId.Value.ToString("D")));
+        }
 
         if (mfaPending)
         {
@@ -337,6 +354,24 @@ public static class AuthClaims
         string? rawId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(rawId, out Guid userId) && userId != Guid.Empty
             ? userId
+            : null;
+    }
+
+    /// <summary>
+    /// Extracts the <see cref="PanelUserSession.Id"/> (<see cref="SessionIdClaimType"/>) from a <see cref="ClaimsPrincipal"/>, if present and valid.
+    /// </summary>
+    /// <param name="principal">The claims principal to inspect.</param>
+    /// <returns>The parsed <see cref="Guid"/> session identifier, or <see langword="null"/> if absent or invalid.</returns>
+    public static Guid? GetSessionId(ClaimsPrincipal? principal)
+    {
+        if (principal is null)
+        {
+            return null;
+        }
+
+        string? rawId = principal.FindFirstValue(SessionIdClaimType);
+        return Guid.TryParse(rawId, out Guid sessionId) && sessionId != Guid.Empty
+            ? sessionId
             : null;
     }
 

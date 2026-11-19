@@ -515,6 +515,14 @@ public sealed class MfaPolicyServiceTests
             throw new NotSupportedException();
 
         /// <inheritdoc />
+        public ValueTask SetGrantsBatchAsync(Guid groupId, IReadOnlyDictionary<string, PermissionState> grants, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        /// <inheritdoc />
+        public ValueTask<PermissionGroup> SeedDefaultGlobalGroupAsync(IReadOnlyCollection<string>? enabledDangerousFeatureKeys = null, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        /// <inheritdoc />
         public ValueTask<IReadOnlyList<PermissionGroupMember>> GetGroupMembersAsync(Guid groupId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 

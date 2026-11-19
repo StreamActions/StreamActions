@@ -27,6 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StreamActions.Core.Abstractions;
 using StreamActions.Core.Models;
 using StreamActions.Core.Models.Entities;
+using StreamActions.Core.Permissions;
 using StreamActions.Daemon;
 using StreamActions.Web.Components.Pages;
 using StreamActions.Web.Endpoints;
@@ -63,6 +64,14 @@ public sealed partial class SetupTests
         _ = component.Markup.Should().Contain("value=\"twitch\"");
         _ = component.Markup.Should().Contain("name=\"clientId\"");
         _ = component.Markup.Should().Contain("name=\"clientSecret\"");
+        _ = component.Markup.Should().Contain("data-setup-dangerous-features=\"true\"");
+        _ = component.Markup.Should().Contain("High-Risk / Advanced Features (Optional)");
+        _ = component.Markup.Should().Contain("name=\"enableAllDangerousFeatures\"");
+        _ = component.Markup.Should().Contain($"name=\"enabledDangerousFeatures\" value=\"{BuiltInPermissionKeys.FeatureScriptingClearScript}\"");
+        _ = component.Markup.Should().Contain($"name=\"enabledDangerousFeatures\" value=\"{BuiltInPermissionKeys.FeaturePlugins}\"");
+        _ = component.Markup.Should().Contain($"name=\"enabledDangerousFeatures\" value=\"{BuiltInPermissionKeys.FeatureCustomOAuthApp}\"");
+        _ = component.Markup.Should().Contain($"name=\"enabledDangerousFeatures\" value=\"{BuiltInPermissionKeys.FeatureCustomBotAccount}\"");
+        _ = component.Markup.Should().Contain($"name=\"enabledDangerousFeatures\" value=\"{BuiltInPermissionKeys.FeatureCustomOidcProvider}\"");
         _ = component.Markup.Should().NotContain(secretBootstrapToken);
     }
 
@@ -81,6 +90,7 @@ public sealed partial class SetupTests
 
         _ = component.Markup.Should().Contain("Root Recovery");
         _ = component.Markup.Should().NotContain("Initial Setup");
+        _ = component.Markup.Should().NotContain("data-setup-dangerous-features=\"true\"");
         _ = component.Markup.Should().NotContain(secretBootstrapToken);
     }
 
@@ -302,6 +312,49 @@ public sealed partial class SetupTests
         HttpResponseMessage revisitResponse = await client.GetAsync(new Uri("/setup", UriKind.Relative), ct);
         string revisitHtml = await revisitResponse.Content.ReadAsStringAsync(ct);
         _ = revisitHtml.Should().NotContain("super-secret-client-secret");
+    }
+
+    [Fact]
+    [Trait("Member", "MapSetupEndpoints")]
+    public async Task PostSetupVerify_WhenInitialSetupWithDangerousFeaturesOptIn_SeedsDefaultWorkspacePlanGlobalGroupGrants()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDaemonDirectories dirs = new();
+        using WebTestApplicationFactory factory = new(dirs);
+        using HttpClient client = factory.CreateClient();
+
+        IBootstrapTokenService tokenService = factory.Services.GetRequiredService<IBootstrapTokenService>();
+        BootstrapTokenRequestResult tokenResult = tokenService.RequestOrReuseActiveToken();
+        _ = tokenResult.Succeeded.Should().BeTrue();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/setup/verify",
+            new
+            {
+                bootstrapToken = tokenResult.Token,
+                platformId = "twitch",
+                enabledDangerousFeatures = new[]
+                {
+                    BuiltInPermissionKeys.FeatureScriptingClearScript,
+                    BuiltInPermissionKeys.FeatureCustomOAuthApp,
+                },
+            },
+            ct);
+
+        _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        IPermissionStore permissionStore = factory.Services.GetRequiredService<IPermissionStore>();
+        IReadOnlyList<PermissionGroup> globalGroups = await permissionStore.GetGroupsAsync(null, ct);
+        PermissionGroup defaultPlan = globalGroups.Should().ContainSingle(
+            static g => g.Name == BuiltInPermissionKeys.DefaultWorkspacePlanGroupName).Subject;
+
+        IReadOnlyList<PermissionGrant> grants = await permissionStore.GetGrantsAsync(defaultPlan.Id, ct);
+        _ = grants.Should().Contain(static g => g.PermissionKey == BuiltInPermissionKeys.FeatureCustomCommands && g.State == PermissionState.Allow);
+        _ = grants.Should().Contain(static g => g.PermissionKey == BuiltInPermissionKeys.FeatureScriptingClearScript && g.State == PermissionState.Allow);
+        _ = grants.Should().Contain(static g => g.PermissionKey == BuiltInPermissionKeys.FeatureCustomOAuthApp && g.State == PermissionState.Allow);
+        _ = grants.Should().NotContain(static g => g.PermissionKey == BuiltInPermissionKeys.FeaturePlugins);
+        _ = grants.Should().NotContain(static g => g.PermissionKey == BuiltInPermissionKeys.FeatureCustomBotAccount);
+        _ = grants.Should().NotContain(static g => g.PermissionKey == BuiltInPermissionKeys.FeatureCustomOidcProvider);
     }
     #endregion
 

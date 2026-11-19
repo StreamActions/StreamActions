@@ -32,8 +32,12 @@
 @inject IPermissionRegistry PermissionRegistry
 @inject IEventBus EventBus
 @inject IServiceProvider ServiceProvider
+@inject NavigationManager Navigation
 
 <PageTitle>@AuthPolicyParser.FormatPageTitle("Global Permissions (Tier 1)", _instanceName)</PageTitle>
+
+<NavigationLock ConfirmExternalNavigation="@HasUnsavedChanges"
+                OnBeforeInternalNavigation="OnBeforeInternalNavigationAsync" />
 
 <h1>Global Permissions (Tier 1)</h1>
 
@@ -60,160 +64,513 @@
     <p role="status">@_statusMessage</p>
 }
 
-<section aria-labelledby="global-groups-heading">
-    <h2 id="global-groups-heading">Global Permission Groups</h2>
-    <div>
-        <label for="new-global-group-name">New Global Group:</label>
-        <input id="new-global-group-name" type="text" @bind="_newGlobalGroupName" placeholder="Global group name" />
-        <button type="button" @onclick="CreateGlobalGroupAsync">Create Global Group</button>
+@if (_showUnsavedNavigationPrompt)
+{
+    <div role="alertdialog"
+         aria-labelledby="unsaved-global-nav-prompt-heading"
+         data-unsaved-navigation-prompt="true">
+        <h3 id="unsaved-global-nav-prompt-heading">Unsaved Global Permission Changes</h3>
+        <p>You have @UnsavedChangesCount unsaved permission change(s) for <strong>@(_selectedGroup?.Name)</strong>. Do you want to discard your staged changes?</p>
+        <button type="button"
+                data-confirm-discard-changes="true"
+                @onclick="ConfirmDiscardAndNavigate">
+            Discard Changes &amp; Leave
+        </button>
+        <button type="button"
+                data-cancel-discard-changes="true"
+                @onclick="CancelDiscardNavigation">
+            Stay in Editor
+        </button>
     </div>
+}
 
-    @if (_globalGroups.Count == 0)
-    {
-        <p>No global permission groups configured.</p>
-    }
-    else
-    {
-        List<PermissionGroup> filteredGroups = [.. _globalGroups.Where(MatchesGlobalGroupSearch)];
-        @if (filteredGroups.Count == 0)
-        {
-            <p>No global permission groups match the current search.</p>
-        }
-        else
-        {
-            <ul>
-                @foreach (PermissionGroup group in filteredGroups)
-                {
-                    <li>
+@if (_currentMode == PermissionsPageMode.List)
+{
+    <section aria-labelledby="global-groups-heading" data-permissions-mode="List">
+        <h2 id="global-groups-heading">Global Permission Groups</h2>
+        <div>
+            <label for="new-global-group-name">New Global Group:</label>
+            <input id="new-global-group-name" type="text" @bind="_newGlobalGroupName" placeholder="Global group name" />
+            <button type="button" data-create-group="true" @onclick="CreateGlobalGroupAsync">Create Global Group</button>
+            <button type="button" data-seed-default-global-group="true" @onclick="SeedDefaultGlobalGroupAsync">Ensure Default Workspace Plan</button>
+        </div>
+
+        <DataTableGrid TItem="PermissionGroup"
+                       GridId="global-groups-grid"
+                       Items="@_globalGroups"
+                       SearchQuery="@_searchQuery"
+                       SearchQueryChanged="OnSearchQueryChanged"
+                       FilterPredicate="MatchesGlobalGroupGridSearch"
+                       SearchPlaceholder="Filter global groups...">
+            <EmptyContent>
+                <p>No global permission groups configured.</p>
+            </EmptyContent>
+            <HeaderContent>
+                <tr>
+                    <th>Global Group Name</th>
+                    <th>Type</th>
+                    <th>Assigned Workspaces</th>
+                    <th>Actions</th>
+                </tr>
+            </HeaderContent>
+            <RowTemplate Context="group">
+                <tr @key="group.Id" data-group-row="@group.Id">
+                    <td>
                         <strong>@group.Name</strong>
                         <code>(@group.Id)</code>
-                        <button type="button" @onclick="() => DeleteGlobalGroupAsync(group.Id)">Delete</button>
-                    </li>
-                }
-            </ul>
-        }
-    }
-</section>
-
-<section aria-labelledby="global-matrix-heading">
-    <h2 id="global-matrix-heading">Global Permission Grants</h2>
-    @if (_globalGroups.Count == 0)
-    {
-        <p>Create a global permission group to configure Tier 1 grants.</p>
-    }
-    else
-    {
-        bool anyPermissionRendered = false;
-        @foreach (string category in _categories)
-        {
-            List<PermissionDescriptor> descriptors = [.. PermissionRegistry.GetByCategory(category).Where(MatchesPermissionSearch)];
-            if (descriptors.Count == 0)
-            {
-                continue;
-            }
-
-            anyPermissionRendered = true;
-            <h3>@category</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Permission</th>
-                        @foreach (PermissionGroup group in _globalGroups)
+                    </td>
+                    <td>
+                        @if (IsBuiltInGlobalGroup(group))
                         {
-                            <th>@group.Name</th>
+                            <span data-group-badge="built-in-default-plan">(Built-in Default Plan)</span>
                         }
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (PermissionDescriptor descriptor in descriptors)
-                    {
-                        <tr class="@(descriptor.IsGloballyGated ? "globally-gated-feature" : string.Empty)">
-                            <td>
-                                <strong>@descriptor.DisplayName</strong>
-                                <code>(@descriptor.Key)</code>
-                                @if (descriptor.IsGloballyGated)
-                                {
-                                    <strong>[Globally Gated]</strong>
-                                }
-                                <div>@descriptor.Description</div>
-                            </td>
-                            @foreach (PermissionGroup group in _globalGroups)
-                            {
-                                PermissionState currentState = GetGrantState(group.Id, descriptor.Key);
-                                <td>
-                                    <select aria-label="@($"{descriptor.DisplayName} for {group.Name}")"
-                                            value="@currentState"
-                                            @onchange="(ChangeEventArgs args) => OnGrantChangedAsync(group.Id, descriptor.Key, args)">
-                                        <option value="@PermissionState.Inherit">Inherit</option>
-                                        <option value="@PermissionState.Allow">Allow</option>
-                                        <option value="@PermissionState.Deny">Deny</option>
-                                    </select>
-                                </td>
-                            }
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
+                        else
+                        {
+                            <span data-group-badge="custom">(Custom Global Group)</span>
+                        }
+                    </td>
+                    <td>@GetAssignedWorkspacesForGroup(group.Id).Count</td>
+                    <td>
+                        <button type="button"
+                                data-group-view="@group.Id"
+                                @onclick="() => EnterViewGroupMode(group)">
+                            View
+                        </button>
+                        <button type="button"
+                                data-group-edit="@group.Id"
+                                @onclick="() => EnterEditGroupMode(group)">
+                            Edit
+                        </button>
+                        @if (!IsBuiltInGlobalGroup(group))
+                        {
+                            <button type="button"
+                                    data-group-delete="@group.Id"
+                                    @onclick="() => DeleteGlobalGroupAsync(group.Id)">
+                                Delete
+                            </button>
+                        }
+                    </td>
+                </tr>
+            </RowTemplate>
+        </DataTableGrid>
+    </section>
 
-        @if (!anyPermissionRendered)
-        {
-            <p>No permissions match the current search.</p>
-        }
-    }
-</section>
-
-<section aria-labelledby="workspace-assignments-heading">
-    <h2 id="workspace-assignments-heading">Workspace Assignments</h2>
-    <div>
-        <label for="assignment-workspace-select">Workspace:</label>
-        <select id="assignment-workspace-select" @bind="_selectedWorkspaceId" @bind:after="LoadWorkspaceAssignmentsAsync">
-            <option value="">-- Select a workspace --</option>
-            @foreach (Workspace workspace in _workspaces.Where(MatchesWorkspaceSearch))
-            {
-                <option value="@workspace.Id.ToString("D")">@($"{workspace.Name} ({workspace.PrimaryPlatformId})")</option>
-            }
-        </select>
-        <button type="button" @onclick="LoadWorkspaceAssignmentsAsync">Inspect Workspace</button>
-
-        @if (_globalGroups.Count > 0)
-        {
-            <label for="assignment-global-group">Global Group:</label>
-            <select id="assignment-global-group" @bind="_selectedGlobalGroupId">
-                @foreach (PermissionGroup group in _globalGroups)
+    <section aria-labelledby="workspace-assignments-heading">
+        <h2 id="workspace-assignments-heading">Workspace Assignments &amp; Permission Audit</h2>
+        <div>
+            <label for="assignment-workspace-select">Workspace:</label>
+            <select id="assignment-workspace-select" @bind="_selectedWorkspaceId" @bind:after="LoadWorkspaceAssignmentsAsync">
+                <option value="">-- Select a workspace --</option>
+                @foreach (Workspace workspace in _workspaces.Where(MatchesWorkspaceSearch))
                 {
-                    <option value="@group.Id">@group.Name</option>
+                    <option value="@workspace.Id.ToString("D")">@($"{workspace.Name} ({workspace.PrimaryPlatformId})")</option>
                 }
             </select>
-            <button type="button" @onclick="AssignWorkspaceAsync">Assign Workspace</button>
-        }
-    </div>
+            <button type="button" @onclick="LoadWorkspaceAssignmentsAsync">Inspect Workspace</button>
+            <button type="button"
+                    data-launch-workspace-audit="true"
+                    @onclick="LaunchWorkspaceAuditAsync">
+                Audit Workspace Permissions
+            </button>
 
-    @if (_inspectedWorkspaceId is not null)
-    {
-        Workspace? inspectedWorkspace = _workspaces.FirstOrDefault(w => w.Id == _inspectedWorkspaceId);
-        string workspaceLabel = inspectedWorkspace is not null
-            ? $"{inspectedWorkspace.Name} ({inspectedWorkspace.PrimaryPlatformId})"
-            : _inspectedWorkspaceId.Value.ToString("D");
-        <h3>Assigned Global Groups for @workspaceLabel</h3>
-        @if (_assignedWorkspaceGroups.Count == 0)
+            @if (_globalGroups.Count > 0)
+            {
+                <label for="assignment-global-group">Global Group:</label>
+                <select id="assignment-global-group" @bind="_selectedGlobalGroupId">
+                    @foreach (PermissionGroup group in _globalGroups)
+                    {
+                        <option value="@group.Id">@group.Name</option>
+                    }
+                </select>
+                <button type="button" @onclick="AssignWorkspaceAsync">Assign Workspace</button>
+            }
+        </div>
+
+        @if (_inspectedWorkspaceId is not null)
         {
-            <p>No global groups assigned to this workspace.</p>
+            Workspace? inspectedWorkspace = _workspaces.FirstOrDefault(w => w.Id == _inspectedWorkspaceId);
+            string workspaceLabel = inspectedWorkspace is not null
+                ? $"{inspectedWorkspace.Name} ({inspectedWorkspace.PrimaryPlatformId})"
+                : _inspectedWorkspaceId.Value.ToString("D");
+            <h3>Assigned Global Groups for @workspaceLabel</h3>
+            @if (_assignedWorkspaceGroups.Count == 0)
+            {
+                <p>No global groups assigned to this workspace.</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (PermissionGroup assignedGroup in _assignedWorkspaceGroups)
+                    {
+                        <li>
+                            <strong>@assignedGroup.Name</strong>
+                            <button type="button" @onclick="() => RemoveWorkspaceAssignmentAsync(assignedGroup.Id)">Remove</button>
+                        </li>
+                    }
+                </ul>
+            }
         }
-        else
-        {
-            <ul>
-                @foreach (PermissionGroup assignedGroup in _assignedWorkspaceGroups)
+    </section>
+}
+else if (_currentMode == PermissionsPageMode.View)
+{
+    <section aria-labelledby="global-view-mode-heading" data-permissions-mode="View">
+        <div class="sa-permissions-mode-header">
+            @if (_isAuditView)
+            {
+                <h2 id="global-view-mode-heading">Permission Audit: @_auditTargetLabel</h2>
+            }
+            else if (_selectedGroup is not null)
+            {
+                <h2 id="global-view-mode-heading">Viewing Group: @_selectedGroup.Name</h2>
+            }
+
+            <div>
+                <button type="button"
+                        data-back-to-groups="true"
+                        @onclick="RequestBackToGroups">
+                    Back to Groups
+                </button>
+                @if (!_isAuditView && _selectedGroup is not null)
                 {
-                    <li>
-                        <strong>@assignedGroup.Name</strong>
-                        <button type="button" @onclick="() => RemoveWorkspaceAssignmentAsync(assignedGroup.Id)">Remove</button>
-                    </li>
+                    <button type="button"
+                            data-enter-edit-mode="true"
+                            @onclick="() => EnterEditGroupMode(_selectedGroup)">
+                        Edit Permissions
+                    </button>
                 }
-            </ul>
+            </div>
+        </div>
+
+        @if (_isAuditView)
+        {
+            <DataTableGrid TItem="PermissionAuditBreakdown"
+                           GridId="workspace-audit-grid"
+                           Items="@FilteredAuditBreakdowns"
+                           TotalUnfilteredCount="@_auditBreakdowns.Count"
+                           SearchQuery="@_searchQuery"
+                           SearchQueryChanged="OnSearchQueryChanged"
+                           FilterPredicate="MatchesAuditSearch"
+                           SearchPlaceholder="Filter audited permissions...">
+                <FilterContent>
+                    <label for="global-audit-category-filter">Category:</label>
+                    <select id="global-audit-category-filter"
+                            data-category-filter="true"
+                            @bind="_selectedCategoryFilter">
+                        <option value="">All Categories</option>
+                        @foreach (string category in _categories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </select>
+                </FilterContent>
+                <HeaderContent>
+                    <tr>
+                        <th>Permission</th>
+                        <th>Category</th>
+                        <th>Effective Outcome</th>
+                        <th>Determined By</th>
+                        <th>Breakdown</th>
+                    </tr>
+                </HeaderContent>
+                <RowTemplate Context="item">
+                    <tr @key="item.Descriptor.Key" data-audit-row="@item.Descriptor.Key">
+                        <td>
+                            <strong>@item.Descriptor.DisplayName</strong>
+                            <code>(@item.Descriptor.Key)</code>
+                            @if (item.Descriptor.IsGloballyGated)
+                            {
+                                <strong>[Globally Gated]</strong>
+                            }
+                            @if (item.Descriptor.IsDangerousGlobalFeature)
+                            {
+                                <span>[Dangerous]</span>
+                            }
+                            <div>@item.Descriptor.Description</div>
+                        </td>
+                        <td>@item.Descriptor.Category</td>
+                        <td>
+                            <span data-audit-outcome="@(item.IsAllowed ? "Allowed" : "Denied")">
+                                @(item.IsAllowed ? "Allowed" : "Denied")
+                            </span>
+                        </td>
+                        <td data-audit-determined-by="@item.Descriptor.Key">
+                            @item.DeterminedByDisplay
+                        </td>
+                        <td>
+                            <div>@item.SummaryReason</div>
+                            <details data-audit-breakdown="@item.Descriptor.Key">
+                                <summary>View Contributions (@item.Contributions.Count)</summary>
+                                <ul>
+                                    @foreach (PermissionContribution contribution in item.Contributions)
+                                    {
+                                        <li data-audit-contribution="@contribution.SourceName">
+                                            <strong>@contribution.SourceName</strong>:
+                                            <span>@contribution.DisplayState</span>
+                                        </li>
+                                    }
+                                </ul>
+                            </details>
+                        </td>
+                    </tr>
+                </RowTemplate>
+            </DataTableGrid>
         }
-    }
-</section>
+        else if (_selectedGroup is not null)
+        {
+            <DataTableGrid TItem="PermissionDescriptor"
+                           GridId="view-global-group-permissions-grid"
+                           Items="@FilteredDescriptorsByCategory"
+                           TotalUnfilteredCount="@_allDescriptors.Count"
+                           SearchQuery="@_searchQuery"
+                           SearchQueryChanged="OnSearchQueryChanged"
+                           FilterPredicate="MatchesDescriptorSearch"
+                           SearchPlaceholder="Filter permissions...">
+                <FilterContent>
+                    <label for="global-view-category-filter">Category:</label>
+                    <select id="global-view-category-filter"
+                            data-category-filter="true"
+                            @bind="_selectedCategoryFilter">
+                        <option value="">All Categories</option>
+                        @foreach (string category in _categories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </select>
+                </FilterContent>
+                <HeaderContent>
+                    <tr>
+                        <th>Permission</th>
+                        <th>Category</th>
+                        <th>State for @_selectedGroup.Name</th>
+                    </tr>
+                </HeaderContent>
+                <RowTemplate Context="descriptor">
+                    <tr @key="descriptor.Key"
+                        class="@(descriptor.IsGloballyGated ? "globally-gated-feature" : string.Empty)"
+                        data-permission-row="@descriptor.Key">
+                        <td>
+                            <strong>@descriptor.DisplayName</strong>
+                            <code>(@descriptor.Key)</code>
+                            @if (descriptor.IsGloballyGated)
+                            {
+                                <strong>[Globally Gated]</strong>
+                            }
+                            @if (descriptor.IsDangerousGlobalFeature)
+                            {
+                                <span>[Dangerous]</span>
+                            }
+                            <div>@descriptor.Description</div>
+                        </td>
+                        <td>@descriptor.Category</td>
+                        <td data-permission-state="@descriptor.Key">
+                            <strong>@GetSavedGrantState(_selectedGroup.Id, descriptor.Key)</strong>
+                        </td>
+                    </tr>
+                </RowTemplate>
+            </DataTableGrid>
+
+            <section aria-labelledby="group-workspaces-heading">
+                <h3 id="group-workspaces-heading">Assigned Workspaces for @_selectedGroup.Name</h3>
+                <div>
+                    <label for="group-assign-workspace-select">Assign Workspace to @_selectedGroup.Name:</label>
+                    <select id="group-assign-workspace-select" @bind="_selectedWorkspaceId">
+                        <option value="">-- Select a workspace --</option>
+                        @foreach (Workspace workspace in _workspaces)
+                        {
+                            <option value="@workspace.Id.ToString("D")">@($"{workspace.Name} ({workspace.PrimaryPlatformId})")</option>
+                        }
+                    </select>
+                    <button type="button"
+                            data-assign-workspace-to-selected-group="true"
+                            @onclick="AssignWorkspaceToSelectedGroupAsync">
+                        Assign Workspace
+                    </button>
+                </div>
+
+                <DataTableGrid TItem="Workspace"
+                               GridId="view-global-group-workspaces-grid"
+                               Items="@GetAssignedWorkspacesForGroup(_selectedGroup.Id)"
+                               SearchQuery="@_searchQuery"
+                               SearchQueryChanged="OnSearchQueryChanged"
+                               FilterPredicate="MatchesWorkspaceGridSearch"
+                               SearchPlaceholder="Filter assigned workspaces...">
+                    <EmptyContent>
+                        <p>No workspaces are assigned to @_selectedGroup.Name.</p>
+                    </EmptyContent>
+                    <HeaderContent>
+                        <tr>
+                            <th>Workspace Name</th>
+                            <th>Primary Platform</th>
+                            <th>Actions</th>
+                        </tr>
+                    </HeaderContent>
+                    <RowTemplate Context="workspace">
+                        <tr @key="workspace.Id">
+                            <td><strong>@workspace.Name</strong> <code>(@workspace.Id)</code></td>
+                            <td>@workspace.PrimaryPlatformId</td>
+                            <td>
+                                <button type="button"
+                                        data-remove-workspace-assignment="@workspace.Id"
+                                        @onclick="() => RemoveWorkspaceFromSelectedGroupAsync(workspace.Id, _selectedGroup.Id)">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+                    </RowTemplate>
+                </DataTableGrid>
+            </section>
+        }
+    </section>
+}
+else if (_currentMode == PermissionsPageMode.Edit && _selectedGroup is not null)
+{
+    <section aria-labelledby="global-edit-mode-heading" data-permissions-mode="Edit">
+        <div class="sa-permissions-mode-header">
+            <h2 id="global-edit-mode-heading">Editing Group: @_selectedGroup.Name</h2>
+            <div>
+                <button type="button"
+                        data-back-to-groups="true"
+                        @onclick="RequestBackToGroups">
+                    Back to Groups
+                </button>
+                <button type="button"
+                        data-switch-to-view-mode="true"
+                        @onclick="RequestSwitchToViewMode">
+                    View Mode
+                </button>
+            </div>
+        </div>
+
+        <div class="sa-bulk-page-toolbar" data-bulk-page-toolbar="true">
+            <strong>Set All Permissions for @_selectedGroup.Name to:</strong>
+            <button type="button"
+                    data-bulk-page-allow="true"
+                    @onclick="() => SetAllPermissionsForActiveGroup(PermissionState.Allow)">
+                Allow
+            </button>
+            <button type="button"
+                    data-bulk-page-inherit="true"
+                    @onclick="() => SetAllPermissionsForActiveGroup(PermissionState.Inherit)">
+                Inherit
+            </button>
+            <button type="button"
+                    data-bulk-page-deny="true"
+                    @onclick="() => SetAllPermissionsForActiveGroup(PermissionState.Deny)">
+                Deny
+            </button>
+        </div>
+
+        <div class="sa-bulk-categories-toolbar" data-bulk-categories-toolbar="true">
+            @foreach (string category in _categories)
+            {
+                string currentCategory = category;
+                <div class="sa-bulk-category-group" data-bulk-category-group="@currentCategory">
+                    <span><strong>@currentCategory:</strong></span>
+                    <button type="button"
+                            data-bulk-category-allow="@currentCategory"
+                            @onclick="() => SetCategoryPermissionsForActiveGroup(currentCategory, PermissionState.Allow)">
+                        Allow
+                    </button>
+                    <button type="button"
+                            data-bulk-category-inherit="@currentCategory"
+                            @onclick="() => SetCategoryPermissionsForActiveGroup(currentCategory, PermissionState.Inherit)">
+                        Inherit
+                    </button>
+                    <button type="button"
+                            data-bulk-category-deny="@currentCategory"
+                            @onclick="() => SetCategoryPermissionsForActiveGroup(currentCategory, PermissionState.Deny)">
+                        Deny
+                    </button>
+                </div>
+            }
+        </div>
+
+        <DataTableGrid TItem="PermissionDescriptor"
+                       GridId="edit-global-group-permissions-grid"
+                       Items="@FilteredDescriptorsByCategory"
+                       TotalUnfilteredCount="@_allDescriptors.Count"
+                       SearchQuery="@_searchQuery"
+                       SearchQueryChanged="OnSearchQueryChanged"
+                       FilterPredicate="MatchesDescriptorSearch"
+                       SearchPlaceholder="Filter permissions...">
+            <FilterContent>
+                <label for="global-edit-category-filter">Category:</label>
+                <select id="global-edit-category-filter"
+                        data-category-filter="true"
+                        @bind="_selectedCategoryFilter">
+                    <option value="">All Categories</option>
+                    @foreach (string category in _categories)
+                    {
+                        <option value="@category">@category</option>
+                    }
+                </select>
+            </FilterContent>
+            <HeaderContent>
+                <tr>
+                    <th>Permission</th>
+                    <th>Category</th>
+                    <th>@_selectedGroup.Name</th>
+                </tr>
+            </HeaderContent>
+            <RowTemplate Context="descriptor">
+                @{
+                    PermissionState pendingState = GetPendingGrantState(descriptor.Key);
+                    PermissionState savedState = GetSavedGrantState(_selectedGroup.Id, descriptor.Key);
+                    bool isModified = pendingState != savedState;
+                }
+                <tr @key="descriptor.Key"
+                    class="@(descriptor.IsGloballyGated ? "globally-gated-feature" : string.Empty)"
+                    data-permission-row="@descriptor.Key"
+                    data-permission-modified="@(isModified ? "true" : "false")">
+                    <td>
+                        <strong>@descriptor.DisplayName</strong>
+                        <code>(@descriptor.Key)</code>
+                        @if (descriptor.IsGloballyGated)
+                        {
+                            <strong>[Globally Gated]</strong>
+                        }
+                        @if (descriptor.IsDangerousGlobalFeature)
+                        {
+                            <span>[Dangerous]</span>
+                        }
+                        <div>@descriptor.Description</div>
+                    </td>
+                    <td>@descriptor.Category</td>
+                    <td>
+                        <select aria-label="@($"{descriptor.DisplayName} for {_selectedGroup.Name}")"
+                                data-permission-select="@descriptor.Key"
+                                @onchange="(ChangeEventArgs args) => OnPendingGrantChanged(descriptor.Key, args)">
+                            <option value="@PermissionState.Inherit" selected="@(pendingState == PermissionState.Inherit)">Inherit</option>
+                            <option value="@PermissionState.Allow" selected="@(pendingState == PermissionState.Allow)">Allow</option>
+                            <option value="@PermissionState.Deny" selected="@(pendingState == PermissionState.Deny)">Deny</option>
+                        </select>
+                    </td>
+                </tr>
+            </RowTemplate>
+        </DataTableGrid>
+
+        <div class="sa-sticky-save-bar"
+             data-sticky-save-bar="true"
+             style="position: sticky; bottom: 0;">
+            <span data-unsaved-changes-count="@UnsavedChangesCount">
+                @UnsavedChangesCount unsaved change(s) for @_selectedGroup.Name
+            </span>
+            <button type="button"
+                    data-save-permissions="true"
+                    disabled="@(!HasUnsavedChanges)"
+                    @onclick="SavePendingChangesAsync">
+                Save Changes
+            </button>
+            <button type="button"
+                    data-revert-permissions="true"
+                    disabled="@(!HasUnsavedChanges)"
+                    @onclick="RevertPendingChanges">
+                Revert
+            </button>
+        </div>
+    </section>
+}
 
 @code {
     /// <summary>
@@ -222,9 +579,29 @@
     private readonly Dictionary<(Guid GroupId, string PermissionKey), PermissionState> _grantStates = [];
 
     /// <summary>
+    /// Snapshot of the selected global group's persisted grant states when entering <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    private readonly Dictionary<string, PermissionState> _savedGrantStates = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// In-memory staged grant states for the selected global group in <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    private readonly Dictionary<string, PermissionState> _pendingGrantStates = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Cached list of workspaces assigned to each global group.
+    /// </summary>
+    private readonly Dictionary<Guid, IReadOnlyList<Workspace>> _workspacesByGlobalGroup = [];
+
+    /// <summary>
     /// Configured Tier-1 global permission groups.
     /// </summary>
     private IReadOnlyList<PermissionGroup> _globalGroups = [];
+
+    /// <summary>
+    /// All registered permission descriptors.
+    /// </summary>
+    private IReadOnlyList<PermissionDescriptor> _allDescriptors = [];
 
     /// <summary>
     /// Registered permission categories.
@@ -235,6 +612,21 @@
     /// All known workspaces loaded from <see cref="IWorkspaceStore"/> when available.
     /// </summary>
     private IReadOnlyList<Workspace> _workspaces = [];
+
+    /// <summary>
+    /// Current page mode (<see cref="PermissionsPageMode.List"/>, <see cref="PermissionsPageMode.View"/>, or <see cref="PermissionsPageMode.Edit"/>).
+    /// </summary>
+    private PermissionsPageMode _currentMode = PermissionsPageMode.List;
+
+    /// <summary>
+    /// Currently selected global permission group in <see cref="PermissionsPageMode.View"/> or <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    private PermissionGroup? _selectedGroup;
+
+    /// <summary>
+    /// Optional category filter applied to permission descriptor and audit tables.
+    /// </summary>
+    private string _selectedCategoryFilter = string.Empty;
 
     /// <summary>
     /// Page-level search query filtering permissions, global groups, and workspaces.
@@ -267,6 +659,41 @@
     private IReadOnlyList<PermissionGroup> _assignedWorkspaceGroups = [];
 
     /// <summary>
+    /// Whether <see cref="PermissionsPageMode.View"/> is currently showing an Effective Permission Audit report rather than a single global group.
+    /// </summary>
+    private bool _isAuditView;
+
+    /// <summary>
+    /// Display label for the audited workspace.
+    /// </summary>
+    private string _auditTargetLabel = string.Empty;
+
+    /// <summary>
+    /// Computed effective permission audit breakdowns for the audited workspace.
+    /// </summary>
+    private IReadOnlyList<PermissionAuditBreakdown> _auditBreakdowns = [];
+
+    /// <summary>
+    /// Whether the unsaved-changes confirmation prompt is currently displayed.
+    /// </summary>
+    private bool _showUnsavedNavigationPrompt;
+
+    /// <summary>
+    /// Pending target mode if the user confirms discarding unsaved changes.
+    /// </summary>
+    private PermissionsPageMode? _pendingTargetModeAfterDiscard;
+
+    /// <summary>
+    /// Pending internal navigation target URL if the user confirms discarding unsaved changes.
+    /// </summary>
+    private string? _pendingNavigationUrlAfterDiscard;
+
+    /// <summary>
+    /// Bypass flag set when executing a confirmed discard navigation so <see cref="OnBeforeInternalNavigationAsync"/> allows it through.
+    /// </summary>
+    private bool _bypassNavigationLockOnce;
+
+    /// <summary>
     /// Status banner message.
     /// </summary>
     private string? _statusMessage;
@@ -281,6 +708,55 @@
     /// </summary>
     private string _instanceName = AuthPolicyParser.DefaultInstanceName;
 
+    /// <summary>
+    /// Gets the number of staged permission changes that differ from <see cref="_savedGrantStates"/>.
+    /// </summary>
+    private int UnsavedChangesCount
+    {
+        get
+        {
+            if (_currentMode != PermissionsPageMode.Edit || _selectedGroup is null)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            foreach (KeyValuePair<string, PermissionState> kvp in _pendingGrantStates)
+            {
+                PermissionState saved = _savedGrantStates.TryGetValue(kvp.Key, out PermissionState s)
+                    ? s
+                    : PermissionState.Inherit;
+                if (kvp.Value != saved)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether the active edit session has any unsaved grant modifications.
+    /// </summary>
+    private bool HasUnsavedChanges => UnsavedChangesCount > 0;
+
+    /// <summary>
+    /// Gets the list of permission descriptors filtered by <see cref="_selectedCategoryFilter"/>.
+    /// </summary>
+    private IReadOnlyList<PermissionDescriptor> FilteredDescriptorsByCategory =>
+        string.IsNullOrWhiteSpace(_selectedCategoryFilter)
+            ? _allDescriptors
+            : [.. _allDescriptors.Where(d => string.Equals(d.Category, _selectedCategoryFilter, StringComparison.OrdinalIgnoreCase))];
+
+    /// <summary>
+    /// Gets the list of audit breakdowns filtered by <see cref="_selectedCategoryFilter"/>.
+    /// </summary>
+    private IReadOnlyList<PermissionAuditBreakdown> FilteredAuditBreakdowns =>
+        string.IsNullOrWhiteSpace(_selectedCategoryFilter)
+            ? _auditBreakdowns
+            : [.. _auditBreakdowns.Where(b => string.Equals(b.Descriptor.Category, _selectedCategoryFilter, StringComparison.OrdinalIgnoreCase))];
+
     /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
     {
@@ -291,6 +767,8 @@
             _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         }
 
+        _categories = PermissionRegistry.GetCategories();
+        _allDescriptors = PermissionRegistry.GetAll();
         _eventSubscription = EventBus.Subscribe<PermissionsInvalidatedEvent>(OnPermissionsInvalidatedAsync);
         await LoadGlobalDataAsync();
     }
@@ -303,36 +781,75 @@
     }
 
     /// <summary>
-    /// Determines whether a permission descriptor matches the current <see cref="_searchQuery"/>.
+    /// Synchronizes the page-level search query when updated from a child <see cref="DataTableGrid{TItem}"/>.
     /// </summary>
-    /// <param name="descriptor">The permission descriptor.</param>
-    /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
-    private bool MatchesPermissionSearch(PermissionDescriptor descriptor)
+    /// <param name="newQuery">The new search query string.</param>
+    private void OnSearchQueryChanged(string? newQuery)
     {
-        if (string.IsNullOrWhiteSpace(_searchQuery))
-        {
-            return true;
-        }
-
-        string term = _searchQuery.Trim();
-        return descriptor.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)
-            || descriptor.Key.Contains(term, StringComparison.OrdinalIgnoreCase)
-            || descriptor.Description.Contains(term, StringComparison.OrdinalIgnoreCase);
+        _searchQuery = newQuery ?? string.Empty;
     }
 
     /// <summary>
-    /// Determines whether a global permission group matches the current <see cref="_searchQuery"/>.
+    /// Determines whether a global permission group is the built-in <c>Default Workspace Plan</c> group.
     /// </summary>
     /// <param name="group">The permission group.</param>
-    /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
-    private bool MatchesGlobalGroupSearch(PermissionGroup group)
+    /// <returns><see langword="true"/> if built-in default global plan; otherwise, <see langword="false"/>.</returns>
+    private static bool IsBuiltInGlobalGroup(PermissionGroup group)
     {
-        if (string.IsNullOrWhiteSpace(_searchQuery))
+        return string.Equals(group.Name, PermissionCategories.DefaultWorkspacePlanGroupName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Predicate evaluating whether a global <see cref="PermissionGroup"/> matches the search query.
+    /// </summary>
+    /// <param name="group">The permission group.</param>
+    /// <param name="query">The trimmed search query.</param>
+    /// <returns><see langword="true"/> if matched; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesGlobalGroupGridSearch(PermissionGroup group, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
         {
             return true;
         }
 
-        return group.Name.Contains(_searchQuery.Trim(), StringComparison.OrdinalIgnoreCase);
+        return group.Name.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Predicate evaluating whether a <see cref="PermissionDescriptor"/> matches the search query.
+    /// </summary>
+    /// <param name="descriptor">The permission descriptor.</param>
+    /// <param name="query">The trimmed search query.</param>
+    /// <returns><see langword="true"/> if matched; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesDescriptorSearch(PermissionDescriptor descriptor, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        return descriptor.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Key.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Category.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Description.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Predicate evaluating whether a <see cref="PermissionAuditBreakdown"/> matches the search query.
+    /// </summary>
+    /// <param name="breakdown">The permission audit breakdown.</param>
+    /// <param name="query">The trimmed search query.</param>
+    /// <returns><see langword="true"/> if matched; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesAuditSearch(PermissionAuditBreakdown breakdown, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        return MatchesDescriptorSearch(breakdown.Descriptor, query)
+            || breakdown.DeterminedByDisplay.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || breakdown.SummaryReason.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -342,12 +859,23 @@
     /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
     private bool MatchesWorkspaceSearch(Workspace workspace)
     {
-        if (string.IsNullOrWhiteSpace(_searchQuery))
+        return MatchesWorkspaceGridSearch(workspace, _searchQuery);
+    }
+
+    /// <summary>
+    /// Predicate evaluating whether a <see cref="Workspace"/> matches a search query string.
+    /// </summary>
+    /// <param name="workspace">The workspace entity.</param>
+    /// <param name="query">The search query.</param>
+    /// <returns><see langword="true"/> if matched; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesWorkspaceGridSearch(Workspace workspace, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
         {
             return true;
         }
 
-        string term = _searchQuery.Trim();
+        string term = query.Trim();
         return workspace.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
             || workspace.PrimaryPlatformId.Contains(term, StringComparison.OrdinalIgnoreCase);
     }
@@ -358,7 +886,7 @@
     /// <param name="groupId">The global group identifier.</param>
     /// <param name="permissionKey">The permission key.</param>
     /// <returns>The configured <see cref="PermissionState"/>, defaulting to <see cref="PermissionState.Inherit"/>.</returns>
-    private PermissionState GetGrantState(Guid groupId, string permissionKey)
+    private PermissionState GetSavedGrantState(Guid groupId, string permissionKey)
     {
         return _grantStates.TryGetValue((groupId, permissionKey), out PermissionState state)
             ? state
@@ -366,7 +894,346 @@
     }
 
     /// <summary>
-    /// Creates a new Tier-1 global permission group.
+    /// Retrieves the staged permission grant state for a permission key in <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    /// <param name="permissionKey">The permission key.</param>
+    /// <returns>The staged <see cref="PermissionState"/>, defaulting to <see cref="PermissionState.Inherit"/>.</returns>
+    private PermissionState GetPendingGrantState(string permissionKey)
+    {
+        return _pendingGrantStates.TryGetValue(permissionKey, out PermissionState state)
+            ? state
+            : PermissionState.Inherit;
+    }
+
+    /// <summary>
+    /// Retrieves the cached list of workspaces assigned to the specified global group.
+    /// </summary>
+    /// <param name="globalGroupId">The global group identifier.</param>
+    /// <returns>A read-only list of assigned workspaces.</returns>
+    private IReadOnlyList<Workspace> GetAssignedWorkspacesForGroup(Guid globalGroupId)
+    {
+        return _workspacesByGlobalGroup.TryGetValue(globalGroupId, out IReadOnlyList<Workspace>? assigned)
+            ? assigned
+            : [];
+    }
+
+    /// <summary>
+    /// Transitions into <see cref="PermissionsPageMode.View"/> for the specified global group.
+    /// </summary>
+    /// <param name="group">The global group to view.</param>
+    private void EnterViewGroupMode(PermissionGroup group)
+    {
+        _selectedGroup = group;
+        _isAuditView = false;
+        _selectedCategoryFilter = string.Empty;
+        _showUnsavedNavigationPrompt = false;
+        _currentMode = PermissionsPageMode.View;
+    }
+
+    /// <summary>
+    /// Initializes the staged edit buffer for <paramref name="group"/> and transitions into <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    /// <param name="group">The global group to edit.</param>
+    private void EnterEditGroupMode(PermissionGroup group)
+    {
+        _selectedGroup = group;
+        _isAuditView = false;
+        _selectedCategoryFilter = string.Empty;
+        _showUnsavedNavigationPrompt = false;
+        InitializeEditBuffer(group.Id);
+        _currentMode = PermissionsPageMode.Edit;
+    }
+
+    /// <summary>
+    /// Copies persisted grant states for <paramref name="groupId"/> into <see cref="_savedGrantStates"/> and <see cref="_pendingGrantStates"/>.
+    /// </summary>
+    /// <param name="groupId">The global group identifier.</param>
+    private void InitializeEditBuffer(Guid groupId)
+    {
+        _savedGrantStates.Clear();
+        _pendingGrantStates.Clear();
+
+        foreach (PermissionDescriptor descriptor in _allDescriptors)
+        {
+            PermissionState saved = GetSavedGrantState(groupId, descriptor.Key);
+            _savedGrantStates[descriptor.Key] = saved;
+            _pendingGrantStates[descriptor.Key] = saved;
+        }
+    }
+
+    /// <summary>
+    /// Requests returning to <see cref="PermissionsPageMode.List"/>, prompting for confirmation if there are unsaved changes.
+    /// </summary>
+    private void RequestBackToGroups()
+    {
+        if (HasUnsavedChanges)
+        {
+            _pendingTargetModeAfterDiscard = PermissionsPageMode.List;
+            _pendingNavigationUrlAfterDiscard = null;
+            _showUnsavedNavigationPrompt = true;
+            return;
+        }
+
+        _currentMode = PermissionsPageMode.List;
+        _selectedGroup = null;
+        _isAuditView = false;
+        _showUnsavedNavigationPrompt = false;
+    }
+
+    /// <summary>
+    /// Requests switching from <see cref="PermissionsPageMode.Edit"/> to <see cref="PermissionsPageMode.View"/>, prompting if there are unsaved changes.
+    /// </summary>
+    private void RequestSwitchToViewMode()
+    {
+        if (_selectedGroup is null)
+        {
+            return;
+        }
+
+        if (HasUnsavedChanges)
+        {
+            _pendingTargetModeAfterDiscard = PermissionsPageMode.View;
+            _pendingNavigationUrlAfterDiscard = null;
+            _showUnsavedNavigationPrompt = true;
+            return;
+        }
+
+        EnterViewGroupMode(_selectedGroup);
+    }
+
+    /// <summary>
+    /// Intercepts internal Blazor navigation when <see cref="HasUnsavedChanges"/> is <see langword="true"/>.
+    /// </summary>
+    /// <param name="context">The location changing context.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous handler.</returns>
+    private Task OnBeforeInternalNavigationAsync(LocationChangingContext context)
+    {
+        if (_bypassNavigationLockOnce)
+        {
+            _bypassNavigationLockOnce = false;
+            return Task.CompletedTask;
+        }
+
+        if (HasUnsavedChanges)
+        {
+            context.PreventNavigation();
+            _pendingNavigationUrlAfterDiscard = context.TargetLocation;
+            _pendingTargetModeAfterDiscard = null;
+            _showUnsavedNavigationPrompt = true;
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Discards staged permission edits and completes the pending mode transition or internal navigation.
+    /// </summary>
+    private void ConfirmDiscardAndNavigate()
+    {
+        _showUnsavedNavigationPrompt = false;
+        if (_selectedGroup is not null)
+        {
+            InitializeEditBuffer(_selectedGroup.Id);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_pendingNavigationUrlAfterDiscard))
+        {
+            string targetUrl = _pendingNavigationUrlAfterDiscard;
+            _pendingNavigationUrlAfterDiscard = null;
+            _bypassNavigationLockOnce = true;
+            Navigation.NavigateTo(targetUrl);
+            return;
+        }
+
+        if (_pendingTargetModeAfterDiscard == PermissionsPageMode.View && _selectedGroup is not null)
+        {
+            _pendingTargetModeAfterDiscard = null;
+            EnterViewGroupMode(_selectedGroup);
+            return;
+        }
+
+        _pendingTargetModeAfterDiscard = null;
+        _currentMode = PermissionsPageMode.List;
+        _selectedGroup = null;
+        _isAuditView = false;
+    }
+
+    /// <summary>
+    /// Cancels the unsaved-changes discard prompt and stays in <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    private void CancelDiscardNavigation()
+    {
+        _showUnsavedNavigationPrompt = false;
+        _pendingTargetModeAfterDiscard = null;
+        _pendingNavigationUrlAfterDiscard = null;
+    }
+
+    /// <summary>
+    /// Updates a single permission's staged state in <see cref="_pendingGrantStates"/> without writing to the database.
+    /// </summary>
+    /// <param name="permissionKey">The permission key.</param>
+    /// <param name="args">The change event arguments.</param>
+    private void OnPendingGrantChanged(string permissionKey, ChangeEventArgs args)
+    {
+        if (!Enum.TryParse(args.Value?.ToString(), out PermissionState newState))
+        {
+            return;
+        }
+
+        _pendingGrantStates[permissionKey] = newState;
+    }
+
+    /// <summary>
+    /// Sets all registered permissions in <see cref="_pendingGrantStates"/> for the active global group to <paramref name="targetState"/>.
+    /// </summary>
+    /// <param name="targetState">The target <see cref="PermissionState"/>.</param>
+    private void SetAllPermissionsForActiveGroup(PermissionState targetState)
+    {
+        if (_selectedGroup is null)
+        {
+            return;
+        }
+
+        foreach (PermissionDescriptor descriptor in _allDescriptors)
+        {
+            _pendingGrantStates[descriptor.Key] = targetState;
+        }
+
+        _statusMessage = $"Staged all global permissions as {targetState} for '{_selectedGroup.Name}'. Click Save Changes to persist.";
+    }
+
+    /// <summary>
+    /// Sets all permissions within <paramref name="category"/> in <see cref="_pendingGrantStates"/> for the active global group to <paramref name="targetState"/>.
+    /// </summary>
+    /// <param name="category">The permission category name.</param>
+    /// <param name="targetState">The target <see cref="PermissionState"/>.</param>
+    private void SetCategoryPermissionsForActiveGroup(string category, PermissionState targetState)
+    {
+        if (_selectedGroup is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<PermissionDescriptor> categoryDescriptors = PermissionRegistry.GetByCategory(category);
+        foreach (PermissionDescriptor descriptor in categoryDescriptors)
+        {
+            _pendingGrantStates[descriptor.Key] = targetState;
+        }
+
+        _statusMessage = $"Staged category '{category}' permissions as {targetState} for '{_selectedGroup.Name}'. Click Save Changes to persist.";
+    }
+
+    /// <summary>
+    /// Persists all modified grants for the active global group in a single atomic batch call and invalidates the global permission cache once.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous save operation.</returns>
+    private async Task SavePendingChangesAsync()
+    {
+        if (_selectedGroup is null)
+        {
+            return;
+        }
+
+        Dictionary<string, PermissionState> changedGrants = new(StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, PermissionState> kvp in _pendingGrantStates)
+        {
+            PermissionState saved = _savedGrantStates.TryGetValue(kvp.Key, out PermissionState s)
+                ? s
+                : PermissionState.Inherit;
+            if (kvp.Value != saved)
+            {
+                changedGrants[kvp.Key] = kvp.Value;
+            }
+        }
+
+        if (changedGrants.Count == 0)
+        {
+            return;
+        }
+
+        Guid groupId = _selectedGroup.Id;
+        string groupName = _selectedGroup.Name;
+
+        await PermissionStore.SetGrantsBatchAsync(groupId, changedGrants);
+        foreach (KeyValuePair<string, PermissionState> kvp in changedGrants)
+        {
+            if (kvp.Value == PermissionState.Inherit)
+            {
+                _ = _grantStates.Remove((groupId, kvp.Key));
+            }
+            else
+            {
+                _grantStates[(groupId, kvp.Key)] = kvp.Value;
+            }
+
+            _savedGrantStates[kvp.Key] = kvp.Value;
+        }
+
+        _showUnsavedNavigationPrompt = false;
+        await PermissionService.InvalidateGlobalAsync();
+        _statusMessage = $"Saved {changedGrants.Count} global permission change(s) for '{groupName}'.";
+    }
+
+    /// <summary>
+    /// Reverts all staged edits in <see cref="_pendingGrantStates"/> back to <see cref="_savedGrantStates"/>.
+    /// </summary>
+    private void RevertPendingChanges()
+    {
+        if (_selectedGroup is null)
+        {
+            return;
+        }
+
+        InitializeEditBuffer(_selectedGroup.Id);
+        _showUnsavedNavigationPrompt = false;
+        _statusMessage = $"Reverted unsaved changes for '{_selectedGroup.Name}'.";
+    }
+
+    /// <summary>
+    /// Runs <see cref="IPermissionService.ExplainWorkspacePermissionsAsync"/> for the currently selected workspace and transitions to <see cref="PermissionsPageMode.View"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous audit operation.</returns>
+    private async Task LaunchWorkspaceAuditAsync()
+    {
+        if (_selectedWorkspaceId is not Guid workspaceId || workspaceId == Guid.Empty)
+        {
+            _statusMessage = _workspaces.Count == 0
+                ? "No workspaces are available to audit."
+                : "Please select a workspace to audit.";
+            return;
+        }
+
+        _auditBreakdowns = await PermissionService.ExplainWorkspacePermissionsAsync(
+            workspaceId,
+            viewerIsRootOrGlobalAdmin: true);
+
+        Workspace? workspace = _workspaces.FirstOrDefault(w => w.Id == workspaceId);
+        _auditTargetLabel = workspace is not null
+            ? $"{workspace.Name} ({workspace.PrimaryPlatformId})"
+            : workspaceId.ToString("D");
+
+        _selectedGroup = null;
+        _isAuditView = true;
+        _selectedCategoryFilter = string.Empty;
+        _currentMode = PermissionsPageMode.View;
+        _statusMessage = null;
+    }
+
+    /// <summary>
+    /// Seeds or ensures the built-in <c>Default Workspace Plan</c> Tier-1 global group.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task SeedDefaultGlobalGroupAsync()
+    {
+        PermissionGroup seeded = await PermissionStore.SeedDefaultGlobalGroupAsync();
+        await PermissionService.InvalidateGlobalAsync();
+        await LoadGlobalDataAsync();
+        _statusMessage = $"Ensured built-in global group '{seeded.Name}'.";
+    }
+
+    /// <summary>
+    /// Creates a new Tier-1 global permission group with all permissions defaulting to <see cref="PermissionState.Inherit"/> (zero grant rows).
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task CreateGlobalGroupAsync()
@@ -392,36 +1259,23 @@
     }
 
     /// <summary>
-    /// Deletes a Tier-1 global permission group.
+    /// Deletes a custom Tier-1 global permission group.
     /// </summary>
     /// <param name="groupId">The global group identifier.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task DeleteGlobalGroupAsync(Guid groupId)
     {
+        PermissionGroup? group = _globalGroups.FirstOrDefault(g => g.Id == groupId);
+        if (group is not null && IsBuiltInGlobalGroup(group))
+        {
+            _statusMessage = $"Built-in global group '{group.Name}' cannot be deleted.";
+            return;
+        }
+
         await PermissionStore.DeleteGroupAsync(groupId);
         await PermissionService.InvalidateGlobalAsync();
         await LoadGlobalDataAsync();
         _statusMessage = "Deleted global group.";
-    }
-
-    /// <summary>
-    /// Updates a Tier-1 permission grant state for a global group.
-    /// </summary>
-    /// <param name="groupId">The global group identifier.</param>
-    /// <param name="permissionKey">The permission key.</param>
-    /// <param name="args">The change event arguments containing the selected <see cref="PermissionState"/>.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    private async Task OnGrantChangedAsync(Guid groupId, string permissionKey, ChangeEventArgs args)
-    {
-        if (!Enum.TryParse(args.Value?.ToString(), out PermissionState newState))
-        {
-            return;
-        }
-
-        await PermissionStore.SetGrantAsync(groupId, permissionKey, newState);
-        _grantStates[(groupId, permissionKey)] = newState;
-        await PermissionService.InvalidateGlobalAsync();
-        _statusMessage = $"Updated global grant '{permissionKey}' to {newState}.";
     }
 
     /// <summary>
@@ -460,8 +1314,26 @@
         await PermissionStore.AssignWorkspaceToGlobalGroupAsync(workspaceId, _selectedGlobalGroupId);
         await PermissionService.InvalidateWorkspaceAsync(workspaceId);
         _inspectedWorkspaceId = workspaceId;
-        _assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(workspaceId);
+        await LoadGlobalDataAsync();
         _statusMessage = "Assigned workspace to global group.";
+    }
+
+    /// <summary>
+    /// Assigns the selected workspace to the currently viewed global group in <see cref="PermissionsPageMode.View"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task AssignWorkspaceToSelectedGroupAsync()
+    {
+        if (_selectedWorkspaceId is not Guid workspaceId || workspaceId == Guid.Empty || _selectedGroup is null)
+        {
+            _statusMessage = "Please select a workspace.";
+            return;
+        }
+
+        await PermissionStore.AssignWorkspaceToGlobalGroupAsync(workspaceId, _selectedGroup.Id);
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        await LoadGlobalDataAsync();
+        _statusMessage = $"Assigned workspace to '{_selectedGroup.Name}'.";
     }
 
     /// <summary>
@@ -478,7 +1350,21 @@
 
         await PermissionStore.RemoveWorkspaceFromGlobalGroupAsync(workspaceId, globalGroupId);
         await PermissionService.InvalidateWorkspaceAsync(workspaceId);
-        _assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(workspaceId);
+        await LoadGlobalDataAsync();
+        _statusMessage = "Removed workspace assignment from global group.";
+    }
+
+    /// <summary>
+    /// Removes a workspace assignment from the currently viewed global group in <see cref="PermissionsPageMode.View"/>.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <param name="globalGroupId">The global group identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task RemoveWorkspaceFromSelectedGroupAsync(Guid workspaceId, Guid globalGroupId)
+    {
+        await PermissionStore.RemoveWorkspaceFromGlobalGroupAsync(workspaceId, globalGroupId);
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        await LoadGlobalDataAsync();
         _statusMessage = "Removed workspace assignment from global group.";
     }
 
@@ -489,8 +1375,10 @@
     private async Task LoadGlobalDataAsync()
     {
         _categories = PermissionRegistry.GetCategories();
+        _allDescriptors = PermissionRegistry.GetAll();
         _globalGroups = await PermissionStore.GetGroupsAsync(null);
         _grantStates.Clear();
+        _workspacesByGlobalGroup.Clear();
 
         foreach (PermissionGroup group in _globalGroups)
         {
@@ -506,6 +1394,29 @@
             ? await workspaceStore.GetAllAsync().ConfigureAwait(false)
             : [];
 
+        Dictionary<Guid, List<Workspace>> assignedByGroup = [];
+        foreach (PermissionGroup group in _globalGroups)
+        {
+            assignedByGroup[group.Id] = [];
+        }
+
+        foreach (Workspace workspace in _workspaces)
+        {
+            IReadOnlyList<PermissionGroup> assignedGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(workspace.Id);
+            foreach (PermissionGroup assignedGroup in assignedGroups)
+            {
+                if (assignedByGroup.TryGetValue(assignedGroup.Id, out List<Workspace>? list))
+                {
+                    list.Add(workspace);
+                }
+            }
+        }
+
+        foreach (KeyValuePair<Guid, List<Workspace>> kvp in assignedByGroup)
+        {
+            _workspacesByGlobalGroup[kvp.Key] = kvp.Value;
+        }
+
         if (_workspaces.Count > 0 && (!_selectedWorkspaceId.HasValue || !_workspaces.Any(w => w.Id == _selectedWorkspaceId.Value)))
         {
             _selectedWorkspaceId = _workspaces[0].Id;
@@ -517,9 +1428,30 @@
             _selectedGlobalGroupId = _globalGroups[0].Id;
         }
 
-        if (_inspectedWorkspaceId is Guid workspaceId)
+        if (_inspectedWorkspaceId is Guid inspectedId)
         {
-            _assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(workspaceId);
+            _assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(inspectedId);
+        }
+
+        if (_selectedGroup is not null)
+        {
+            PermissionGroup? refreshed = _globalGroups.FirstOrDefault(g => g.Id == _selectedGroup.Id);
+            if (refreshed is null)
+            {
+                _selectedGroup = null;
+                if (_currentMode != PermissionsPageMode.List && !_isAuditView)
+                {
+                    _currentMode = PermissionsPageMode.List;
+                }
+            }
+            else
+            {
+                _selectedGroup = refreshed;
+                if (_currentMode == PermissionsPageMode.Edit && !HasUnsavedChanges)
+                {
+                    InitializeEditBuffer(refreshed.Id);
+                }
+            }
         }
     }
 

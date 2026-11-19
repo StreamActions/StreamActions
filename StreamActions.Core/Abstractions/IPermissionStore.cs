@@ -143,6 +143,28 @@ public interface IPermissionStore
     ValueTask SetGrantAsync(Guid groupId, string permissionKey, PermissionState state, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Sets or updates multiple tri-state permission grants on a single group in one atomic batch operation.
+    /// </summary>
+    /// <param name="groupId">The permission group identifier.</param>
+    /// <param name="grants">The dictionary of permission keys and their target <see cref="PermissionState"/> values.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    ValueTask SetGrantsBatchAsync(Guid groupId, IReadOnlyDictionary<string, PermissionState> grants, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Idempotently seeds the built-in <c>Default Workspace Plan</c> Tier 1 global permission group with <see cref="PermissionState.Allow"/>
+    /// grants for all standard global features and optional opt-in <see cref="PermissionState.Allow"/> grants for specified dangerous global features.
+    /// </summary>
+    /// <param name="enabledDangerousFeatureKeys">
+    /// Optional collection of dangerous global feature permission keys to set to <see cref="PermissionState.Allow"/> on the default global group.
+    /// </param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>The persisted <c>Default Workspace Plan</c> <see cref="PermissionGroup"/>.</returns>
+    ValueTask<PermissionGroup> SeedDefaultGlobalGroupAsync(
+        IReadOnlyCollection<string>? enabledDangerousFeatureKeys = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves all explicit members of a permission group.
     /// </summary>
     /// <param name="groupId">The permission group identifier.</param>

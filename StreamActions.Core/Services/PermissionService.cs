@@ -40,6 +40,26 @@ public sealed class PermissionService : IPermissionService
     private const string _everyoneDesignation = "Everyone";
 
     /// <summary>
+    /// Redacted source name displayed for Tier 1 global groups when viewed by non-root and non-global-admin operators.
+    /// </summary>
+    private const string _redactedGlobalGroupName = "Global Permissions";
+
+    /// <summary>
+    /// Source name displayed for the mandatory default state contribution entry.
+    /// </summary>
+    private const string _defaultStateSourceName = "Default State";
+
+    /// <summary>
+    /// Human-readable display label for a permission whose default state is <see cref="PermissionState.Inherit"/>.
+    /// </summary>
+    private const string _implicitDenyDefaultDisplay = "Implicit Deny (Overridable Deny)";
+
+    /// <summary>
+    /// Human-readable display label for a permission whose default state is <see cref="PermissionState.Allow"/>.
+    /// </summary>
+    private const string _defaultAllowDisplay = "Default State: Allow";
+
+    /// <summary>
     /// The permission persistence store.
     /// </summary>
     private readonly IPermissionStore _store;
@@ -107,7 +127,7 @@ public sealed class PermissionService : IPermissionService
         {
             foreach (PermissionGrant grant in entry.Grants)
             {
-                if (!string.Equals(grant.PermissionKey, permissionKey, StringComparison.OrdinalIgnoreCase))
+                if (!MatchesPermissionKey(grant.PermissionKey, permissionKey))
                 {
                     continue;
                 }
@@ -124,7 +144,8 @@ public sealed class PermissionService : IPermissionService
             }
         }
 
-        bool isGloballyGated = this._registry.GetByKey(permissionKey)?.IsGloballyGated == true
+        PermissionDescriptor? descriptor = this._registry.GetByKey(permissionKey);
+        bool isGloballyGated = descriptor?.IsGloballyGated == true
             || permissionKey.StartsWith("feature.", StringComparison.OrdinalIgnoreCase);
 
         if (isGloballyGated && !hasGlobalAllow)
@@ -159,7 +180,7 @@ public sealed class PermissionService : IPermissionService
 
             foreach (PermissionGrant grant in entry.Grants)
             {
-                if (!string.Equals(grant.PermissionKey, permissionKey, StringComparison.OrdinalIgnoreCase))
+                if (!MatchesPermissionKey(grant.PermissionKey, permissionKey))
                 {
                     continue;
                 }
@@ -178,7 +199,7 @@ public sealed class PermissionService : IPermissionService
 
         foreach (UserPermissionOverride userOverride in userOverrides)
         {
-            if (!string.Equals(userOverride.PermissionKey, permissionKey, StringComparison.OrdinalIgnoreCase))
+            if (!MatchesPermissionKey(userOverride.PermissionKey, permissionKey))
             {
                 continue;
             }
@@ -222,6 +243,575 @@ public sealed class PermissionService : IPermissionService
     {
         await this._cache.RemoveByTagAsync(_globalCacheTag, cancellationToken).ConfigureAwait(false);
         await this._eventBus.PublishAsync(new PermissionsInvalidatedEvent(null), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<PermissionAuditBreakdown> ExplainWorkspacePermissionAsync(
+        Guid workspaceId,
+        string permissionKey,
+        bool viewerIsRootOrGlobalAdmin = true,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(permissionKey);
+
+        IReadOnlyList<GroupWithGrants> globalGroups = await this.GetGlobalGroupsWithGrantsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        PermissionDescriptor descriptor = this.ResolveDescriptor(permissionKey);
+        return BuildWorkspaceBreakdown(descriptor, globalGroups, viewerIsRootOrGlobalAdmin);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyList<PermissionAuditBreakdown>> ExplainWorkspacePermissionsAsync(
+        Guid workspaceId,
+        bool viewerIsRootOrGlobalAdmin = true,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<GroupWithGrants> globalGroups = await this.GetGlobalGroupsWithGrantsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<PermissionDescriptor> descriptors = this._registry.GetAll();
+        List<PermissionAuditBreakdown> results = new(descriptors.Count);
+
+        foreach (PermissionDescriptor descriptor in descriptors)
+        {
+            results.Add(BuildWorkspaceBreakdown(descriptor, globalGroups, viewerIsRootOrGlobalAdmin));
+        }
+
+        return results;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<PermissionAuditBreakdown> ExplainUserPermissionAsync(
+        Guid workspaceId,
+        PlatformUserIdentity actor,
+        string permissionKey,
+        bool viewerIsRootOrGlobalAdmin = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentException.ThrowIfNullOrWhiteSpace(permissionKey);
+
+        IReadOnlyList<GroupWithGrants> globalGroups = await this.GetGlobalGroupsWithGrantsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        Workspace? workspace = await this.GetWorkspaceAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        WorkspacePlatformRoleRoster? roster = await this.GetPlatformRoleRosterAsync(workspaceId, actor.PlatformId, actor.PlatformUserId, cancellationToken).ConfigureAwait(false);
+        PlatformUserDesignations effectiveDesignations = actor.Designations | (roster?.Designations ?? PlatformUserDesignations.None);
+        IReadOnlyList<Guid> userGroupIds = await this.GetUserGroupIdsAsync(workspaceId, actor.PlatformId, actor.PlatformUserId, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<GroupWithGrants> workspaceGroups = await this.GetWorkspaceGroupsWithGrantsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<UserPermissionOverride> userOverrides = await this.GetUserOverridesAsync(workspaceId, actor.PlatformId, actor.PlatformUserId, cancellationToken).ConfigureAwait(false);
+
+        PermissionDescriptor descriptor = this.ResolveDescriptor(permissionKey);
+        return BuildUserBreakdown(
+            descriptor,
+            actor,
+            workspace,
+            effectiveDesignations,
+            userGroupIds,
+            globalGroups,
+            workspaceGroups,
+            userOverrides,
+            viewerIsRootOrGlobalAdmin);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyList<PermissionAuditBreakdown>> ExplainUserPermissionsAsync(
+        Guid workspaceId,
+        PlatformUserIdentity actor,
+        bool viewerIsRootOrGlobalAdmin = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+
+        IReadOnlyList<GroupWithGrants> globalGroups = await this.GetGlobalGroupsWithGrantsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        Workspace? workspace = await this.GetWorkspaceAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        WorkspacePlatformRoleRoster? roster = await this.GetPlatformRoleRosterAsync(workspaceId, actor.PlatformId, actor.PlatformUserId, cancellationToken).ConfigureAwait(false);
+        PlatformUserDesignations effectiveDesignations = actor.Designations | (roster?.Designations ?? PlatformUserDesignations.None);
+        IReadOnlyList<Guid> userGroupIds = await this.GetUserGroupIdsAsync(workspaceId, actor.PlatformId, actor.PlatformUserId, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<GroupWithGrants> workspaceGroups = await this.GetWorkspaceGroupsWithGrantsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<UserPermissionOverride> userOverrides = await this.GetUserOverridesAsync(workspaceId, actor.PlatformId, actor.PlatformUserId, cancellationToken).ConfigureAwait(false);
+
+        IReadOnlyList<PermissionDescriptor> descriptors = this._registry.GetAll();
+        List<PermissionAuditBreakdown> results = new(descriptors.Count);
+
+        foreach (PermissionDescriptor descriptor in descriptors)
+        {
+            results.Add(BuildUserBreakdown(
+                descriptor,
+                actor,
+                workspace,
+                effectiveDesignations,
+                userGroupIds,
+                globalGroups,
+                workspaceGroups,
+                userOverrides,
+                viewerIsRootOrGlobalAdmin));
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Builds a Tier 1 workspace-level <see cref="PermissionAuditBreakdown"/> for a single permission descriptor.
+    /// </summary>
+    /// <param name="descriptor">The permission descriptor.</param>
+    /// <param name="globalGroups">The assigned Tier 1 global groups and their grants.</param>
+    /// <param name="viewerIsRootOrGlobalAdmin">Whether global group names should be preserved (<see langword="true"/>) or redacted (<see langword="false"/>).</param>
+    /// <returns>The computed <see cref="PermissionAuditBreakdown"/>.</returns>
+    private static PermissionAuditBreakdown BuildWorkspaceBreakdown(
+        PermissionDescriptor descriptor,
+        IReadOnlyList<GroupWithGrants> globalGroups,
+        bool viewerIsRootOrGlobalAdmin)
+    {
+        List<PermissionContribution> contributions = [];
+        bool hasGlobalDeny = false;
+        bool hasGlobalAllow = false;
+        string? firstGlobalDenyName = null;
+        string? firstGlobalAllowName = null;
+
+        foreach (GroupWithGrants entry in globalGroups)
+        {
+            foreach (PermissionGrant grant in entry.Grants)
+            {
+                if (!MatchesPermissionKey(grant.PermissionKey, descriptor.Key)
+                    || grant.State == PermissionState.Inherit)
+                {
+                    continue;
+                }
+
+                string sourceName = viewerIsRootOrGlobalAdmin ? entry.Group.Name : _redactedGlobalGroupName;
+                Guid? groupId = viewerIsRootOrGlobalAdmin ? entry.Group.Id : null;
+                string displayState = grant.State == PermissionState.Allow ? "Allow" : "Deny";
+
+                contributions.Add(new(
+                    SourceName: sourceName,
+                    State: grant.State,
+                    DisplayState: displayState,
+                    IsGlobalTier: true,
+                    IsDefaultState: false,
+                    GroupId: groupId));
+
+                if (grant.State == PermissionState.Deny)
+                {
+                    hasGlobalDeny = true;
+                    firstGlobalDenyName ??= sourceName;
+                }
+                else if (grant.State == PermissionState.Allow)
+                {
+                    hasGlobalAllow = true;
+                    firstGlobalAllowName ??= sourceName;
+                }
+            }
+        }
+
+        (PermissionState defaultState, string defaultStateDisplay, PermissionContribution defaultContribution) = BuildDefaultStateContribution(descriptor);
+        contributions.Add(defaultContribution);
+
+        if (hasGlobalDeny)
+        {
+            string denyReason = viewerIsRootOrGlobalAdmin && !string.IsNullOrWhiteSpace(firstGlobalDenyName)
+                ? $"Explicitly denied by Tier 1 global group '{firstGlobalDenyName}'."
+                : "Explicitly denied by Global Permissions.";
+            return new(
+                Descriptor: descriptor,
+                IsAllowed: false,
+                EffectiveState: PermissionState.Deny,
+                DeterminedByTier: PermissionDeterminingTier.GlobalTier1,
+                DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.GlobalTier1),
+                SummaryReason: denyReason,
+                DefaultState: defaultState,
+                DefaultStateDisplay: defaultStateDisplay,
+                Contributions: contributions);
+        }
+
+        if (hasGlobalAllow)
+        {
+            string allowReason = viewerIsRootOrGlobalAdmin && !string.IsNullOrWhiteSpace(firstGlobalAllowName)
+                ? $"Allowed by Tier 1 global group '{firstGlobalAllowName}'."
+                : "Allowed by Global Permissions.";
+            return new(
+                Descriptor: descriptor,
+                IsAllowed: true,
+                EffectiveState: PermissionState.Allow,
+                DeterminedByTier: PermissionDeterminingTier.GlobalTier1,
+                DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.GlobalTier1),
+                SummaryReason: allowReason,
+                DefaultState: defaultState,
+                DefaultStateDisplay: defaultStateDisplay,
+                Contributions: contributions);
+        }
+
+        if (descriptor.IsGloballyGated)
+        {
+            return new(
+                Descriptor: descriptor,
+                IsAllowed: false,
+                EffectiveState: PermissionState.Deny,
+                DeterminedByTier: PermissionDeterminingTier.DefaultState,
+                DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.DefaultState),
+                SummaryReason: "Globally gated feature is not enabled by any assigned global group (Implicit Deny).",
+                DefaultState: defaultState,
+                DefaultStateDisplay: defaultStateDisplay,
+                Contributions: contributions);
+        }
+
+        bool allowedByDefault = defaultState == PermissionState.Allow;
+        return new(
+            Descriptor: descriptor,
+            IsAllowed: allowedByDefault,
+            EffectiveState: defaultState,
+            DeterminedByTier: PermissionDeterminingTier.DefaultState,
+            DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.DefaultState),
+            SummaryReason: allowedByDefault
+                ? "Not restricted by Tier 1 global groups; allowed by default state."
+                : "Not restricted by Tier 1 global groups; governed by Tier 2 workspace groups (Default State: Implicit Deny).",
+            DefaultState: defaultState,
+            DefaultStateDisplay: defaultStateDisplay,
+            Contributions: contributions);
+    }
+
+    /// <summary>
+    /// Builds a two-tier user-level <see cref="PermissionAuditBreakdown"/> for a single permission descriptor and actor.
+    /// </summary>
+    /// <param name="descriptor">The permission descriptor.</param>
+    /// <param name="actor">The target actor identity.</param>
+    /// <param name="workspace">The workspace entity, if found.</param>
+    /// <param name="effectiveDesignations">The actor's combined live and roster designations.</param>
+    /// <param name="userGroupIds">The custom workspace group identifiers the actor belongs to.</param>
+    /// <param name="globalGroups">The assigned Tier 1 global groups and their grants.</param>
+    /// <param name="workspaceGroups">The Tier 2 workspace groups and their grants.</param>
+    /// <param name="userOverrides">The per-user permission overrides for the actor.</param>
+    /// <param name="viewerIsRootOrGlobalAdmin">Whether global group names should be preserved (<see langword="true"/>) or redacted (<see langword="false"/>).</param>
+    /// <returns>The computed <see cref="PermissionAuditBreakdown"/>.</returns>
+    private static PermissionAuditBreakdown BuildUserBreakdown(
+        PermissionDescriptor descriptor,
+        PlatformUserIdentity actor,
+        Workspace? workspace,
+        PlatformUserDesignations effectiveDesignations,
+        IReadOnlyList<Guid> userGroupIds,
+        IReadOnlyList<GroupWithGrants> globalGroups,
+        IReadOnlyList<GroupWithGrants> workspaceGroups,
+        IReadOnlyList<UserPermissionOverride> userOverrides,
+        bool viewerIsRootOrGlobalAdmin)
+    {
+        List<PermissionContribution> contributions = [];
+        bool hasGlobalDeny = false;
+        bool hasGlobalAllow = false;
+        string? firstGlobalDenyName = null;
+        string? firstGlobalAllowName = null;
+
+        foreach (GroupWithGrants entry in globalGroups)
+        {
+            foreach (PermissionGrant grant in entry.Grants)
+            {
+                if (!MatchesPermissionKey(grant.PermissionKey, descriptor.Key)
+                    || grant.State == PermissionState.Inherit)
+                {
+                    continue;
+                }
+
+                string sourceName = viewerIsRootOrGlobalAdmin ? entry.Group.Name : _redactedGlobalGroupName;
+                Guid? groupId = viewerIsRootOrGlobalAdmin ? entry.Group.Id : null;
+                string displayState = grant.State == PermissionState.Allow ? "Allow" : "Deny";
+
+                contributions.Add(new(
+                    SourceName: sourceName,
+                    State: grant.State,
+                    DisplayState: displayState,
+                    IsGlobalTier: true,
+                    IsDefaultState: false,
+                    GroupId: groupId));
+
+                if (grant.State == PermissionState.Deny)
+                {
+                    hasGlobalDeny = true;
+                    firstGlobalDenyName ??= sourceName;
+                }
+                else if (grant.State == PermissionState.Allow)
+                {
+                    hasGlobalAllow = true;
+                    firstGlobalAllowName ??= sourceName;
+                }
+            }
+        }
+
+        bool hasWorkspaceDeny = false;
+        bool hasWorkspaceAllow = false;
+        string? firstWorkspaceDenyName = null;
+        string? firstWorkspaceAllowName = null;
+
+        foreach (GroupWithGrants entry in workspaceGroups)
+        {
+            if (!MatchesGroup(entry.Group, effectiveDesignations, userGroupIds, actor.OidcGroupClaims))
+            {
+                continue;
+            }
+
+            foreach (PermissionGrant grant in entry.Grants)
+            {
+                if (!MatchesPermissionKey(grant.PermissionKey, descriptor.Key)
+                    || grant.State == PermissionState.Inherit)
+                {
+                    continue;
+                }
+
+                string displayState = grant.State == PermissionState.Allow ? "Allow" : "Deny";
+                contributions.Add(new(
+                    SourceName: entry.Group.Name,
+                    State: grant.State,
+                    DisplayState: displayState,
+                    IsGlobalTier: false,
+                    IsDefaultState: false,
+                    GroupId: entry.Group.Id));
+
+                if (grant.State == PermissionState.Deny)
+                {
+                    hasWorkspaceDeny = true;
+                    firstWorkspaceDenyName ??= entry.Group.Name;
+                }
+                else if (grant.State == PermissionState.Allow)
+                {
+                    hasWorkspaceAllow = true;
+                    firstWorkspaceAllowName ??= entry.Group.Name;
+                }
+            }
+        }
+
+        foreach (UserPermissionOverride userOverride in userOverrides)
+        {
+            if (!MatchesPermissionKey(userOverride.PermissionKey, descriptor.Key)
+                || userOverride.State == PermissionState.Inherit)
+            {
+                continue;
+            }
+
+            const string overrideSourceName = "User Override";
+            string displayState = userOverride.State == PermissionState.Allow ? "Allow" : "Deny";
+            contributions.Add(new(
+                SourceName: overrideSourceName,
+                State: userOverride.State,
+                DisplayState: displayState,
+                IsGlobalTier: false,
+                IsDefaultState: false,
+                GroupId: null));
+
+            if (userOverride.State == PermissionState.Deny)
+            {
+                hasWorkspaceDeny = true;
+                firstWorkspaceDenyName ??= overrideSourceName;
+            }
+            else if (userOverride.State == PermissionState.Allow)
+            {
+                hasWorkspaceAllow = true;
+                firstWorkspaceAllowName ??= overrideSourceName;
+            }
+        }
+
+        (PermissionState defaultState, string defaultStateDisplay, PermissionContribution defaultContribution) = BuildDefaultStateContribution(descriptor);
+        contributions.Add(defaultContribution);
+
+        // 1. Root or Global Admin bypass.
+        if (actor.IsRoot || actor.IsGlobalAdmin)
+        {
+            return new(
+                Descriptor: descriptor,
+                IsAllowed: true,
+                EffectiveState: PermissionState.Allow,
+                DeterminedByTier: PermissionDeterminingTier.RootOrOwnerBypass,
+                DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.RootOrOwnerBypass),
+                SummaryReason: "Root or global administrator bypass.",
+                DefaultState: defaultState,
+                DefaultStateDisplay: defaultStateDisplay,
+                Contributions: contributions);
+        }
+
+        // 2. Tier 1 Global Deny always wins.
+        if (hasGlobalDeny)
+        {
+            string denyReason = viewerIsRootOrGlobalAdmin && !string.IsNullOrWhiteSpace(firstGlobalDenyName)
+                ? $"Denied by Tier 1 global group '{firstGlobalDenyName}'."
+                : "Denied by Global Permissions.";
+            return new(
+                Descriptor: descriptor,
+                IsAllowed: false,
+                EffectiveState: PermissionState.Deny,
+                DeterminedByTier: PermissionDeterminingTier.GlobalTier1,
+                DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.GlobalTier1),
+                SummaryReason: denyReason,
+                DefaultState: defaultState,
+                DefaultStateDisplay: defaultStateDisplay,
+                Contributions: contributions);
+        }
+
+        // 3. Globally gated feature without Tier 1 Global Allow.
+        if (descriptor.IsGloballyGated && !hasGlobalAllow)
+        {
+            return new(
+                Descriptor: descriptor,
+                IsAllowed: false,
+                EffectiveState: PermissionState.Deny,
+                DeterminedByTier: PermissionDeterminingTier.DefaultState,
+                DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.DefaultState),
+                SummaryReason: "Globally gated permission is not allowed by any assigned global group (Implicit Deny).",
+                DefaultState: defaultState,
+                DefaultStateDisplay: defaultStateDisplay,
+                Contributions: contributions);
+        }
+
+        // 4. Workspace Owner or Broadcaster bypass (unless Tier 2 explicitly granted via Broadcaster group, or owner bypass).
+        bool isOwnerOrBroadcaster = effectiveDesignations.HasFlag(PlatformUserDesignations.Broadcaster)
+            || (workspace is not null && actor.PanelUserId.HasValue && workspace.OwnerUserId == actor.PanelUserId.Value);
+
+        if (isOwnerOrBroadcaster)
+        {
+            if (descriptor.IsGloballyGated && hasGlobalAllow && !hasWorkspaceAllow)
+            {
+                string globalAllowReason = viewerIsRootOrGlobalAdmin && !string.IsNullOrWhiteSpace(firstGlobalAllowName)
+                    ? $"Allowed by Tier 1 global group '{firstGlobalAllowName}' for workspace owner/broadcaster."
+                    : "Allowed by Global Permissions for workspace owner/broadcaster.";
+                return new(
+                    Descriptor: descriptor,
+                    IsAllowed: true,
+                    EffectiveState: PermissionState.Allow,
+                    DeterminedByTier: PermissionDeterminingTier.GlobalTier1,
+                    DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.GlobalTier1),
+                    SummaryReason: globalAllowReason,
+                    DefaultState: defaultState,
+                    DefaultStateDisplay: defaultStateDisplay,
+                    Contributions: contributions);
+            }
+
+            return hasWorkspaceAllow && !hasWorkspaceDeny
+                ? new(
+                    Descriptor: descriptor,
+                    IsAllowed: true,
+                    EffectiveState: PermissionState.Allow,
+                    DeterminedByTier: PermissionDeterminingTier.WorkspaceTier2,
+                    DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.WorkspaceTier2),
+                    SummaryReason: $"Allowed by workspace group '{firstWorkspaceAllowName}'.",
+                    DefaultState: defaultState,
+                    DefaultStateDisplay: defaultStateDisplay,
+                    Contributions: contributions)
+                : new(
+                Descriptor: descriptor,
+                IsAllowed: true,
+                EffectiveState: PermissionState.Allow,
+                DeterminedByTier: PermissionDeterminingTier.RootOrOwnerBypass,
+                DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.RootOrOwnerBypass),
+                SummaryReason: "Workspace owner or broadcaster bypass.",
+                DefaultState: defaultState,
+                DefaultStateDisplay: defaultStateDisplay,
+                Contributions: contributions);
+        }
+
+        // 5. Tier 2 Workspace Deny.
+        if (hasWorkspaceDeny)
+        {
+            return new(
+                Descriptor: descriptor,
+                IsAllowed: false,
+                EffectiveState: PermissionState.Deny,
+                DeterminedByTier: PermissionDeterminingTier.WorkspaceTier2,
+                DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.WorkspaceTier2),
+                SummaryReason: $"Denied by workspace group or override '{firstWorkspaceDenyName}'.",
+                DefaultState: defaultState,
+                DefaultStateDisplay: defaultStateDisplay,
+                Contributions: contributions);
+        }
+
+        // 6. Tier 2 Workspace Allow.
+        if (hasWorkspaceAllow)
+        {
+            return new(
+                Descriptor: descriptor,
+                IsAllowed: true,
+                EffectiveState: PermissionState.Allow,
+                DeterminedByTier: PermissionDeterminingTier.WorkspaceTier2,
+                DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.WorkspaceTier2),
+                SummaryReason: $"Allowed by workspace group or override '{firstWorkspaceAllowName}'.",
+                DefaultState: defaultState,
+                DefaultStateDisplay: defaultStateDisplay,
+                Contributions: contributions);
+        }
+
+        // 7. No Tier 2 group or override granted Allow -> falls back to Default State.
+        return new(
+            Descriptor: descriptor,
+            IsAllowed: false,
+            EffectiveState: PermissionState.Inherit,
+            DeterminedByTier: PermissionDeterminingTier.DefaultState,
+            DeterminedByDisplay: GetTierDisplay(PermissionDeterminingTier.DefaultState),
+            SummaryReason: "No explicit allow grant found; denied by default state (Implicit Deny).",
+            DefaultState: defaultState,
+            DefaultStateDisplay: defaultStateDisplay,
+            Contributions: contributions);
+    }
+
+    /// <summary>
+    /// Builds the mandatory Default State <see cref="PermissionContribution"/> and display strings for a permission descriptor.
+    /// </summary>
+    /// <param name="descriptor">The permission descriptor.</param>
+    /// <returns>A tuple containing the baseline <see cref="PermissionState"/>, display label, and <see cref="PermissionContribution"/>.</returns>
+    private static (PermissionState DefaultState, string DefaultStateDisplay, PermissionContribution Contribution) BuildDefaultStateContribution(
+        PermissionDescriptor descriptor)
+    {
+        PermissionState defaultState = descriptor.DefaultState == PermissionState.Allow
+            ? PermissionState.Allow
+            : PermissionState.Inherit;
+
+        string display = defaultState == PermissionState.Allow
+            ? _defaultAllowDisplay
+            : _implicitDenyDefaultDisplay;
+
+        PermissionContribution contribution = new(
+            SourceName: _defaultStateSourceName,
+            State: defaultState,
+            DisplayState: display,
+            IsGlobalTier: descriptor.IsGloballyGated,
+            IsDefaultState: true,
+            GroupId: null);
+
+        return (defaultState, display, contribution);
+    }
+
+    /// <summary>
+    /// Formats a human-readable display string for a <see cref="PermissionDeterminingTier"/>.
+    /// </summary>
+    /// <param name="tier">The determining tier.</param>
+    /// <returns>The human-readable tier label.</returns>
+    private static string GetTierDisplay(PermissionDeterminingTier tier) => tier switch
+    {
+        PermissionDeterminingTier.GlobalTier1 => "Global Permissions (Tier 1)",
+        PermissionDeterminingTier.WorkspaceTier2 => "Workspace Permissions (Tier 2)",
+        PermissionDeterminingTier.RootOrOwnerBypass => "Root / Workspace Owner Bypass",
+        PermissionDeterminingTier.DefaultState => "Default State",
+        _ => "Default State",
+    };
+
+    /// <summary>
+    /// Determines whether a stored grant or override permission key matches a requested permission key.
+    /// </summary>
+    /// <param name="storedKey">The permission key stored on a grant or override.</param>
+    /// <param name="requestedKey">The permission key being evaluated or explained.</param>
+    /// <returns><see langword="true"/> if the keys match; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesPermissionKey(string storedKey, string requestedKey) => string.Equals(storedKey, requestedKey, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Resolves a <see cref="PermissionDescriptor"/> from the registry or constructs a fallback descriptor for ad-hoc keys.
+    /// </summary>
+    /// <param name="permissionKey">The permission key.</param>
+    /// <returns>The resolved or synthesized <see cref="PermissionDescriptor"/>.</returns>
+    private PermissionDescriptor ResolveDescriptor(string permissionKey)
+    {
+        string trimmed = permissionKey.Trim();
+        PermissionDescriptor? registered = this._registry.GetByKey(trimmed);
+        if (registered is not null)
+        {
+            return registered;
+        }
+
+        bool isGloballyGated = trimmed.StartsWith("feature.", StringComparison.OrdinalIgnoreCase);
+        return new(
+            Key: trimmed,
+            Category: isGloballyGated ? PermissionCategories.Features : PermissionCategories.Actions,
+            DisplayName: trimmed,
+            Description: trimmed,
+            IsGloballyGated: isGloballyGated);
     }
 
     /// <summary>

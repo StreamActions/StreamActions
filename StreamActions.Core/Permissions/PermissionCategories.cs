@@ -42,6 +42,11 @@ public static class PermissionCategories
     /// Category for executable bot and chat actions (<c>action.*</c>).
     /// </summary>
     public const string Actions = "Actions";
+
+    /// <summary>
+    /// Name of the built-in Tier 1 global permission group seeded with default global feature grants and assigned to all workspaces.
+    /// </summary>
+    public const string DefaultWorkspacePlanGroupName = "Default Workspace Plan";
 }
 
 /// <summary>
@@ -49,6 +54,11 @@ public static class PermissionCategories
 /// </summary>
 public static class BuiltInPermissionKeys
 {
+    /// <summary>
+    /// Name of the built-in Tier 1 global permission group seeded with default global feature grants and assigned to all workspaces.
+    /// </summary>
+    public const string DefaultWorkspacePlanGroupName = PermissionCategories.DefaultWorkspacePlanGroupName;
+
     /// <summary>
     /// Enables custom chat commands within a workspace.
     /// </summary>
@@ -95,6 +105,26 @@ public static class BuiltInPermissionKeys
     public const string FeatureAlerts = "feature.alerts";
 
     /// <summary>
+    /// Enables anonymous viewer access to the public workspace portal.
+    /// </summary>
+    public const string FeaturePublicAnonymousAccess = "feature.public.anonymous_access";
+
+    /// <summary>
+    /// Enables viewer login on the public workspace portal.
+    /// </summary>
+    public const string FeaturePublicViewerLogin = "feature.public.viewer_login";
+
+    /// <summary>
+    /// Enables connecting the Discord add-on platform adapter within a workspace.
+    /// </summary>
+    public const string FeatureAddonDiscord = "feature.addon.discord";
+
+    /// <summary>
+    /// Enables user-authored JavaScript execution in the ClearScript V8 sandbox within a workspace.
+    /// </summary>
+    public const string FeatureScriptingClearScript = "feature.scripting.clearscript";
+
+    /// <summary>
     /// Enables third-party plugin execution within a workspace.
     /// </summary>
     public const string FeaturePlugins = "feature.plugins";
@@ -112,7 +142,7 @@ public static class BuiltInPermissionKeys
     /// <summary>
     /// Enables configuring and using custom per-workspace external OIDC identity providers.
     /// </summary>
-    public const string FeatureCustomOidcProvider = "feature.auth.custom_oidc_provider";
+    public const string FeatureCustomOidcProvider = "feature.custom_oidc_provider";
 
     /// <summary>
     /// Allows accessing the workspace web panel.

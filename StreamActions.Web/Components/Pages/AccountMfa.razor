@@ -18,6 +18,7 @@
 
 @page "/account/mfa"
 @attribute [Authorize(Policy = AuthClaims.MfaPendingPolicy)]
+@implements IDisposable
 @rendermode InteractiveServer
 
 @using System.Security.Claims
@@ -34,6 +35,7 @@
 @inject IMfaPolicyService MfaPolicyService
 @inject IEnumerable<IPlatformOAuthProvider> PlatformProviders
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @inject IServiceProvider ServiceProvider
 
 <PageTitle>@AuthPolicyParser.FormatPageTitle("Security & MFA", _instanceName)</PageTitle>
@@ -195,6 +197,17 @@
         </div>
     }
 </section>
+
+@if (!_isMfaPending)
+{
+    <section aria-labelledby="account-active-sessions-heading" data-account-sessions-section="true">
+        <h2 id="account-active-sessions-heading">Active Sessions</h2>
+        <p>Terminate all other active web sessions across your devices while keeping this session signed in.</p>
+        <button type="button" data-revoke-other-sessions="true" @onclick="RevokeOtherSessionsAsync">
+            Log Out of All Other Sessions
+        </button>
+    </section>
+}
 </StepUpMfaGuard>
 
 @code {
@@ -219,6 +232,16 @@
     /// Authenticated panel user identifier.
     /// </summary>
     private Guid? _panelUserId;
+
+    /// <summary>
+    /// Active session identifier extracted from the <see cref="AuthClaims.SessionIdClaimType"/> claim.
+    /// </summary>
+    private Guid? _currentSessionId;
+
+    /// <summary>
+    /// Active subscription handle for <see cref="UserSessionsRevokedEvent"/> notifications on <see cref="IEventBus"/>.
+    /// </summary>
+    private IDisposable? _sessionRevocationSubscription;
 
     /// <summary>
     /// Indicates whether the current session is still awaiting MFA completion or enrollment.
@@ -337,8 +360,15 @@
         AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
         ClaimsPrincipal principal = authState.User;
         _panelUserId = AuthClaims.GetPanelUserId(principal);
+        _currentSessionId = AuthClaims.GetSessionId(principal);
         _isMfaPending = AuthClaims.HasTrueClaim(principal, AuthClaims.MfaPendingClaimType);
         _isEnrollmentRequiredClaim = AuthClaims.HasTrueClaim(principal, AuthClaims.MfaEnrollmentRequiredClaimType);
+
+        IEventBus? eventBus = ServiceProvider.GetService<IEventBus>();
+        if (eventBus is not null)
+        {
+            _sessionRevocationSubscription = eventBus.Subscribe<UserSessionsRevokedEvent>(HandleUserSessionsRevokedAsync);
+        }
 
         IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
         PanelUser? user = panelUserStore is not null && _panelUserId.HasValue
@@ -504,6 +534,68 @@
 
         await ReloadSummariesAsync().ConfigureAwait(false);
         _statusMessage = "Removed MFA credential.";
+    }
+
+    /// <summary>
+    /// Revokes all active panel sessions for the current user other than the current session.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous revocation operation.</returns>
+    private async Task RevokeOtherSessionsAsync()
+    {
+        ClearMessages();
+        if (!_panelUserId.HasValue || _isMfaPending)
+        {
+            _errorMessage = "Complete MFA verification before revoking sessions.";
+            return;
+        }
+
+        IPanelSessionService? sessionService = ServiceProvider.GetService<IPanelSessionService>();
+        if (sessionService is null)
+        {
+            _errorMessage = "Session tracking service is not available.";
+            return;
+        }
+
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        Guid currentSessionId = AuthClaims.GetSessionId(authState.User) ?? _currentSessionId ?? Guid.Empty;
+        int revokedCount = await sessionService
+            .RevokeOtherSessionsAsync(_panelUserId.Value, currentSessionId)
+            .ConfigureAwait(false);
+
+        _statusMessage = $"Logged out of {revokedCount} other session(s).";
+    }
+
+    /// <summary>
+    /// Redirects the active Blazor circuit to <c>/login?error=session_revoked</c> when the current user's session is revoked.
+    /// </summary>
+    /// <param name="evt">The session revocation event payload.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the asynchronous handler execution.</returns>
+    private async ValueTask HandleUserSessionsRevokedAsync(
+        UserSessionsRevokedEvent evt,
+        CancellationToken cancellationToken)
+    {
+        await InvokeAsync(async () =>
+        {
+            AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            ClaimsPrincipal user = authState.User;
+            Guid? currentUserId = AuthClaims.GetPanelUserId(user) ?? _panelUserId;
+            Guid? currentSessionId = AuthClaims.GetSessionId(user) ?? _currentSessionId;
+            if (currentUserId == evt.PanelUserId
+                && (evt.ExcludedSessionId is null || currentSessionId != evt.ExcludedSessionId))
+            {
+                Navigation.NavigateTo("/login?error=session_revoked", forceLoad: true);
+            }
+        }).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Releases event bus subscriptions when the component is disposed.
+    /// </summary>
+    public void Dispose()
+    {
+        _sessionRevocationSubscription?.Dispose();
+        _sessionRevocationSubscription = null;
     }
 
     /// <summary>

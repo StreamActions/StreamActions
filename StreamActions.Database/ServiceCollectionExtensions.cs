@@ -111,10 +111,12 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException($"Unsupported database provider: {bootstrap.Database.Provider}.");
         }
 
+        _ = services.AddHybridCache();
         services.TryAddSingleton<SecretProtectionService>();
         services.TryAddSingleton<IWorkspaceKeyValueStore, WorkspaceKeyValueStore>();
         services.TryAddSingleton<IPermissionStore, PermissionStore>();
         services.TryAddSingleton<IPanelUserStore, PanelUserStore>();
+        services.TryAddSingleton<IPanelSessionService, PanelSessionService>();
         services.TryAddSingleton<IWorkspaceStore, WorkspaceStore>();
         services.TryAddSingleton<IExternalOidcProviderStore, ExternalOidcProviderStore>();
         services.TryAddSingleton<IPlatformCredentialStore, PlatformCredentialStore>();

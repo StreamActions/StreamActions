@@ -462,6 +462,189 @@ public sealed class PermissionServiceTests
 
     #endregion
 
+    #region ExplainWorkspacePermissionsAsync
+
+    [Fact]
+    [Trait("Member", "ExplainWorkspacePermissionsAsync")]
+    public async Task ExplainWorkspacePermissionsAsyncOmitsInheritGroupsIncludesDefaultStateAndRedactsGlobalGroupNamesForNonRoot()
+    {
+        (PermissionService service, FakePermissionStore store, _, InMemoryEventBus eventBus, ServiceProvider provider) = CreateSut();
+        await using (provider.ConfigureAwait(false))
+        using (eventBus)
+        {
+            Guid defaultPlanId = Guid.NewGuid();
+            Guid inheritPlanId = Guid.NewGuid();
+            Guid restrictedPlanId = Guid.NewGuid();
+
+            store.GlobalGroups[defaultPlanId] = new() { Id = defaultPlanId, WorkspaceId = null, Name = BuiltInPermissionKeys.DefaultWorkspacePlanGroupName };
+            store.GlobalGroups[inheritPlanId] = new() { Id = inheritPlanId, WorkspaceId = null, Name = "Silent Inherit Plan" };
+            store.GlobalGroups[restrictedPlanId] = new() { Id = restrictedPlanId, WorkspaceId = null, Name = "Secret Enterprise Tier" };
+
+            store.WorkspaceGlobalAssignments.Add(new() { Id = Guid.NewGuid(), WorkspaceId = _workspaceId, GlobalGroupId = defaultPlanId });
+            store.WorkspaceGlobalAssignments.Add(new() { Id = Guid.NewGuid(), WorkspaceId = _workspaceId, GlobalGroupId = inheritPlanId });
+            store.WorkspaceGlobalAssignments.Add(new() { Id = Guid.NewGuid(), WorkspaceId = _workspaceId, GlobalGroupId = restrictedPlanId });
+
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = defaultPlanId, PermissionKey = BuiltInPermissionKeys.FeatureCustomCommands, State = PermissionState.Allow });
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = inheritPlanId, PermissionKey = BuiltInPermissionKeys.FeatureCustomCommands, State = PermissionState.Inherit });
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = restrictedPlanId, PermissionKey = BuiltInPermissionKeys.FeatureQuotes, State = PermissionState.Deny });
+
+            IReadOnlyList<PermissionAuditBreakdown> rootBreakdowns = await service.ExplainWorkspacePermissionsAsync(
+                _workspaceId,
+                viewerIsRootOrGlobalAdmin: true,
+                TestContext.Current.CancellationToken);
+
+            PermissionAuditBreakdown rootCommands = rootBreakdowns.Single(static b => b.Descriptor.Key == BuiltInPermissionKeys.FeatureCustomCommands);
+            _ = rootCommands.IsAllowed.Should().BeTrue();
+            _ = rootCommands.EffectiveState.Should().Be(PermissionState.Allow);
+            _ = rootCommands.DeterminedByTier.Should().Be(PermissionDeterminingTier.GlobalTier1);
+            _ = rootCommands.DefaultStateDisplay.Should().Be("Implicit Deny (Overridable Deny)");
+            _ = rootCommands.Contributions.Should().NotContain(static c => c.SourceName == "Silent Inherit Plan");
+            _ = rootCommands.Contributions.Should().Contain(c =>
+                c.SourceName == BuiltInPermissionKeys.DefaultWorkspacePlanGroupName
+                && c.State == PermissionState.Allow
+                && c.IsGlobalTier
+                && c.GroupId == defaultPlanId);
+            _ = rootCommands.Contributions.Should().ContainSingle(static c =>
+                c.IsDefaultState
+                && c.SourceName == "Default State"
+                && c.DisplayState == "Implicit Deny (Overridable Deny)");
+
+            PermissionAuditBreakdown rootDangerous = rootBreakdowns.Single(static b => b.Descriptor.Key == BuiltInPermissionKeys.FeatureScriptingClearScript);
+            _ = rootDangerous.IsAllowed.Should().BeFalse();
+            _ = rootDangerous.DeterminedByTier.Should().Be(PermissionDeterminingTier.DefaultState);
+            _ = rootDangerous.Contributions.Should().ContainSingle().Which.IsDefaultState.Should().BeTrue();
+
+            PermissionAuditBreakdown rootRunCmd = rootBreakdowns.Single(static b => b.Descriptor.Key == BuiltInPermissionKeys.ActionRunCommand);
+            _ = rootRunCmd.DefaultState.Should().Be(PermissionState.Allow);
+            _ = rootRunCmd.DefaultStateDisplay.Should().Be("Default State: Allow");
+            _ = rootRunCmd.Contributions.Should().ContainSingle(static c =>
+                c.IsDefaultState && c.DisplayState == "Default State: Allow");
+
+            PermissionAuditBreakdown nonRootQuotes = await service.ExplainWorkspacePermissionAsync(
+                _workspaceId,
+                BuiltInPermissionKeys.FeatureQuotes,
+                viewerIsRootOrGlobalAdmin: false,
+                TestContext.Current.CancellationToken);
+
+            _ = nonRootQuotes.IsAllowed.Should().BeFalse();
+            _ = nonRootQuotes.DeterminedByTier.Should().Be(PermissionDeterminingTier.GlobalTier1);
+            _ = nonRootQuotes.SummaryReason.Should().NotContain("Secret Enterprise Tier");
+            _ = nonRootQuotes.Contributions.Should().Contain(static c =>
+                c.IsGlobalTier
+                && c.SourceName == "Global Permissions"
+                && c.State == PermissionState.Deny
+                && c.GroupId == null);
+            _ = nonRootQuotes.Contributions.Should().NotContain(static c => c.SourceName == "Secret Enterprise Tier");
+        }
+    }
+
+    #endregion
+
+    #region ExplainUserPermissionsAsync
+
+    [Fact]
+    [Trait("Member", "ExplainUserPermissionsAsync")]
+    public async Task ExplainUserPermissionsAsyncAttributesGlobalVsWorkspaceVsDefaultTiersOmitsInheritAndRedactsGlobalNamesForWorkspaceAdmin()
+    {
+        (PermissionService service, FakePermissionStore store, _, InMemoryEventBus eventBus, ServiceProvider provider) = CreateSut();
+        await using (provider.ConfigureAwait(false))
+        using (eventBus)
+        {
+            Guid globalPlanId = Guid.NewGuid();
+            Guid modGroupId = Guid.NewGuid();
+            Guid vipGroupId = Guid.NewGuid();
+            Guid customDenyGroupId = Guid.NewGuid();
+
+            store.GlobalGroups[globalPlanId] = new() { Id = globalPlanId, WorkspaceId = null, Name = "Internal VIP Global Plan" };
+            store.WorkspaceGlobalAssignments.Add(new() { Id = Guid.NewGuid(), WorkspaceId = _workspaceId, GlobalGroupId = globalPlanId });
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = globalPlanId, PermissionKey = BuiltInPermissionKeys.ActionTriggerAlert, State = PermissionState.Deny });
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = globalPlanId, PermissionKey = BuiltInPermissionKeys.FeatureCustomCommands, State = PermissionState.Allow });
+
+            store.WorkspaceGroups[modGroupId] = new() { Id = modGroupId, WorkspaceId = _workspaceId, Name = "Moderator", MappedPlatformDesignation = "moderator" };
+            store.WorkspaceGroups[vipGroupId] = new() { Id = vipGroupId, WorkspaceId = _workspaceId, Name = "VIP", MappedPlatformDesignation = "vip" };
+            store.WorkspaceGroups[customDenyGroupId] = new() { Id = customDenyGroupId, WorkspaceId = _workspaceId, Name = "NoBanMods" };
+
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = modGroupId, PermissionKey = BuiltInPermissionKeys.ModerationTimeout, State = PermissionState.Allow });
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = vipGroupId, PermissionKey = BuiltInPermissionKeys.ModerationTimeout, State = PermissionState.Inherit });
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = modGroupId, PermissionKey = BuiltInPermissionKeys.ModerationBan, State = PermissionState.Allow });
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = customDenyGroupId, PermissionKey = BuiltInPermissionKeys.ModerationBan, State = PermissionState.Deny });
+            store.Grants.Add(new() { Id = Guid.NewGuid(), GroupId = modGroupId, PermissionKey = BuiltInPermissionKeys.ActionTriggerAlert, State = PermissionState.Allow });
+
+            store.GroupMembers.Add(new()
+            {
+                Id = Guid.NewGuid(),
+                GroupId = customDenyGroupId,
+                PlatformId = "twitch",
+                PlatformUserId = "mod1",
+                AddedAtUtc = DateTimeOffset.UtcNow,
+            });
+
+            PlatformUserIdentity modActor = new(
+                "twitch",
+                "mod1",
+                "mod_one",
+                Designations: PlatformUserDesignations.Moderator | PlatformUserDesignations.Vip);
+
+            IReadOnlyList<PermissionAuditBreakdown> wsAdminBreakdowns = await service.ExplainUserPermissionsAsync(
+                _workspaceId,
+                modActor,
+                viewerIsRootOrGlobalAdmin: false,
+                TestContext.Current.CancellationToken);
+
+            // 1. Allowed by Workspace Tier 2 (Moderator Allow, VIP Inherit omitted).
+            PermissionAuditBreakdown timeoutBreakdown = wsAdminBreakdowns.Single(static b => b.Descriptor.Key == BuiltInPermissionKeys.ModerationTimeout);
+            _ = timeoutBreakdown.IsAllowed.Should().BeTrue();
+            _ = timeoutBreakdown.DeterminedByTier.Should().Be(PermissionDeterminingTier.WorkspaceTier2);
+            _ = timeoutBreakdown.Contributions.Should().Contain(c => c.SourceName == "Moderator" && c.State == PermissionState.Allow && !c.IsGlobalTier && c.GroupId == modGroupId);
+            _ = timeoutBreakdown.Contributions.Should().NotContain(static c => c.SourceName == "VIP");
+            _ = timeoutBreakdown.Contributions.Should().ContainSingle(static c => c.IsDefaultState && c.DisplayState == "Implicit Deny (Overridable Deny)");
+
+            // 2. Denied by Workspace Tier 2 (Custom group Deny overrides Moderator Allow).
+            PermissionAuditBreakdown banBreakdown = wsAdminBreakdowns.Single(static b => b.Descriptor.Key == BuiltInPermissionKeys.ModerationBan);
+            _ = banBreakdown.IsAllowed.Should().BeFalse();
+            _ = banBreakdown.EffectiveState.Should().Be(PermissionState.Deny);
+            _ = banBreakdown.DeterminedByTier.Should().Be(PermissionDeterminingTier.WorkspaceTier2);
+            _ = banBreakdown.Contributions.Should().Contain(static c => c.SourceName == "Moderator" && c.State == PermissionState.Allow);
+            _ = banBreakdown.Contributions.Should().Contain(static c => c.SourceName == "NoBanMods" && c.State == PermissionState.Deny);
+
+            // 3. Denied by Global Tier 1 (Global group name redacted to "Global Permissions" for workspace admin).
+            PermissionAuditBreakdown alertBreakdown = wsAdminBreakdowns.Single(static b => b.Descriptor.Key == BuiltInPermissionKeys.ActionTriggerAlert);
+            _ = alertBreakdown.IsAllowed.Should().BeFalse();
+            _ = alertBreakdown.EffectiveState.Should().Be(PermissionState.Deny);
+            _ = alertBreakdown.DeterminedByTier.Should().Be(PermissionDeterminingTier.GlobalTier1);
+            _ = alertBreakdown.SummaryReason.Should().NotContain("Internal VIP Global Plan");
+            _ = alertBreakdown.Contributions.Should().Contain(static c =>
+                c.IsGlobalTier
+                && c.SourceName == "Global Permissions"
+                && c.State == PermissionState.Deny
+                && c.GroupId == null);
+            _ = alertBreakdown.Contributions.Should().NotContain(static c => c.SourceName == "Internal VIP Global Plan");
+
+            // 4. Denied by Default State (no group grants ui.secrets.manage to Moderator).
+            PermissionAuditBreakdown secretsBreakdown = wsAdminBreakdowns.Single(static b => b.Descriptor.Key == BuiltInPermissionKeys.UiSecretsManage);
+            _ = secretsBreakdown.IsAllowed.Should().BeFalse();
+            _ = secretsBreakdown.EffectiveState.Should().Be(PermissionState.Inherit);
+            _ = secretsBreakdown.DeterminedByTier.Should().Be(PermissionDeterminingTier.DefaultState);
+            _ = secretsBreakdown.Contributions.Should().ContainSingle(static c =>
+                c.IsDefaultState && c.DisplayState == "Implicit Deny (Overridable Deny)");
+
+            // 5. Root viewer sees the unredacted Global Group name and GroupId.
+            PermissionAuditBreakdown rootAlertBreakdown = await service.ExplainUserPermissionAsync(
+                _workspaceId,
+                modActor,
+                BuiltInPermissionKeys.ActionTriggerAlert,
+                viewerIsRootOrGlobalAdmin: true,
+                TestContext.Current.CancellationToken);
+            _ = rootAlertBreakdown.SummaryReason.Should().Contain("Internal VIP Global Plan");
+            _ = rootAlertBreakdown.Contributions.Should().Contain(c =>
+                c.IsGlobalTier
+                && c.SourceName == "Internal VIP Global Plan"
+                && c.GroupId == globalPlanId);
+        }
+    }
+
+    #endregion
+
     /// <summary>
     /// In-memory <see cref="IPermissionStore"/> test double for <see cref="PermissionServiceTests"/>.
     /// </summary>
@@ -581,6 +764,14 @@ public sealed class PermissionServiceTests
         /// <inheritdoc />
         public ValueTask SetGrantAsync(Guid groupId, string permissionKey, PermissionState state, CancellationToken cancellationToken = default) =>
             ValueTask.CompletedTask;
+
+        /// <inheritdoc />
+        public ValueTask SetGrantsBatchAsync(Guid groupId, IReadOnlyDictionary<string, PermissionState> grants, CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        /// <inheritdoc />
+        public ValueTask<PermissionGroup> SeedDefaultGlobalGroupAsync(IReadOnlyCollection<string>? enabledDangerousFeatureKeys = null, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(new PermissionGroup { Id = Guid.NewGuid(), Name = BuiltInPermissionKeys.DefaultWorkspacePlanGroupName });
 
         /// <inheritdoc />
         public ValueTask<IReadOnlyList<PermissionGroupMember>> GetGroupMembersAsync(Guid groupId, CancellationToken cancellationToken = default) =>

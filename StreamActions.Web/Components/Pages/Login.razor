@@ -39,7 +39,9 @@
 
 @if (!string.IsNullOrWhiteSpace(Error))
 {
-    <p role="alert" data-login-error="@Error">
+    <p role="alert"
+       data-login-error="@Error"
+       data-login-session-revoked="@(string.Equals(Error, "session_revoked", StringComparison.OrdinalIgnoreCase) ? "true" : null)">
         @FormatErrorMessage(Error, Platform)
     </p>
 }
@@ -404,6 +406,7 @@ else if (_oidcLoginMode != ExternalOidcLoginMode.Required)
         "workspace_oidc_required" => "Your workspace requires signing in via an external OpenID Connect (OIDC) provider.",
         "oidc_secret_unavailable" => "External OIDC provider credentials could not be decrypted.",
         "identity_missing" => "The identity provider did not return a valid user identifier.",
+        "session_revoked" => "Your session was logged out or revoked. Please sign in again.",
         _ => "Authentication could not be completed. Please try again.",
     };
 }

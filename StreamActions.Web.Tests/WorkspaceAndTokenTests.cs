@@ -549,12 +549,21 @@ public sealed partial class WorkspaceAndTokenTests
             .And.Contain("Inherit")
             .And.Contain("Explicit Deny");
 
-        // Filter permissions by key.
+        // In ListMode, both Moderators and VIPs are listed. Filter groups by member username in ListMode.
+        component.Find("#permissions-search").Input("alpha_mod");
+        _ = component.Markup.Should().Contain("Moderators");
+        _ = component.Markup.Should().NotContain("VIPs");
+
+        // Clear search and enter ViewMode for Moderators to filter permissions and members.
+        component.Find("#permissions-search").Input(string.Empty);
+        component.Find($"[data-group-view='{modsGroupId}']").Click();
+
+        // Filter permissions by key in ViewMode.
         component.Find("#permissions-search").Input(BuiltInPermissionKeys.FeatureSoundboard);
         _ = component.Markup.Should().Contain(BuiltInPermissionKeys.FeatureSoundboard);
         _ = component.Markup.Should().NotContain(BuiltInPermissionKeys.UiDashboardView);
 
-        // Filter members by username.
+        // Filter members by username in ViewMode.
         component.Find("#permissions-search").Input("alpha_mod");
         _ = component.Markup.Should().Contain("alpha_mod");
         _ = component.Markup.Should().NotContain("beta_vip");
@@ -616,15 +625,18 @@ public sealed partial class WorkspaceAndTokenTests
         _ = component.Markup.Should().Contain("Assigned Global Groups for Beta Gaming (kick)");
         _ = component.Markup.Should().Contain("Pro Tier");
 
-        // Search filters permissions and workspace dropdown options.
-        component.Find("#global-permissions-search").Input(BuiltInPermissionKeys.FeatureCustomOAuthApp);
-        _ = component.Markup.Should().Contain(BuiltInPermissionKeys.FeatureCustomOAuthApp);
-        _ = component.Markup.Should().NotContain(BuiltInPermissionKeys.UiDashboardView);
-
+        // Search filters workspace dropdown options in ListMode.
         component.Find("#global-permissions-search").Input("Beta Gaming");
         string filteredSelectText = component.Find("#assignment-workspace-select").TextContent;
         _ = filteredSelectText.Should().Contain("Beta Gaming (kick)");
         _ = filteredSelectText.Should().NotContain("Alpha Studio (twitch)");
+
+        // Enter ViewMode for Pro Tier and filter permissions by key.
+        component.Find("#global-permissions-search").Input(string.Empty);
+        component.Find($"[data-group-view='{globalGroupId}']").Click();
+        component.Find("#global-permissions-search").Input(BuiltInPermissionKeys.FeatureCustomOAuthApp);
+        _ = component.Markup.Should().Contain(BuiltInPermissionKeys.FeatureCustomOAuthApp);
+        _ = component.Markup.Should().NotContain(BuiltInPermissionKeys.UiDashboardView);
     }
 
     #endregion
@@ -1187,6 +1199,9 @@ public sealed partial class WorkspaceAndTokenTests
         public ValueTask<PermissionGroup> UpsertGroupAsync(PermissionGroup group, CancellationToken cancellationToken = default) => ValueTask.FromResult(group);
         public ValueTask DeleteGroupAsync(Guid groupId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
         public ValueTask SetGrantAsync(Guid groupId, string permissionKey, PermissionState state, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask SetGrantsBatchAsync(Guid groupId, IReadOnlyDictionary<string, PermissionState> grants, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask<PermissionGroup> SeedDefaultGlobalGroupAsync(IReadOnlyCollection<string>? enabledDangerousFeatureKeys = null, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(new PermissionGroup { Id = Guid.NewGuid(), Name = "Default Workspace Plan" });
         public ValueTask<IReadOnlyList<PermissionGroupMember>> GetGroupMembersAsync(Guid groupId, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult<IReadOnlyList<PermissionGroupMember>>([.. this.GroupMembers.Where(m => m.GroupId == groupId)]);
         public ValueTask AddGroupMemberAsync(PermissionGroupMember member, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;

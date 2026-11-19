@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using StreamActions.Core.Abstractions;
 using StreamActions.Core.Models;
+using StreamActions.Core.Permissions;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -184,6 +185,21 @@ internal static class SetupEndpoints
         bootstrapTokenService.Invalidate();
 
         bool isRootRecovery = await panelUserStore.HasRootUserAsync(cancellationToken).ConfigureAwait(false);
+        string[]? enabledDangerousFeatures = null;
+        if (!isRootRecovery)
+        {
+            IPermissionRegistry permissionRegistry = httpContext.RequestServices.GetService<IPermissionRegistry>() ?? new PermissionRegistry();
+            enabledDangerousFeatures = ResolveEnabledDangerousFeatures(request, permissionRegistry);
+
+            IPermissionStore? permissionStore = httpContext.RequestServices.GetService<IPermissionStore>();
+            if (permissionStore is not null)
+            {
+                _ = await permissionStore
+                    .SeedDefaultGlobalGroupAsync(enabledDangerousFeatures, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
         TimeProvider timeProvider = httpContext.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System;
         DateTimeOffset issuedAtUtc = timeProvider.GetUtcNow();
         DateTimeOffset expiresAtUtc = issuedAtUtc + SetupTicketLifetime;
@@ -196,6 +212,7 @@ internal static class SetupEndpoints
             IsRootRecovery = isRootRecovery,
             PlatformId = selectedPlatformId,
             ResetRootMfa = isRootRecovery ? (request.ResetMfa ?? true) : null,
+            EnabledDangerousFeatures = isRootRecovery ? null : enabledDangerousFeatures,
         };
 
         string ticketJson = JsonSerializer.Serialize(ticketPayload);
@@ -281,6 +298,20 @@ internal static class SetupEndpoints
                 resetMfa = parsedResetMfa;
             }
 
+            string? rawEnableAll = form["enableAllDangerousFeatures"].FirstOrDefault() ?? form["EnableAllDangerousFeatures"].FirstOrDefault();
+            bool? enableAllDangerousFeatures = null;
+            if (!string.IsNullOrWhiteSpace(rawEnableAll))
+            {
+                enableAllDangerousFeatures = string.Equals(rawEnableAll, "true", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(rawEnableAll, "on", StringComparison.OrdinalIgnoreCase);
+            }
+
+            string[] rawDangerousFeatures = [.. form["enabledDangerousFeatures"]
+                .Concat(form["EnabledDangerousFeatures"])
+                .Where(static k => !string.IsNullOrWhiteSpace(k))
+                .Select(static k => k!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)];
+
             SetupVerifyRequest formRequest = new()
             {
                 BootstrapToken = form["bootstrapToken"].FirstOrDefault() ?? form["BootstrapToken"].FirstOrDefault(),
@@ -288,6 +319,8 @@ internal static class SetupEndpoints
                 ClientId = form["clientId"].FirstOrDefault() ?? form["ClientId"].FirstOrDefault(),
                 ClientSecret = form["clientSecret"].FirstOrDefault() ?? form["ClientSecret"].FirstOrDefault(),
                 ResetMfa = resetMfa,
+                EnableAllDangerousFeatures = enableAllDangerousFeatures,
+                EnabledDangerousFeatures = rawDangerousFeatures,
             };
             return (true, null, formRequest);
         }
@@ -326,6 +359,51 @@ internal static class SetupEndpoints
         return !string.IsNullOrWhiteSpace(acceptHeader)
             && acceptHeader.Contains("text/html", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Resolves and normalizes the list of dangerous global feature keys opted in by the root operator during initial setup.
+    /// </summary>
+    /// <param name="request">The parsed setup verification request.</param>
+    /// <param name="permissionRegistry">The permission descriptor registry.</param>
+    /// <returns>The normalized array of opted-in dangerous global feature keys.</returns>
+    private static string[] ResolveEnabledDangerousFeatures(
+        SetupVerifyRequest request,
+        IPermissionRegistry permissionRegistry)
+    {
+        IReadOnlyList<PermissionDescriptor> allDangerous = [.. permissionRegistry
+            .GetAll()
+            .Where(static d => d.IsGloballyGated && d.IsDangerousGlobalFeature)];
+
+        if (request.EnableAllDangerousFeatures == true)
+        {
+            return [.. allDangerous.Select(static d => d.Key)];
+        }
+
+        if (request.EnabledDangerousFeatures is null || request.EnabledDangerousFeatures.Count == 0)
+        {
+            return [];
+        }
+
+        List<string> resolved = [];
+        foreach (string candidate in request.EnabledDangerousFeatures)
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                continue;
+            }
+
+            PermissionDescriptor? descriptor = permissionRegistry.GetByKey(candidate);
+            if (descriptor is not null && descriptor.IsGloballyGated && descriptor.IsDangerousGlobalFeature)
+            {
+                if (!resolved.Contains(descriptor.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    resolved.Add(descriptor.Key);
+                }
+            }
+        }
+
+        return [.. resolved];
+    }
 }
 
 /// <summary>
@@ -357,6 +435,16 @@ internal sealed record SetupVerifyRequest
     /// Gets a value indicating whether root recovery should reset the root operator's enrolled MFA credentials.
     /// </summary>
     public bool? ResetMfa { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether initial setup should enable all 5 high-risk global features on the default global plan.
+    /// </summary>
+    public bool? EnableAllDangerousFeatures { get; init; }
+
+    /// <summary>
+    /// Gets the list of specific dangerous global feature keys opted in during initial setup.
+    /// </summary>
+    public IReadOnlyList<string>? EnabledDangerousFeatures { get; init; }
 }
 
 /// <summary>
@@ -430,4 +518,9 @@ internal sealed record SetupTicketPayload
     /// Gets a value indicating whether root recovery should clear the root operator's enrolled MFA credentials.
     /// </summary>
     public bool? ResetRootMfa { get; init; }
+
+    /// <summary>
+    /// Gets the optional dangerous global feature keys opted in during initial setup.
+    /// </summary>
+    public IReadOnlyList<string>? EnabledDangerousFeatures { get; init; }
 }

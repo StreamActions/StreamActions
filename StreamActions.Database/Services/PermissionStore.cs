@@ -32,15 +32,15 @@ public sealed class PermissionStore : IPermissionStore
     /// <summary>
     /// Built-in workspace permission groups and their mapped platform designations.
     /// </summary>
-    private static readonly (string Name, string Designation)[] _builtInWorkspaceGroups =
+    private static readonly (string Name, string Designation, PlatformUserDesignations Flag)[] _builtInWorkspaceGroups =
     [
-        ("Broadcaster", "broadcaster"),
-        ("Moderator", "moderator"),
-        ("VIP", "vip"),
-        ("Subscriber", "subscriber"),
-        ("Regular", "regular"),
-        ("Follower", "follower"),
-        ("Everyone", "everyone"),
+        ("Broadcaster", "broadcaster", PlatformUserDesignations.Broadcaster),
+        ("Moderator", "moderator", PlatformUserDesignations.Moderator),
+        ("VIP", "vip", PlatformUserDesignations.Vip),
+        ("Subscriber", "subscriber", PlatformUserDesignations.Subscriber),
+        ("Regular", "regular", PlatformUserDesignations.Regular),
+        ("Follower", "follower", PlatformUserDesignations.Follower),
+        ("Everyone", "everyone", PlatformUserDesignations.Everyone),
     ];
 
     /// <summary>
@@ -59,15 +59,22 @@ public sealed class PermissionStore : IPermissionStore
     private readonly IEventBus _eventBus;
 
     /// <summary>
+    /// The permission descriptor registry used to resolve default global and workspace permission grants.
+    /// </summary>
+    private readonly IPermissionRegistry _permissionRegistry;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="PermissionStore"/> class.
     /// </summary>
     /// <param name="dbContextFactory">The database context factory.</param>
     /// <param name="timeProvider">The time provider used for UTC timestamps.</param>
     /// <param name="eventBus">The event bus used to publish permission invalidation events.</param>
+    /// <param name="permissionRegistry">The optional permission registry (defaults to a new <see cref="PermissionRegistry"/> if <see langword="null"/>).</param>
     public PermissionStore(
         IDbContextFactory<StreamActionsDbContext> dbContextFactory,
         TimeProvider timeProvider,
-        IEventBus eventBus)
+        IEventBus eventBus,
+        IPermissionRegistry? permissionRegistry = null)
     {
         ArgumentNullException.ThrowIfNull(dbContextFactory);
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -76,6 +83,7 @@ public sealed class PermissionStore : IPermissionStore
         this._dbContextFactory = dbContextFactory;
         this._timeProvider = timeProvider;
         this._eventBus = eventBus;
+        this._permissionRegistry = permissionRegistry ?? new PermissionRegistry();
     }
 
     /// <inheritdoc/>
@@ -428,6 +436,98 @@ public sealed class PermissionStore : IPermissionStore
     }
 
     /// <inheritdoc/>
+    public async ValueTask SetGrantsBatchAsync(
+        Guid groupId,
+        IReadOnlyDictionary<string, PermissionState> grants,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(grants);
+
+        if (grants.Count == 0)
+        {
+            return;
+        }
+
+        Guid? workspaceId;
+
+        StreamActionsDbContext db = await this._dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await using (db.ConfigureAwait(false))
+        {
+            workspaceId = await db.PermissionGroups
+                .Where(x => x.Id == groupId)
+                .Select(static x => x.WorkspaceId)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            List<PermissionGrant> existingGrants = await db.PermissionGrants
+                .AsTracking()
+                .Where(x => x.GroupId == groupId)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            Dictionary<string, PermissionGrant> existingByKey = existingGrants
+                .ToDictionary(static x => x.PermissionKey, StringComparer.OrdinalIgnoreCase);
+
+            foreach (KeyValuePair<string, PermissionState> pair in grants)
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(pair.Key);
+
+                string normalizedKey = NormalizeValue(pair.Key);
+                if (existingByKey.TryGetValue(normalizedKey, out PermissionGrant? existing))
+                {
+                    existing.State = pair.Value;
+                }
+                else
+                {
+                    PermissionGrant created = new()
+                    {
+                        Id = Guid.CreateVersion7(),
+                        GroupId = groupId,
+                        PermissionKey = normalizedKey,
+                        State = pair.Value,
+                    };
+                    _ = db.PermissionGrants.Add(created);
+                    existingByKey[normalizedKey] = created;
+                }
+            }
+
+            _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        await this._eventBus.PublishAsync(new PermissionsInvalidatedEvent(workspaceId), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<PermissionGroup> SeedDefaultGlobalGroupAsync(
+        IReadOnlyCollection<string>? enabledDangerousFeatureKeys = null,
+        CancellationToken cancellationToken = default)
+    {
+        PermissionGroup defaultGroup;
+        bool changed;
+
+        StreamActionsDbContext db = await this._dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await using (db.ConfigureAwait(false))
+        {
+            (defaultGroup, changed) = await this.EnsureDefaultGlobalGroupInContextAsync(
+                db,
+                enabledDangerousFeatureKeys,
+                cancellationToken).ConfigureAwait(false);
+
+            if (changed)
+            {
+                _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        if (changed)
+        {
+            await this._eventBus.PublishAsync(new PermissionsInvalidatedEvent(null), cancellationToken).ConfigureAwait(false);
+        }
+
+        return defaultGroup;
+    }
+
+    /// <inheritdoc/>
     public async ValueTask<IReadOnlyList<PermissionGroupMember>> GetGroupMembersAsync(Guid groupId, CancellationToken cancellationToken = default)
     {
         StreamActionsDbContext db = await this._dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
@@ -642,38 +742,124 @@ public sealed class PermissionStore : IPermissionStore
         StreamActionsDbContext db = await this._dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         await using (db.ConfigureAwait(false))
         {
+            (PermissionGroup defaultGlobalGroup, bool defaultGlobalChanged) = await this.EnsureDefaultGlobalGroupInContextAsync(
+                db,
+                enabledDangerousFeatureKeys: null,
+                cancellationToken).ConfigureAwait(false);
+
+            bool assignedToDefaultGlobal = await db.WorkspaceGlobalGroupAssignments
+                .AnyAsync(
+                    x => x.WorkspaceId == workspaceId && x.GlobalGroupId == defaultGlobalGroup.Id,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!assignedToDefaultGlobal)
+            {
+                _ = db.WorkspaceGlobalGroupAssignments.Add(new WorkspaceGlobalGroupAssignment
+                {
+                    Id = Guid.CreateVersion7(),
+                    WorkspaceId = workspaceId,
+                    GlobalGroupId = defaultGlobalGroup.Id,
+                    AssignedAtUtc = this._timeProvider.GetUtcNow(),
+                });
+                addedAny = true;
+            }
+
             List<PermissionGroup> existingGroups = await db.PermissionGroups
+                .AsTracking()
                 .Where(x => x.WorkspaceId == workspaceId)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
+
+            Dictionary<string, PermissionGroup> groupsByDesignation = [];
+            foreach (PermissionGroup grp in existingGroups)
+            {
+                if (!string.IsNullOrWhiteSpace(grp.MappedPlatformDesignation))
+                {
+                    groupsByDesignation[grp.MappedPlatformDesignation] = grp;
+                }
+            }
 
             HashSet<string> existingNames = existingGroups
                 .Select(static x => x.Name)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            HashSet<string> existingDesignations = existingGroups
-                .Where(static x => !string.IsNullOrWhiteSpace(x.MappedPlatformDesignation))
-                .Select(static x => x.MappedPlatformDesignation!)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            foreach ((string name, string designation) in _builtInWorkspaceGroups)
+            foreach ((string name, string designation, PlatformUserDesignations _) in _builtInWorkspaceGroups)
             {
-                if (existingNames.Contains(name) || existingDesignations.Contains(designation))
+                if (groupsByDesignation.ContainsKey(designation) || existingNames.Contains(name))
                 {
+                    if (!groupsByDesignation.ContainsKey(designation))
+                    {
+                        PermissionGroup? byName = existingGroups.FirstOrDefault(
+                            g => string.Equals(g.Name, name, StringComparison.OrdinalIgnoreCase));
+                        if (byName is not null)
+                        {
+                            groupsByDesignation[designation] = byName;
+                        }
+                    }
+
                     continue;
                 }
 
-                _ = db.PermissionGroups.Add(new PermissionGroup
+                PermissionGroup createdGroup = new()
                 {
                     Id = Guid.CreateVersion7(),
                     WorkspaceId = workspaceId,
                     Name = name,
                     MappedPlatformDesignation = designation,
-                });
+                };
+                _ = db.PermissionGroups.Add(createdGroup);
+                existingGroups.Add(createdGroup);
+                groupsByDesignation[designation] = createdGroup;
                 addedAny = true;
             }
 
-            if (addedAny)
+            List<Guid> builtInGroupIds = [.. groupsByDesignation.Values.Select(static g => g.Id)];
+            List<PermissionGrant> existingGrants = builtInGroupIds.Count == 0
+                ? []
+                : await db.PermissionGrants
+                    .Where(x => builtInGroupIds.Contains(x.GroupId))
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+
+            HashSet<(Guid GroupId, string PermissionKey)> existingGrantKeys = [.. existingGrants.Select(static g => (g.GroupId, NormalizeValue(g.PermissionKey)))];
+
+            IReadOnlyList<PermissionDescriptor> allDescriptors = this._permissionRegistry.GetAll();
+
+            foreach ((string _, string designation, PlatformUserDesignations flag) in _builtInWorkspaceGroups)
+            {
+                if (!groupsByDesignation.TryGetValue(designation, out PermissionGroup? targetGroup))
+                {
+                    continue;
+                }
+
+                foreach (PermissionDescriptor descriptor in allDescriptors)
+                {
+                    if (descriptor.IsGloballyGated
+                        || descriptor.DefaultAllowedDesignations == PlatformUserDesignations.None
+                        || !descriptor.DefaultAllowedDesignations.HasFlag(flag))
+                    {
+                        continue;
+                    }
+
+                    string normalizedKey = NormalizeValue(descriptor.Key);
+                    if (!existingGrantKeys.Add((targetGroup.Id, normalizedKey)))
+                    {
+                        continue;
+                    }
+
+                    _ = db.PermissionGrants.Add(new PermissionGrant
+                    {
+                        Id = Guid.CreateVersion7(),
+                        GroupId = targetGroup.Id,
+                        PermissionKey = normalizedKey,
+                        State = PermissionState.Allow,
+                    });
+                    addedAny = true;
+                }
+            }
+
+            if (addedAny || defaultGlobalChanged)
             {
                 _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -683,6 +869,120 @@ public sealed class PermissionStore : IPermissionStore
         {
             await this._eventBus.PublishAsync(new PermissionsInvalidatedEvent(workspaceId), cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Ensures the built-in <c>Default Workspace Plan</c> global group and its default grants exist within the given <paramref name="db"/> context without calling <c>SaveChangesAsync</c>.
+    /// </summary>
+    /// <param name="db">The active database context.</param>
+    /// <param name="enabledDangerousFeatureKeys">Optional dangerous global feature keys to explicitly grant <see cref="PermissionState.Allow"/>.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A tuple containing the <c>Default Workspace Plan</c> group and a flag indicating whether any entities were added or modified.</returns>
+    private async ValueTask<(PermissionGroup Group, bool Changed)> EnsureDefaultGlobalGroupInContextAsync(
+        StreamActionsDbContext db,
+        IReadOnlyCollection<string>? enabledDangerousFeatureKeys,
+        CancellationToken cancellationToken)
+    {
+        bool changed = false;
+
+        List<PermissionGroup> globalGroups = await db.PermissionGroups
+            .AsTracking()
+            .Where(x => x.WorkspaceId == null)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        PermissionGroup? defaultGroup = globalGroups.FirstOrDefault(
+            static g => string.Equals(g.Name, BuiltInPermissionKeys.DefaultWorkspacePlanGroupName, StringComparison.OrdinalIgnoreCase));
+
+        if (defaultGroup is null)
+        {
+            defaultGroup = new PermissionGroup
+            {
+                Id = Guid.CreateVersion7(),
+                WorkspaceId = null,
+                Name = BuiltInPermissionKeys.DefaultWorkspacePlanGroupName,
+            };
+            _ = db.PermissionGroups.Add(defaultGroup);
+            changed = true;
+        }
+
+        List<PermissionGrant> existingGrants = await db.PermissionGrants
+            .AsTracking()
+            .Where(x => x.GroupId == defaultGroup.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        Dictionary<string, PermissionGrant> grantsByKey = existingGrants
+            .ToDictionary(static g => NormalizeValue(g.PermissionKey), StringComparer.OrdinalIgnoreCase);
+
+        HashSet<string> dangerousOptInSet = [];
+        if (enabledDangerousFeatureKeys is not null)
+        {
+            foreach (string rawKey in enabledDangerousFeatureKeys)
+            {
+                if (string.IsNullOrWhiteSpace(rawKey))
+                {
+                    continue;
+                }
+
+                PermissionDescriptor? resolved = this._permissionRegistry.GetByKey(rawKey);
+                string canonicalKey = resolved is not null ? NormalizeValue(resolved.Key) : NormalizeValue(rawKey);
+                _ = dangerousOptInSet.Add(canonicalKey);
+            }
+        }
+
+        foreach (PermissionDescriptor descriptor in this._permissionRegistry.GetAll())
+        {
+            if (!descriptor.IsGloballyGated)
+            {
+                continue;
+            }
+
+            string normalizedKey = NormalizeValue(descriptor.Key);
+
+            if (!descriptor.IsDangerousGlobalFeature)
+            {
+                if (!grantsByKey.ContainsKey(normalizedKey))
+                {
+                    PermissionGrant created = new()
+                    {
+                        Id = Guid.CreateVersion7(),
+                        GroupId = defaultGroup.Id,
+                        PermissionKey = normalizedKey,
+                        State = PermissionState.Allow,
+                    };
+                    _ = db.PermissionGrants.Add(created);
+                    grantsByKey[normalizedKey] = created;
+                    changed = true;
+                }
+            }
+            else if (dangerousOptInSet.Contains(normalizedKey))
+            {
+                if (grantsByKey.TryGetValue(normalizedKey, out PermissionGrant? existingDangerous))
+                {
+                    if (existingDangerous.State != PermissionState.Allow)
+                    {
+                        existingDangerous.State = PermissionState.Allow;
+                        changed = true;
+                    }
+                }
+                else
+                {
+                    PermissionGrant created = new()
+                    {
+                        Id = Guid.CreateVersion7(),
+                        GroupId = defaultGroup.Id,
+                        PermissionKey = normalizedKey,
+                        State = PermissionState.Allow,
+                    };
+                    _ = db.PermissionGrants.Add(created);
+                    grantsByKey[normalizedKey] = created;
+                    changed = true;
+                }
+            }
+        }
+
+        return (defaultGroup, changed);
     }
 
     /// <summary>

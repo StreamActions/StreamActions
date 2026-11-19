@@ -80,6 +80,7 @@ internal static class AuthEndpoints
         _ = endpoints.MapPost("/auth/login-hint/clear", HandleClearLoginHintAsync);
         _ = endpoints.MapPost("/auth/workspace/select", HandleWorkspaceSelectAsync);
         _ = endpoints.MapPost("/auth/logout", HandleLogoutAsync);
+        _ = endpoints.MapPost("/account/sessions/revoke-others", HandleRevokeOtherSessionsAsync);
 
         return endpoints;
     }
@@ -904,14 +905,16 @@ internal static class AuthEndpoints
     }
 
     /// <summary>
-    /// Validates the antiforgery token, clears the authentication cookie, and redirects to <c>/login</c>.
+    /// Validates the antiforgery token, revokes the active session if tracked, clears the authentication cookie, and redirects to <c>/login</c>.
     /// </summary>
     /// <param name="httpContext">The current HTTP context.</param>
     /// <param name="antiforgery">The antiforgery service.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A redirect to <c>/login</c> or <c>400 Bad Request</c> if antiforgery validation fails.</returns>
     private static async Task<IResult> HandleLogoutAsync(
         HttpContext httpContext,
-        IAntiforgery antiforgery)
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -922,9 +925,71 @@ internal static class AuthEndpoints
             return Results.BadRequest();
         }
 
+        if (AuthClaims.GetSessionId(httpContext.User) is Guid sid
+            && httpContext.RequestServices.GetService<IPanelSessionService>() is IPanelSessionService sessionService)
+        {
+            _ = await sessionService.RevokeSessionAsync(sid, cancellationToken).ConfigureAwait(false);
+        }
+
         await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme).ConfigureAwait(false);
         DeleteCookie(httpContext, AuthClaims.WorkspaceCookieName);
         return Results.Redirect("/login");
+    }
+
+    /// <summary>
+    /// Revokes all active panel sessions for the signed-in user other than the current session.
+    /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="antiforgery">The antiforgery validation service.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A JSON response containing <c>revokedCount</c>, a redirect to <c>/account/mfa</c>, or an authorization failure result.</returns>
+    private static async Task<IResult> HandleRevokeOtherSessionsAsync(
+        HttpContext httpContext,
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        IResult? authFailure = await AuthorizePolicyAsync(httpContext, authorizationService, AuthClaims.MfaPendingPolicy)
+            .ConfigureAwait(false);
+        if (authFailure is not null)
+        {
+            return authFailure;
+        }
+
+        if (httpContext.Request.HasFormContentType)
+        {
+            try
+            {
+                await antiforgery.ValidateRequestAsync(httpContext).ConfigureAwait(false);
+            }
+            catch (AntiforgeryValidationException)
+            {
+                return Results.BadRequest();
+            }
+        }
+
+        Guid? currentUserId = AuthClaims.GetPanelUserId(httpContext.User);
+        if (!currentUserId.HasValue)
+        {
+            return Results.Challenge();
+        }
+
+        Guid currentSessionId = AuthClaims.GetSessionId(httpContext.User) ?? Guid.Empty;
+        int revokedCount = 0;
+        if (httpContext.RequestServices.GetService<IPanelSessionService>() is IPanelSessionService sessionService)
+        {
+            revokedCount = await sessionService
+                .RevokeOtherSessionsAsync(currentUserId.Value, currentSessionId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return PrefersHtmlResponse(httpContext.Request)
+            ? Results.Redirect("/account/mfa")
+            : Results.Ok(new RevokeOtherSessionsResponse
+            {
+                RevokedCount = revokedCount,
+            });
     }
 
     /// <summary>
@@ -1125,6 +1190,18 @@ internal static class AuthEndpoints
         IReadOnlyList<PanelUser> allUsers = await panelUserStore.GetAllUsersAsync(cancellationToken).ConfigureAwait(false);
         PanelUser? rootUser = allUsers.FirstOrDefault(static u => u.IsRoot);
 
+        bool isRootRecovery = setupTicket?.IsRootRecovery == true || rootUser is not null;
+        if (!isRootRecovery)
+        {
+            IPermissionStore? permissionStore = httpContext.RequestServices.GetService<IPermissionStore>();
+            if (permissionStore is not null)
+            {
+                _ = await permissionStore
+                    .SeedDefaultGlobalGroupAsync(setupTicket?.EnabledDangerousFeatures, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
         if (rootUser is null)
         {
             if (existingByIdentity is not null)
@@ -1261,9 +1338,15 @@ internal static class AuthEndpoints
             dataProtectionProvider,
             new LoginHintPayload(rootUser.Id, targetWorkspace.Id, platformId, rootUser.DisplayName));
 
+        Guid? sessionId = await CreatePanelSessionIfRegisteredAsync(
+            httpContext,
+            rootUser.Id,
+            platformId,
+            cancellationToken).ConfigureAwait(false);
+
         await httpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
-            AuthClaims.BuildClaimsPrincipal(rootUser, authProvider: platformId)).ConfigureAwait(false);
+            AuthClaims.BuildClaimsPrincipal(rootUser, authProvider: platformId, sessionId: sessionId)).ConfigureAwait(false);
 
         return Results.Redirect(AuthClaims.SafeReturnUrlOrDefault(flowPayload.ReturnUrl, "/"));
     }
@@ -1718,6 +1801,11 @@ internal static class AuthEndpoints
             .ConfigureAwait(false);
 
         string? safeReturnUrl = AuthClaims.IsSafeLocalRedirect(returnUrl) ? returnUrl!.Trim() : null;
+        Guid? sessionId = await CreatePanelSessionIfRegisteredAsync(
+            httpContext,
+            user.Id,
+            authProvider,
+            cancellationToken).ConfigureAwait(false);
 
         if (!policy.IsMfaDisabled && hasAnyCredentials)
         {
@@ -1727,7 +1815,8 @@ internal static class AuthEndpoints
                     user,
                     oidcGroups,
                     authProvider: authProvider,
-                    mfaPending: true)).ConfigureAwait(false);
+                    mfaPending: true,
+                    sessionId: sessionId)).ConfigureAwait(false);
 
             string mfaRedirect = BuildMfaChallengeUrl("/auth/mfa", mfaPolicyWorkspaceId, safeReturnUrl, enrollRequired: false);
             return Results.Redirect(mfaRedirect);
@@ -1742,7 +1831,8 @@ internal static class AuthEndpoints
                     oidcGroups,
                     authProvider: authProvider,
                     mfaPending: true,
-                    mfaEnrollmentRequired: true)).ConfigureAwait(false);
+                    mfaEnrollmentRequired: true,
+                    sessionId: sessionId)).ConfigureAwait(false);
 
             string enrollRedirect = BuildMfaChallengeUrl("/account/mfa", mfaPolicyWorkspaceId, safeReturnUrl, enrollRequired: true);
             return Results.Redirect(enrollRedirect);
@@ -1750,7 +1840,7 @@ internal static class AuthEndpoints
 
         await httpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
-            AuthClaims.BuildClaimsPrincipal(user, oidcGroups, authProvider: authProvider)).ConfigureAwait(false);
+            AuthClaims.BuildClaimsPrincipal(user, oidcGroups, authProvider: authProvider, sessionId: sessionId)).ConfigureAwait(false);
 
         await IssueLoginHintForUserAsync(
             httpContext,
@@ -2071,6 +2161,11 @@ internal static class AuthEndpoints
         }
 
         DateTimeOffset elevatedUntilUtc = GetTimeProvider(httpContext).GetUtcNow() + AuthClaims.StepUpWindow;
+        Guid? sessionId = await CreatePanelSessionIfRegisteredAsync(
+            httpContext,
+            user.Id,
+            "passkey",
+            cancellationToken).ConfigureAwait(false);
         ClaimsPrincipal principal = AuthClaims.BuildClaimsPrincipal(
             user,
             oidcGroups: null,
@@ -2078,7 +2173,8 @@ internal static class AuthEndpoints
             mfaPending: false,
             mfaEnrollmentRequired: false,
             mfaElevatedUntilUtc: elevatedUntilUtc,
-            mfaVerified: true);
+            mfaVerified: true,
+            sessionId: sessionId);
 
         await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal).ConfigureAwait(false);
 
@@ -3063,6 +3159,44 @@ internal static class AuthEndpoints
     /// <returns>The resolved <see cref="TimeProvider"/>.</returns>
     private static TimeProvider GetTimeProvider(HttpContext httpContext) =>
         httpContext.RequestServices.GetService<TimeProvider>() ?? TimeProvider.System;
+
+    /// <summary>
+    /// Creates and persists a new <see cref="PanelUserSession"/> when <see cref="IPanelSessionService"/> is registered in request services.
+    /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <param name="panelUserId">The authenticated panel user identifier.</param>
+    /// <param name="providerId">The authentication provider identifier.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>The created session identifier, or <see langword="null"/> if <see cref="IPanelSessionService"/> is not registered.</returns>
+    private static async ValueTask<Guid?> CreatePanelSessionIfRegisteredAsync(
+        HttpContext httpContext,
+        Guid panelUserId,
+        string providerId,
+        CancellationToken cancellationToken)
+    {
+        if (httpContext.RequestServices.GetService<IPanelSessionService>() is not IPanelSessionService sessionService)
+        {
+            return null;
+        }
+
+        string? remoteIp = httpContext.Connection.RemoteIpAddress?.ToString();
+        string? userAgent = httpContext.Request.Headers.UserAgent.FirstOrDefault();
+        PanelUserSession session = await sessionService
+            .CreateSessionAsync(panelUserId, providerId, remoteIp, userAgent, cancellationToken)
+            .ConfigureAwait(false);
+        return session.Id;
+    }
+}
+
+/// <summary>
+/// Represents the JSON response returned by <c>POST /account/sessions/revoke-others</c>.
+/// </summary>
+internal sealed record RevokeOtherSessionsResponse
+{
+    /// <summary>
+    /// Gets the number of other active sessions revoked for the signed-in user.
+    /// </summary>
+    public int? RevokedCount { get; init; }
 }
 
 /// <summary>

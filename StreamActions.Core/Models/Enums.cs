@@ -112,6 +112,27 @@ public enum PermissionState
 }
 
 /// <summary>
+/// Represents the active view mode of the permissions management pages (<c>/permissions</c> and <c>/admin/global-permissions</c>).
+/// </summary>
+public enum PermissionsPageMode
+{
+    /// <summary>
+    /// Displays the list of permission groups and the permission audit launcher.
+    /// </summary>
+    List = 0,
+
+    /// <summary>
+    /// Displays a read-only view of a single permission group's grants and members/workspaces, or an effective permission audit breakdown.
+    /// </summary>
+    View = 1,
+
+    /// <summary>
+    /// Displays the single-group permission editor with staged edits, bulk actions, and sticky Save/Revert controls.
+    /// </summary>
+    Edit = 2,
+}
+
+/// <summary>
 /// Defines how a workspace counter is scoped.
 /// </summary>
 public enum CounterScopeMode

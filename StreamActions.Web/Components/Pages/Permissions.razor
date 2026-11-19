@@ -21,6 +21,7 @@
 @rendermode InteractiveServer
 @implements IDisposable
 
+@using System.Security.Claims
 @using Microsoft.Extensions.DependencyInjection
 @using StreamActions.Core.Abstractions
 @using StreamActions.Core.Models
@@ -33,8 +34,12 @@
 @inject IEventBus EventBus
 @inject IWorkspaceSessionContext WorkspaceSession
 @inject IServiceProvider ServiceProvider
+@inject NavigationManager Navigation
 
 <PageTitle>@AuthPolicyParser.FormatPageTitle("Workspace Permissions", _instanceName)</PageTitle>
+
+<NavigationLock ConfirmExternalNavigation="@HasUnsavedChanges"
+                OnBeforeInternalNavigation="OnBeforeInternalNavigationAsync" />
 
 <h1>Workspace Permissions</h1>
 
@@ -53,7 +58,7 @@
         <p>No accessible workspace is currently selected.</p>
     }
 
-    @if (_workspaceId is not null)
+    @if (_workspaceId is not null && _currentMode == PermissionsPageMode.List)
     {
         <div>
             <button type="button" @onclick="SeedBuiltInGroupsAsync">Seed Built-in Groups</button>
@@ -77,84 +82,319 @@
 @if (_workspaceId is not null)
 {
     <div>
-        <label for="permissions-search">Search Permissions &amp; Members:</label>
+        <label for="permissions-search">Search Permissions, Groups &amp; Members:</label>
         <input id="permissions-search"
                data-permissions-search="true"
                type="search"
                @bind="_searchQuery"
                @bind:event="oninput"
-               placeholder="Filter permissions or group members..." />
+               placeholder="Filter permissions, groups, or members..." />
     </div>
 
     <StepUpMfaGuard WorkspaceId="@_workspaceId"
                     OperationDescription="Confirm MFA verification to modify workspace permission groups, grants, or group members.">
-    <section aria-labelledby="custom-groups-heading">
-        <h2 id="custom-groups-heading">Permission Groups</h2>
-        <div>
-            <label for="new-group-name">New Custom Group:</label>
-            <input id="new-group-name" type="text" @bind="_newGroupName" placeholder="Group name" />
-            <button type="button" @onclick="CreateCustomGroupAsync">Create Group</button>
-        </div>
 
-        @if (_groups.Count == 0)
+        @if (_showUnsavedNavigationPrompt)
         {
-            <p>No permission groups found for this workspace. Seed built-in groups or create a custom group.</p>
+            <div role="alertdialog"
+                 aria-labelledby="unsaved-nav-prompt-heading"
+                 data-unsaved-navigation-prompt="true">
+                <h3 id="unsaved-nav-prompt-heading">Unsaved Permission Changes</h3>
+                <p>You have @UnsavedChangesCount unsaved permission change(s) for <strong>@(_selectedGroup?.Name)</strong>. Do you want to discard your staged changes?</p>
+                <button type="button"
+                        data-confirm-discard-changes="true"
+                        @onclick="ConfirmDiscardAndNavigateAsync">
+                    Discard Changes &amp; Leave
+                </button>
+                <button type="button"
+                        data-cancel-discard-changes="true"
+                        @onclick="CancelDiscardNavigation">
+                    Stay in Editor
+                </button>
+            </div>
         }
-        else
-        {
-            <ul>
-                @foreach (PermissionGroup group in _groups)
-                {
-                    <li>
-                        <strong>@group.Name</strong>
-                        @if (IsBuiltInGroup(group))
-                        {
-                            <span>(Built-in: @group.MappedPlatformDesignation)</span>
-                        }
-                        else
-                        {
-                            <span>(Custom)</span>
-                            <button type="button" @onclick="() => DeleteGroupAsync(group.Id)">Delete Group</button>
-                        }
-                    </li>
-                }
-            </ul>
-        }
-    </section>
 
-    <section aria-labelledby="permission-matrix-heading">
-        <h2 id="permission-matrix-heading">Permission Matrix</h2>
-        @if (_groups.Count == 0)
+        @if (_currentMode == PermissionsPageMode.List)
         {
-            <p>Add or seed permission groups to configure the permission matrix.</p>
-        }
-        else
-        {
-            bool anyPermissionRendered = false;
-            @foreach (string category in _categories)
-            {
-                List<PermissionDescriptor> descriptors = [.. PermissionRegistry.GetByCategory(category).Where(MatchesPermissionSearch)];
-                if (descriptors.Count == 0)
-                {
-                    continue;
-                }
+            <section aria-labelledby="custom-groups-heading" data-permissions-mode="List">
+                <h2 id="custom-groups-heading">Permission Groups</h2>
+                <div>
+                    <label for="new-group-name">New Custom Group:</label>
+                    <input id="new-group-name" type="text" @bind="_newGroupName" placeholder="Group name" />
+                    <button type="button" data-create-group="true" @onclick="CreateCustomGroupAsync">Create Group</button>
+                </div>
 
-                anyPermissionRendered = true;
-                <h3>@category</h3>
-                <table>
-                    <thead>
+                <DataTableGrid TItem="PermissionGroup"
+                               GridId="workspace-groups-grid"
+                               Items="@_groups"
+                               SearchQuery="@_searchQuery"
+                               SearchQueryChanged="OnSearchQueryChanged"
+                               FilterPredicate="MatchesGroupSearch"
+                               SearchPlaceholder="Filter workspace groups...">
+                    <EmptyContent>
+                        <p>No permission groups found for this workspace. Seed built-in groups or create a custom group.</p>
+                    </EmptyContent>
+                    <HeaderContent>
                         <tr>
-                            <th>Permission</th>
-                            @foreach (PermissionGroup group in _groups)
-                            {
-                                <th>@group.Name</th>
-                            }
+                            <th>Group Name</th>
+                            <th>Type / Mapping</th>
+                            <th>Explicit Members</th>
+                            <th>Actions</th>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (PermissionDescriptor descriptor in descriptors)
+                    </HeaderContent>
+                    <RowTemplate Context="group">
+                        <tr @key="group.Id" data-group-row="@group.Id">
+                            <td><strong>@group.Name</strong></td>
+                            <td>
+                                @if (IsBuiltInGroup(group))
+                                {
+                                    <span data-group-badge="built-in">(Built-in: @(group.MappedPlatformDesignation ?? group.MappedOidcGroupClaim))</span>
+                                }
+                                else
+                                {
+                                    <span data-group-badge="custom">(Custom)</span>
+                                }
+                            </td>
+                            <td>@GetMembersForGroup(group.Id).Count</td>
+                            <td>
+                                <button type="button"
+                                        data-group-view="@group.Id"
+                                        @onclick="() => EnterViewGroupMode(group)">
+                                    View
+                                </button>
+                                <button type="button"
+                                        data-group-edit="@group.Id"
+                                        @onclick="() => EnterEditGroupMode(group)">
+                                    Edit
+                                </button>
+                                @if (!IsBuiltInGroup(group))
+                                {
+                                    <button type="button"
+                                            data-group-delete="@group.Id"
+                                            @onclick="() => DeleteGroupAsync(group.Id)">
+                                        Delete Group
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    </RowTemplate>
+                </DataTableGrid>
+            </section>
+
+            <section aria-labelledby="user-audit-launch-heading" data-audit-launch-card="user">
+                <h2 id="user-audit-launch-heading">Effective Permission Audit</h2>
+                <p>Select or enter a user identity to inspect their resolved two-tier effective permissions and contributing groups.</p>
+                <div>
+                    @if (AllDistinctMembers.Count > 0)
+                    {
+                        <label for="audit-member-quick-pick">Quick-Pick Group Member:</label>
+                        <select id="audit-member-quick-pick"
+                                data-audit-member-quick-pick="true"
+                                @onchange="OnQuickPickAuditMember">
+                            <option value="">-- Custom user identity --</option>
+                            @foreach (PermissionGroupMember member in AllDistinctMembers)
+                            {
+                                string key = $"{member.PlatformId}:{member.PlatformUserId}";
+                                string label = string.IsNullOrWhiteSpace(member.LastKnownUsername)
+                                    ? key
+                                    : $"{member.LastKnownUsername} ({key})";
+                                <option value="@key">@label</option>
+                            }
+                        </select>
+                    }
+
+                    <label for="audit-platform-id">Platform ID:</label>
+                    <input id="audit-platform-id"
+                           data-audit-platform-id="true"
+                           type="text"
+                           @bind="_auditPlatformId"
+                           placeholder="twitch" />
+
+                    <label for="audit-user-id">Platform User ID:</label>
+                    <input id="audit-user-id"
+                           data-audit-user-id="true"
+                           type="text"
+                           @bind="_auditPlatformUserId"
+                           placeholder="User ID" />
+
+                    <label for="audit-username">Username:</label>
+                    <input id="audit-username"
+                           data-audit-username="true"
+                           type="text"
+                           @bind="_auditUsername"
+                           placeholder="Username" />
+
+                    <fieldset>
+                        <legend>Live Platform Designations:</legend>
+                        <label>
+                            <input type="checkbox"
+                                   data-audit-designation="Broadcaster"
+                                   checked="@_auditDesignations.HasFlag(PlatformUserDesignations.Broadcaster)"
+                                   @onchange="(ChangeEventArgs e) => ToggleAuditDesignation(PlatformUserDesignations.Broadcaster, e)" />
+                            Broadcaster
+                        </label>
+                        <label>
+                            <input type="checkbox"
+                                   data-audit-designation="Moderator"
+                                   checked="@_auditDesignations.HasFlag(PlatformUserDesignations.Moderator)"
+                                   @onchange="(ChangeEventArgs e) => ToggleAuditDesignation(PlatformUserDesignations.Moderator, e)" />
+                            Moderator
+                        </label>
+                        <label>
+                            <input type="checkbox"
+                                   data-audit-designation="Vip"
+                                   checked="@_auditDesignations.HasFlag(PlatformUserDesignations.Vip)"
+                                   @onchange="(ChangeEventArgs e) => ToggleAuditDesignation(PlatformUserDesignations.Vip, e)" />
+                            VIP
+                        </label>
+                        <label>
+                            <input type="checkbox"
+                                   data-audit-designation="Subscriber"
+                                   checked="@_auditDesignations.HasFlag(PlatformUserDesignations.Subscriber)"
+                                   @onchange="(ChangeEventArgs e) => ToggleAuditDesignation(PlatformUserDesignations.Subscriber, e)" />
+                            Subscriber
+                        </label>
+                    </fieldset>
+
+                    <button type="button"
+                            data-launch-user-audit="true"
+                            @onclick="LaunchUserAuditAsync">
+                        Audit User Permissions
+                    </button>
+                </div>
+            </section>
+        }
+        else if (_currentMode == PermissionsPageMode.View)
+        {
+            <section aria-labelledby="view-mode-heading" data-permissions-mode="View">
+                <div class="sa-permissions-mode-header">
+                    @if (_isAuditView)
+                    {
+                        <h2 id="view-mode-heading">Permission Audit: @_auditTargetLabel</h2>
+                    }
+                    else if (_selectedGroup is not null)
+                    {
+                        <h2 id="view-mode-heading">Viewing Group: @_selectedGroup.Name</h2>
+                    }
+
+                    <div>
+                        <button type="button"
+                                data-back-to-groups="true"
+                                @onclick="RequestBackToGroups">
+                            Back to Groups
+                        </button>
+                        @if (!_isAuditView && _selectedGroup is not null)
                         {
+                            <button type="button"
+                                    data-enter-edit-mode="true"
+                                    @onclick="() => EnterEditGroupMode(_selectedGroup)">
+                                Edit Permissions
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                @if (_isAuditView)
+                {
+                    <DataTableGrid TItem="PermissionAuditBreakdown"
+                                   GridId="user-audit-grid"
+                                   Items="@FilteredAuditBreakdowns"
+                                   TotalUnfilteredCount="@_auditBreakdowns.Count"
+                                   SearchQuery="@_searchQuery"
+                                   SearchQueryChanged="OnSearchQueryChanged"
+                                   FilterPredicate="MatchesAuditSearch"
+                                   SearchPlaceholder="Filter audited permissions...">
+                        <FilterContent>
+                            <label for="audit-category-filter">Category:</label>
+                            <select id="audit-category-filter"
+                                    data-category-filter="true"
+                                    @bind="_selectedCategoryFilter">
+                                <option value="">All Categories</option>
+                                @foreach (string category in _categories)
+                                {
+                                    <option value="@category">@category</option>
+                                }
+                            </select>
+                        </FilterContent>
+                        <HeaderContent>
                             <tr>
+                                <th>Permission</th>
+                                <th>Category</th>
+                                <th>Effective Outcome</th>
+                                <th>Determined By</th>
+                                <th>Breakdown</th>
+                            </tr>
+                        </HeaderContent>
+                        <RowTemplate Context="item">
+                            <tr @key="item.Descriptor.Key" data-audit-row="@item.Descriptor.Key">
+                                <td>
+                                    <strong>@item.Descriptor.DisplayName</strong>
+                                    <code>(@item.Descriptor.Key)</code>
+                                    @if (item.Descriptor.IsGloballyGated)
+                                    {
+                                        <span>[Globally Gated]</span>
+                                    }
+                                    <div>@item.Descriptor.Description</div>
+                                </td>
+                                <td>@item.Descriptor.Category</td>
+                                <td>
+                                    <span data-audit-outcome="@(item.IsAllowed ? "Allowed" : "Denied")">
+                                        @(item.IsAllowed ? "Allowed" : "Denied")
+                                    </span>
+                                </td>
+                                <td data-audit-determined-by="@item.Descriptor.Key">
+                                    @item.DeterminedByDisplay
+                                </td>
+                                <td>
+                                    <div>@item.SummaryReason</div>
+                                    <details data-audit-breakdown="@item.Descriptor.Key">
+                                        <summary>View Contributions (@item.Contributions.Count)</summary>
+                                        <ul>
+                                            @foreach (PermissionContribution contribution in item.Contributions)
+                                            {
+                                                <li data-audit-contribution="@contribution.SourceName">
+                                                    <strong>@contribution.SourceName</strong>:
+                                                    <span>@contribution.DisplayState</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </details>
+                                </td>
+                            </tr>
+                        </RowTemplate>
+                    </DataTableGrid>
+                }
+                else if (_selectedGroup is not null)
+                {
+                    <DataTableGrid TItem="PermissionDescriptor"
+                                   GridId="view-group-permissions-grid"
+                                   Items="@FilteredDescriptorsByCategory"
+                                   TotalUnfilteredCount="@_allDescriptors.Count"
+                                   SearchQuery="@_searchQuery"
+                                   SearchQueryChanged="OnSearchQueryChanged"
+                                   FilterPredicate="MatchesDescriptorSearch"
+                                   SearchPlaceholder="Filter permissions...">
+                        <FilterContent>
+                            <label for="view-category-filter">Category:</label>
+                            <select id="view-category-filter"
+                                    data-category-filter="true"
+                                    @bind="_selectedCategoryFilter">
+                                <option value="">All Categories</option>
+                                @foreach (string category in _categories)
+                                {
+                                    <option value="@category">@category</option>
+                                }
+                            </select>
+                        </FilterContent>
+                        <HeaderContent>
+                            <tr>
+                                <th>Permission</th>
+                                <th>Category</th>
+                                <th>State for @_selectedGroup.Name</th>
+                            </tr>
+                        </HeaderContent>
+                        <RowTemplate Context="descriptor">
+                            <tr @key="descriptor.Key" data-permission-row="@descriptor.Key">
                                 <td>
                                     <strong>@descriptor.DisplayName</strong>
                                     <code>(@descriptor.Key)</code>
@@ -162,97 +402,280 @@
                                     {
                                         <span>[Globally Gated]</span>
                                     }
+                                    @if (descriptor.IsDangerousGlobalFeature)
+                                    {
+                                        <span>[Dangerous]</span>
+                                    }
                                     <div>@descriptor.Description</div>
                                 </td>
-                                @foreach (PermissionGroup group in _groups)
-                                {
-                                    PermissionState currentState = GetGrantState(group.Id, descriptor.Key);
-                                    <td>
-                                        <select aria-label="@($"{descriptor.DisplayName} for {group.Name}")"
-                                                value="@currentState"
-                                                @onchange="(ChangeEventArgs args) => OnGrantChangedAsync(group.Id, descriptor.Key, args)">
-                                            <option value="@PermissionState.Inherit">Inherit</option>
-                                            <option value="@PermissionState.Allow">Allow</option>
-                                            <option value="@PermissionState.Deny">Deny</option>
-                                        </select>
-                                    </td>
-                                }
+                                <td>@descriptor.Category</td>
+                                <td data-permission-state="@descriptor.Key">
+                                    <strong>@GetSavedGrantState(_selectedGroup.Id, descriptor.Key)</strong>
+                                </td>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+                        </RowTemplate>
+                    </DataTableGrid>
 
-            @if (!anyPermissionRendered)
-            {
-                <p>No permissions match the current search.</p>
-            }
+                    <section aria-labelledby="group-members-heading">
+                        <h3 id="group-members-heading">@_selectedGroup.Name Members</h3>
+                        <div>
+                            <label for="member-platform-input">Platform ID:</label>
+                            <input id="member-platform-input" type="text" @bind="_newMemberPlatformId" placeholder="twitch" />
+                            <label for="member-userid-input">Platform User ID:</label>
+                            <input id="member-userid-input" type="text" @bind="_newMemberPlatformUserId" placeholder="User ID" />
+                            <label for="member-username-input">Username:</label>
+                            <input id="member-username-input" type="text" @bind="_newMemberUsername" placeholder="Optional username" />
+                            <button type="button" data-add-member="true" @onclick="AddMemberToSelectedGroupAsync">Add Member</button>
+                        </div>
+
+                        <DataTableGrid TItem="PermissionGroupMember"
+                                       GridId="view-group-members-grid"
+                                       Items="@GetMembersForGroup(_selectedGroup.Id)"
+                                       SearchQuery="@_searchQuery"
+                                       SearchQueryChanged="OnSearchQueryChanged"
+                                       FilterPredicate="MatchesMemberSearch"
+                                       SearchPlaceholder="Filter group members...">
+                            <EmptyContent>
+                                <p>No explicit members assigned to @_selectedGroup.Name.</p>
+                            </EmptyContent>
+                            <HeaderContent>
+                                <tr>
+                                    <th>Platform Identity</th>
+                                    <th>Username</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </HeaderContent>
+                            <RowTemplate Context="member">
+                                <tr @key="@($"{member.PlatformId}:{member.PlatformUserId}")">
+                                    <td><span>@member.PlatformId:@member.PlatformUserId</span></td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(member.LastKnownUsername))
+                                        {
+                                            <span>(@member.LastKnownUsername)</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button type="button"
+                                                data-remove-member="@($"{member.PlatformId}:{member.PlatformUserId}")"
+                                                @onclick="() => RemoveMemberAsync(_selectedGroup.Id, member.PlatformId, member.PlatformUserId)">
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            </RowTemplate>
+                        </DataTableGrid>
+                    </section>
+                }
+            </section>
         }
-    </section>
-
-    <section aria-labelledby="group-members-heading">
-        <h2 id="group-members-heading">Group Members</h2>
-        @if (_groups.Count == 0)
+        else if (_currentMode == PermissionsPageMode.Edit && _selectedGroup is not null)
         {
-            <p>No groups available.</p>
-        }
-        else
-        {
-            <div>
-                <label for="member-group-select">Group:</label>
-                <select id="member-group-select" @bind="_selectedMemberGroupId">
-                    @foreach (PermissionGroup group in _groups)
-                    {
-                        <option value="@group.Id">@group.Name</option>
-                    }
-                </select>
-                <label for="member-platform-input">Platform ID:</label>
-                <input id="member-platform-input" type="text" @bind="_newMemberPlatformId" placeholder="twitch" />
-                <label for="member-userid-input">Platform User ID:</label>
-                <input id="member-userid-input" type="text" @bind="_newMemberPlatformUserId" placeholder="User ID" />
-                <label for="member-username-input">Username:</label>
-                <input id="member-username-input" type="text" @bind="_newMemberUsername" placeholder="Optional username" />
-                <button type="button" @onclick="AddMemberAsync">Add Member</button>
-            </div>
+            <section aria-labelledby="edit-mode-heading" data-permissions-mode="Edit">
+                <div class="sa-permissions-mode-header">
+                    <h2 id="edit-mode-heading">Editing Group: @_selectedGroup.Name</h2>
+                    <div>
+                        <button type="button"
+                                data-back-to-groups="true"
+                                @onclick="RequestBackToGroups">
+                            Back to Groups
+                        </button>
+                        <button type="button"
+                                data-switch-to-view-mode="true"
+                                @onclick="RequestSwitchToViewMode">
+                            View Mode
+                        </button>
+                    </div>
+                </div>
 
-            @foreach (PermissionGroup group in _groups)
-            {
-                List<PermissionGroupMember> members = [.. GetMembersForGroup(group.Id).Where(MatchesMemberSearch)];
-                if (members.Count == 0)
+                @if (IsSelfEscalationWarningActive)
                 {
-                    continue;
+                    <div role="alert"
+                         data-self-escalation-warning="true"
+                         class="sa-self-escalation-warning">
+                        <p>
+                            <strong>Self-Escalation Warning:</strong>
+                            Granting <strong>Manage Permissions (<code>@BuiltInPermissionKeys.UiPermissionsManage</code>)</strong>
+                            to group <strong>@_selectedGroup.Name</strong> will allow members of this group to access the Workspace Permissions page and modify their own permissions.
+                        </p>
+                        @if (!_selfEscalationConfirmed)
+                        {
+                            <div>
+                                <button type="button"
+                                        data-confirm-self-escalation="true"
+                                        @onclick="ConfirmSelfEscalation">
+                                    Confirm Self-Escalation
+                                </button>
+                                <button type="button"
+                                        data-cancel-self-escalation="true"
+                                        @onclick="CancelSelfEscalation">
+                                    Cancel
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <p data-self-escalation-confirmed="true"><em>Self-escalation confirmed for this save operation.</em></p>
+                        }
+                    </div>
                 }
 
-                <h3>@group.Name Members</h3>
-                <ul>
-                    @foreach (PermissionGroupMember member in members)
+                <div class="sa-bulk-page-toolbar" data-bulk-page-toolbar="true">
+                    <strong>Set All Permissions for @_selectedGroup.Name to:</strong>
+                    <button type="button"
+                            data-bulk-page-allow="true"
+                            @onclick="() => SetAllPermissionsForActiveGroup(PermissionState.Allow)">
+                        Allow
+                    </button>
+                    <button type="button"
+                            data-bulk-page-inherit="true"
+                            @onclick="() => SetAllPermissionsForActiveGroup(PermissionState.Inherit)">
+                        Inherit
+                    </button>
+                    <button type="button"
+                            data-bulk-page-deny="true"
+                            @onclick="() => SetAllPermissionsForActiveGroup(PermissionState.Deny)">
+                        Deny
+                    </button>
+                </div>
+
+                <div class="sa-bulk-categories-toolbar" data-bulk-categories-toolbar="true">
+                    @foreach (string category in _categories)
                     {
-                        <li>
-                            <span>@member.PlatformId:@member.PlatformUserId</span>
-                            @if (!string.IsNullOrWhiteSpace(member.LastKnownUsername))
-                            {
-                                <span>(@member.LastKnownUsername)</span>
-                            }
-                            <button type="button" @onclick="() => RemoveMemberAsync(group.Id, member.PlatformId, member.PlatformUserId)">Remove</button>
-                        </li>
+                        string currentCategory = category;
+                        <div class="sa-bulk-category-group" data-bulk-category-group="@currentCategory">
+                            <span><strong>@currentCategory:</strong></span>
+                            <button type="button"
+                                    data-bulk-category-allow="@currentCategory"
+                                    @onclick="() => SetCategoryPermissionsForActiveGroup(currentCategory, PermissionState.Allow)">
+                                Allow
+                            </button>
+                            <button type="button"
+                                    data-bulk-category-inherit="@currentCategory"
+                                    @onclick="() => SetCategoryPermissionsForActiveGroup(currentCategory, PermissionState.Inherit)">
+                                Inherit
+                            </button>
+                            <button type="button"
+                                    data-bulk-category-deny="@currentCategory"
+                                    @onclick="() => SetCategoryPermissionsForActiveGroup(currentCategory, PermissionState.Deny)">
+                                Deny
+                            </button>
+                        </div>
                     }
-                </ul>
-            }
+                </div>
+
+                <DataTableGrid TItem="PermissionDescriptor"
+                               GridId="edit-group-permissions-grid"
+                               Items="@FilteredDescriptorsByCategory"
+                               TotalUnfilteredCount="@_allDescriptors.Count"
+                               SearchQuery="@_searchQuery"
+                               SearchQueryChanged="OnSearchQueryChanged"
+                               FilterPredicate="MatchesDescriptorSearch"
+                               SearchPlaceholder="Filter permissions...">
+                    <FilterContent>
+                        <label for="edit-category-filter">Category:</label>
+                        <select id="edit-category-filter"
+                                data-category-filter="true"
+                                @bind="_selectedCategoryFilter">
+                            <option value="">All Categories</option>
+                            @foreach (string category in _categories)
+                            {
+                                <option value="@category">@category</option>
+                            }
+                        </select>
+                    </FilterContent>
+                    <HeaderContent>
+                        <tr>
+                            <th>Permission</th>
+                            <th>Category</th>
+                            <th>@_selectedGroup.Name</th>
+                        </tr>
+                    </HeaderContent>
+                    <RowTemplate Context="descriptor">
+                        @{
+                            PermissionState pendingState = GetPendingGrantState(descriptor.Key);
+                            PermissionState savedState = GetSavedGrantState(_selectedGroup.Id, descriptor.Key);
+                            bool isModified = pendingState != savedState;
+                        }
+                        <tr @key="descriptor.Key"
+                            data-permission-row="@descriptor.Key"
+                            data-permission-modified="@(isModified ? "true" : "false")">
+                            <td>
+                                <strong>@descriptor.DisplayName</strong>
+                                <code>(@descriptor.Key)</code>
+                                @if (descriptor.IsGloballyGated)
+                                {
+                                    <span>[Globally Gated]</span>
+                                }
+                                @if (descriptor.IsDangerousGlobalFeature)
+                                {
+                                    <span>[Dangerous]</span>
+                                }
+                                <div>@descriptor.Description</div>
+                            </td>
+                            <td>@descriptor.Category</td>
+                            <td>
+                                <select aria-label="@($"{descriptor.DisplayName} for {_selectedGroup.Name}")"
+                                        data-permission-select="@descriptor.Key"
+                                        @onchange="(ChangeEventArgs args) => OnPendingGrantChanged(descriptor.Key, args)">
+                                    <option value="@PermissionState.Inherit" selected="@(pendingState == PermissionState.Inherit)">Inherit</option>
+                                    <option value="@PermissionState.Allow" selected="@(pendingState == PermissionState.Allow)">Allow</option>
+                                    <option value="@PermissionState.Deny" selected="@(pendingState == PermissionState.Deny)">Deny</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </RowTemplate>
+                </DataTableGrid>
+
+                <div class="sa-sticky-save-bar"
+                     data-sticky-save-bar="true"
+                     style="position: sticky; bottom: 0;">
+                    <span data-unsaved-changes-count="@UnsavedChangesCount">
+                        @UnsavedChangesCount unsaved change(s) for @_selectedGroup.Name
+                    </span>
+                    <button type="button"
+                            data-save-permissions="true"
+                            disabled="@(!HasUnsavedChanges || (IsSelfEscalationWarningActive && !_selfEscalationConfirmed))"
+                            @onclick="SavePendingChangesAsync">
+                        Save Changes
+                    </button>
+                    <button type="button"
+                            data-revert-permissions="true"
+                            disabled="@(!HasUnsavedChanges)"
+                            @onclick="RevertPendingChanges">
+                        Revert
+                    </button>
+                </div>
+            </section>
         }
-    </section>
     </StepUpMfaGuard>
 }
 
 @code {
     /// <summary>
-    /// Cached permission grant states keyed by group and permission key.
+    /// Cached persisted permission grant states keyed by group and permission key.
     /// </summary>
     private readonly Dictionary<(Guid GroupId, string PermissionKey), PermissionState> _grantStates = [];
+
+    /// <summary>
+    /// Snapshot of the selected group's persisted grant states when entering <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    private readonly Dictionary<string, PermissionState> _savedGrantStates = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// In-memory staged grant states for the selected group in <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    private readonly Dictionary<string, PermissionState> _pendingGrantStates = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Cached group member lists keyed by group identifier.
     /// </summary>
     private readonly Dictionary<Guid, IReadOnlyList<PermissionGroupMember>> _groupMembers = [];
+
+    /// <summary>
+    /// Cascading authentication state task used to determine whether the viewing operator is Root or Global Admin.
+    /// </summary>
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
     /// <summary>
     /// Active workspace identifier from <see cref="IWorkspaceSessionContext"/>.
@@ -270,12 +693,32 @@
     private IReadOnlyList<PermissionGroup> _groups = [];
 
     /// <summary>
+    /// All registered permission descriptors.
+    /// </summary>
+    private IReadOnlyList<PermissionDescriptor> _allDescriptors = [];
+
+    /// <summary>
     /// Registered permission categories.
     /// </summary>
     private IReadOnlyList<string> _categories = [];
 
     /// <summary>
-    /// Page-level search query filtering permissions and group members.
+    /// Current page mode (<see cref="PermissionsPageMode.List"/>, <see cref="PermissionsPageMode.View"/>, or <see cref="PermissionsPageMode.Edit"/>).
+    /// </summary>
+    private PermissionsPageMode _currentMode = PermissionsPageMode.List;
+
+    /// <summary>
+    /// Currently selected permission group in <see cref="PermissionsPageMode.View"/> or <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    private PermissionGroup? _selectedGroup;
+
+    /// <summary>
+    /// Optional category filter applied to permission descriptor and audit tables.
+    /// </summary>
+    private string _selectedCategoryFilter = string.Empty;
+
+    /// <summary>
+    /// Page-level search query filtering permissions, groups, and members.
     /// </summary>
     private string _searchQuery = string.Empty;
 
@@ -283,11 +726,6 @@
     /// New custom group name input.
     /// </summary>
     private string _newGroupName = string.Empty;
-
-    /// <summary>
-    /// Target group identifier for adding a new member.
-    /// </summary>
-    private Guid _selectedMemberGroupId;
 
     /// <summary>
     /// Platform identifier for adding a new group member.
@@ -305,6 +743,76 @@
     private string _newMemberUsername = string.Empty;
 
     /// <summary>
+    /// Prior state of <see cref="BuiltInPermissionKeys.UiPermissionsManage"/> before a staged change set it to <see cref="PermissionState.Allow"/>.
+    /// </summary>
+    private PermissionState _priorUiPermissionsManageState = PermissionState.Inherit;
+
+    /// <summary>
+    /// Whether the operator has explicitly confirmed the <c>ui.permissions.manage</c> self-escalation warning in the current edit session.
+    /// </summary>
+    private bool _selfEscalationConfirmed;
+
+    /// <summary>
+    /// Whether <see cref="PermissionsPageMode.View"/> is currently showing an Effective Permission Audit report rather than a single group.
+    /// </summary>
+    private bool _isAuditView;
+
+    /// <summary>
+    /// Display label for the audited user identity.
+    /// </summary>
+    private string _auditTargetLabel = string.Empty;
+
+    /// <summary>
+    /// Audit target platform identifier input.
+    /// </summary>
+    private string _auditPlatformId = "twitch";
+
+    /// <summary>
+    /// Audit target platform user identifier input.
+    /// </summary>
+    private string _auditPlatformUserId = string.Empty;
+
+    /// <summary>
+    /// Audit target display username input.
+    /// </summary>
+    private string _auditUsername = string.Empty;
+
+    /// <summary>
+    /// Audit target live platform designations.
+    /// </summary>
+    private PlatformUserDesignations _auditDesignations = PlatformUserDesignations.None;
+
+    /// <summary>
+    /// Computed effective permission audit breakdowns for the audited user.
+    /// </summary>
+    private IReadOnlyList<PermissionAuditBreakdown> _auditBreakdowns = [];
+
+    /// <summary>
+    /// Whether the current viewer holds Root or Global Administrator privileges.
+    /// </summary>
+    private bool _viewerIsRootOrGlobalAdmin;
+
+    /// <summary>
+    /// Whether the unsaved-changes confirmation prompt is currently displayed.
+    /// </summary>
+    private bool _showUnsavedNavigationPrompt;
+
+    /// <summary>
+    /// Pending target mode if the user confirms discarding unsaved changes.
+    /// </summary>
+    private PermissionsPageMode? _pendingTargetModeAfterDiscard;
+
+    /// <summary>
+    /// Pending internal navigation target URL if the user confirms discarding unsaved changes.
+    /// </summary>
+    private string? _pendingNavigationUrlAfterDiscard;
+
+    /// <summary>
+    /// Bypass flag set when executing a confirmed discard navigation so <see cref="OnBeforeInternalNavigationAsync"/> allows it through.
+    /// </summary>
+    private bool _bypassNavigationLockOnce;
+
+    /// <summary>
     /// Status banner message.
     /// </summary>
     private string? _statusMessage;
@@ -319,6 +827,99 @@
     /// </summary>
     private string _instanceName = AuthPolicyParser.DefaultInstanceName;
 
+    /// <summary>
+    /// Gets the number of staged permission changes that differ from <see cref="_savedGrantStates"/>.
+    /// </summary>
+    private int UnsavedChangesCount
+    {
+        get
+        {
+            if (_currentMode != PermissionsPageMode.Edit || _selectedGroup is null)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            foreach (KeyValuePair<string, PermissionState> kvp in _pendingGrantStates)
+            {
+                PermissionState saved = _savedGrantStates.TryGetValue(kvp.Key, out PermissionState s)
+                    ? s
+                    : PermissionState.Inherit;
+                if (kvp.Value != saved)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether the active edit session has any unsaved grant modifications.
+    /// </summary>
+    private bool HasUnsavedChanges => UnsavedChangesCount > 0;
+
+    /// <summary>
+    /// Gets a value indicating whether the self-escalation warning for <see cref="BuiltInPermissionKeys.UiPermissionsManage"/> is active.
+    /// </summary>
+    private bool IsSelfEscalationWarningActive
+    {
+        get
+        {
+            if (_currentMode != PermissionsPageMode.Edit || _selectedGroup is null)
+            {
+                return false;
+            }
+
+            PermissionState saved = _savedGrantStates.TryGetValue(BuiltInPermissionKeys.UiPermissionsManage, out PermissionState s)
+                ? s
+                : PermissionState.Inherit;
+            PermissionState pending = _pendingGrantStates.TryGetValue(BuiltInPermissionKeys.UiPermissionsManage, out PermissionState p)
+                ? p
+                : PermissionState.Inherit;
+
+            return saved != PermissionState.Allow && pending == PermissionState.Allow;
+        }
+    }
+
+    /// <summary>
+    /// Gets the list of permission descriptors filtered by <see cref="_selectedCategoryFilter"/>.
+    /// </summary>
+    private IReadOnlyList<PermissionDescriptor> FilteredDescriptorsByCategory =>
+        string.IsNullOrWhiteSpace(_selectedCategoryFilter)
+            ? _allDescriptors
+            : [.. _allDescriptors.Where(d => string.Equals(d.Category, _selectedCategoryFilter, StringComparison.OrdinalIgnoreCase))];
+
+    /// <summary>
+    /// Gets the list of audit breakdowns filtered by <see cref="_selectedCategoryFilter"/>.
+    /// </summary>
+    private IReadOnlyList<PermissionAuditBreakdown> FilteredAuditBreakdowns =>
+        string.IsNullOrWhiteSpace(_selectedCategoryFilter)
+            ? _auditBreakdowns
+            : [.. _auditBreakdowns.Where(b => string.Equals(b.Descriptor.Category, _selectedCategoryFilter, StringComparison.OrdinalIgnoreCase))];
+
+    /// <summary>
+    /// Gets all distinct group members across all groups in the active workspace for quick-picking in the audit launcher.
+    /// </summary>
+    private IReadOnlyList<PermissionGroupMember> AllDistinctMembers
+    {
+        get
+        {
+            Dictionary<string, PermissionGroupMember> distinct = new(StringComparer.OrdinalIgnoreCase);
+            foreach (IReadOnlyList<PermissionGroupMember> members in _groupMembers.Values)
+            {
+                foreach (PermissionGroupMember member in members)
+                {
+                    string key = $"{member.PlatformId}:{member.PlatformUserId}";
+                    _ = distinct.TryAdd(key, member);
+                }
+            }
+
+            return [.. distinct.Values];
+        }
+    }
+
     /// <inheritdoc/>
     protected override async Task OnInitializedAsync()
     {
@@ -329,7 +930,16 @@
             _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         }
 
+        if (AuthenticationStateTask is not null)
+        {
+            AuthenticationState authState = await AuthenticationStateTask.ConfigureAwait(false);
+            ClaimsPrincipal principal = authState.User;
+            _viewerIsRootOrGlobalAdmin = AuthClaims.HasTrueClaim(principal, AuthClaims.IsRootClaimType)
+                || AuthClaims.HasTrueClaim(principal, AuthClaims.IsGlobalAdminClaimType);
+        }
+
         _categories = PermissionRegistry.GetCategories();
+        _allDescriptors = PermissionRegistry.GetAll();
         _eventSubscription = EventBus.Subscribe<PermissionsInvalidatedEvent>(OnPermissionsInvalidatedAsync);
         WorkspaceSession.WorkspaceChanged += OnActiveWorkspaceChanged;
 
@@ -350,6 +960,15 @@
     }
 
     /// <summary>
+    /// Synchronizes the page-level search query when updated from a child <see cref="DataTableGrid{TItem}"/>.
+    /// </summary>
+    /// <param name="newQuery">The new search query string.</param>
+    private void OnSearchQueryChanged(string? newQuery)
+    {
+        _searchQuery = newQuery ?? string.Empty;
+    }
+
+    /// <summary>
     /// Handles active workspace changes triggered by the workspace session context.
     /// </summary>
     /// <param name="sender">The event sender.</param>
@@ -362,6 +981,13 @@
             {
                 _workspaceId = activeWorkspaceId;
                 _statusMessage = null;
+                _currentMode = PermissionsPageMode.List;
+                _selectedGroup = null;
+                _isAuditView = false;
+                _savedGrantStates.Clear();
+                _pendingGrantStates.Clear();
+                _showUnsavedNavigationPrompt = false;
+
                 if (_workspaceId.HasValue)
                 {
                     await LoadWorkspaceDataAsync();
@@ -379,40 +1005,92 @@
         });
 
     /// <summary>
-    /// Determines whether a permission descriptor matches the current <see cref="_searchQuery"/>.
+    /// Predicate evaluating whether a <see cref="PermissionGroup"/> matches the search query (either by group name, designation, member, or matching permission).
     /// </summary>
-    /// <param name="descriptor">The permission descriptor.</param>
-    /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
-    private bool MatchesPermissionSearch(PermissionDescriptor descriptor)
+    /// <param name="group">The permission group.</param>
+    /// <param name="query">The trimmed search query.</param>
+    /// <returns><see langword="true"/> if matched; otherwise, <see langword="false"/>.</returns>
+    private bool MatchesGroupSearch(PermissionGroup group, string query)
     {
-        if (string.IsNullOrWhiteSpace(_searchQuery))
+        if (string.IsNullOrWhiteSpace(query))
         {
             return true;
         }
 
-        string term = _searchQuery.Trim();
-        return descriptor.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)
-            || descriptor.Key.Contains(term, StringComparison.OrdinalIgnoreCase)
-            || descriptor.Description.Contains(term, StringComparison.OrdinalIgnoreCase);
+        if (group.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(group.MappedPlatformDesignation)
+                && group.MappedPlatformDesignation.Contains(query, StringComparison.OrdinalIgnoreCase))
+            || (!string.IsNullOrWhiteSpace(group.MappedOidcGroupClaim)
+                && group.MappedOidcGroupClaim.Contains(query, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        foreach (PermissionGroupMember member in GetMembersForGroup(group.Id))
+        {
+            if (MatchesMemberSearch(member, query))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
-    /// Determines whether a group member matches the current <see cref="_searchQuery"/>.
+    /// Predicate evaluating whether a <see cref="PermissionDescriptor"/> matches the search query.
     /// </summary>
-    /// <param name="member">The group member.</param>
-    /// <returns><see langword="true"/> if matched or search is empty; otherwise, <see langword="false"/>.</returns>
-    private bool MatchesMemberSearch(PermissionGroupMember member)
+    /// <param name="descriptor">The permission descriptor.</param>
+    /// <param name="query">The trimmed search query.</param>
+    /// <returns><see langword="true"/> if matched; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesDescriptorSearch(PermissionDescriptor descriptor, string query)
     {
-        if (string.IsNullOrWhiteSpace(_searchQuery))
+        if (string.IsNullOrWhiteSpace(query))
         {
             return true;
         }
 
-        string term = _searchQuery.Trim();
-        return member.PlatformId.Contains(term, StringComparison.OrdinalIgnoreCase)
-            || member.PlatformUserId.Contains(term, StringComparison.OrdinalIgnoreCase)
+        return descriptor.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Key.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Category.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || descriptor.Description.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Predicate evaluating whether a <see cref="PermissionAuditBreakdown"/> matches the search query.
+    /// </summary>
+    /// <param name="breakdown">The permission audit breakdown.</param>
+    /// <param name="query">The trimmed search query.</param>
+    /// <returns><see langword="true"/> if matched; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesAuditSearch(PermissionAuditBreakdown breakdown, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        return MatchesDescriptorSearch(breakdown.Descriptor, query)
+            || breakdown.DeterminedByDisplay.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || breakdown.SummaryReason.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Predicate evaluating whether a <see cref="PermissionGroupMember"/> matches the search query.
+    /// </summary>
+    /// <param name="member">The group member.</param>
+    /// <param name="query">The trimmed search query.</param>
+    /// <returns><see langword="true"/> if matched; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesMemberSearch(PermissionGroupMember member, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        return member.PlatformId.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || member.PlatformUserId.Contains(query, StringComparison.OrdinalIgnoreCase)
             || (!string.IsNullOrWhiteSpace(member.LastKnownUsername)
-                && member.LastKnownUsername.Contains(term, StringComparison.OrdinalIgnoreCase));
+                && member.LastKnownUsername.Contains(query, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -427,14 +1105,26 @@
     }
 
     /// <summary>
-    /// Retrieves the cached permission grant state for a group and permission key.
+    /// Retrieves the persisted permission grant state for a group and permission key.
     /// </summary>
     /// <param name="groupId">The group identifier.</param>
     /// <param name="permissionKey">The permission key.</param>
-    /// <returns>The configured <see cref="PermissionState"/>, defaulting to <see cref="PermissionState.Inherit"/>.</returns>
-    private PermissionState GetGrantState(Guid groupId, string permissionKey)
+    /// <returns>The persisted <see cref="PermissionState"/>, defaulting to <see cref="PermissionState.Inherit"/>.</returns>
+    private PermissionState GetSavedGrantState(Guid groupId, string permissionKey)
     {
         return _grantStates.TryGetValue((groupId, permissionKey), out PermissionState state)
+            ? state
+            : PermissionState.Inherit;
+    }
+
+    /// <summary>
+    /// Retrieves the staged permission grant state for a permission key in <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    /// <param name="permissionKey">The permission key.</param>
+    /// <returns>The staged <see cref="PermissionState"/>, defaulting to <see cref="PermissionState.Inherit"/>.</returns>
+    private PermissionState GetPendingGrantState(string permissionKey)
+    {
+        return _pendingGrantStates.TryGetValue(permissionKey, out PermissionState state)
             ? state
             : PermissionState.Inherit;
     }
@@ -451,6 +1141,422 @@
             : [];
     }
 
+    /// <summary>
+    /// Transitions into <see cref="PermissionsPageMode.View"/> for the specified group.
+    /// </summary>
+    /// <param name="group">The group to view.</param>
+    private void EnterViewGroupMode(PermissionGroup group)
+    {
+        _selectedGroup = group;
+        _isAuditView = false;
+        _selectedCategoryFilter = string.Empty;
+        _showUnsavedNavigationPrompt = false;
+        _currentMode = PermissionsPageMode.View;
+    }
+
+    /// <summary>
+    /// Initializes the staged edit buffer for <paramref name="group"/> and transitions into <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    /// <param name="group">The group to edit.</param>
+    private void EnterEditGroupMode(PermissionGroup group)
+    {
+        _selectedGroup = group;
+        _isAuditView = false;
+        _selectedCategoryFilter = string.Empty;
+        _showUnsavedNavigationPrompt = false;
+        InitializeEditBuffer(group.Id);
+        _currentMode = PermissionsPageMode.Edit;
+    }
+
+    /// <summary>
+    /// Copies persisted grant states for <paramref name="groupId"/> into <see cref="_savedGrantStates"/> and <see cref="_pendingGrantStates"/>.
+    /// </summary>
+    /// <param name="groupId">The group identifier.</param>
+    private void InitializeEditBuffer(Guid groupId)
+    {
+        _savedGrantStates.Clear();
+        _pendingGrantStates.Clear();
+
+        foreach (PermissionDescriptor descriptor in _allDescriptors)
+        {
+            PermissionState saved = GetSavedGrantState(groupId, descriptor.Key);
+            _savedGrantStates[descriptor.Key] = saved;
+            _pendingGrantStates[descriptor.Key] = saved;
+        }
+
+        _priorUiPermissionsManageState = _savedGrantStates.TryGetValue(BuiltInPermissionKeys.UiPermissionsManage, out PermissionState initialManageState)
+            ? initialManageState
+            : PermissionState.Inherit;
+        _selfEscalationConfirmed = false;
+    }
+
+    /// <summary>
+    /// Requests returning to <see cref="PermissionsPageMode.List"/>, prompting for confirmation if there are unsaved changes.
+    /// </summary>
+    private void RequestBackToGroups()
+    {
+        if (HasUnsavedChanges)
+        {
+            _pendingTargetModeAfterDiscard = PermissionsPageMode.List;
+            _pendingNavigationUrlAfterDiscard = null;
+            _showUnsavedNavigationPrompt = true;
+            return;
+        }
+
+        _currentMode = PermissionsPageMode.List;
+        _selectedGroup = null;
+        _isAuditView = false;
+        _showUnsavedNavigationPrompt = false;
+    }
+
+    /// <summary>
+    /// Requests switching from <see cref="PermissionsPageMode.Edit"/> to <see cref="PermissionsPageMode.View"/>, prompting if there are unsaved changes.
+    /// </summary>
+    private void RequestSwitchToViewMode()
+    {
+        if (_selectedGroup is null)
+        {
+            return;
+        }
+
+        if (HasUnsavedChanges)
+        {
+            _pendingTargetModeAfterDiscard = PermissionsPageMode.View;
+            _pendingNavigationUrlAfterDiscard = null;
+            _showUnsavedNavigationPrompt = true;
+            return;
+        }
+
+        EnterViewGroupMode(_selectedGroup);
+    }
+
+    /// <summary>
+    /// Intercepts internal Blazor navigation when <see cref="HasUnsavedChanges"/> is <see langword="true"/>.
+    /// </summary>
+    /// <param name="context">The location changing context.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous handler.</returns>
+    private Task OnBeforeInternalNavigationAsync(LocationChangingContext context)
+    {
+        if (_bypassNavigationLockOnce)
+        {
+            _bypassNavigationLockOnce = false;
+            return Task.CompletedTask;
+        }
+
+        if (HasUnsavedChanges)
+        {
+            context.PreventNavigation();
+            _pendingNavigationUrlAfterDiscard = context.TargetLocation;
+            _pendingTargetModeAfterDiscard = null;
+            _showUnsavedNavigationPrompt = true;
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Discards staged permission edits and completes the pending mode transition or internal navigation.
+    /// </summary>
+    private void ConfirmDiscardAndNavigateAsync()
+    {
+        _showUnsavedNavigationPrompt = false;
+        if (_selectedGroup is not null)
+        {
+            InitializeEditBuffer(_selectedGroup.Id);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_pendingNavigationUrlAfterDiscard))
+        {
+            string targetUrl = _pendingNavigationUrlAfterDiscard;
+            _pendingNavigationUrlAfterDiscard = null;
+            _bypassNavigationLockOnce = true;
+            Navigation.NavigateTo(targetUrl);
+            return;
+        }
+
+        if (_pendingTargetModeAfterDiscard == PermissionsPageMode.View && _selectedGroup is not null)
+        {
+            _pendingTargetModeAfterDiscard = null;
+            EnterViewGroupMode(_selectedGroup);
+            return;
+        }
+
+        _pendingTargetModeAfterDiscard = null;
+        _currentMode = PermissionsPageMode.List;
+        _selectedGroup = null;
+        _isAuditView = false;
+    }
+
+    /// <summary>
+    /// Cancels the unsaved-changes discard prompt and stays in <see cref="PermissionsPageMode.Edit"/>.
+    /// </summary>
+    private void CancelDiscardNavigation()
+    {
+        _showUnsavedNavigationPrompt = false;
+        _pendingTargetModeAfterDiscard = null;
+        _pendingNavigationUrlAfterDiscard = null;
+    }
+
+    /// <summary>
+    /// Updates a single permission's staged state in <see cref="_pendingGrantStates"/> without writing to the database.
+    /// </summary>
+    /// <param name="permissionKey">The permission key.</param>
+    /// <param name="args">The change event arguments.</param>
+    private void OnPendingGrantChanged(string permissionKey, ChangeEventArgs args)
+    {
+        if (!Enum.TryParse(args.Value?.ToString(), out PermissionState newState))
+        {
+            return;
+        }
+
+        ApplyPendingGrantState(permissionKey, newState);
+    }
+
+    /// <summary>
+    /// Sets all registered permissions in <see cref="_pendingGrantStates"/> for the active group to <paramref name="targetState"/>.
+    /// </summary>
+    /// <param name="targetState">The target <see cref="PermissionState"/>.</param>
+    private void SetAllPermissionsForActiveGroup(PermissionState targetState)
+    {
+        if (_selectedGroup is null)
+        {
+            return;
+        }
+
+        foreach (PermissionDescriptor descriptor in _allDescriptors)
+        {
+            ApplyPendingGrantState(descriptor.Key, targetState);
+        }
+
+        _statusMessage = $"Staged all permissions as {targetState} for '{_selectedGroup.Name}'. Click Save Changes to persist.";
+    }
+
+    /// <summary>
+    /// Sets all permissions within <paramref name="category"/> in <see cref="_pendingGrantStates"/> for the active group to <paramref name="targetState"/>.
+    /// </summary>
+    /// <param name="category">The permission category name.</param>
+    /// <param name="targetState">The target <see cref="PermissionState"/>.</param>
+    private void SetCategoryPermissionsForActiveGroup(string category, PermissionState targetState)
+    {
+        if (_selectedGroup is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<PermissionDescriptor> categoryDescriptors = PermissionRegistry.GetByCategory(category);
+        foreach (PermissionDescriptor descriptor in categoryDescriptors)
+        {
+            ApplyPendingGrantState(descriptor.Key, targetState);
+        }
+
+        _statusMessage = $"Staged category '{category}' permissions as {targetState} for '{_selectedGroup.Name}'. Click Save Changes to persist.";
+    }
+
+    /// <summary>
+    /// Applies a staged state change to <see cref="_pendingGrantStates"/> and tracks <see cref="BuiltInPermissionKeys.UiPermissionsManage"/> self-escalation transitions.
+    /// </summary>
+    /// <param name="permissionKey">The permission key.</param>
+    /// <param name="newState">The new staged state.</param>
+    private void ApplyPendingGrantState(string permissionKey, PermissionState newState)
+    {
+        if (string.Equals(permissionKey, BuiltInPermissionKeys.UiPermissionsManage, StringComparison.OrdinalIgnoreCase))
+        {
+            PermissionState currentPending = GetPendingGrantState(BuiltInPermissionKeys.UiPermissionsManage);
+            if (newState == PermissionState.Allow && currentPending != PermissionState.Allow)
+            {
+                _priorUiPermissionsManageState = currentPending;
+                _selfEscalationConfirmed = false;
+            }
+            else if (newState != PermissionState.Allow)
+            {
+                _selfEscalationConfirmed = false;
+            }
+        }
+
+        _pendingGrantStates[permissionKey] = newState;
+    }
+
+    /// <summary>
+    /// Confirms the self-escalation warning for granting <see cref="BuiltInPermissionKeys.UiPermissionsManage"/>.
+    /// </summary>
+    private void ConfirmSelfEscalation()
+    {
+        _selfEscalationConfirmed = true;
+    }
+
+    /// <summary>
+    /// Cancels the self-escalation change on <see cref="BuiltInPermissionKeys.UiPermissionsManage"/> and reverts it to its prior state.
+    /// </summary>
+    private void CancelSelfEscalation()
+    {
+        _pendingGrantStates[BuiltInPermissionKeys.UiPermissionsManage] = _priorUiPermissionsManageState;
+        _selfEscalationConfirmed = false;
+    }
+
+    /// <summary>
+    /// Persists all modified grants for the active group in a single atomic batch call and invalidates the workspace permission cache once.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous save operation.</returns>
+    private async Task SavePendingChangesAsync()
+    {
+        if (_workspaceId is not Guid workspaceId || _selectedGroup is null)
+        {
+            return;
+        }
+
+        if (IsSelfEscalationWarningActive && !_selfEscalationConfirmed)
+        {
+            _statusMessage = "Please confirm or cancel the Self-Escalation Warning before saving.";
+            return;
+        }
+
+        Dictionary<string, PermissionState> changedGrants = new(StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, PermissionState> kvp in _pendingGrantStates)
+        {
+            PermissionState saved = _savedGrantStates.TryGetValue(kvp.Key, out PermissionState s)
+                ? s
+                : PermissionState.Inherit;
+            if (kvp.Value != saved)
+            {
+                changedGrants[kvp.Key] = kvp.Value;
+            }
+        }
+
+        if (changedGrants.Count == 0)
+        {
+            return;
+        }
+
+        Guid groupId = _selectedGroup.Id;
+        string groupName = _selectedGroup.Name;
+
+        await PermissionStore.SetGrantsBatchAsync(groupId, changedGrants);
+        foreach (KeyValuePair<string, PermissionState> kvp in changedGrants)
+        {
+            if (kvp.Value == PermissionState.Inherit)
+            {
+                _ = _grantStates.Remove((groupId, kvp.Key));
+            }
+            else
+            {
+                _grantStates[(groupId, kvp.Key)] = kvp.Value;
+            }
+
+            _savedGrantStates[kvp.Key] = kvp.Value;
+        }
+
+        _priorUiPermissionsManageState = GetPendingGrantState(BuiltInPermissionKeys.UiPermissionsManage);
+        _selfEscalationConfirmed = false;
+        _showUnsavedNavigationPrompt = false;
+
+        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
+        _statusMessage = $"Saved {changedGrants.Count} permission change(s) for '{groupName}'.";
+    }
+
+    /// <summary>
+    /// Reverts all staged edits in <see cref="_pendingGrantStates"/> back to <see cref="_savedGrantStates"/>.
+    /// </summary>
+    private void RevertPendingChanges()
+    {
+        if (_selectedGroup is null)
+        {
+            return;
+        }
+
+        InitializeEditBuffer(_selectedGroup.Id);
+        _showUnsavedNavigationPrompt = false;
+        _statusMessage = $"Reverted unsaved changes for '{_selectedGroup.Name}'.";
+    }
+
+    /// <summary>
+    /// Populates the user audit inputs when a member is selected from the quick-pick dropdown.
+    /// </summary>
+    /// <param name="args">The change event arguments.</param>
+    private void OnQuickPickAuditMember(ChangeEventArgs args)
+    {
+        string? raw = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return;
+        }
+
+        int separatorIndex = raw.IndexOf(':', StringComparison.Ordinal);
+        if (separatorIndex <= 0)
+        {
+            return;
+        }
+
+        string platformId = raw[..separatorIndex];
+        string platformUserId = raw[(separatorIndex + 1)..];
+        PermissionGroupMember? member = AllDistinctMembers.FirstOrDefault(
+            m => string.Equals(m.PlatformId, platformId, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(m.PlatformUserId, platformUserId, StringComparison.OrdinalIgnoreCase));
+
+        _auditPlatformId = platformId;
+        _auditPlatformUserId = platformUserId;
+        _auditUsername = member?.LastKnownUsername ?? platformUserId;
+    }
+
+    /// <summary>
+    /// Toggles a <see cref="PlatformUserDesignations"/> flag on the user audit target input.
+    /// </summary>
+    /// <param name="flag">The designation flag to toggle.</param>
+    /// <param name="args">The checkbox change event arguments.</param>
+    private void ToggleAuditDesignation(PlatformUserDesignations flag, ChangeEventArgs args)
+    {
+        bool isChecked = args.Value is bool b && b;
+        _auditDesignations = isChecked
+            ? _auditDesignations | flag
+            : _auditDesignations & ~flag;
+    }
+
+    /// <summary>
+    /// Runs <see cref="IPermissionService.ExplainUserPermissionsAsync"/> for the configured target user and transitions to <see cref="PermissionsPageMode.View"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous audit operation.</returns>
+    private async Task LaunchUserAuditAsync()
+    {
+        if (_workspaceId is not Guid workspaceId)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_auditPlatformId) || string.IsNullOrWhiteSpace(_auditPlatformUserId))
+        {
+            _statusMessage = "Platform ID and Platform User ID are required to audit user permissions.";
+            return;
+        }
+
+        string platformId = _auditPlatformId.Trim();
+        string platformUserId = _auditPlatformUserId.Trim();
+        string username = string.IsNullOrWhiteSpace(_auditUsername)
+            ? platformUserId
+            : _auditUsername.Trim();
+
+        PlatformUserIdentity actor = new(
+            PlatformId: platformId,
+            PlatformUserId: platformUserId,
+            Username: username,
+            Designations: _auditDesignations);
+
+        _auditBreakdowns = await PermissionService.ExplainUserPermissionsAsync(
+            workspaceId,
+            actor,
+            viewerIsRootOrGlobalAdmin: _viewerIsRootOrGlobalAdmin);
+
+        _auditTargetLabel = $"{username} ({platformId}:{platformUserId})";
+        _selectedGroup = null;
+        _isAuditView = true;
+        _selectedCategoryFilter = string.Empty;
+        _currentMode = PermissionsPageMode.View;
+        _statusMessage = null;
+    }
+
+    /// <summary>
+    /// Seeds built-in workspace permission groups for the active workspace.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task SeedBuiltInGroupsAsync()
     {
         if (_workspaceId is not Guid workspaceId)
@@ -464,6 +1570,10 @@
         _statusMessage = "Built-in workspace groups seeded.";
     }
 
+    /// <summary>
+    /// Creates a new custom workspace permission group with all permissions defaulting to <see cref="PermissionState.Inherit"/> (zero grant rows).
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task CreateCustomGroupAsync()
     {
         if (_workspaceId is not Guid workspaceId)
@@ -491,6 +1601,11 @@
         _statusMessage = $"Created group '{newGroup.Name}'.";
     }
 
+    /// <summary>
+    /// Deletes a custom workspace permission group.
+    /// </summary>
+    /// <param name="groupId">The group identifier to delete.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task DeleteGroupAsync(Guid groupId)
     {
         if (_workspaceId is not Guid workspaceId)
@@ -504,27 +1619,13 @@
         _statusMessage = "Deleted custom group.";
     }
 
-    private async Task OnGrantChangedAsync(Guid groupId, string permissionKey, ChangeEventArgs args)
+    /// <summary>
+    /// Adds a platform user as an explicit member of the currently selected permission group.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task AddMemberToSelectedGroupAsync()
     {
-        if (_workspaceId is not Guid workspaceId)
-        {
-            return;
-        }
-
-        if (!Enum.TryParse(args.Value?.ToString(), out PermissionState newState))
-        {
-            return;
-        }
-
-        await PermissionStore.SetGrantAsync(groupId, permissionKey, newState);
-        _grantStates[(groupId, permissionKey)] = newState;
-        await PermissionService.InvalidateWorkspaceAsync(workspaceId);
-        _statusMessage = $"Updated '{permissionKey}' to {newState}.";
-    }
-
-    private async Task AddMemberAsync()
-    {
-        if (_workspaceId is not Guid workspaceId || _selectedMemberGroupId == Guid.Empty)
+        if (_workspaceId is not Guid workspaceId || _selectedGroup is null)
         {
             return;
         }
@@ -538,7 +1639,7 @@
         PermissionGroupMember member = new()
         {
             Id = Guid.NewGuid(),
-            GroupId = _selectedMemberGroupId,
+            GroupId = _selectedGroup.Id,
             PlatformId = _newMemberPlatformId.Trim(),
             PlatformUserId = _newMemberPlatformUserId.Trim(),
             LastKnownUsername = string.IsNullOrWhiteSpace(_newMemberUsername) ? null : _newMemberUsername.Trim(),
@@ -553,6 +1654,13 @@
         _statusMessage = "Added group member.";
     }
 
+    /// <summary>
+    /// Removes an explicit member from a permission group.
+    /// </summary>
+    /// <param name="groupId">The group identifier.</param>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="platformUserId">The platform user identifier.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task RemoveMemberAsync(Guid groupId, string platformId, string platformUserId)
     {
         if (_workspaceId is not Guid workspaceId)
@@ -566,6 +1674,10 @@
         _statusMessage = "Removed group member.";
     }
 
+    /// <summary>
+    /// Loads workspace details, permission groups, grants, and group members from <see cref="IPermissionStore"/>.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task LoadWorkspaceDataAsync()
     {
         if (_workspaceId is not Guid workspaceId)
@@ -574,6 +1686,7 @@
         }
 
         _categories = PermissionRegistry.GetCategories();
+        _allDescriptors = PermissionRegistry.GetAll();
         _workspace = await PermissionStore.GetWorkspaceAsync(workspaceId);
         _groups = await PermissionStore.GetGroupsAsync(workspaceId);
 
@@ -592,12 +1705,34 @@
             _groupMembers[group.Id] = members;
         }
 
-        if (_groups.Count > 0 && !_groups.Any(g => g.Id == _selectedMemberGroupId))
+        if (_selectedGroup is not null)
         {
-            _selectedMemberGroupId = _groups[0].Id;
+            PermissionGroup? refreshed = _groups.FirstOrDefault(g => g.Id == _selectedGroup.Id);
+            if (refreshed is null)
+            {
+                _selectedGroup = null;
+                if (_currentMode != PermissionsPageMode.List && !_isAuditView)
+                {
+                    _currentMode = PermissionsPageMode.List;
+                }
+            }
+            else
+            {
+                _selectedGroup = refreshed;
+                if (_currentMode == PermissionsPageMode.Edit && !HasUnsavedChanges)
+                {
+                    InitializeEditBuffer(refreshed.Id);
+                }
+            }
         }
     }
 
+    /// <summary>
+    /// Handles <see cref="PermissionsInvalidatedEvent"/> notifications from the event bus.
+    /// </summary>
+    /// <param name="evt">The invalidation event.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
     private ValueTask OnPermissionsInvalidatedAsync(PermissionsInvalidatedEvent evt, CancellationToken cancellationToken)
     {
         if (_workspaceId is not Guid currentWorkspaceId)

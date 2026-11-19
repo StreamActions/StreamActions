@@ -27,6 +27,7 @@
 @using StreamActions.Core.Abstractions
 @using StreamActions.Core.Models
 @using StreamActions.Core.Models.Entities
+@using StreamActions.Core.Permissions
 @using StreamActions.Web.Endpoints
 
 @inject IBootstrapTokenService BootstrapTokenService
@@ -97,6 +98,35 @@ else
                 <p>Recommended if you lost access to your passkey or authenticator app. Uncheck to keep existing MFA credentials and require an MFA challenge after OAuth verification.</p>
             </div>
         }
+        else
+        {
+            <fieldset data-setup-dangerous-features="true">
+                <legend>High-Risk / Advanced Features (Optional)</legend>
+                <p>
+                    By default, the <strong>@BuiltInPermissionKeys.DefaultWorkspacePlanGroupName</strong> global group grants standard streamer features
+                    (commands, timers, quotes, counters, moderation, loyalty, overlays, soundboard, alerts, public portal, and Discord add-on) while leaving
+                    the following 5 high-risk global features at <strong>Implicit Deny (Inherit)</strong> for multi-tenant security.
+                    Check any advanced features you want enabled by default for streamer workspaces on this node:
+                </p>
+                <div>
+                    <label for="enable-all-dangerous-features">
+                        <input id="enable-all-dangerous-features" name="enableAllDangerousFeatures" type="checkbox" value="true" />
+                        Enable all advanced features for streamer workspaces
+                    </label>
+                </div>
+                <ul>
+                    @foreach (PermissionDescriptor descriptor in _dangerousGlobalFeatures)
+                    {
+                        <li>
+                            <label>
+                                <input type="checkbox" name="enabledDangerousFeatures" value="@descriptor.Key" />
+                                <strong>@descriptor.DisplayName</strong> (<code>@descriptor.Key</code>) — @descriptor.Description
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </fieldset>
+        }
         <button type="submit">Verify &amp; Continue</button>
     </form>
 }
@@ -148,6 +178,11 @@ else
     private string _instanceName = AuthPolicyParser.DefaultInstanceName;
 
     /// <summary>
+    /// Registered dangerous global feature descriptors rendered as opt-in checkboxes during initial setup.
+    /// </summary>
+    private IReadOnlyList<PermissionDescriptor> _dangerousGlobalFeatures = [];
+
+    /// <summary>
     /// Gets or sets the ambient HTTP context during static SSR rendering.
     /// </summary>
     [CascadingParameter]
@@ -185,6 +220,11 @@ else
             InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
             _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         }
+
+        IPermissionRegistry permissionRegistry = ServiceProvider.GetService<IPermissionRegistry>() ?? new PermissionRegistry();
+        _dangerousGlobalFeatures = [.. permissionRegistry
+            .GetAll()
+            .Where(static d => d.IsGloballyGated && d.IsDangerousGlobalFeature)];
 
         BootstrapTokenRequestResult tokenResult = BootstrapTokenService.RequestOrReuseActiveToken();
         _tokenAvailable = tokenResult.Succeeded;

@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -71,6 +72,26 @@ public static class WebServiceCollectionExtensions
                 options.ExpireTimeSpan = TimeSpan.FromDays(7);
                 options.Events = new CookieAuthenticationEvents
                 {
+                    OnValidatePrincipal = static async context =>
+                    {
+                        if (AuthClaims.GetSessionId(context.Principal) is Guid sessionId
+                            && context.HttpContext.RequestServices.GetService<IPanelSessionService>() is IPanelSessionService sessionService)
+                        {
+                            bool valid = await sessionService
+                                .IsSessionValidAsync(
+                                    sessionId,
+                                    AuthClaims.GetPanelUserId(context.Principal),
+                                    context.HttpContext.RequestAborted)
+                                .ConfigureAwait(false);
+                            if (!valid)
+                            {
+                                context.RejectPrincipal();
+                                await context.HttpContext
+                                    .SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme)
+                                    .ConfigureAwait(false);
+                            }
+                        }
+                    },
                     OnRedirectToLogin = static context =>
                     {
                         if (context.Request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase))

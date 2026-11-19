@@ -69,6 +69,125 @@ public sealed class PermissionStoreTests
         ]);
         await firstEventReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
         _ = events.Should().ContainSingle(e => e.WorkspaceId == workspaceId);
+
+        PermissionGroup broadcasterGroup = groups.Single(static g => g.Name == "Broadcaster");
+        PermissionGroup moderatorGroup = groups.Single(static g => g.Name == "Moderator");
+        PermissionGroup everyoneGroup = groups.Single(static g => g.Name == "Everyone");
+        PermissionGroup vipGroup = groups.Single(static g => g.Name == "VIP");
+
+        IReadOnlyList<PermissionGrant> broadcasterGrants = await store.GetGrantsAsync(broadcasterGroup.Id, ct);
+        IReadOnlyList<PermissionGrant> moderatorGrants = await store.GetGrantsAsync(moderatorGroup.Id, ct);
+        IReadOnlyList<PermissionGrant> everyoneGrants = await store.GetGrantsAsync(everyoneGroup.Id, ct);
+        IReadOnlyList<PermissionGrant> vipGrants = await store.GetGrantsAsync(vipGroup.Id, ct);
+
+        _ = broadcasterGrants.Should().Contain(static g => g.PermissionKey == BuiltInPermissionKeys.UiPermissionsManage && g.State == PermissionState.Allow);
+        _ = broadcasterGrants.Should().Contain(static g => g.PermissionKey == BuiltInPermissionKeys.UiPanelAccess && g.State == PermissionState.Allow);
+        _ = moderatorGrants.Should().Contain(static g => g.PermissionKey == BuiltInPermissionKeys.UiPanelAccess && g.State == PermissionState.Allow);
+        _ = moderatorGrants.Should().NotContain(static g => g.PermissionKey == BuiltInPermissionKeys.UiPermissionsManage);
+        _ = everyoneGrants.Should().ContainSingle(static g => g.PermissionKey == BuiltInPermissionKeys.ActionRunCommand && g.State == PermissionState.Allow);
+        _ = vipGrants.Should().BeEmpty();
+
+        IReadOnlyList<PermissionGroup> assignedGlobalGroups = await store.GetGlobalGroupsForWorkspaceAsync(workspaceId, ct);
+        _ = assignedGlobalGroups.Should().ContainSingle(static g => g.Name == BuiltInPermissionKeys.DefaultWorkspacePlanGroupName);
+    }
+    #endregion
+
+    #region SeedDefaultGlobalGroupAsync
+    [Fact]
+    [Trait("Member", "SeedDefaultGlobalGroupAsync")]
+    public async Task SeedDefaultGlobalGroupAsync_SeedsStandardGlobalFeaturesToAllowLeavesDangerousAtInheritAndSupportsOptIn()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TestSqliteContextFactory factory = new();
+        using InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
+        PermissionRegistry registry = new();
+        PermissionStore store = new(factory, TimeProvider.System, eventBus, registry);
+
+        PermissionGroup defaultGroup = await store.SeedDefaultGlobalGroupAsync(enabledDangerousFeatureKeys: null, ct);
+        _ = defaultGroup.Name.Should().Be(BuiltInPermissionKeys.DefaultWorkspacePlanGroupName);
+        _ = defaultGroup.WorkspaceId.Should().BeNull();
+
+        IReadOnlyList<PermissionGrant> initialGrants = await store.GetGrantsAsync(defaultGroup.Id, ct);
+        IReadOnlyList<PermissionDescriptor> standardGlobal = [.. registry.GetAll().Where(static d => d.IsGloballyGated && !d.IsDangerousGlobalFeature)];
+        IReadOnlyList<PermissionDescriptor> dangerousGlobal = [.. registry.GetAll().Where(static d => d.IsGloballyGated && d.IsDangerousGlobalFeature)];
+
+        _ = standardGlobal.Should().HaveCount(12);
+        _ = dangerousGlobal.Should().HaveCount(5);
+
+        foreach (PermissionDescriptor standard in standardGlobal)
+        {
+            _ = initialGrants.Should().ContainSingle(g => g.PermissionKey == standard.Key && g.State == PermissionState.Allow);
+        }
+
+        foreach (PermissionDescriptor dangerous in dangerousGlobal)
+        {
+            _ = initialGrants.Should().NotContain(g => g.PermissionKey == dangerous.Key);
+        }
+
+        // Opt in to 2 dangerous features.
+        PermissionGroup updatedGroup = await store.SeedDefaultGlobalGroupAsync(
+            [BuiltInPermissionKeys.FeatureScriptingClearScript, BuiltInPermissionKeys.FeatureCustomOidcProvider],
+            ct);
+        _ = updatedGroup.Id.Should().Be(defaultGroup.Id);
+
+        IReadOnlyList<PermissionGrant> afterOptInGrants = await store.GetGrantsAsync(defaultGroup.Id, ct);
+        _ = afterOptInGrants.Should().ContainSingle(static g => g.PermissionKey == BuiltInPermissionKeys.FeatureScriptingClearScript && g.State == PermissionState.Allow);
+        _ = afterOptInGrants.Should().ContainSingle(static g => g.PermissionKey == BuiltInPermissionKeys.FeatureCustomOidcProvider && g.State == PermissionState.Allow);
+        _ = afterOptInGrants.Should().NotContain(static g => g.PermissionKey == BuiltInPermissionKeys.FeaturePlugins);
+    }
+    #endregion
+
+    #region SetGrantsBatchAsync
+    [Fact]
+    [Trait("Member", "SetGrantsBatchAsync")]
+    public async Task SetGrantsBatchAsync_UpsertsAllGrantsInSingleSaveAndPublishesSingleInvalidationEvent()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TestSqliteContextFactory factory = new();
+        (_, Guid workspaceId) = await factory.SeedWorkspaceAsync(ct);
+        using InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
+        PermissionStore store = new(factory, TimeProvider.System, eventBus);
+
+        PermissionGroup customGroup = await store.UpsertGroupAsync(new PermissionGroup
+        {
+            WorkspaceId = workspaceId,
+            Name = "Custom Moderators",
+        }, ct);
+
+        // Creating a new group creates 0 persisted grant rows.
+        _ = (await store.GetGrantsAsync(customGroup.Id, ct)).Should().BeEmpty();
+
+        TaskCompletionSource batchEventReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<PermissionsInvalidatedEvent> batchEvents = [];
+        using IDisposable sub = eventBus.Subscribe<PermissionsInvalidatedEvent>((evt, cancellationToken) =>
+        {
+            if (evt.WorkspaceId == workspaceId)
+            {
+                batchEvents.Add(evt);
+                _ = batchEventReceived.TrySetResult();
+            }
+
+            return ValueTask.CompletedTask;
+        });
+
+        await store.SetGrantsBatchAsync(
+            customGroup.Id,
+            new Dictionary<string, PermissionState>
+            {
+                [BuiltInPermissionKeys.UiPanelAccess] = PermissionState.Allow,
+                [BuiltInPermissionKeys.ModerationTimeout] = PermissionState.Allow,
+                [BuiltInPermissionKeys.ModerationBan] = PermissionState.Deny,
+            },
+            ct);
+
+        await batchEventReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
+        _ = batchEvents.Should().ContainSingle();
+
+        IReadOnlyList<PermissionGrant> grants = await store.GetGrantsAsync(customGroup.Id, ct);
+        _ = grants.Should().HaveCount(3);
+        _ = grants.Should().ContainSingle(static g => g.PermissionKey == BuiltInPermissionKeys.UiPanelAccess && g.State == PermissionState.Allow);
+        _ = grants.Should().ContainSingle(static g => g.PermissionKey == BuiltInPermissionKeys.ModerationTimeout && g.State == PermissionState.Allow);
+        _ = grants.Should().ContainSingle(static g => g.PermissionKey == BuiltInPermissionKeys.ModerationBan && g.State == PermissionState.Deny);
     }
     #endregion
 

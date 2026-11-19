@@ -120,6 +120,11 @@ public class StreamActionsDbContext : DbContext
     public DbSet<PanelUserMfaCredential> PanelUserMfaCredentials => this.Set<PanelUserMfaCredential>();
 
     /// <summary>
+    /// Gets the panel user sessions table.
+    /// </summary>
+    public DbSet<PanelUserSession> PanelUserSessions => this.Set<PanelUserSession>();
+
+    /// <summary>
     /// Gets the permission groups table.
     /// </summary>
     public DbSet<PermissionGroup> PermissionGroups => this.Set<PermissionGroup>();
