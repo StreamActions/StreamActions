@@ -79,6 +79,11 @@ public sealed class Workspace
     public StepUpSudoPolicy StepUpSudoPolicy { get; set; } = StepUpSudoPolicy.Required;
 
     /// <summary>
+    /// Gets or sets the BCP-47 culture code used for localized bot output in this workspace.
+    /// </summary>
+    public string BotCulture { get; set; } = "en-US";
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when the workspace was created.
     /// </summary>
     public DateTimeOffset CreatedAtUtc { get; set; }

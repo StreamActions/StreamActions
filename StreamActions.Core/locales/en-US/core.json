@@ -1,0 +1,45 @@
+{
+  "ui": {
+    "title": "StreamActions",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "workspaceSettings": "Workspace Settings",
+    "botCulture": "Bot Language"
+  },
+  "responses": {
+    "commandSuccess": "{sender}, the command completed successfully.",
+    "commandFailed": "{sender}, the command could not be completed: {1}",
+    "missingPermission": "{sender}, you do not have permission to use that command.",
+    "invalidArguments": "{sender}, invalid arguments. Usage: {1}",
+    "cooldownActive": "{sender}, that command is on cooldown for {1}s.",
+    "pluginEnabled": "{sender}, plugin {1} has been enabled.",
+    "pluginDisabled": "{sender}, plugin {1} has been disabled.",
+    "alertSent": "{sender}, alert {1} has been triggered."
+  },
+  "commands": {
+    "bot.command": {
+      "triggers": [
+        "command",
+        "cmd"
+      ],
+      "description": "Manages custom chat commands for the workspace."
+    },
+    "bot.plugin": {
+      "triggers": [
+        "plugin",
+        "plugins"
+      ],
+      "description": "Enables, disables, or inspects workspace plugins."
+    },
+    "bot.alert": {
+      "triggers": [
+        "alert",
+        "alerts"
+      ],
+      "description": "Triggers or manages stream alerts."
+    }
+  }
+}

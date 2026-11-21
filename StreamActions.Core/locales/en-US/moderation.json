@@ -1,0 +1,35 @@
+{
+  "ui": {
+    "title": "Moderation",
+    "lockdownButton": "Emergency Lockdown",
+    "filtersTitle": "Chat Filters",
+    "permitUser": "Permit User"
+  },
+  "responses": {
+    "permitGranted": "{sender}, {1} has been temporarily permitted to post links.",
+    "lockdownEnabled": "{sender}, emergency chat lockdown is now enabled.",
+    "lockdownDisabled": "{sender}, emergency chat lockdown has been lifted.",
+    "filterUpdated": "{sender}, moderation filter {1} has been updated."
+  },
+  "commands": {
+    "bot.permit": {
+      "triggers": [
+        "permit"
+      ],
+      "description": "Temporarily permits a user to bypass link and spam filters."
+    },
+    "bot.filter": {
+      "triggers": [
+        "filter",
+        "filters"
+      ],
+      "description": "Configures automated chat moderation filters."
+    },
+    "bot.lockdown": {
+      "triggers": [
+        "lockdown"
+      ],
+      "description": "Toggles emergency chat lockdown mode."
+    }
+  }
+}

@@ -126,6 +126,59 @@ public sealed class WorkspaceStoreTests
         _ = updatedSecond.RequireExternalOidcLogin.Should().BeTrue();
     }
 
+    [Fact]
+    [Trait("Member", "CreateWorkspaceAsync")]
+    public async Task CreateWorkspaceAsync_DefaultsAndPersistsNormalizedBotCultureAcrossCreateAndUpdate()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TestSqliteContextFactory factory = new();
+        (Guid userId, _) = await factory.SeedWorkspaceAsync(ct);
+
+        SecretProtectionService protection = new(new EphemeralDataProtectionProvider(), NullLogger<SecretProtectionService>.Instance);
+        FakeTimeProvider timeProvider = new();
+        using InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
+        PermissionStore permissionStore = new(factory, timeProvider, eventBus);
+        WorkspaceStore store = new(factory, protection, permissionStore, timeProvider);
+
+        Workspace defaulted = await store.CreateWorkspaceAsync(
+            new Workspace
+            {
+                OwnerUserId = userId,
+                Name = "Default Culture Workspace",
+                PrimaryPlatformId = "twitch",
+                BotCulture = "   ",
+            },
+            cancellationToken: ct);
+        _ = defaulted.BotCulture.Should().Be("en-US");
+
+        Workspace custom = await store.CreateWorkspaceAsync(
+            new Workspace
+            {
+                OwnerUserId = userId,
+                Name = "Custom Culture Workspace",
+                PrimaryPlatformId = "twitch",
+                BotCulture = "  es-ES  ",
+            },
+            cancellationToken: ct);
+        _ = custom.BotCulture.Should().Be("es-ES");
+
+        Workspace? reloadedCustom = await store.GetByIdAsync(custom.Id, ct);
+        _ = reloadedCustom.Should().NotBeNull();
+        _ = reloadedCustom!.BotCulture.Should().Be("es-ES");
+
+        defaulted.BotCulture = "  es-ES ";
+        Workspace updated = await store.UpdateWorkspaceAsync(defaulted, ct);
+        _ = updated.BotCulture.Should().Be("es-ES");
+
+        Workspace? reloadedUpdated = await store.GetByIdAsync(defaulted.Id, ct);
+        _ = reloadedUpdated.Should().NotBeNull();
+        _ = reloadedUpdated!.BotCulture.Should().Be("es-ES");
+
+        updated.BotCulture = string.Empty;
+        Workspace reset = await store.UpdateWorkspaceAsync(updated, ct);
+        _ = reset.BotCulture.Should().Be("en-US");
+    }
+
     #endregion
 
     #region CustomOAuthApp

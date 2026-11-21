@@ -36,6 +36,7 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
         _ = builder.Property(static x => x.Name).HasMaxLength(200).IsRequired();
         _ = builder.Property(static x => x.Slug).HasMaxLength(128).IsRequired();
         _ = builder.Property(static x => x.PrimaryPlatformId).HasMaxLength(64).IsRequired();
+        _ = builder.Property(static x => x.BotCulture).HasMaxLength(32).IsRequired();
 
         _ = builder.HasOne<PanelUser>()
             .WithMany()

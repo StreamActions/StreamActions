@@ -179,6 +179,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
                 MfaTotpAvailability = workspace.MfaTotpAvailability,
                 LoginMfaRequirement = workspace.LoginMfaRequirement,
                 StepUpSudoPolicy = workspace.StepUpSudoPolicy,
+                BotCulture = NormalizeBotCulture(workspace.BotCulture),
                 CreatedAtUtc = workspace.CreatedAtUtc == default ? this._timeProvider.GetUtcNow() : workspace.CreatedAtUtc,
             };
 
@@ -236,6 +237,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
             existing.MfaTotpAvailability = workspace.MfaTotpAvailability;
             existing.LoginMfaRequirement = workspace.LoginMfaRequirement;
             existing.StepUpSudoPolicy = workspace.StepUpSudoPolicy;
+            existing.BotCulture = NormalizeBotCulture(workspace.BotCulture);
 
             _ = await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return existing;
@@ -462,6 +464,22 @@ public sealed class WorkspaceStore : IWorkspaceStore
 
             return deleted > 0;
         }
+    }
+
+    /// <summary>
+    /// Normalizes a workspace bot culture tag by trimming whitespace, defaulting to <c>en-US</c>, and bounding length to 32 characters.
+    /// </summary>
+    /// <param name="botCulture">The raw bot culture tag.</param>
+    /// <returns>The normalized bot culture tag.</returns>
+    private static string NormalizeBotCulture(string? botCulture)
+    {
+        if (string.IsNullOrWhiteSpace(botCulture))
+        {
+            return "en-US";
+        }
+
+        string trimmed = botCulture.Trim();
+        return trimmed.Length > 32 ? trimmed[..32] : trimmed;
     }
 
     /// <summary>

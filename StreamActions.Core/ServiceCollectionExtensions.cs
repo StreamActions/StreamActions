@@ -19,6 +19,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using StreamActions.Core.Abstractions;
 using StreamActions.Core.Configuration;
 using StreamActions.Core.Permissions;
@@ -47,6 +48,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         _ = services.AddOptions<BootstrapOptions>()
             .Bind(configuration.GetSection(BootstrapOptions.SectionName));
+        _ = services.AddOptions<LocalizationOptions>()
+            .Bind(configuration.GetSection(LocalizationOptions.SectionName));
         services.TryAddSingleton<ISecretRedactor, SecretRedactor>();
         services.TryAddSingleton<IEventBus, InMemoryEventBus>();
         services.TryAddSingleton<IPluginManager, PluginManager>();
@@ -59,6 +62,9 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IWorkspaceAccessService, WorkspaceAccessService>();
         services.TryAddSingleton<ITotpService, TotpService>();
         services.TryAddScoped<IMfaPolicyService, MfaPolicyService>();
+        services.TryAddSingleton<IStreamActionsLocalizer, StreamActionsLocalizer>();
+        services.TryAddSingleton<IStringLocalizer>(static sp => sp.GetRequiredService<IStreamActionsLocalizer>());
+        services.TryAddSingleton<ISafeExternalHttpClient, SafeExternalHttpClient>();
         _ = services.AddHybridCache();
 
         return services;

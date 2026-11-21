@@ -120,6 +120,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IWorkspaceStore, WorkspaceStore>();
         services.TryAddSingleton<IExternalOidcProviderStore, ExternalOidcProviderStore>();
         services.TryAddSingleton<IPlatformCredentialStore, PlatformCredentialStore>();
+        services.TryAddSingleton<ISecretVault, SecretVault>();
         services.TryAddSingleton<IMfaCredentialStore, MfaCredentialStore>();
         services.TryAddSingleton<WorkspaceCacheService>();
         services.TryAddSingleton<DatabaseMigrationService>();
