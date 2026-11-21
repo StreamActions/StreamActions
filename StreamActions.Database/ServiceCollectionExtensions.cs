@@ -123,6 +123,9 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ISecretVault, SecretVault>();
         services.TryAddSingleton<IMfaCredentialStore, MfaCredentialStore>();
         services.TryAddSingleton<WorkspaceCacheService>();
+        services.TryAddSingleton<ICommandRepository, CommandRepository>();
+        services.TryAddSingleton<ICounterStore, CounterStore>();
+        services.TryAddSingleton<IViewerLoyaltyStore, ViewerLoyaltyStore>();
         services.TryAddSingleton<DatabaseMigrationService>();
         services.TryAddSingleton<IInstanceSettingsService, InstanceSettingsService>();
         services.TryAddSingleton<IInstanceOAuthConfigService, InstanceOAuthConfigService>();

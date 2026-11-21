@@ -41,6 +41,16 @@ public interface IChatPlatform
     PlatformCapabilities Capabilities { get; }
 
     /// <summary>
+    /// Gets the maximum character length allowed per single outbound chat message on this platform.
+    /// </summary>
+    int MaxMessageLength => 500;
+
+    /// <summary>
+    /// Gets a value indicating whether the platform permits non-moderator bots to send identical consecutive messages within the duplicate window.
+    /// </summary>
+    bool SupportsDuplicateMessagesAsNonModerator => false;
+
+    /// <summary>
     /// Connects the platform integration for the specified workspace.
     /// </summary>
     /// <param name="workspaceId">The workspace identifier.</param>
@@ -66,4 +76,25 @@ public interface IChatPlatform
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous send operation.</returns>
     ValueTask SendMessageAsync(Guid workspaceId, string channelId, string message, string? replyToMessageId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Determines whether the bot account holds moderator or VIP status in the specified channel.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <param name="channelId">The target platform channel identifier.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> if the bot is a moderator or VIP in the channel; otherwise, <see langword="false"/>.</returns>
+    ValueTask<bool> IsBotModeratorOrVipAsync(Guid workspaceId, string channelId, CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(false);
+
+    /// <summary>
+    /// Sends a private whisper or direct message to a user on this platform.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <param name="targetPlatformUserId">The recipient's platform-specific user identifier.</param>
+    /// <param name="message">The whisper message text to send.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the asynchronous whisper send operation.</returns>
+    ValueTask SendWhisperAsync(Guid workspaceId, string targetPlatformUserId, string message, CancellationToken cancellationToken = default) =>
+        ValueTask.CompletedTask;
 }

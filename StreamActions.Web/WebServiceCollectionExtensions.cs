@@ -155,6 +155,7 @@ public static class WebServiceCollectionExtensions
             .AddInteractiveServerComponents();
         _ = services.AddSignalR();
         _ = services.AddHostedService<PermissionHubEventBridge>();
+        _ = services.AddHostedService<CommandHubEventBridge>();
         _ = services.AddRateLimiter(static options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

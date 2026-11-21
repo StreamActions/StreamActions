@@ -36,6 +36,28 @@ public sealed class CommandMetadata
     public bool AllowCustomOverride { get; set; }
 
     /// <summary>
+    /// Gets or sets the platform designations allowed to mutate a bound counter through parameterized usage.
+    /// </summary>
+    public PlatformUserDesignations CounterMutateDesignations { get; set; } = PlatformUserDesignations.Moderator;
+
+    /// <summary>
+    /// Gets or sets an optional permission key required to mutate a bound counter through parameterized usage.
+    /// </summary>
+    public string? CounterMutatePermissionKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional list of platform identifiers where this command is permitted to execute; empty or <see langword="null"/> allows all platforms.
+    /// </summary>
+    [SuppressMessage("Design", "CA1002:Do not expose generic lists", Justification = "Mutable list required for EF Core complex JSON property and System.Text.Json binding.")]
+    [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Mutable list required for EF Core complex JSON property and System.Text.Json binding.")]
+    public List<string>? AllowedPlatforms { get; set; }
+
+    /// <summary>
+    /// Gets or sets the outbound routing scope for responses emitted by this command.
+    /// </summary>
+    public OutboundTargetScope TargetScope { get; set; } = OutboundTargetScope.OriginPlatform;
+
+    /// <summary>
     /// Gets or sets additional command-specific key-value settings.
     /// </summary>
     [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Mutable dictionary required for EF Core complex JSON property and System.Text.Json binding.")]

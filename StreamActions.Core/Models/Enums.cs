@@ -182,6 +182,79 @@ public enum CounterUsageBehavior
     /// Resets the bound counter value to zero.
     /// </summary>
     ResetToZero = 5,
+
+    /// <summary>
+    /// Mutates or reads the bound counter using parameterized arguments (for example, <c>+1</c>, <c>-2</c>, or <c>=10</c>).
+    /// </summary>
+    Parameterized = 6,
+}
+
+/// <summary>
+/// Defines the priority lanes used by the outbound chat dispatcher, ordered from highest to lowest priority.
+/// </summary>
+public enum OutboundChatPriority
+{
+    /// <summary>
+    /// Highest-priority lane for immediate moderation actions and notices; applies backpressure without dropping messages.
+    /// </summary>
+    ModerationImmediate = 0,
+
+    /// <summary>
+    /// High-priority lane for interactive command replies; applies backpressure without dropping messages.
+    /// </summary>
+    CommandReply = 1,
+
+    /// <summary>
+    /// Normal-priority lane for stream event announcements; drops the oldest queued message when saturated.
+    /// </summary>
+    EventAnnouncement = 2,
+
+    /// <summary>
+    /// Lowest-priority lane for scheduled timer messages; drops the oldest queued message when saturated.
+    /// </summary>
+    Timer = 3,
+}
+
+/// <summary>
+/// Defines which attached workspace platforms receive an outbound message.
+/// </summary>
+public enum OutboundTargetScope
+{
+    /// <summary>
+    /// Routes the message only to the platform and channel where the invocation originated.
+    /// </summary>
+    OriginPlatform = 0,
+
+    /// <summary>
+    /// Routes the message only to the workspace's primary platform channel.
+    /// </summary>
+    PrimaryPlatformOnly = 1,
+
+    /// <summary>
+    /// Routes the message to all currently live streaming platforms (primary and simulcast peers) attached to the workspace.
+    /// </summary>
+    AllActiveStreamPlatforms = 2,
+}
+
+/// <summary>
+/// Defines how identical outbound messages sent within the duplicate-guard window are handled.
+/// </summary>
+public enum DuplicateMessagePolicy
+{
+    /// <summary>
+    /// Suppresses identical messages within the duplicate window unless the platform permits duplicates for non-moderators or the bot is a moderator or VIP.
+    /// </summary>
+    PlatformDefault = 0,
+
+    /// <summary>
+    /// Always suppresses identical messages sent to the same channel within the duplicate window, regardless of moderator or VIP status.
+    /// </summary>
+    Suppress = 1,
+
+    /// <summary>
+    /// Bypasses the duplicate-message guard and always sends the message.
+    /// </summary>
+    Allow = 2,
 }
 
 /// <summary>

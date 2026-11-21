@@ -19,11 +19,14 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using StreamActions.Core.Abstractions;
+using StreamActions.Core.Commands;
 using StreamActions.Core.Configuration;
 using StreamActions.Core.Permissions;
 using StreamActions.Core.Services;
+using StreamActions.Core.Templates;
 
 namespace StreamActions.Core;
 
@@ -65,7 +68,26 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IStreamActionsLocalizer, StreamActionsLocalizer>();
         services.TryAddSingleton<IStringLocalizer>(static sp => sp.GetRequiredService<IStreamActionsLocalizer>());
         services.TryAddSingleton<ISafeExternalHttpClient, SafeExternalHttpClient>();
+        services.TryAddSingleton<IStreamStatusProvider, DefaultStreamStatusProvider>();
+        _ = services.AddOptions<OutboundChatDispatcherOptions>();
+        services.TryAddSingleton<OutboundChatDispatcher>();
+        services.TryAddSingleton<IOutboundChatDispatcher>(static sp => sp.GetRequiredService<OutboundChatDispatcher>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, OutboundChatDispatcher>(static sp => sp.GetRequiredService<OutboundChatDispatcher>()));
         _ = services.AddHybridCache();
+
+        foreach (ICommandTagHandler handler in CoreTagRegistryFactory.CreateDefaultHandlers())
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton(handler));
+        }
+
+        services.TryAddSingleton<ITagRegistry, TagRegistry>();
+        services.TryAddSingleton<BotCommandSubCommandHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBuiltInCommandHandler, BotCommandSubCommandHandler>(static sp => sp.GetRequiredService<BotCommandSubCommandHandler>()));
+        services.TryAddSingleton<IBuiltInCommandRegistry, BuiltInCommandRegistry>();
+        services.TryAddSingleton<CommandAstCache>();
+        services.TryAddSingleton<CommandCooldownTracker>();
+        services.TryAddSingleton<ICommandDispatcher, CommandDispatcher>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPlugin, CommandsPlugin>());
 
         return services;
     }

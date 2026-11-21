@@ -17,7 +17,26 @@
     "cooldownActive": "{sender}, that command is on cooldown for {1}s.",
     "pluginEnabled": "{sender}, plugin {1} has been enabled.",
     "pluginDisabled": "{sender}, plugin {1} has been disabled.",
-    "alertSent": "{sender}, alert {1} has been triggered."
+    "alertSent": "{sender}, alert {1} has been triggered.",
+    "insufficientPoints": "{sender}, you do not have enough points ({1} required) to use that command.",
+    "commandAdded": "{sender}, command !{1} has been added.",
+    "commandEdited": "{sender}, command !{1} has been updated.",
+    "commandDeleted": "{sender}, command !{1} has been deleted.",
+    "commandNotFound": "{sender}, command !{1} was not found.",
+    "commandAlreadyExists": "{sender}, command !{1} already exists.",
+    "commandInvalidSyntax": "{sender}, invalid command template syntax: {1}",
+    "commandPermissionUpdated": "{sender}, permission for !{1} on group {2} has been set to {3}.",
+    "commandCooldownUpdated": "{sender}, cooldown for !{1} ({2}) has been set to {3}s.",
+    "commandCostUpdated": "{sender}, point cost for !{1} has been set to {2}.",
+    "commandRewardUpdated": "{sender}, point reward for !{1} has been set to {2}.",
+    "commandCountUpdated": "{sender}, counter settings for !{1} have been updated.",
+    "commandToggled": "{sender}, command !{1} is now {2}.",
+    "permissionGroupNotFound": "{sender}, permission group '{1}' was not found.",
+    "counter": {
+      "increased": "[Increased] ",
+      "decreased": "[Decreased] ",
+      "set": "[Set] "
+    }
   },
   "commands": {
     "bot.command": {
