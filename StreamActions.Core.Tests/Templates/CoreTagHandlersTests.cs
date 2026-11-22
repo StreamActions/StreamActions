@@ -60,13 +60,17 @@ public sealed class CoreTagHandlersTests
         _ = (await EvaluateAsync("{sender_id}", ctx)).Value.Should().Be("user-42");
         _ = (await EvaluateAsync("{channel}", ctx)).Value.Should().Be("streamer_chan");
         _ = (await EvaluateAsync("{target}", ctx)).Value.Should().Be("Bob");
-        _ = (await EvaluateAsync("{clean_user \"  @Carol \"}", ctx)).Value.Should().Be("Carol");
-        _ = (await EvaluateAsync("{point_to_user}", ctx)).Value.Should().Be("@Bob");
+        _ = (await EvaluateAsync("{clean_user \"  @Carol!# \"}", ctx)).Value.Should().Be("Carol");
+        _ = (await EvaluateAsync("{point_to_user}", ctx)).Value.Should().Be("Bob -> ");
 
         TagEvaluationContext noArgCtx = TemplateTestHarness.CreateContext(
             TemplateTestHarness.CreateChatCommand(arguments: [], senderDisplayName: "AliceDisplay"));
         _ = (await EvaluateAsync("{target}", noArgCtx)).Value.Should().Be("AliceDisplay");
-        _ = (await EvaluateAsync("{point_to_user}", noArgCtx)).Value.Should().Be("@AliceDisplay");
+        _ = (await EvaluateAsync("{point_to_user}", noArgCtx)).Value.Should().Be("AliceDisplay -> ");
+
+        TagEvaluationContext discordCtx = TemplateTestHarness.CreateContext(
+            TemplateTestHarness.CreateChatCommand(platformId: "discord", senderUsername: "alice", senderDisplayName: "Alice"));
+        _ = (await EvaluateAsync("{@sender}", discordCtx)).Value.Should().Be("<@user-42>");
     }
 
     #endregion
@@ -108,6 +112,7 @@ public sealed class CoreTagHandlersTests
         _ = (await EvaluateAsync("{replace \"a-b-a\" \"-\" \"_\"}", ctx)).Value.Should().Be("a_b_a");
         _ = (await EvaluateAsync("{url_encode \"a b&c=1\"}", ctx)).Value.Should().Be("a%20b%26c%3D1");
         _ = (await EvaluateAsync("{repeat 3 \"ha\"}", ctx)).Value.Should().Be("hahaha");
+        _ = RepeatTagHandler.MaxRepeatCount.Should().Be(30);
         _ = (await EvaluateAsync("{repeat 500 \"x\"}", ctx)).Value.Should().HaveLength(RepeatTagHandler.MaxRepeatCount);
         _ = (await EvaluateAsync("{nl}", ctx)).Value.Should().Be("\n");
     }
@@ -132,9 +137,22 @@ public sealed class CoreTagHandlersTests
         int parsed = int.Parse(randInt.Value, CultureInfo.InvariantCulture);
         _ = parsed.Should().BeInRange(10, 20);
 
+        TagResult randIntDefault = await EvaluateAsync("{random_int}", ctx);
+        _ = int.Parse(randIntDefault.Value, CultureInfo.InvariantCulture).Should().BeInRange(1, 100);
+
+        TagResult randIntSinglePositive = await EvaluateAsync("{random_int 5}", ctx);
+        _ = int.Parse(randIntSinglePositive.Value, CultureInfo.InvariantCulture).Should().BeInRange(1, 5);
+
+        TagResult randIntSingleNegative = await EvaluateAsync("{random_int -2}", ctx);
+        _ = int.Parse(randIntSingleNegative.Value, CultureInfo.InvariantCulture).Should().BeInRange(-2, 1);
+
+        _ = RandomCodeTagHandler.MaxCodeLength.Should().Be(64);
         TagResult randCode = await EvaluateAsync("{random_code 12}", ctx);
         _ = randCode.Value.Should().HaveLength(12);
         _ = randCode.Value.Should().MatchRegex("^[A-Za-z0-9]{12}$");
+
+        TagResult cappedCode = await EvaluateAsync("{random_code 200}", ctx);
+        _ = cappedCode.Value.Should().HaveLength(RandomCodeTagHandler.MaxCodeLength);
     }
 
     [Theory]

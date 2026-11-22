@@ -44,6 +44,11 @@ public static class TemplateExecutionLimits
     public const int MaxEvaluationBufferChars = 16_384;
 
     /// <summary>
+    /// Maximum number of delayed actions (<c>{delaycommand}</c> and <c>{delaysay}</c>) permitted per template evaluation.
+    /// </summary>
+    public const int MaxDelayedActionsPerExecution = 3;
+
+    /// <summary>
     /// Default timeout applied to template evaluation when no explicit timeout is specified.
     /// </summary>
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);

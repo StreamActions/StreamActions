@@ -33,6 +33,7 @@
   <ItemGroup>
     <ProjectReference Include="..\StreamActions.Core\StreamActions.Core.csproj" />
     <ProjectReference Include="..\StreamActions.Database\StreamActions.Database.csproj" />
+    <ProjectReference Include="..\StreamActions.Twitch.UI\StreamActions.Twitch.UI.csproj" />
     <ProjectReference Include="..\StreamActions.Twitch\StreamActions.Twitch.csproj" />
     <ProjectReference Include="..\StreamActions.Web\StreamActions.Web.csproj" />
   </ItemGroup>

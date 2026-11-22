@@ -58,6 +58,11 @@ public interface ITagEvaluationContext
     PlatformUserIdentity ActorIdentity { get; }
 
     /// <summary>
+    /// Gets the optional channel point redemption context associated with this evaluation.
+    /// </summary>
+    ChannelPointRedemptionContext? ChannelPointRedemption { get; }
+
+    /// <summary>
     /// Gets the command's parsed positional arguments.
     /// </summary>
     IReadOnlyList<string> Arguments { get; }
@@ -158,6 +163,16 @@ public interface ITagEvaluationContext
     int MaxAstNestingDepth { get; }
 
     /// <summary>
+    /// Gets the number of delayed actions scheduled so far during this evaluation.
+    /// </summary>
+    int DelayedActionCount { get; }
+
+    /// <summary>
+    /// Gets the maximum number of delayed actions permitted per evaluation.
+    /// </summary>
+    int MaxDelayedActionsPerExecution { get; }
+
+    /// <summary>
     /// Gets the most recent counter read or mutation result recorded during this execution, if any.
     /// </summary>
     CounterMutationResult? LastCounterMutation { get; }
@@ -234,4 +249,10 @@ public interface ITagEvaluationContext
     /// </summary>
     /// <param name="mutation">The counter mutation result to record.</param>
     void RecordCounterMutation(CounterMutationResult mutation);
+
+    /// <summary>
+    /// Attempts to reserve a delayed action slot against <see cref="MaxDelayedActionsPerExecution"/>.
+    /// </summary>
+    /// <returns><see langword="true"/> if a slot was reserved; <see langword="false"/> if the per-evaluation cap has been reached.</returns>
+    bool TryReserveDelayedAction();
 }

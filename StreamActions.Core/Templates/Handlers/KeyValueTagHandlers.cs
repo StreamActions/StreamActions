@@ -89,12 +89,9 @@ public sealed class KvGetTagHandler : ICommandTagHandler
             defaultValue,
             cancellationToken).ConfigureAwait(false);
 
-        if (stored is not null)
-        {
-            return TagResult.Complete(stored);
-        }
-
-        return hasExplicitDefault
+        return stored is not null
+            ? TagResult.Complete(stored)
+            : hasExplicitDefault
             ? TagResult.Complete(defaultValue ?? string.Empty)
             : TagResult.Incomplete;
     }
@@ -228,5 +225,78 @@ public sealed class KvRandTagHandler : ICommandTagHandler
         string chosenKey = keys[RandomNumberGenerator.GetInt32(keys.Count)];
         string? value = await kvStore.GetStringAsync(context.WorkspaceId, table, section, chosenKey, null, cancellationToken).ConfigureAwait(false);
         return TagResult.FromNonEmpty(value);
+    }
+}
+
+/// <summary>
+/// Handles the <c>{kv_append &lt;table&gt; &lt;section&gt; &lt;key&gt; &lt;val&gt;}</c> tag, appending a newline-separated value in <see cref="IWorkspaceKeyValueStore"/>.
+/// </summary>
+public sealed class KvAppendTagHandler : ICommandTagHandler
+{
+    /// <inheritdoc />
+    public string TagName => "kv_append";
+
+    /// <inheritdoc />
+    public async ValueTask<TagResult> EvaluateAsync(
+        ITagEvaluationContext context,
+        IReadOnlyList<TemplateNode> unevaluatedArgs,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(unevaluatedArgs);
+
+        if (unevaluatedArgs.Count < 4)
+        {
+            return TagResult.Incomplete;
+        }
+
+        IWorkspaceKeyValueStore? kvStore = context.GetService<IWorkspaceKeyValueStore>();
+        if (kvStore is null)
+        {
+            return TagResult.Incomplete;
+        }
+
+        TagResult tableResult = await unevaluatedArgs[0].EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+        if (!tableResult.IsComplete || string.IsNullOrWhiteSpace(tableResult.Value))
+        {
+            return TagResult.Incomplete;
+        }
+
+        TagResult sectionResult = await unevaluatedArgs[1].EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+        if (!sectionResult.IsComplete || string.IsNullOrWhiteSpace(sectionResult.Value))
+        {
+            return TagResult.Incomplete;
+        }
+
+        TagResult keyResult = await unevaluatedArgs[2].EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+        if (!keyResult.IsComplete || string.IsNullOrWhiteSpace(keyResult.Value))
+        {
+            return TagResult.Incomplete;
+        }
+
+        TagResult valResult = await unevaluatedArgs[3].EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+        if (!valResult.IsComplete)
+        {
+            return TagResult.Incomplete;
+        }
+
+        string table = tableResult.Value.Trim();
+        string section = sectionResult.Value.Trim();
+        string key = keyResult.Value.Trim();
+
+        string? existing = await kvStore.GetStringAsync(context.WorkspaceId, table, section, key, null, cancellationToken).ConfigureAwait(false);
+        string updated = string.IsNullOrEmpty(existing)
+            ? valResult.Value
+            : $"{existing}\n{valResult.Value}";
+
+        await kvStore.SetAsync(
+            context.WorkspaceId,
+            table,
+            section,
+            key,
+            updated,
+            cancellationToken).ConfigureAwait(false);
+
+        return TagResult.Complete(string.Empty);
     }
 }

@@ -66,6 +66,8 @@ public sealed class TagEvaluationContext : ITagEvaluationContext
     /// <param name="maxTagEvaluationsPerExecution">Maximum allowed tag evaluations per execution.</param>
     /// <param name="maxEvaluationBufferChars">Maximum allowed buffer characters per execution.</param>
     /// <param name="maxAstNestingDepth">Maximum allowed AST nesting depth.</param>
+    /// <param name="channelPointRedemption">Optional channel point redemption metadata.</param>
+    /// <param name="maxDelayedActionsPerExecution">Maximum allowed delayed actions per execution.</param>
     public TagEvaluationContext(
         IMessageEnvelope message,
         ITagRegistry tagRegistry,
@@ -85,7 +87,9 @@ public sealed class TagEvaluationContext : ITagEvaluationContext
         ConcurrentDictionary<string, object?>? memoizedCache = null,
         int maxTagEvaluationsPerExecution = TemplateExecutionLimits.MaxTagEvaluationsPerExecution,
         int maxEvaluationBufferChars = TemplateExecutionLimits.MaxEvaluationBufferChars,
-        int maxAstNestingDepth = TemplateExecutionLimits.MaxAstNestingDepth)
+        int maxAstNestingDepth = TemplateExecutionLimits.MaxAstNestingDepth,
+        ChannelPointRedemptionContext? channelPointRedemption = null,
+        int maxDelayedActionsPerExecution = TemplateExecutionLimits.MaxDelayedActionsPerExecution)
     {
         ArgumentNullException.ThrowIfNull(message);
         ArgumentNullException.ThrowIfNull(tagRegistry);
@@ -93,6 +97,7 @@ public sealed class TagEvaluationContext : ITagEvaluationContext
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxTagEvaluationsPerExecution);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxEvaluationBufferChars);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxAstNestingDepth);
+        ArgumentOutOfRangeException.ThrowIfNegative(maxDelayedActionsPerExecution);
 
         this.Message = message;
         this.WorkspaceId = message.WorkspaceId;
@@ -100,6 +105,7 @@ public sealed class TagEvaluationContext : ITagEvaluationContext
         this.ChannelName = channelName ?? (message as IChatMessage)?.Channel.ChannelName ?? string.Empty;
         this.CurrentGameCategory = currentGameCategory;
         this.ActorIdentity = actorIdentity ?? message.Sender.ToIdentity();
+        this.ChannelPointRedemption = channelPointRedemption;
 
         if (message is ICommandInvocation invocation)
         {
@@ -158,6 +164,7 @@ public sealed class TagEvaluationContext : ITagEvaluationContext
         this.MaxTagEvaluationsPerExecution = maxTagEvaluationsPerExecution;
         this.MaxEvaluationBufferChars = maxEvaluationBufferChars;
         this.MaxAstNestingDepth = maxAstNestingDepth;
+        this.MaxDelayedActionsPerExecution = maxDelayedActionsPerExecution;
     }
 
     /// <inheritdoc />
@@ -177,6 +184,9 @@ public sealed class TagEvaluationContext : ITagEvaluationContext
 
     /// <inheritdoc />
     public PlatformUserIdentity ActorIdentity { get; }
+
+    /// <inheritdoc />
+    public ChannelPointRedemptionContext? ChannelPointRedemption { get; }
 
     /// <inheritdoc />
     public IReadOnlyList<string> Arguments { get; }
@@ -237,6 +247,12 @@ public sealed class TagEvaluationContext : ITagEvaluationContext
 
     /// <inheritdoc />
     public int MaxAstNestingDepth { get; }
+
+    /// <inheritdoc />
+    public int DelayedActionCount { get; private set; }
+
+    /// <inheritdoc />
+    public int MaxDelayedActionsPerExecution { get; }
 
     /// <inheritdoc />
     public CounterMutationResult? LastCounterMutation =>
@@ -393,5 +409,17 @@ public sealed class TagEvaluationContext : ITagEvaluationContext
     {
         ArgumentNullException.ThrowIfNull(mutation);
         this._counterMutations.Add(mutation);
+    }
+
+    /// <inheritdoc />
+    public bool TryReserveDelayedAction()
+    {
+        if (this.DelayedActionCount >= this.MaxDelayedActionsPerExecution)
+        {
+            return false;
+        }
+
+        this.DelayedActionCount++;
+        return true;
     }
 }

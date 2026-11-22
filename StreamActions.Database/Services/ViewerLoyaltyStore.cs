@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using StreamActions.Core.Abstractions;
 using StreamActions.Core.Models.Entities;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace StreamActions.Database.Services;
 
@@ -78,6 +79,34 @@ public sealed class ViewerLoyaltyStore : IViewerLoyaltyStore
                         && (x.PlatformUserId == normalizedUserId),
                     cancellationToken)
                 .ConfigureAwait(false);
+        }
+    }
+
+    /// <inheritdoc/>
+    [SuppressMessage("Globalization", "CA1304:Specify CultureInfo", Justification = "EF Core translates string.ToLower() to SQL LOWER() across SQLite, PostgreSQL, MySQL, and SQL Server.")]
+    [SuppressMessage("Globalization", "CA1311:Specify a culture or use an invariant version", Justification = "EF Core translates string.ToLower() to SQL LOWER() across SQLite, PostgreSQL, MySQL, and SQL Server.")]
+    [SuppressMessage("Performance", "CA1862:Use the 'StringComparison' method overloads to perform case-insensitive string comparisons", Justification = "EF Core cannot translate StringComparison overloads to SQL on all supported providers.")]
+    public async ValueTask<WorkspaceViewerProfile?> GetProfileByLoginAsync(
+        Guid workspaceId,
+        string platformId,
+        string login,
+        CancellationToken cancellationToken = default)
+    {
+        (string normalizedPlatformId, string normalizedLogin) = NormalizeIdentity(platformId, login);
+
+        StreamActionsDbContext db = await this._dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await using (db.ConfigureAwait(false))
+        {
+            List<WorkspaceViewerProfile> matches = await db.WorkspaceViewerProfiles
+                .Where(x => (x.WorkspaceId == workspaceId)
+                    && (x.PlatformId == normalizedPlatformId)
+                    && (x.LastKnownLogin.ToLower() == normalizedLogin))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            return matches
+                .OrderByDescending(static x => x.UpdatedAtUtc)
+                .FirstOrDefault();
         }
     }
 

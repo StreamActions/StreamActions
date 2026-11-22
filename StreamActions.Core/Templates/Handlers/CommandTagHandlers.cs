@@ -132,7 +132,7 @@ public sealed class BotCmdTagHandler : ICommandTagHandler
     /// <param name="nextDepth">The incremented command chain depth.</param>
     /// <param name="nextVisited">The updated visited trigger set.</param>
     /// <returns>The child <see cref="ICommandInvocation"/>.</returns>
-    private static ICommandInvocation BuildChildInvocation(
+    internal static ICommandInvocation BuildChildInvocation(
         ITagEvaluationContext context,
         string prefix,
         string trigger,

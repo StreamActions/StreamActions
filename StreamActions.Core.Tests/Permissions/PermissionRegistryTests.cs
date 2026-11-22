@@ -76,6 +76,8 @@ public sealed class PermissionRegistryTests
     [InlineData(BuiltInPermissionKeys.UiCommandsScriptEdit, false, false, PlatformUserDesignations.Broadcaster)]
     [InlineData(BuiltInPermissionKeys.UiPermissionsManage, false, false, PlatformUserDesignations.Broadcaster)]
     [InlineData(BuiltInPermissionKeys.UiSettingsManage, false, false, PlatformUserDesignations.Broadcaster)]
+    [InlineData(BuiltInPermissionKeys.UiLoyaltyManage, false, false, PlatformUserDesignations.Broadcaster | PlatformUserDesignations.Moderator)]
+    [InlineData(BuiltInPermissionKeys.UiCommandsActionsDiscordRoles, false, false, PlatformUserDesignations.Broadcaster)]
     [InlineData(BuiltInPermissionKeys.ModerationTimeout, false, false, PlatformUserDesignations.Broadcaster | PlatformUserDesignations.Moderator)]
     [InlineData(BuiltInPermissionKeys.ActionRunCommand, false, false, PlatformUserDesignations.Everyone)]
     [Trait("Member", "GetByKey")]

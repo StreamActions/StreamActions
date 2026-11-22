@@ -711,6 +711,7 @@ public sealed partial class CommandDispatcher : ICommandDispatcher
                 SafeExternalHttpClient = this._safeExternalHttpClient,
                 CommandDispatcher = this,
                 CommandRepository = this._commandRepository,
+                ViewerLoyaltyStore = this._loyaltyStore,
                 TimeProvider = this._timeProvider,
             };
 

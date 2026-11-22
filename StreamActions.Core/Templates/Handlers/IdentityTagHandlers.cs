@@ -16,6 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Text.RegularExpressions;
+
 namespace StreamActions.Core.Templates.Handlers;
 
 /// <summary>
@@ -44,7 +46,7 @@ public sealed class SenderTagHandler : ICommandTagHandler
 }
 
 /// <summary>
-/// Handles the <c>{@sender}</c> tag, returning the invoking user prefixed with <c>@</c>.
+/// Handles the <c>{@sender}</c> tag, returning a platform-appropriate mention for the invoking user (<c>&lt;@userId&gt;</c> on Discord or <c>@DisplayName</c> elsewhere).
 /// </summary>
 public sealed class AtSenderTagHandler : ICommandTagHandler
 {
@@ -59,6 +61,12 @@ public sealed class AtSenderTagHandler : ICommandTagHandler
     {
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
+
+        if (string.Equals(context.PlatformId, "discord", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(context.Message.Sender.PlatformUserId))
+        {
+            return ValueTask.FromResult(TagResult.Complete($"<@{context.Message.Sender.PlatformUserId.Trim()}>"));
+        }
 
         string raw = !string.IsNullOrWhiteSpace(context.Message.Sender.DisplayName)
             ? context.Message.Sender.DisplayName
@@ -174,10 +182,17 @@ public sealed class TargetTagHandler : ICommandTagHandler
 }
 
 /// <summary>
-/// Handles the <c>{clean_user &lt;str&gt;}</c> tag, stripping whitespace and leading <c>@</c> characters from a username string.
+/// Handles the <c>{clean_user &lt;str&gt;}</c> tag, stripping whitespace, leading <c>@</c> characters, and disallowed username characters.
 /// </summary>
-public sealed class CleanUserTagHandler : ICommandTagHandler
+public sealed partial class CleanUserTagHandler : ICommandTagHandler
 {
+    /// <summary>
+    /// Matches any character outside the allowed username character set (<c>A-Z</c>, <c>a-z</c>, <c>0-9</c>, <c>_</c>, <c>.</c>, <c>-</c>).
+    /// </summary>
+    /// <returns>The compiled <see cref="Regex"/>.</returns>
+    [GeneratedRegex(@"[^A-Za-z0-9_.\-]")]
+    private static partial Regex DisallowedUsernameCharsRegex();
+
     /// <inheritdoc />
     public string TagName => "clean_user";
 
@@ -202,13 +217,14 @@ public sealed class CleanUserTagHandler : ICommandTagHandler
             return TagResult.Incomplete;
         }
 
-        string cleaned = argResult.Value.Trim().TrimStart('@');
+        string trimmed = argResult.Value.Trim().TrimStart('@');
+        string cleaned = DisallowedUsernameCharsRegex().Replace(trimmed, string.Empty);
         return TagResult.FromNonEmpty(cleaned);
     }
 }
 
 /// <summary>
-/// Handles the <c>{point_to_user}</c> tag, returning an <c>@</c>-prefixed mention of the first argument if supplied, otherwise mentioning the sender.
+/// Handles the <c>{point_to_user}</c> tag, formatting <c>{target} -&gt; </c> for directed replies.
 /// </summary>
 public sealed class PointToUserTagHandler : ICommandTagHandler
 {
@@ -240,6 +256,6 @@ public sealed class PointToUserTagHandler : ICommandTagHandler
 
         return ValueTask.FromResult(string.IsNullOrEmpty(candidate)
             ? TagResult.Incomplete
-            : TagResult.Complete($"@{candidate}"));
+            : TagResult.Complete($"{candidate} -> "));
     }
 }

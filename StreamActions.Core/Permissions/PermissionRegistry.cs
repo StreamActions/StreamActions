@@ -126,6 +126,8 @@ public sealed class PermissionRegistry : IPermissionRegistry
             new(BuiltInPermissionKeys.UiPermissionsManage, PermissionCategories.Ui, "Manage Permissions", "Allows managing workspace permission groups and overrides in the web panel.", DefaultAllowedDesignations: PlatformUserDesignations.Broadcaster),
             new(BuiltInPermissionKeys.UiSettingsManage, PermissionCategories.Ui, "Manage Settings", "Allows managing general workspace settings in the web panel.", DefaultAllowedDesignations: PlatformUserDesignations.Broadcaster),
             new(BuiltInPermissionKeys.UiAuditLogView, PermissionCategories.Ui, "View Audit Log", "Allows viewing the workspace audit log in the web panel.", DefaultAllowedDesignations: broadcasterAndModerator),
+            new(BuiltInPermissionKeys.UiLoyaltyManage, PermissionCategories.Ui, "Manage Loyalty", "Allows managing viewer loyalty points and settings in the web panel and chat templates.", DefaultAllowedDesignations: broadcasterAndModerator),
+            new(BuiltInPermissionKeys.UiCommandsActionsDiscordRoles, PermissionCategories.Ui, "Manage Discord Role Actions", "Allows creating or editing command actions that assign or remove Discord roles.", DefaultAllowedDesignations: PlatformUserDesignations.Broadcaster),
 
             new(BuiltInPermissionKeys.ModerationTimeout, PermissionCategories.Moderation, "Timeout Users", "Allows timing out users in chat.", DefaultAllowedDesignations: broadcasterAndModerator),
             new(BuiltInPermissionKeys.ModerationBan, PermissionCategories.Moderation, "Ban Users", "Allows banning users in chat.", DefaultAllowedDesignations: broadcasterAndModerator),

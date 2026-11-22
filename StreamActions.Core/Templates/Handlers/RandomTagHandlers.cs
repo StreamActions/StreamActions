@@ -68,7 +68,7 @@ public sealed class RandomIntTagHandler : ICommandTagHandler
         ArgumentNullException.ThrowIfNull(unevaluatedArgs);
         cancellationToken.ThrowIfCancellationRequested();
 
-        int min = 0;
+        int min = 1;
         int max = 100;
 
         if (unevaluatedArgs.Count == 1)
@@ -120,7 +120,7 @@ public sealed class RandomCodeTagHandler : ICommandTagHandler
     /// <summary>
     /// Maximum allowed code length per invocation to prevent excessive allocations.
     /// </summary>
-    public const int MaxCodeLength = 256;
+    public const int MaxCodeLength = 64;
 
     /// <summary>
     /// Alphanumeric character set used for generated random codes.

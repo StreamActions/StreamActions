@@ -170,7 +170,7 @@ public sealed class RepeatTagHandler : ICommandTagHandler
     /// <summary>
     /// Maximum repetition count allowed by a single <c>{repeat}</c> invocation.
     /// </summary>
-    public const int MaxRepeatCount = 100;
+    public const int MaxRepeatCount = 30;
 
     /// <inheritdoc />
     public string TagName => "repeat";

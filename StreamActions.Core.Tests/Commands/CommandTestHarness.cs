@@ -783,6 +783,25 @@ internal static class CommandTestHarness
             ValueTask.FromResult(this._profiles.GetValueOrDefault((workspaceId, platformId.ToUpperInvariant(), platformUserId)));
 
         /// <inheritdoc/>
+        public ValueTask<WorkspaceViewerProfile?> GetProfileByLoginAsync(Guid workspaceId, string platformId, string login, CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(login);
+
+            string normalizedPlatform = platformId.Trim();
+            string normalizedLogin = login.Trim();
+
+            WorkspaceViewerProfile? match = this._profiles.Values
+                .Where(p => p.WorkspaceId == workspaceId
+                    && string.Equals(p.PlatformId, normalizedPlatform, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(p.LastKnownLogin.Trim(), normalizedLogin, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(static p => p.UpdatedAtUtc)
+                .FirstOrDefault();
+
+            return ValueTask.FromResult(match);
+        }
+
+        /// <inheritdoc/>
         public ValueTask<WorkspaceViewerProfile> GetOrCreateProfileAsync(Guid workspaceId, string platformId, string platformUserId, string login, string displayName, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(this.GetOrCreateInternal(workspaceId, platformId, platformUserId, login, displayName));
 

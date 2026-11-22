@@ -31,7 +31,7 @@ public static class CoreTagRegistryFactory
     /// <returns>An immutable read-only list of universal Core tag handlers.</returns>
     public static IReadOnlyList<ICommandTagHandler> CreateDefaultHandlers()
     {
-        List<ICommandTagHandler> handlers = new(40);
+        List<ICommandTagHandler> handlers = new(69);
 
         for (int index = 1; index <= 9; index++)
         {
@@ -47,6 +47,11 @@ public static class CoreTagRegistryFactory
         handlers.Add(new TargetTagHandler());
         handlers.Add(new CleanUserTagHandler());
         handlers.Add(new PointToUserTagHandler());
+        handlers.Add(new SenderRankTagHandler());
+        handlers.Add(new RankTagHandler());
+        handlers.Add(new AccountAgeTagHandler());
+        handlers.Add(new RandomChatterTagHandler());
+        handlers.Add(new LastTipTagHandler());
 
         handlers.Add(new OrTagHandler());
         handlers.Add(new IfTagHandler());
@@ -77,6 +82,15 @@ public static class CoreTagRegistryFactory
         handlers.Add(new VarTagHandler());
         handlers.Add(new CancelTagHandler());
 
+        handlers.Add(new PointsTagHandler());
+        handlers.Add(new PointNameTagHandler());
+        handlers.Add(new PriceTagHandler());
+        handlers.Add(new PayTagHandler());
+        handlers.Add(new PointsAddTagHandler());
+        handlers.Add(new PointsTakeTagHandler());
+        handlers.Add(new PointsTakeOrCancelTagHandler());
+        handlers.Add(new PointsTransferTagHandler());
+
         handlers.Add(new CountTagHandler());
         handlers.Add(new CounterGetTagHandler());
         handlers.Add(new CounterTotalTagHandler());
@@ -85,11 +99,20 @@ public static class CoreTagRegistryFactory
         handlers.Add(new KvGetTagHandler());
         handlers.Add(new KvSetTagHandler());
         handlers.Add(new KvRandTagHandler());
+        handlers.Add(new KvAppendTagHandler());
 
         handlers.Add(new ApiTagHandler());
         handlers.Add(new JsonGetTagHandler());
         handlers.Add(new BotCmdTagHandler());
         handlers.Add(new CommandsListTagHandler());
+
+        handlers.Add(new DelayCommandTagHandler());
+        handlers.Add(new DelaySayTagHandler());
+        handlers.Add(new TwitchSayTagHandler());
+        handlers.Add(new DiscordSayTagHandler());
+        handlers.Add(new AlertTagHandler());
+        handlers.Add(new AlertTextTagHandler());
+        handlers.Add(new PlaySoundTagHandler());
 
         return handlers.AsReadOnly();
     }

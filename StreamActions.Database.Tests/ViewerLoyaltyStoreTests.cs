@@ -54,6 +54,49 @@ public sealed class ViewerLoyaltyStoreTests
     }
     #endregion
 
+    #region GetProfileByLoginAsync
+    [Fact]
+    [Trait("Member", "GetProfileByLoginAsync")]
+    public async Task GetProfileByLoginAsync_NormalizesLoginCaseInsensitivelyAndIsolatesWorkspaces()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TestSqliteContextFactory factory = new();
+        (_, Guid workspaceA) = await factory.SeedWorkspaceAsync(ct);
+        (_, Guid workspaceB) = await factory.SeedWorkspaceAsync(ct);
+        ViewerLoyaltyStore store = new(factory, TimeProvider.System);
+
+        _ = await store.GetOrCreateProfileAsync(workspaceA, "TWITCH", "uid-99", "Viewer_Login", "Viewer Display", ct);
+        _ = await store.AdjustPointsAsync(workspaceA, "twitch", "uid-99", 420, ct);
+
+        WorkspaceViewerProfile? found = await store.GetProfileByLoginAsync(workspaceA, "  Twitch ", "  viewer_LOGIN ", ct);
+        WorkspaceViewerProfile? missingLogin = await store.GetProfileByLoginAsync(workspaceA, "twitch", "unknown_user", ct);
+        WorkspaceViewerProfile? otherWorkspace = await store.GetProfileByLoginAsync(workspaceB, "twitch", "viewer_login", ct);
+
+        _ = found.Should().NotBeNull();
+        _ = found!.PlatformUserId.Should().Be("uid-99");
+        _ = found.Points.Should().Be(420);
+        _ = missingLogin.Should().BeNull();
+        _ = otherWorkspace.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("", "user")]
+    [InlineData("   ", "user")]
+    [InlineData("twitch", "")]
+    [InlineData("twitch", "   ")]
+    [Trait("Member", "GetProfileByLoginAsync")]
+    public async Task GetProfileByLoginAsync_WhenPlatformOrLoginBlank_ThrowsArgumentException(string platformId, string login)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TestSqliteContextFactory factory = new();
+        (_, Guid workspaceId) = await factory.SeedWorkspaceAsync(ct);
+        ViewerLoyaltyStore store = new(factory, TimeProvider.System);
+
+        Func<Task> action = async () => _ = await store.GetProfileByLoginAsync(workspaceId, platformId, login, ct).ConfigureAwait(false);
+        _ = await action.Should().ThrowAsync<ArgumentException>();
+    }
+    #endregion
+
     #region GetOrCreateProfileAsync
     [Fact]
     [Trait("Member", "GetOrCreateProfileAsync")]

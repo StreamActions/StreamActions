@@ -215,6 +215,16 @@ public static class BuiltInPermissionKeys
     public const string UiAuditLogView = "ui.audit_log.view";
 
     /// <summary>
+    /// Allows managing viewer loyalty points and settings in the web panel and chat templates.
+    /// </summary>
+    public const string UiLoyaltyManage = "ui.loyalty.manage";
+
+    /// <summary>
+    /// Allows creating or editing command actions that assign or remove Discord roles.
+    /// </summary>
+    public const string UiCommandsActionsDiscordRoles = "ui.commands.actions.discord_roles";
+
+    /// <summary>
     /// Allows timing out users in chat.
     /// </summary>
     public const string ModerationTimeout = "moderation.timeout";

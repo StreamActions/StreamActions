@@ -40,6 +40,20 @@ public interface IViewerLoyaltyStore
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves a viewer's loyalty profile within a workspace by normalized login handle, if one exists.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="login">The viewer's login handle.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>The matching <see cref="WorkspaceViewerProfile"/>, or <see langword="null"/> if not found.</returns>
+    ValueTask<WorkspaceViewerProfile?> GetProfileByLoginAsync(
+        Guid workspaceId,
+        string platformId,
+        string login,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Retrieves an existing viewer profile or creates and initializes a new one while updating last-known identity metadata.
     /// </summary>
     /// <param name="workspaceId">The workspace identifier.</param>

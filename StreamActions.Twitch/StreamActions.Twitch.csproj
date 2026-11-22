@@ -35,6 +35,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="StreamActions.Daemon" />
     <InternalsVisibleTo Include="StreamActions.Twitch.Tests" />
+    <InternalsVisibleTo Include="StreamActions.Twitch.UI" />
   </ItemGroup>
 
 </Project>
