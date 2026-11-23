@@ -288,7 +288,7 @@ else if (_oidcLoginMode != ExternalOidcLoginMode.Required)
         _providers = [.. PlatformProviders.OrderBy(static p => p.PlatformId, StringComparer.OrdinalIgnoreCase)];
         _safeReturnUrl = AuthClaims.SafeReturnUrlOrDefault(ReturnUrl, "/");
 
-        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        InstanceSettings settings = await InstanceSettingsService.GetAsync();
         _settings = settings;
         _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         _oidcLoginMode = settings.ExternalOidcLoginMode;
@@ -312,16 +312,14 @@ else if (_oidcLoginMode != ExternalOidcLoginMode.Required)
             List<ExternalOidcProvider> combinedOidc =
             [
                 .. await OidcProviderStore
-                    .GetProvidersAsync(workspaceId: null, enabledOnly: true)
-                    .ConfigureAwait(false),
+                    .GetProvidersAsync(workspaceId: null, enabledOnly: true),
             ];
 
             Guid? targetWorkspaceId = WorkspaceId ?? _loginHint?.WorkspaceId;
             if (targetWorkspaceId.HasValue && targetWorkspaceId.Value != Guid.Empty)
             {
                 IReadOnlyList<ExternalOidcProvider> workspaceOidc = await OidcProviderStore
-                    .GetProvidersAsync(targetWorkspaceId.Value, enabledOnly: true)
-                    .ConfigureAwait(false);
+                    .GetProvidersAsync(targetWorkspaceId.Value, enabledOnly: true);
                 combinedOidc.AddRange(workspaceOidc);
             }
 

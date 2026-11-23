@@ -1,12 +1,12 @@
 ---
 trigger: glob
-globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/Directory.Packages.props, **/.editorconfig"
+globs: "**/*.cs, **/*.razor, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/Directory.Packages.props, **/.editorconfig"
 ---
 
 # C# / .NET Standards
 
 ## Verification
-- After creating or editing any `.cs` file, follow the `dotnet-build-verify` skill (format → verify-no-changes → build → test) until it reports clean
+- After creating or editing any `.cs` or `.razor` file, follow the `dotnet-build-verify` skill (format → verify-no-changes → build → test) until it reports clean
 
 ## Central Package Management
 - `Directory.Packages.props` sets `ManagePackageVersionsCentrally`. Package versions are declared only there, as `<PackageVersion Include="..." Version="..." />`
@@ -70,6 +70,7 @@ globs: "**/*.cs, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Build.props, **/
 - The `[Obsolete]` attribute cannot be applied to method parameters; deprecation of parameters should be documented in the method's XML documentation.
 - When a `BackgroundService` binds a socket, named pipe, or other listener inside `ExecuteAsync`, override `StartAsync` and await a `TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)` signaled only after `Bind`/`Listen` (or pipe creation) succeeds (propagating any startup exception or cancellation). Windows `NamedPipeClientStream.ConnectAsync` polls when a pipe does not exist yet (masking startup races), whereas Linux/macOS `Socket.ConnectAsync` on `UnixDomainSocketEndPoint` fails immediately with `ENOENT` (`SocketException: Cannot assign requested address`).
 - Do not name a single lambda parameter `_` when the lambda body uses `_ = ...` discard assignments (for example, use `(evt, cancellationToken) =>` instead of `(evt, _) =>`); a single `_` parameter shadows the discard token and causes `CS0029`.
+- Never use `.ConfigureAwait(false)` inside Blazor `.razor` components (or `ComponentBase` methods); async continuations that mutate component state or trigger rendering must stay on the Blazor renderer `SynchronizationContext`. When loading data across multiple `await` calls in a component, buffer results into local variables or collections before mutating component fields.
 
 ## Tests
 - Use the `Xunit` testing framework for all tests

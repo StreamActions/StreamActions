@@ -329,9 +329,11 @@ public sealed class PermissionsUxAndDataTableTests
 
         _ = permStore.SetGrantsBatchCalls.Should().ContainSingle();
         _ = permStore.SetGrantsBatchCalls[0].GroupId.Should().Be(proPlanId);
+        component.WaitForState(() => component.Find("[data-unsaved-changes-count]").GetAttribute("data-unsaved-changes-count") == "0");
 
         // Return to ListMode and launch Workspace Permission Audit for Partner Stream.
         component.Find("[data-back-to-groups='true']").Click();
+        component.WaitForState(() => component.FindAll("[data-permissions-mode='List']").Count == 1);
         _ = component.Find("[data-permissions-mode='List']").Should().NotBeNull();
 
         component.Find("[data-launch-workspace-audit='true']").Click();

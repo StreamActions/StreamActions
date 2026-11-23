@@ -135,23 +135,23 @@
             _sessionRevocationSubscription = eventBus.Subscribe<UserSessionsRevokedEvent>(HandleUserSessionsRevokedAsync);
         }
 
-        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        InstanceSettings settings = await InstanceSettingsService.GetAsync();
         _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
 
         AuthenticationStateProvider? authStateProvider = ServiceProvider.GetService<AuthenticationStateProvider>();
         IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
         if (authStateProvider is not null && panelUserStore is not null)
         {
-            AuthenticationState authState = await authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            AuthenticationState authState = await authStateProvider.GetAuthenticationStateAsync();
             Guid? panelUserId = AuthClaims.GetPanelUserId(authState.User);
             if (panelUserId.HasValue)
             {
-                PanelUser? user = await panelUserStore.GetByIdAsync(panelUserId.Value).ConfigureAwait(false);
+                PanelUser? user = await panelUserStore.GetByIdAsync(panelUserId.Value);
                 _showMfaAdminResetNotice = user?.MfaResetByAdminNoticePending == true;
             }
         }
 
-        await WorkspaceSession.InitializeAsync().ConfigureAwait(false);
+        await WorkspaceSession.InitializeAsync();
     }
 
     /// <summary>
@@ -183,14 +183,14 @@
 
         await InvokeAsync(async () =>
         {
-            AuthenticationState authState = await authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            AuthenticationState authState = await authStateProvider.GetAuthenticationStateAsync();
             ClaimsPrincipal user = authState.User;
             if (AuthClaims.GetPanelUserId(user) == evt.PanelUserId
                 && (evt.ExcludedSessionId is null || AuthClaims.GetSessionId(user) != evt.ExcludedSessionId))
             {
                 Navigation.NavigateTo("/login?error=session_revoked", forceLoad: true);
             }
-        }).ConfigureAwait(false);
+        });
     }
 
     /// <summary>

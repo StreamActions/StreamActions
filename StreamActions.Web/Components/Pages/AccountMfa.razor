@@ -341,7 +341,7 @@
         IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
         if (settingsService is not null)
         {
-            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            InstanceSettings settings = await settingsService.GetAsync();
             _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
             _totpIssuerName = AuthPolicyParser.ResolveTotpIssuerName(settings);
         }
@@ -357,7 +357,7 @@
 
         _safeReturnUrl = AuthClaims.SafeReturnUrlOrDefault(ReturnUrl, "/");
 
-        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync();
         ClaimsPrincipal principal = authState.User;
         _panelUserId = AuthClaims.GetPanelUserId(principal);
         _currentSessionId = AuthClaims.GetSessionId(principal);
@@ -372,28 +372,25 @@
 
         IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
         PanelUser? user = panelUserStore is not null && _panelUserId.HasValue
-            ? await panelUserStore.GetByIdAsync(_panelUserId.Value).ConfigureAwait(false)
+            ? await panelUserStore.GetByIdAsync(_panelUserId.Value)
             : null;
 
         if (user is not null && panelUserStore is not null)
         {
             _mfaResetByAdminNoticePending = user.MfaResetByAdminNoticePending;
             _linkedIdentities = await panelUserStore
-                .GetLoginIdentitiesAsync(user.Id)
-                .ConfigureAwait(false);
+                .GetLoginIdentitiesAsync(user.Id);
             IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(principal);
             _policy = await MfaPolicyService
-                .GetEffectivePolicyForUserAsync(user, _linkedIdentities, oidcGroups, workspaceId: null)
-                .ConfigureAwait(false);
+                .GetEffectivePolicyForUserAsync(user, _linkedIdentities, oidcGroups, workspaceId: null);
         }
         else
         {
             _policy = await MfaPolicyService
-                .GetEffectivePolicyAsync(workspaceId: null)
-                .ConfigureAwait(false);
+                .GetEffectivePolicyAsync(workspaceId: null);
         }
 
-        await ReloadSummariesAsync().ConfigureAwait(false);
+        await ReloadSummariesAsync();
     }
 
     /// <summary>
@@ -402,7 +399,7 @@
     /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
     private async Task ReloadSummariesAsync() =>
         _summaries = _panelUserId.HasValue
-            ? await MfaCredentialStore.GetSummariesAsync(_panelUserId.Value).ConfigureAwait(false)
+            ? await MfaCredentialStore.GetSummariesAsync(_panelUserId.Value)
             : [];
 
     /// <summary>
@@ -421,7 +418,7 @@
             _ = await JS.InvokeAsync<object?>(
                 "streamActionsWebAuthn.registerPasskey",
                 _passkeyName,
-                redirectTarget).ConfigureAwait(false);
+                redirectTarget);
         }
         catch (JSException ex)
         {
@@ -441,8 +438,7 @@
         try
         {
             TotpEnrollBeginDto result = await JS
-                .InvokeAsync<TotpEnrollBeginDto>("streamActionsWebAuthn.beginTotpEnrollment")
-                .ConfigureAwait(false);
+                .InvokeAsync<TotpEnrollBeginDto>("streamActionsWebAuthn.beginTotpEnrollment");
 
             _pendingTotpSecret = result.SecretBase32;
             _pendingOtpAuthUri = result.OtpAuthUri;
@@ -478,8 +474,7 @@
         try
         {
             TotpEnrollConfirmDto result = await JS
-                .InvokeAsync<TotpEnrollConfirmDto>("streamActionsWebAuthn.confirmTotpEnrollment", _totpConfirmCode.Trim())
-                .ConfigureAwait(false);
+                .InvokeAsync<TotpEnrollConfirmDto>("streamActionsWebAuthn.confirmTotpEnrollment", _totpConfirmCode.Trim());
 
             _pendingTotpSecret = null;
             _pendingOtpAuthUri = null;
@@ -488,7 +483,7 @@
             _revealedRecoveryCodes = result.RecoveryCodes ?? [];
             _isMfaPending = false;
             _isEnrollmentRequiredClaim = false;
-            await ReloadSummariesAsync().ConfigureAwait(false);
+            await ReloadSummariesAsync();
             _statusMessage = "Authenticator app enrolled. Save your recovery codes below.";
         }
         catch (JSException ex)
@@ -523,8 +518,7 @@
         }
 
         bool deleted = await MfaCredentialStore
-            .DeleteCredentialAsync(_panelUserId.Value, credentialId)
-            .ConfigureAwait(false);
+            .DeleteCredentialAsync(_panelUserId.Value, credentialId);
 
         if (!deleted)
         {
@@ -532,7 +526,7 @@
             return;
         }
 
-        await ReloadSummariesAsync().ConfigureAwait(false);
+        await ReloadSummariesAsync();
         _statusMessage = "Removed MFA credential.";
     }
 
@@ -556,11 +550,10 @@
             return;
         }
 
-        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync();
         Guid currentSessionId = AuthClaims.GetSessionId(authState.User) ?? _currentSessionId ?? Guid.Empty;
         int revokedCount = await sessionService
-            .RevokeOtherSessionsAsync(_panelUserId.Value, currentSessionId)
-            .ConfigureAwait(false);
+            .RevokeOtherSessionsAsync(_panelUserId.Value, currentSessionId);
 
         _statusMessage = $"Logged out of {revokedCount} other session(s).";
     }
@@ -577,7 +570,7 @@
     {
         await InvokeAsync(async () =>
         {
-            AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync();
             ClaimsPrincipal user = authState.User;
             Guid? currentUserId = AuthClaims.GetPanelUserId(user) ?? _panelUserId;
             Guid? currentSessionId = AuthClaims.GetSessionId(user) ?? _currentSessionId;
@@ -586,7 +579,7 @@
             {
                 Navigation.NavigateTo("/login?error=session_revoked", forceLoad: true);
             }
-        }).ConfigureAwait(false);
+        });
     }
 
     /// <summary>

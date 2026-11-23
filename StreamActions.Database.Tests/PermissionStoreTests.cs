@@ -148,14 +148,25 @@ public sealed class PermissionStoreTests
         using InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
         PermissionStore store = new(factory, TimeProvider.System, eventBus);
 
-        PermissionGroup customGroup = await store.UpsertGroupAsync(new PermissionGroup
+        TaskCompletionSource upsertEventReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using IDisposable upsertSub = eventBus.Subscribe<PermissionsInvalidatedEvent>((evt, cancellationToken) =>
+        {
+            if (evt.WorkspaceId == workspaceId)
+            {
+                _ = upsertEventReceived.TrySetResult();
+            }
+
+            return ValueTask.CompletedTask;
+        });
+        PermissionGroup createdGroup = await store.UpsertGroupAsync(new PermissionGroup
         {
             WorkspaceId = workspaceId,
             Name = "Custom Moderators",
         }, ct);
+        await upsertEventReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
 
         // Creating a new group creates 0 persisted grant rows.
-        _ = (await store.GetGrantsAsync(customGroup.Id, ct)).Should().BeEmpty();
+        _ = (await store.GetGrantsAsync(createdGroup.Id, ct)).Should().BeEmpty();
 
         TaskCompletionSource batchEventReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
         List<PermissionsInvalidatedEvent> batchEvents = [];
@@ -171,7 +182,7 @@ public sealed class PermissionStoreTests
         });
 
         await store.SetGrantsBatchAsync(
-            customGroup.Id,
+            createdGroup.Id,
             new Dictionary<string, PermissionState>
             {
                 [BuiltInPermissionKeys.UiPanelAccess] = PermissionState.Allow,
@@ -183,7 +194,7 @@ public sealed class PermissionStoreTests
         await batchEventReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), ct);
         _ = batchEvents.Should().ContainSingle();
 
-        IReadOnlyList<PermissionGrant> grants = await store.GetGrantsAsync(customGroup.Id, ct);
+        IReadOnlyList<PermissionGrant> grants = await store.GetGrantsAsync(createdGroup.Id, ct);
         _ = grants.Should().HaveCount(3);
         _ = grants.Should().ContainSingle(static g => g.PermissionKey == BuiltInPermissionKeys.UiPanelAccess && g.State == PermissionState.Allow);
         _ = grants.Should().ContainSingle(static g => g.PermissionKey == BuiltInPermissionKeys.ModerationTimeout && g.State == PermissionState.Allow);

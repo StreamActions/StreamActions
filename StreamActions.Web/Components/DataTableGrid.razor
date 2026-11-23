@@ -393,7 +393,7 @@
             _pageNumber = 1;
         }
 
-        await RefreshDataCoreAsync().ConfigureAwait(false);
+        await RefreshDataCoreAsync();
     }
 
     /// <inheritdoc/>
@@ -402,7 +402,7 @@
         if (_pendingVirtualizeRefresh && _virtualizeComponent is not null)
         {
             _pendingVirtualizeRefresh = false;
-            await _virtualizeComponent.RefreshDataAsync().ConfigureAwait(false);
+            await _virtualizeComponent.RefreshDataAsync();
             StateHasChanged();
         }
     }
@@ -413,7 +413,7 @@
     /// <returns>A <see cref="Task"/> representing the asynchronous refresh operation.</returns>
     public async Task RefreshDataAsync()
     {
-        await RefreshDataCoreAsync().ConfigureAwait(false);
+        await RefreshDataCoreAsync();
         StateHasChanged();
     }
 
@@ -431,7 +431,7 @@
         PagedResult<TItem> result;
         if (ServerItemsProvider is not null)
         {
-            result = await ServerItemsProvider(request, CancellationToken.None).ConfigureAwait(false);
+            result = await ServerItemsProvider(request, CancellationToken.None);
         }
         else
         {
@@ -459,7 +459,7 @@
     {
         if (ServerItemsProvider is not null && _visibleItems.Count == 0 && _totalFilteredCount == 0)
         {
-            await RefreshDataCoreAsync().ConfigureAwait(false);
+            await RefreshDataCoreAsync();
         }
 
         int totalCount = _visibleItems.Count;
@@ -495,10 +495,10 @@
 
         if (PageSizeChanged.HasDelegate)
         {
-            await PageSizeChanged.InvokeAsync(newPageSize).ConfigureAwait(false);
+            await PageSizeChanged.InvokeAsync(newPageSize);
         }
 
-        await RefreshDataCoreAsync().ConfigureAwait(false);
+        await RefreshDataCoreAsync();
     }
 
     /// <summary>
@@ -515,10 +515,10 @@
 
         if (SearchQueryChanged.HasDelegate)
         {
-            await SearchQueryChanged.InvokeAsync(newQuery).ConfigureAwait(false);
+            await SearchQueryChanged.InvokeAsync(newQuery);
         }
 
-        await RefreshDataCoreAsync().ConfigureAwait(false);
+        await RefreshDataCoreAsync();
     }
 
     /// <summary>
@@ -535,7 +535,7 @@
         }
 
         _pageNumber = clamped;
-        await RefreshDataCoreAsync().ConfigureAwait(false);
+        await RefreshDataCoreAsync();
     }
 
     /// <summary>

@@ -468,7 +468,7 @@
             _selectedPlatformId = discoveredPlatforms[0];
         }
 
-        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        InstanceSettings settings = await InstanceSettingsService.GetAsync();
         _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         _pageInstanceName = _instanceName;
         _totpIssuerName = AuthPolicyParser.ResolveTotpIssuerName(settings);
@@ -492,9 +492,9 @@
         _loginMfaRequirement = settings.LoginMfaRequirement;
         _stepUpSudoPolicy = settings.StepUpSudoPolicy;
 
-        await LoadSelectedPlatformOAuthAsync().ConfigureAwait(false);
-        await ReloadOidcProvidersAsync().ConfigureAwait(false);
-        await ReloadPanelUsersMfaAsync().ConfigureAwait(false);
+        await LoadSelectedPlatformOAuthAsync();
+        await ReloadOidcProvidersAsync();
+        await ReloadPanelUsersMfaAsync();
     }
 
     /// <summary>
@@ -504,7 +504,7 @@
     private async Task SavePoliciesAsync()
     {
         ClearMessages();
-        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
+        InstanceSettings settings = await InstanceSettingsService.GetAsync();
         settings.InstanceName = string.IsNullOrWhiteSpace(_instanceName)
             ? AuthPolicyParser.DefaultInstanceName
             : _instanceName.Trim();
@@ -526,7 +526,7 @@
         settings.LoginMfaRequirement = _loginMfaRequirement;
         settings.StepUpSudoPolicy = _stepUpSudoPolicy;
 
-        await InstanceSettingsService.UpdateAsync(settings).ConfigureAwait(false);
+        await InstanceSettingsService.UpdateAsync(settings);
         _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         _pageInstanceName = _instanceName;
         _totpIssuerName = AuthPolicyParser.ResolveTotpIssuerName(settings);
@@ -560,8 +560,7 @@
     private async Task LoadSelectedPlatformOAuthAsync()
     {
         PlatformOAuthAppCredentials? existing = await InstanceOAuthConfigService
-            .GetAsync(_selectedPlatformId)
-            .ConfigureAwait(false);
+            .GetAsync(_selectedPlatformId);
 
         _platformClientId = existing?.ClientId ?? string.Empty;
         _platformClientSecret = string.Empty;
@@ -588,8 +587,7 @@
         if (secretToPersist is null)
         {
             PlatformOAuthAppCredentials? existing = await InstanceOAuthConfigService
-                .GetAsync(_selectedPlatformId)
-                .ConfigureAwait(false);
+                .GetAsync(_selectedPlatformId);
             secretToPersist = existing?.ClientSecret;
         }
 
@@ -600,8 +598,7 @@
         }
 
         await InstanceOAuthConfigService
-            .SetAsync(_selectedPlatformId, new PlatformOAuthAppCredentials(_platformClientId.Trim(), secretToPersist))
-            .ConfigureAwait(false);
+            .SetAsync(_selectedPlatformId, new PlatformOAuthAppCredentials(_platformClientId.Trim(), secretToPersist));
 
         _platformClientSecret = string.Empty;
         _hasExistingPlatformSecret = true;
@@ -615,7 +612,7 @@
     private async Task ClearPlatformOAuthAsync()
     {
         ClearMessages();
-        _ = await InstanceOAuthConfigService.RemoveAsync(_selectedPlatformId).ConfigureAwait(false);
+        _ = await InstanceOAuthConfigService.RemoveAsync(_selectedPlatformId);
         _platformClientId = string.Empty;
         _platformClientSecret = string.Empty;
         _hasExistingPlatformSecret = false;
@@ -695,8 +692,8 @@
             IsEnabled = _oidcIsEnabled,
         };
 
-        _ = await OidcProviderStore.UpsertAsync(provider, plaintextSecret).ConfigureAwait(false);
-        await ReloadOidcProvidersAsync().ConfigureAwait(false);
+        _ = await OidcProviderStore.UpsertAsync(provider, plaintextSecret);
+        await ReloadOidcProvidersAsync();
         ResetOidcForm();
         _statusMessage = $"Saved external OIDC provider '{provider.Slug}'.";
     }
@@ -709,13 +706,13 @@
     private async Task DeleteOidcProviderAsync(Guid providerId)
     {
         ClearMessages();
-        _ = await OidcProviderStore.DeleteAsync(providerId).ConfigureAwait(false);
+        _ = await OidcProviderStore.DeleteAsync(providerId);
         if (_editingOidcProviderId == providerId)
         {
             ResetOidcForm();
         }
 
-        await ReloadOidcProvidersAsync().ConfigureAwait(false);
+        await ReloadOidcProvidersAsync();
         _statusMessage = "Deleted external OIDC provider.";
     }
 
@@ -741,8 +738,7 @@
     /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
     private async Task ReloadOidcProvidersAsync() =>
         _oidcProviders = await OidcProviderStore
-            .GetProvidersAsync(workspaceId: null, enabledOnly: false)
-            .ConfigureAwait(false);
+            .GetProvidersAsync(workspaceId: null, enabledOnly: false);
 
     /// <summary>
     /// Clears any visible status or error banners.
@@ -773,7 +769,7 @@
         AuthenticationStateProvider? authStateProvider = ServiceProvider.GetService<AuthenticationStateProvider>();
         if (authStateProvider is not null)
         {
-            AuthenticationState authState = await authStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+            AuthenticationState authState = await authStateProvider.GetAuthenticationStateAsync();
             ClaimsPrincipal principal = authState.User;
             _currentUserIsRoot = AuthClaims.HasTrueClaim(principal, AuthClaims.IsRootClaimType);
             _currentUserIsGlobalAdmin = AuthClaims.HasTrueClaim(principal, AuthClaims.IsGlobalAdminClaimType);
@@ -781,7 +777,7 @@
             Guid? currentUserId = AuthClaims.GetPanelUserId(principal);
             if (currentUserId.HasValue)
             {
-                PanelUser? currentUser = await panelUserStore.GetByIdAsync(currentUserId.Value).ConfigureAwait(false);
+                PanelUser? currentUser = await panelUserStore.GetByIdAsync(currentUserId.Value);
                 if (currentUser is not null)
                 {
                     _currentUserIsRoot = _currentUserIsRoot || currentUser.IsRoot;
@@ -790,13 +786,12 @@
             }
         }
 
-        IReadOnlyList<PanelUser> users = await panelUserStore.GetAllUsersAsync().ConfigureAwait(false);
+        IReadOnlyList<PanelUser> users = await panelUserStore.GetAllUsersAsync();
         List<PanelUserMfaEntry> entries = new(users.Count);
         foreach (PanelUser user in users)
         {
             IReadOnlyList<MfaCredentialSummary> summaries = await mfaCredentialStore
-                .GetSummariesAsync(user.Id)
-                .ConfigureAwait(false);
+                .GetSummariesAsync(user.Id);
             entries.Add(new PanelUserMfaEntry(user, summaries.Count));
         }
 
@@ -824,7 +819,7 @@
             return;
         }
 
-        PanelUser? targetUser = await panelUserStore.GetByIdAsync(targetUserId).ConfigureAwait(false);
+        PanelUser? targetUser = await panelUserStore.GetByIdAsync(targetUserId);
         if (targetUser is null)
         {
             _errorMessage = "Target panel user was not found.";
@@ -837,11 +832,11 @@
             return;
         }
 
-        _ = await mfaCredentialStore.ClearAllForUserAsync(targetUser.Id).ConfigureAwait(false);
+        _ = await mfaCredentialStore.ClearAllForUserAsync(targetUser.Id);
         targetUser.MfaResetByAdminNoticePending = true;
-        _ = await panelUserStore.UpdateUserAsync(targetUser).ConfigureAwait(false);
+        _ = await panelUserStore.UpdateUserAsync(targetUser);
 
-        await ReloadPanelUsersMfaAsync().ConfigureAwait(false);
+        await ReloadPanelUsersMfaAsync();
         _statusMessage = $"Removed MFA credentials for {targetUser.DisplayName}.";
     }
 
@@ -865,7 +860,7 @@
             return;
         }
 
-        PanelUser? targetUser = await panelUserStore.GetByIdAsync(targetUserId).ConfigureAwait(false);
+        PanelUser? targetUser = await panelUserStore.GetByIdAsync(targetUserId);
         if (targetUser is null)
         {
             _errorMessage = "Target panel user was not found.";
@@ -881,7 +876,7 @@
         IPanelSessionService? sessionService = ServiceProvider.GetService<IPanelSessionService>();
         if (sessionService is not null)
         {
-            _ = await sessionService.RevokeAllSessionsForUserAsync(targetUser.Id).ConfigureAwait(false);
+            _ = await sessionService.RevokeAllSessionsForUserAsync(targetUser.Id);
         }
 
         _statusMessage = $"Forced logout of all sessions for {targetUser.DisplayName}.";

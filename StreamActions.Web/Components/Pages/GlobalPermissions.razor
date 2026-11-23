@@ -763,7 +763,7 @@ else if (_currentMode == PermissionsPageMode.Edit && _selectedGroup is not null)
         IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
         if (settingsService is not null)
         {
-            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            InstanceSettings settings = await settingsService.GetAsync();
             _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         }
 
@@ -1374,33 +1374,32 @@ else if (_currentMode == PermissionsPageMode.Edit && _selectedGroup is not null)
     /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
     private async Task LoadGlobalDataAsync()
     {
-        _categories = PermissionRegistry.GetCategories();
-        _allDescriptors = PermissionRegistry.GetAll();
-        _globalGroups = await PermissionStore.GetGroupsAsync(null);
-        _grantStates.Clear();
-        _workspacesByGlobalGroup.Clear();
+        IReadOnlyList<string> categories = PermissionRegistry.GetCategories();
+        IReadOnlyList<PermissionDescriptor> allDescriptors = PermissionRegistry.GetAll();
+        IReadOnlyList<PermissionGroup> globalGroups = await PermissionStore.GetGroupsAsync(null);
+        Dictionary<(Guid GroupId, string PermissionKey), PermissionState> grantStates = [];
 
-        foreach (PermissionGroup group in _globalGroups)
+        foreach (PermissionGroup group in globalGroups)
         {
             IReadOnlyList<PermissionGrant> grants = await PermissionStore.GetGrantsAsync(group.Id);
             foreach (PermissionGrant grant in grants)
             {
-                _grantStates[(group.Id, grant.PermissionKey)] = grant.State;
+                grantStates[(group.Id, grant.PermissionKey)] = grant.State;
             }
         }
 
         IWorkspaceStore? workspaceStore = ServiceProvider.GetService<IWorkspaceStore>();
-        _workspaces = workspaceStore is not null
-            ? await workspaceStore.GetAllAsync().ConfigureAwait(false)
+        IReadOnlyList<Workspace> workspaces = workspaceStore is not null
+            ? await workspaceStore.GetAllAsync()
             : [];
 
         Dictionary<Guid, List<Workspace>> assignedByGroup = [];
-        foreach (PermissionGroup group in _globalGroups)
+        foreach (PermissionGroup group in globalGroups)
         {
             assignedByGroup[group.Id] = [];
         }
 
-        foreach (Workspace workspace in _workspaces)
+        foreach (Workspace workspace in workspaces)
         {
             IReadOnlyList<PermissionGroup> assignedGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(workspace.Id);
             foreach (PermissionGroup assignedGroup in assignedGroups)
@@ -1412,25 +1411,44 @@ else if (_currentMode == PermissionsPageMode.Edit && _selectedGroup is not null)
             }
         }
 
+        Guid? selectedWorkspaceId = _selectedWorkspaceId;
+        Guid? inspectedWorkspaceId = _inspectedWorkspaceId;
+        if (workspaces.Count > 0 && (!selectedWorkspaceId.HasValue || !workspaces.Any(w => w.Id == selectedWorkspaceId.Value)))
+        {
+            selectedWorkspaceId = workspaces[0].Id;
+            inspectedWorkspaceId = selectedWorkspaceId;
+        }
+
+        IReadOnlyList<PermissionGroup> assignedWorkspaceGroups = _assignedWorkspaceGroups;
+        if (inspectedWorkspaceId is Guid inspectedId)
+        {
+            assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(inspectedId);
+        }
+
+        _categories = categories;
+        _allDescriptors = allDescriptors;
+        _globalGroups = globalGroups;
+        _workspaces = workspaces;
+
+        _grantStates.Clear();
+        foreach (KeyValuePair<(Guid GroupId, string PermissionKey), PermissionState> kvp in grantStates)
+        {
+            _grantStates[kvp.Key] = kvp.Value;
+        }
+
+        _workspacesByGlobalGroup.Clear();
         foreach (KeyValuePair<Guid, List<Workspace>> kvp in assignedByGroup)
         {
             _workspacesByGlobalGroup[kvp.Key] = kvp.Value;
         }
 
-        if (_workspaces.Count > 0 && (!_selectedWorkspaceId.HasValue || !_workspaces.Any(w => w.Id == _selectedWorkspaceId.Value)))
-        {
-            _selectedWorkspaceId = _workspaces[0].Id;
-            _inspectedWorkspaceId = _selectedWorkspaceId;
-        }
+        _selectedWorkspaceId = selectedWorkspaceId;
+        _inspectedWorkspaceId = inspectedWorkspaceId;
+        _assignedWorkspaceGroups = assignedWorkspaceGroups;
 
         if (_globalGroups.Count > 0 && !_globalGroups.Any(g => g.Id == _selectedGlobalGroupId))
         {
             _selectedGlobalGroupId = _globalGroups[0].Id;
-        }
-
-        if (_inspectedWorkspaceId is Guid inspectedId)
-        {
-            _assignedWorkspaceGroups = await PermissionStore.GetGlobalGroupsForWorkspaceAsync(inspectedId);
         }
 
         if (_selectedGroup is not null)

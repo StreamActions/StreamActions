@@ -20,14 +20,15 @@ trigger: always_on
 
 ## Auto-approved commands (outside the sandbox)
 <!-- BEGIN SYNCED ALLOWLIST: managed by skill sync-command-permissions. Do not hand-edit. -->
-Last synced: 2026-10-31 from operator-provided list.
+Last synced: 2026-11-23 from operator-provided list.
 
 | Directive | Auto-approved examples |
 | :-- | :-- |
+| `command(regex:gh (run (list\|view)\|workflow (list\|view)\|pr (list\|view\|checks\|status\|diff)\|issue (list\|view\|status)).*)` | `gh run list -R StreamActions/StreamActions --workflow ci.yml --limit 8`, `gh run view --job <id> -R StreamActions/StreamActions --log-failed`, `gh pr checks` |
+| `command(Get-Process -Name dotnet*, MSBuild*, VBCSCompiler*)` | Exact string only |
 | `command(regex:dotnet (sln list\|build\|format\|list\|test\|run\|--info\|--version).*)` | `dotnet build StreamActions.Twitch/StreamActions.Twitch.csproj -v q -nologo`, `dotnet test ... --filter ...`, `dotnet format ... --include ...`, `dotnet list StreamActions.Twitch/StreamActions.Twitch.csproj package --vulnerable --include-transitive` |
 | `command(regex:git (status\|log\|show\|grep\|ls-files\|diff).*)` | `git grep -n "RequireUserToken" -- "*.cs"`, `git log -1 --format=%H`, `git diff --stat` |
 | `command(regex:uv (run\|sync).*)` | `uv run --project Diff Diff/DocParserFinder.py --folder .`, `uv sync --locked --project Diff` |
-| `command(Get-Process -Name dotnet*, MSBuild*, VBCSCompiler*)` | Exact string only |
 
 Pre-approved URLs: `https://dev.twitch.tv`, `https://twitch.tv`, `https://github.com`
 <!-- END SYNCED ALLOWLIST -->

@@ -5,7 +5,7 @@ This file contains instructions for Generative AI Agents
 - This file only describes the solution topology. Detailed rules live in `.agents/rules/`, and multi-step workflows live in `.agents/skills/`
 - Antigravity loads these automatically. Other agents must read them manually:
 	- Always: `.agents/rules/00-global-discipline.md` and `.agents/rules/05-sandbox-execution.md`
-	- When creating or editing `.cs`, `.csproj`, `.sln`, `.slnx`, `Directory.Build.props`, `Directory.Packages.props`, or `.editorconfig`: `.agents/rules/10-csharp-dotnet.md`, then follow `.agents/skills/dotnet-build-verify/SKILL.md` to verify
+	- When creating or editing `.cs`, `.razor`, `.csproj`, `.sln`, `.slnx`, `Directory.Build.props`, `Directory.Packages.props`, or `.editorconfig`: `.agents/rules/10-csharp-dotnet.md`, then follow `.agents/skills/dotnet-build-verify/SKILL.md` to verify
 	- When creating or editing `.py`, `pyproject.toml`, or `uv.lock`: `.agents/rules/20-python-uv.md`
 - Folder-level `AGENTS.md` files contain domain-specific invariants. How to resolve them is defined in `.agents/rules/00-global-discipline.md`
 

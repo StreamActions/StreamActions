@@ -483,8 +483,8 @@ else
         }
 
         WorkspaceSession.WorkspaceChanged += OnWorkspaceChanged;
-        await WorkspaceSession.InitializeAsync().ConfigureAwait(false);
-        await LoadDataAsync().ConfigureAwait(false);
+        await WorkspaceSession.InitializeAsync();
+        await LoadDataAsync();
     }
 
     /// <summary>
@@ -510,76 +510,66 @@ else
     /// <returns>A <see cref="Task"/> representing the asynchronous load operation.</returns>
     private async Task LoadDataAsync()
     {
-        _activeWorkspace = WorkspaceSession.ActiveWorkspace;
+        AccessibleWorkspace? activeWorkspace = WorkspaceSession.ActiveWorkspace;
 
-        InstanceSettings settings = await InstanceSettingsService.GetAsync().ConfigureAwait(false);
-        _settings = settings;
-        _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
-        _botPolicy = AuthPolicyParser.ParseBotAccountPolicy(settings.InstanceBotAccountPolicy);
-        _oauthPolicy = AuthPolicyParser.ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
+        InstanceSettings settings = await InstanceSettingsService.GetAsync();
+        string instanceName = AuthPolicyParser.ResolveInstanceName(settings);
+        InstanceBotAccountPolicy botPolicy = AuthPolicyParser.ParseBotAccountPolicy(settings.InstanceBotAccountPolicy);
+        InstanceOAuthAppPolicy oauthPolicy = AuthPolicyParser.ParseOAuthAppPolicy(settings.InstanceOAuthAppPolicy);
 
-        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync();
         Guid? panelUserId = AuthClaims.GetPanelUserId(authState.User);
-        _linkedIdentities = panelUserId.HasValue
-            ? await PanelUserStore.GetLoginIdentitiesAsync(panelUserId.Value).ConfigureAwait(false)
+        IReadOnlyList<UserLoginIdentity> linkedIdentities = panelUserId.HasValue
+            ? await PanelUserStore.GetLoginIdentitiesAsync(panelUserId.Value)
             : [];
 
-        _platformStates = [];
-        _customBotFeatureAllowed = false;
-        _customOAuthFeatureAllowed = false;
-
-        if (_activeWorkspace is null)
+        if (activeWorkspace is null)
         {
+            _activeWorkspace = null;
+            _settings = settings;
+            _instanceName = instanceName;
+            _botPolicy = botPolicy;
+            _oauthPolicy = oauthPolicy;
+            _linkedIdentities = linkedIdentities;
+            _platformStates = [];
+            _customBotFeatureAllowed = false;
+            _customOAuthFeatureAllowed = false;
             return;
         }
 
-        _wsMfaPasskeyAvailability = IsPasskeyPolicyFixedByRoot()
-            ? _settings?.MfaPasskeyAvailability ?? MfaMethodAvailability.Allowed
-            : _activeWorkspace.Workspace.MfaPasskeyAvailability;
-        _wsMfaTotpAvailability = IsTotpPolicyFixedByRoot()
-            ? _settings?.MfaTotpAvailability ?? MfaMethodAvailability.Allowed
-            : _activeWorkspace.Workspace.MfaTotpAvailability;
-        PanelLoginMfaRequirement rootLoginMfa = _settings?.LoginMfaRequirement ?? PanelLoginMfaRequirement.Optional;
-        _wsLoginMfaRequirement = (PanelLoginMfaRequirement)Math.Max((int)rootLoginMfa, (int)_activeWorkspace.Workspace.LoginMfaRequirement);
-        StepUpSudoPolicy rootStepUp = _settings?.StepUpSudoPolicy ?? StepUpSudoPolicy.Required;
-        _wsStepUpSudoPolicy = (StepUpSudoPolicy)Math.Max((int)rootStepUp, (int)_activeWorkspace.Workspace.StepUpSudoPolicy);
-        _wsRequireExternalOidcLogin = _activeWorkspace.Workspace.RequireExternalOidcLogin;
-
-        Guid workspaceId = _activeWorkspace.Workspace.Id;
+        Guid workspaceId = activeWorkspace.Workspace.Id;
         PlatformUserIdentity workspaceActor = new(
-            _activeWorkspace.Workspace.PrimaryPlatformId,
+            activeWorkspace.Workspace.PrimaryPlatformId,
             "__workspace__",
             "workspace",
             PlatformUserDesignations.Broadcaster);
 
-        _customBotFeatureAllowed = await PermissionService
-            .IsAllowedAsync(workspaceId, workspaceActor, BuiltInPermissionKeys.FeatureCustomBotAccount)
-            .ConfigureAwait(false);
-        _customOAuthFeatureAllowed = await PermissionService
-            .IsAllowedAsync(workspaceId, workspaceActor, BuiltInPermissionKeys.FeatureCustomOAuthApp)
-            .ConfigureAwait(false);
+        bool customBotFeatureAllowed = await PermissionService
+            .IsAllowedAsync(workspaceId, workspaceActor, BuiltInPermissionKeys.FeatureCustomBotAccount);
+        bool customOAuthFeatureAllowed = await PermissionService
+            .IsAllowedAsync(workspaceId, workspaceActor, BuiltInPermissionKeys.FeatureCustomOAuthApp);
 
         IReadOnlyList<WorkspacePlatform> attachments = await WorkspaceStore
-            .GetPlatformsAsync(workspaceId)
-            .ConfigureAwait(false);
+            .GetPlatformsAsync(workspaceId);
+
+        List<PlatformCardState> platformStates = new(attachments.Count);
+        Dictionary<string, string> customClientIds = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> customRedirectUris = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (WorkspacePlatform attachment in attachments)
         {
-            _customClientIds[attachment.PlatformId] = attachment.CustomClientId ?? string.Empty;
-            _customRedirectUris[attachment.PlatformId] = attachment.CustomRedirectUri ?? string.Empty;
-            _ = _customClientSecrets.TryAdd(attachment.PlatformId, string.Empty);
+            customClientIds[attachment.PlatformId] = attachment.CustomClientId ?? string.Empty;
+            customRedirectUris[attachment.PlatformId] = attachment.CustomRedirectUri ?? string.Empty;
 
             (bool broadcasterFound, CredentialStatus broadcasterStatus, PlatformTokenPayload? broadcasterPayload) =
                 await PlatformCredentialStore
-                    .TryGetTokenAsync(workspaceId, attachment.PlatformId, TokenRole.Broadcaster)
-                    .ConfigureAwait(false);
+                    .TryGetTokenAsync(workspaceId, attachment.PlatformId, TokenRole.Broadcaster);
 
             ScopeDriftReport drift = ScopeDriftDetector.DetectDrift(attachment.PlatformId, broadcasterPayload);
             BotCredentialResolutionResult botResolution = await BotCredentialResolver
-                .ResolveAsync(workspaceId, attachment.PlatformId)
-                .ConfigureAwait(false);
+                .ResolveAsync(workspaceId, attachment.PlatformId);
 
-            _platformStates.Add(new PlatformCardState(
+            platformStates.Add(new PlatformCardState(
                 attachment,
                 broadcasterFound,
                 broadcasterStatus,
@@ -587,6 +577,44 @@ else
                 drift,
                 botResolution));
         }
+
+        _activeWorkspace = activeWorkspace;
+        _settings = settings;
+        _instanceName = instanceName;
+        _botPolicy = botPolicy;
+        _oauthPolicy = oauthPolicy;
+        _linkedIdentities = linkedIdentities;
+        _customBotFeatureAllowed = customBotFeatureAllowed;
+        _customOAuthFeatureAllowed = customOAuthFeatureAllowed;
+
+        _wsMfaPasskeyAvailability = IsPasskeyPolicyFixedByRoot()
+            ? settings.MfaPasskeyAvailability
+            : activeWorkspace.Workspace.MfaPasskeyAvailability;
+        _wsMfaTotpAvailability = IsTotpPolicyFixedByRoot()
+            ? settings.MfaTotpAvailability
+            : activeWorkspace.Workspace.MfaTotpAvailability;
+        PanelLoginMfaRequirement rootLoginMfa = settings.LoginMfaRequirement;
+        _wsLoginMfaRequirement = (PanelLoginMfaRequirement)Math.Max((int)rootLoginMfa, (int)activeWorkspace.Workspace.LoginMfaRequirement);
+        StepUpSudoPolicy rootStepUp = settings.StepUpSudoPolicy;
+        _wsStepUpSudoPolicy = (StepUpSudoPolicy)Math.Max((int)rootStepUp, (int)activeWorkspace.Workspace.StepUpSudoPolicy);
+        _wsRequireExternalOidcLogin = activeWorkspace.Workspace.RequireExternalOidcLogin;
+
+        foreach (KeyValuePair<string, string> kvp in customClientIds)
+        {
+            _customClientIds[kvp.Key] = kvp.Value;
+        }
+
+        foreach (KeyValuePair<string, string> kvp in customRedirectUris)
+        {
+            _customRedirectUris[kvp.Key] = kvp.Value;
+        }
+
+        foreach (string platformId in customClientIds.Keys)
+        {
+            _ = _customClientSecrets.TryAdd(platformId, string.Empty);
+        }
+
+        _platformStates = platformStates;
     }
 
     /// <summary>
@@ -613,11 +641,11 @@ else
             PlatformId = _newPlatformId.Trim(),
             Role = _newPlatformRole,
             PlatformChannelId = _newPlatformChannelId.Trim(),
-        }).ConfigureAwait(false);
+        });
 
         _newPlatformChannelId = string.Empty;
-        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
-        await LoadDataAsync().ConfigureAwait(false);
+        await WorkspaceSession.RefreshAsync();
+        await LoadDataAsync();
         _statusMessage = $"Attached platform '{_newPlatformId.Trim()}'.";
     }
 
@@ -636,9 +664,9 @@ else
         }
 
         attachment.Role = newRole;
-        _ = await WorkspaceStore.UpsertPlatformAsync(attachment).ConfigureAwait(false);
-        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
-        await LoadDataAsync().ConfigureAwait(false);
+        _ = await WorkspaceStore.UpsertPlatformAsync(attachment);
+        await WorkspaceSession.RefreshAsync();
+        await LoadDataAsync();
         _statusMessage = $"Updated role for '{attachment.PlatformId}' to {newRole}.";
     }
 
@@ -656,11 +684,10 @@ else
         }
 
         _ = await WorkspaceStore
-            .RemovePlatformAsync(_activeWorkspace.Workspace.Id, platformId)
-            .ConfigureAwait(false);
+            .RemovePlatformAsync(_activeWorkspace.Workspace.Id, platformId);
 
-        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
-        await LoadDataAsync().ConfigureAwait(false);
+        await WorkspaceSession.RefreshAsync();
+        await LoadDataAsync();
         _statusMessage = $"Removed platform '{platformId}'.";
     }
 
@@ -684,9 +711,9 @@ else
         }
 
         _activeWorkspace.Workspace.AllowCustomBotAccountOverride = enabled;
-        _ = await WorkspaceStore.UpdateWorkspaceAsync(_activeWorkspace.Workspace).ConfigureAwait(false);
-        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
-        await LoadDataAsync().ConfigureAwait(false);
+        _ = await WorkspaceStore.UpdateWorkspaceAsync(_activeWorkspace.Workspace);
+        await WorkspaceSession.RefreshAsync();
+        await LoadDataAsync();
         _statusMessage = enabled
             ? "Enabled custom bot account override for this workspace."
             : "Disabled custom bot account override for this workspace.";
@@ -729,9 +756,9 @@ else
             _activeWorkspace.Workspace.RequireExternalOidcLogin = _wsRequireExternalOidcLogin;
         }
 
-        _ = await WorkspaceStore.UpdateWorkspaceAsync(_activeWorkspace.Workspace).ConfigureAwait(false);
-        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
-        await LoadDataAsync().ConfigureAwait(false);
+        _ = await WorkspaceStore.UpdateWorkspaceAsync(_activeWorkspace.Workspace);
+        await WorkspaceSession.RefreshAsync();
+        await LoadDataAsync();
         _statusMessage = "Workspace MFA policies updated.";
     }
 
@@ -750,9 +777,9 @@ else
         }
 
         attachment.Metadata.UseBroadcasterAsBot = useBroadcaster;
-        _ = await WorkspaceStore.UpsertPlatformAsync(attachment).ConfigureAwait(false);
-        await WorkspaceSession.RefreshAsync().ConfigureAwait(false);
-        await LoadDataAsync().ConfigureAwait(false);
+        _ = await WorkspaceStore.UpsertPlatformAsync(attachment);
+        await WorkspaceSession.RefreshAsync();
+        await LoadDataAsync();
         _statusMessage = useBroadcaster
             ? $"Enabled broadcaster identity fallback for '{attachment.PlatformId}'."
             : $"Disabled broadcaster identity fallback for '{attachment.PlatformId}'.";
@@ -805,11 +832,10 @@ else
                 platformId,
                 clientId,
                 string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret.Trim(),
-                redirectUri)
-            .ConfigureAwait(false);
+                redirectUri);
 
         _customClientSecrets[platformId] = string.Empty;
-        await LoadDataAsync().ConfigureAwait(false);
+        await LoadDataAsync();
         _statusMessage = $"Saved custom OAuth credentials for '{platformId}'.";
     }
 
@@ -833,13 +859,12 @@ else
         }
 
         _ = await WorkspaceStore
-            .SetCustomOAuthAppAsync(_activeWorkspace.Workspace.Id, platformId, null, null)
-            .ConfigureAwait(false);
+            .SetCustomOAuthAppAsync(_activeWorkspace.Workspace.Id, platformId, null, null);
 
         _customClientIds[platformId] = string.Empty;
         _customClientSecrets[platformId] = string.Empty;
         _customRedirectUris[platformId] = string.Empty;
-        await LoadDataAsync().ConfigureAwait(false);
+        await LoadDataAsync();
         _statusMessage = $"Cleared custom OAuth credentials for '{platformId}'.";
     }
 

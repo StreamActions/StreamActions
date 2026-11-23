@@ -926,13 +926,13 @@
         IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
         if (settingsService is not null)
         {
-            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            InstanceSettings settings = await settingsService.GetAsync();
             _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         }
 
         if (AuthenticationStateTask is not null)
         {
-            AuthenticationState authState = await AuthenticationStateTask.ConfigureAwait(false);
+            AuthenticationState authState = await AuthenticationStateTask;
             ClaimsPrincipal principal = authState.User;
             _viewerIsRootOrGlobalAdmin = AuthClaims.HasTrueClaim(principal, AuthClaims.IsRootClaimType)
                 || AuthClaims.HasTrueClaim(principal, AuthClaims.IsGlobalAdminClaimType);
@@ -943,11 +943,11 @@
         _eventSubscription = EventBus.Subscribe<PermissionsInvalidatedEvent>(OnPermissionsInvalidatedAsync);
         WorkspaceSession.WorkspaceChanged += OnActiveWorkspaceChanged;
 
-        await WorkspaceSession.InitializeAsync().ConfigureAwait(false);
+        await WorkspaceSession.InitializeAsync();
         if (WorkspaceSession.ActiveWorkspaceId is Guid activeWorkspaceId)
         {
             _workspaceId = activeWorkspaceId;
-            await LoadWorkspaceDataAsync().ConfigureAwait(false);
+            await LoadWorkspaceDataAsync();
         }
     }
 
@@ -1685,24 +1685,40 @@
             return;
         }
 
-        _categories = PermissionRegistry.GetCategories();
-        _allDescriptors = PermissionRegistry.GetAll();
-        _workspace = await PermissionStore.GetWorkspaceAsync(workspaceId);
-        _groups = await PermissionStore.GetGroupsAsync(workspaceId);
+        IReadOnlyList<string> categories = PermissionRegistry.GetCategories();
+        IReadOnlyList<PermissionDescriptor> allDescriptors = PermissionRegistry.GetAll();
+        Workspace? workspace = await PermissionStore.GetWorkspaceAsync(workspaceId);
+        IReadOnlyList<PermissionGroup> groups = await PermissionStore.GetGroupsAsync(workspaceId);
+        Dictionary<(Guid GroupId, string PermissionKey), PermissionState> grantStates = [];
+        Dictionary<Guid, IReadOnlyList<PermissionGroupMember>> groupMembers = [];
 
-        _grantStates.Clear();
-        _groupMembers.Clear();
-
-        foreach (PermissionGroup group in _groups)
+        foreach (PermissionGroup group in groups)
         {
             IReadOnlyList<PermissionGrant> grants = await PermissionStore.GetGrantsAsync(group.Id);
             foreach (PermissionGrant grant in grants)
             {
-                _grantStates[(group.Id, grant.PermissionKey)] = grant.State;
+                grantStates[(group.Id, grant.PermissionKey)] = grant.State;
             }
 
             IReadOnlyList<PermissionGroupMember> members = await PermissionStore.GetGroupMembersAsync(group.Id);
-            _groupMembers[group.Id] = members;
+            groupMembers[group.Id] = members;
+        }
+
+        _categories = categories;
+        _allDescriptors = allDescriptors;
+        _workspace = workspace;
+        _groups = groups;
+
+        _grantStates.Clear();
+        foreach (KeyValuePair<(Guid GroupId, string PermissionKey), PermissionState> kvp in grantStates)
+        {
+            _grantStates[kvp.Key] = kvp.Value;
+        }
+
+        _groupMembers.Clear();
+        foreach (KeyValuePair<Guid, IReadOnlyList<PermissionGroupMember>> kvp in groupMembers)
+        {
+            _groupMembers[kvp.Key] = kvp.Value;
         }
 
         if (_selectedGroup is not null)

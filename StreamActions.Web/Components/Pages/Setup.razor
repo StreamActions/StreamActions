@@ -217,7 +217,7 @@ else
         IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
         if (settingsService is not null)
         {
-            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            InstanceSettings settings = await settingsService.GetAsync();
             _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         }
 
@@ -229,14 +229,14 @@ else
         BootstrapTokenRequestResult tokenResult = BootstrapTokenService.RequestOrReuseActiveToken();
         _tokenAvailable = tokenResult.Succeeded;
         _cooldownRemaining = tokenResult.CooldownRemaining;
-        _isRootRecovery = await PanelUserStore.HasRootUserAsync().ConfigureAwait(false);
+        _isRootRecovery = await PanelUserStore.HasRootUserAsync();
 
         if (_isRootRecovery)
         {
             IInstanceOAuthConfigService? oauthConfigService = ServiceProvider.GetService<IInstanceOAuthConfigService>();
             if (oauthConfigService is not null)
             {
-                IReadOnlyDictionary<string, PlatformOAuthAppCredentials> stored = await oauthConfigService.GetAllAsync().ConfigureAwait(false);
+                IReadOnlyDictionary<string, PlatformOAuthAppCredentials> stored = await oauthConfigService.GetAllAsync();
                 _hasStoredOAuthCredentials = stored.Count > 0;
             }
         }

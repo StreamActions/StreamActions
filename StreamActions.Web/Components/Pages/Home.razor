@@ -45,7 +45,7 @@
         IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
         if (settingsService is not null)
         {
-            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            InstanceSettings settings = await settingsService.GetAsync();
             _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         }
     }

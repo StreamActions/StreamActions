@@ -224,7 +224,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         bool wasLoaded = _loaded;
-        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync();
         ClaimsPrincipal principal = authState.User;
 
         _isElevated = AuthClaims.IsStepUpElevated(principal, TimeProvider);
@@ -236,40 +236,35 @@ else
         IMfaCredentialStore? mfaCredentialStore = ServiceProvider.GetService<IMfaCredentialStore>();
         Guid? userId = AuthClaims.GetPanelUserId(principal);
         PanelUser? user = panelUserStore is not null && userId.HasValue
-            ? await panelUserStore.GetByIdAsync(userId.Value).ConfigureAwait(false)
+            ? await panelUserStore.GetByIdAsync(userId.Value)
             : null;
 
         IReadOnlyList<UserLoginIdentity> identities = [];
         if (user is not null && panelUserStore is not null)
         {
             identities = await panelUserStore
-                .GetLoginIdentitiesAsync(user.Id)
-                .ConfigureAwait(false);
+                .GetLoginIdentitiesAsync(user.Id);
             IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(principal);
 
             _policy = await MfaPolicyService
-                .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, WorkspaceId)
-                .ConfigureAwait(false);
+                .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, WorkspaceId);
             _requiresLoginMfa = await MfaPolicyService
-                .IsLoginMfaRequiredAsync(user, identities, oidcGroups, WorkspaceId)
-                .ConfigureAwait(false);
+                .IsLoginMfaRequiredAsync(user, identities, oidcGroups, WorkspaceId);
         }
         else
         {
             _policy = await MfaPolicyService
-                .GetEffectivePolicyAsync(WorkspaceId)
-                .ConfigureAwait(false);
+                .GetEffectivePolicyAsync(WorkspaceId);
             _requiresLoginMfa = false;
         }
 
         _hasAnyCredentials = mfaCredentialStore is null || !userId.HasValue
-            || await mfaCredentialStore.HasAnyCredentialsAsync(userId.Value).ConfigureAwait(false);
+            || await mfaCredentialStore.HasAnyCredentialsAsync(userId.Value);
 
         if (mfaCredentialStore is not null && userId.HasValue)
         {
             IReadOnlyList<MfaCredentialSummary> summaries = await mfaCredentialStore
-                .GetSummariesAsync(userId.Value)
-                .ConfigureAwait(false);
+                .GetSummariesAsync(userId.Value);
             _hasPasskeyEnrolled = summaries.Any(static s => s.Method == MfaMethod.Passkey);
         }
         else
@@ -296,7 +291,7 @@ else
 
         if (allowForceReauth)
         {
-            (string? href, string label) = await ResolveForceReauthTargetAsync(principal, identities).ConfigureAwait(false);
+            (string? href, string label) = await ResolveForceReauthTargetAsync(principal, identities);
             if (!string.IsNullOrWhiteSpace(href))
             {
                 _canForceReauth = true;
@@ -347,8 +342,7 @@ else
             if (oidcStore is not null)
             {
                 ExternalOidcProvider? instanceProvider = await oidcStore
-                    .GetBySlugAsync(workspaceId: null, slug)
-                    .ConfigureAwait(false);
+                    .GetBySlugAsync(workspaceId: null, slug);
                 if (instanceProvider is not null && instanceProvider.IsEnabled)
                 {
                     providerDisplayName = instanceProvider.DisplayName;
@@ -359,8 +353,7 @@ else
                     if (candidateWorkspaceId.HasValue && candidateWorkspaceId.Value != Guid.Empty)
                     {
                         ExternalOidcProvider? wsProvider = await oidcStore
-                            .GetBySlugAsync(candidateWorkspaceId.Value, slug)
-                            .ConfigureAwait(false);
+                            .GetBySlugAsync(candidateWorkspaceId.Value, slug);
                         if (wsProvider is not null && wsProvider.IsEnabled)
                         {
                             oidcWorkspaceId = candidateWorkspaceId.Value;

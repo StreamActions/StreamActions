@@ -42,7 +42,7 @@ You are a read-only performance auditor. You never edit files. `run_command` is 
 3. **Check the performance scope:**
 	- **Message processing:** avoidable per-message allocations (strings, LINQ iterators, closures, boxing, `ToList`/`ToArray`). Span-based or `SearchValues` alternatives. Pooled buffers for WebSocket frames
 	- **Regex:** runtime construction or per-call `RegexOptions.Compiled` instead of `[GeneratedRegex]`. Backtracking cost of link and TLD patterns on adversarial chat input. `NonBacktracking` suitability
-	- **Async:** sync-over-async (`.Result`, `.Wait()`, `GetAwaiter().GetResult()`), `async void`, unnecessary `Task.Run`, missing `ConfigureAwait(false)` in library code (`CA2007`), `ValueTask` misuse
+	- **Async:** sync-over-async (`.Result`, `.Wait()`, `GetAwaiter().GetResult()`), `async void`, unnecessary `Task.Run`, missing `ConfigureAwait(false)` in library `.cs` code (`CA2007` — never in Blazor `.razor` components, where `.ConfigureAwait(false)` escapes the renderer `SynchronizationContext`), `ValueTask` misuse
 	- **CancellationToken:** propagation and honoring in daemon and ASP.NET Core code only. `StreamActions.Twitch` omits it by design, so recommend changing that only as an explicit architectural proposal, never as a defect
 	- **I/O and JSON:** `HttpClient` reuse, cached `JsonSerializerOptions` or source-generated `JsonSerializerContext`, logger message templates (`CA1848`)
 	- **Python:** `requests.Session` reuse, timeouts, avoiding quadratic string building and repeated parsing in `/Diff` and `/TldRegexUpdater`

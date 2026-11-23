@@ -497,12 +497,32 @@ public sealed class CommandDispatcherTests
         CommandTestHarness.DispatcherTestRig rig = CommandTestHarness.CreateRig();
         await using (rig.ConfigureAwait(false))
         {
-            await rig.CommandRepository.UpsertAsync(
-                new CustomCommand { Id = Guid.NewGuid(), WorkspaceId = CommandTestHarness.DefaultWorkspaceId, Trigger = "c1", RoutineJson = "A {botcmd c2}", IsEnabled = true },
-                TestContext.Current.CancellationToken);
-            await rig.CommandRepository.UpsertAsync(
-                new CustomCommand { Id = Guid.NewGuid(), WorkspaceId = CommandTestHarness.DefaultWorkspaceId, Trigger = "c2", RoutineJson = "B {botcmd c1}", IsEnabled = true },
-                TestContext.Current.CancellationToken);
+            int initialInvalidations = 0;
+            TaskCompletionSource initialInvalidatedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            Action<Guid?> onInitialInvalidated = wsId =>
+            {
+                if (wsId == CommandTestHarness.DefaultWorkspaceId && Interlocked.Increment(ref initialInvalidations) == 2)
+                {
+                    _ = initialInvalidatedTcs.TrySetResult();
+                }
+            };
+
+            rig.AstCache.Invalidated += onInitialInvalidated;
+            try
+            {
+                await rig.CommandRepository.UpsertAsync(
+                    new CustomCommand { Id = Guid.NewGuid(), WorkspaceId = CommandTestHarness.DefaultWorkspaceId, Trigger = "c1", RoutineJson = "A {botcmd c2}", IsEnabled = true },
+                    TestContext.Current.CancellationToken);
+                await rig.CommandRepository.UpsertAsync(
+                    new CustomCommand { Id = Guid.NewGuid(), WorkspaceId = CommandTestHarness.DefaultWorkspaceId, Trigger = "c2", RoutineJson = "B {botcmd c1}", IsEnabled = true },
+                    TestContext.Current.CancellationToken);
+
+                await initialInvalidatedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            }
+            finally
+            {
+                rig.AstCache.Invalidated -= onInitialInvalidated;
+            }
 
             CommandDispatchResult result = await rig.Dispatcher.DispatchAsync(
                 CommandTestHarness.CreateChatCommand("c1"),
@@ -517,7 +537,7 @@ public sealed class CommandDispatcherTests
             _ = rig.AstCache.CompilationCount.Should().Be(compilationsBefore);
 
             TaskCompletionSource<Guid?> invalidatedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            rig.AstCache.Invalidated += wsId =>
+            Action<Guid?> onInvalidated = wsId =>
             {
                 if (wsId == CommandTestHarness.DefaultWorkspaceId)
                 {
@@ -525,10 +545,18 @@ public sealed class CommandDispatcherTests
                 }
             };
 
-            await rig.CommandRepository.UpsertAsync(
-                new CustomCommand { Id = Guid.NewGuid(), WorkspaceId = CommandTestHarness.DefaultWorkspaceId, Trigger = "c3", RoutineJson = "C", IsEnabled = true },
-                TestContext.Current.CancellationToken);
-            _ = await invalidatedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            rig.AstCache.Invalidated += onInvalidated;
+            try
+            {
+                await rig.CommandRepository.UpsertAsync(
+                    new CustomCommand { Id = Guid.NewGuid(), WorkspaceId = CommandTestHarness.DefaultWorkspaceId, Trigger = "c3", RoutineJson = "C", IsEnabled = true },
+                    TestContext.Current.CancellationToken);
+                _ = await invalidatedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            }
+            finally
+            {
+                rig.AstCache.Invalidated -= onInvalidated;
+            }
 
             _ = await rig.Dispatcher.DispatchAsync(CommandTestHarness.CreateChatCommand("c1"), TestContext.Current.CancellationToken);
             _ = rig.AstCache.CompilationCount.Should().BeGreaterThan(compilationsBefore);

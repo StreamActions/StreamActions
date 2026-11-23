@@ -194,44 +194,40 @@ else
         IInstanceSettingsService? settingsService = ServiceProvider.GetService<IInstanceSettingsService>();
         if (settingsService is not null)
         {
-            InstanceSettings settings = await settingsService.GetAsync().ConfigureAwait(false);
+            InstanceSettings settings = await settingsService.GetAsync();
             _instanceName = AuthPolicyParser.ResolveInstanceName(settings);
         }
         _safeReturnUrl = AuthClaims.SafeReturnUrlOrDefault(ReturnUrl, "/");
 
-        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync().ConfigureAwait(false);
+        AuthenticationState authState = await AuthStateProvider.GetAuthenticationStateAsync();
         ClaimsPrincipal principal = authState.User;
 
         IPanelUserStore? panelUserStore = ServiceProvider.GetService<IPanelUserStore>();
         IMfaCredentialStore? mfaCredentialStore = ServiceProvider.GetService<IMfaCredentialStore>();
         Guid? userId = AuthClaims.GetPanelUserId(principal);
         PanelUser? user = panelUserStore is not null && userId.HasValue
-            ? await panelUserStore.GetByIdAsync(userId.Value).ConfigureAwait(false)
+            ? await panelUserStore.GetByIdAsync(userId.Value)
             : null;
 
         if (user is not null && panelUserStore is not null)
         {
             IReadOnlyList<UserLoginIdentity> identities = await panelUserStore
-                .GetLoginIdentitiesAsync(user.Id)
-                .ConfigureAwait(false);
+                .GetLoginIdentitiesAsync(user.Id);
             IReadOnlyList<string> oidcGroups = AuthClaims.GetOidcGroups(principal);
 
             _policy = await MfaPolicyService
-                .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, workspaceId: WorkspaceId)
-                .ConfigureAwait(false);
+                .GetEffectivePolicyForUserAsync(user, identities, oidcGroups, workspaceId: WorkspaceId);
         }
         else
         {
             _policy = await MfaPolicyService
-                .GetEffectivePolicyAsync(workspaceId: WorkspaceId)
-                .ConfigureAwait(false);
+                .GetEffectivePolicyAsync(workspaceId: WorkspaceId);
         }
 
         if (mfaCredentialStore is not null && userId.HasValue)
         {
             IReadOnlyList<MfaCredentialSummary> summaries = await mfaCredentialStore
-                .GetSummariesAsync(userId.Value)
-                .ConfigureAwait(false);
+                .GetSummariesAsync(userId.Value);
             _hasPasskeyEnrolled = summaries.Any(static s => s.Method == MfaMethod.Passkey);
         }
         else
