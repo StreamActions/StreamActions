@@ -71,13 +71,13 @@ public sealed record Entitlement
     /// Unique identifier of the entitlement.
     /// </summary>
     [JsonPropertyName("entitlement_id")]
-    public string? EntitlementId { get; init; }
+    public Guid? EntitlementId { get; init; }
 
     /// <summary>
     /// Identifier of the Benefit.
     /// </summary>
     [JsonPropertyName("benefit_id")]
-    public string? BenefitId { get; init; }
+    public Guid? BenefitId { get; init; }
 
     /// <summary>
     /// UTC timestamp in ISO format when this entitlement was granted on Twitch.

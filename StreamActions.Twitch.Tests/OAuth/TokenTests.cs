@@ -438,7 +438,7 @@ public sealed class TokenTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?)"/> validates against the specified expected audience.
+    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?, string?, HttpClient?, CancellationToken)"/> validates against the specified expected audience.
     /// </summary>
     [Fact]
     [Trait("Member", "GetJwtTokenAsync")]
@@ -448,8 +448,8 @@ public sealed class TokenTests : IDisposable
         string signedIdToken = this._fixture.CreateSignedJwtIdToken(customAudience, "141981764", "twitchdev");
         Token token = new() { IdToken = signedIdToken };
 
-        JsonWebToken? matchingJwt = await token.GetJwtTokenAsync(customAudience).ConfigureAwait(true);
-        JsonWebToken? mismatchedJwt = await token.GetJwtTokenAsync("different_audience").ConfigureAwait(true);
+        JsonWebToken? matchingJwt = await token.GetJwtTokenAsync(customAudience, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
+        JsonWebToken? mismatchedJwt = await token.GetJwtTokenAsync("different_audience", cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = matchingJwt.Should().NotBeNull();
         _ = matchingJwt.Audiences.Should().Contain(customAudience);
@@ -457,7 +457,7 @@ public sealed class TokenTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?)"/> returns the parsed JWT when the <c>nonce</c> claim matches.
+    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?, string?, HttpClient?, CancellationToken)"/> returns the parsed JWT when the <c>nonce</c> claim matches.
     /// </summary>
     [Fact]
     [Trait("Member", "GetJwtTokenAsync")]
@@ -467,7 +467,7 @@ public sealed class TokenTests : IDisposable
         string signedIdToken = this.CreateSignedJwtWithOptionalNonce(rsa, this._fixture.ClientId, "expected_nonce_123");
         Token token = new() { IdToken = signedIdToken };
 
-        JsonWebToken? jwt = await token.GetJwtTokenAsync(this._fixture.ClientId, "expected_nonce_123").ConfigureAwait(true);
+        JsonWebToken? jwt = await token.GetJwtTokenAsync(this._fixture.ClientId, "expected_nonce_123", cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = jwt.Should().NotBeNull();
         _ = jwt.TryGetClaim("nonce", out System.Security.Claims.Claim? nonceClaim).Should().BeTrue();
@@ -475,7 +475,7 @@ public sealed class TokenTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?)"/> returns <see langword="null"/> when the <c>nonce</c> claim mismatches or is missing.
+    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?, string?, HttpClient?, CancellationToken)"/> returns <see langword="null"/> when the <c>nonce</c> claim mismatches or is missing.
     /// </summary>
     /// <param name="tokenNonce">The nonce claim embedded in the signed JWT, or <see langword="null"/> to omit it.</param>
     /// <param name="expectedNonce">The expected nonce passed to validation.</param>
@@ -489,13 +489,13 @@ public sealed class TokenTests : IDisposable
         string signedIdToken = this.CreateSignedJwtWithOptionalNonce(rsa, this._fixture.ClientId, tokenNonce);
         Token token = new() { IdToken = signedIdToken };
 
-        JsonWebToken? jwt = await token.GetJwtTokenAsync(this._fixture.ClientId, expectedNonce).ConfigureAwait(true);
+        JsonWebToken? jwt = await token.GetJwtTokenAsync(this._fixture.ClientId, expectedNonce, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = jwt.Should().BeNull();
     }
 
     /// <summary>
-    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?)"/> skips <c>nonce</c> validation when <paramref name="expectedNonce"/> is <see langword="null"/> or whitespace.
+    /// Tests that <see cref="Token.GetJwtTokenAsync(string?, string?, string?, HttpClient?, CancellationToken)"/> skips <c>nonce</c> validation when <paramref name="expectedNonce"/> is <see langword="null"/> or whitespace.
     /// </summary>
     /// <param name="expectedNonce">The null or whitespace expected nonce value.</param>
     [Theory]
@@ -508,7 +508,7 @@ public sealed class TokenTests : IDisposable
         string signedIdToken = this._fixture.CreateSignedJwtIdToken(this._fixture.ClientId, "141981764", "twitchdev");
         Token token = new() { IdToken = signedIdToken };
 
-        JsonWebToken? jwt = await token.GetJwtTokenAsync(this._fixture.ClientId, expectedNonce).ConfigureAwait(true);
+        JsonWebToken? jwt = await token.GetJwtTokenAsync(this._fixture.ClientId, expectedNonce, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = jwt.Should().NotBeNull();
     }

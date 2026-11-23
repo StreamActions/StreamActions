@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Collections.Frozen;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -27,10 +28,42 @@ namespace StreamActions.Common.Json.Serialization;
 /// <typeparam name="T">An enum whose values should be converted.</typeparam>
 public sealed class JsonUpperCaseEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
+    #region Static Fields
+
     /// <summary>
-    /// Cached array of the names of the enum values for type <typeparamref name="T"/>.
+    /// Cached mappings between enum names and enum values.
     /// </summary>
-    private static readonly string[] _names = Enum.GetNames<T>();
+    private static readonly (FrozenDictionary<string, T> StringToEnum, FrozenDictionary<T, string> EnumToString) _maps = BuildMaps();
+
+    /// <summary>
+    /// An alternate lookup for <see cref="_maps"/> supporting <see cref="ReadOnlySpan{T}"/> keys.
+    /// </summary>
+    private static readonly FrozenDictionary<string, T>.AlternateLookup<ReadOnlySpan<char>> _stringToEnumLookup = _maps.StringToEnum.GetAlternateLookup<ReadOnlySpan<char>>();
+
+    #endregion Static Fields
+
+    #region Private Methods
+
+    /// <summary>
+    /// Precomputes and caches the mapping between enum values and their uppercase string representations.
+    /// </summary>
+    /// <returns>A tuple containing the string-to-enum and enum-to-string frozen dictionaries.</returns>
+    private static (FrozenDictionary<string, T> StringToEnum, FrozenDictionary<T, string> EnumToString) BuildMaps()
+    {
+        Dictionary<string, T> stringToEnumMap = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<T, string> enumToStringMap = [];
+
+        foreach (string name in Enum.GetNames<T>())
+        {
+            T eval = Enum.Parse<T>(name);
+            stringToEnumMap[name] = eval;
+            enumToStringMap[eval] = name.ToUpperInvariant();
+        }
+
+        return (stringToEnumMap.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase), enumToStringMap.ToFrozenDictionary());
+    }
+
+    #endregion Private Methods
 
     #region Public Properties
 
@@ -44,21 +77,23 @@ public sealed class JsonUpperCaseEnumConverter<T> : JsonConverter<T> where T : s
     /// <inheritdoc/>
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        string val = reader.GetString()!;
-
-        foreach (string name in _names)
+        if (reader.TokenType == JsonTokenType.Null)
         {
-            if (name.Equals(val, StringComparison.InvariantCultureIgnoreCase))
-            {
-                return Enum.Parse<T>(name);
-            }
+            return default;
         }
 
-        return default;
+        if (reader.TokenType == JsonTokenType.String && !reader.HasValueSequence && reader.ValueSpan.Length <= 128)
+        {
+            Span<char> charBuffer = stackalloc char[128];
+            int charsWritten = reader.CopyString(charBuffer);
+            return _stringToEnumLookup.TryGetValue(charBuffer[..charsWritten], out T result) ? result : default;
+        }
+
+        return _stringToEnumLookup.TryGetValue(reader.GetString().AsSpan(), out T fallbackResult) ? fallbackResult : default;
     }
 
     /// <inheritdoc/>
-    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => writer?.WriteStringValue(Enum.GetName(value)?.ToUpperInvariant());
+    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => writer?.WriteStringValue(_maps.EnumToString.TryGetValue(value, out string? result) ? result : Enum.GetName(value)?.ToUpperInvariant());
 
     #endregion Public Methods
 }

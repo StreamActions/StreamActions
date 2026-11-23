@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -91,30 +90,27 @@ public sealed record ClipDownload
     /// </remarks>
     public static async Task<ResponseData<ClipDownload>?> GetClipsDownload(TwitchSession session, string broadcasterId, string editorId, IEnumerable<string> clipId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(editorId))
         {
-            throw new ArgumentNullException(nameof(editorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(editorId));
         }
 
         IReadOnlyList<string>? clipIdList = clipId as IReadOnlyList<string> ?? clipId?.ToArray();
         if (clipIdList is null || clipIdList.Count == 0)
         {
-            throw new ArgumentNullException(nameof(clipId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(clipId));
         }
 
         if (clipIdList.Count > 10)
         {
-            throw new ArgumentOutOfRangeException(nameof(clipId), clipIdList.Count, "must have a count <= 10").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(clipId), clipIdList.Count, "must have a count <= 10");
         }
 
         session.RequireUserOrAppToken(Scope.ChannelManageClips, Scope.EditorManageClips);

@@ -257,6 +257,20 @@ public sealed class GameTests : IDisposable
 
     /// <summary>
     /// <para>
+    /// Tests that <see cref="Game.GetTopGames"/> throws <see cref="InvalidOperationException"/> when both before and after are provided.
+    /// </para>
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetTopGames")]
+    public async Task GetTopGames_WhenBothBeforeAndAfterProvided_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        Func<Task> action = async () => await Game.GetTopGames(session, before: "before_cursor", after: "after_cursor").ConfigureAwait(true);
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// <para>
     /// Tests that <see cref="Game.GetTopGames"/> sends a GET request and returns top games with pagination.
     /// </para>
     /// </summary>
@@ -283,7 +297,7 @@ public sealed class GameTests : IDisposable
         this._fixture.RegisterResponse("GET", "/helix/games/top", jsonResponse);
 
         using TwitchSession session = TestTokenFactory.CreateAppSession();
-        ResponseData<Game>? response = await Game.GetTopGames(session, 20, "after_cursor", "before_cursor").ConfigureAwait(true);
+        ResponseData<Game>? response = await Game.GetTopGames(session, 20, after: "after_cursor").ConfigureAwait(true);
 
         _ = response.Should().NotBeNull();
         _ = response.Data.Should().NotBeNull();
@@ -304,7 +318,7 @@ public sealed class GameTests : IDisposable
         _ = request.Path.Should().Be("/helix/games/top");
         _ = request.QueryString.Should().Contain("first=20");
         _ = request.QueryString.Should().Contain("after=after_cursor");
-        _ = request.QueryString.Should().Contain("before=before_cursor");
+        _ = request.QueryString.Should().NotContain("before=");
     }
 
     /// <summary>

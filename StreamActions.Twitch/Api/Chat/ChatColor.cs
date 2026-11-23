@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -202,25 +201,23 @@ public sealed record ChatColor
     /// </remarks>
     public static async Task<ResponseData<ChatColor>?> GetUserChatColor(TwitchSession session, IEnumerable<string> userId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         IReadOnlyList<string>? userIdList = userId as IReadOnlyList<string> ?? userId?.ToArray();
         if (userIdList is null || userIdList.Count == 0)
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         if (userIdList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(userId), userIdList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(userId), userIdList.Count, "must have a count <= 100");
         }
 
         session.RequireUserOrAppToken();
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/color", UriKind.Relative), new() { { "user_id", userIdList } }), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/color", UriKind.Relative), new() { { "user_id", userIdList } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatColor>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -261,24 +258,21 @@ public sealed record ChatColor
     /// </remarks>
     public static async Task<JsonApiResponse?> UpdateUserChatColor(TwitchSession session, string userId, NamedColor color, string? hex = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         if (color == NamedColor.Custom && string.IsNullOrWhiteSpace(hex))
         {
-            throw new ArgumentNullException(nameof(hex)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(hex));
         }
 
         if (color == NamedColor.Custom && !Util.IsValidHexColor(hex!))
         {
-            throw new ArgumentOutOfRangeException(nameof(hex), hex, "must be a valid rgb hex string #rrggbb").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(hex), hex, "must be a valid rgb hex string #rrggbb");
         }
 
         session.RequireUserToken(Scope.UserManageChatColor);
@@ -295,11 +289,12 @@ public sealed record ChatColor
 
             if (string.IsNullOrWhiteSpace(scolor))
             {
-                throw new ArgumentNullException(nameof(color)).Log(TwitchApi.GetLogger());
+                throw new ArgumentNullException(nameof(color));
             }
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/chat/color", UriKind.Relative), new() { { "user_id", userId }, { "color", scolor } }), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/color", UriKind.Relative), new() { { "user_id", userId }, { "color", scolor } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

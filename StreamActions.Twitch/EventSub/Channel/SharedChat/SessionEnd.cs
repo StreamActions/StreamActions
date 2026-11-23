@@ -40,7 +40,7 @@ public sealed record SessionEnd : IEventSubType
     /// The unique identifier for the shared chat session.
     /// </summary>
     [JsonPropertyName("session_id")]
-    public string? SessionId { get; init; }
+    public Guid? SessionId { get; init; }
 
     /// <summary>
     /// The User ID of the channel in the subscription condition which is no longer active in the shared chat session.

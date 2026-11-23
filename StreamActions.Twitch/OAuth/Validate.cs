@@ -18,7 +18,6 @@
 
 using StreamActions.Common.Attributes;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
@@ -89,12 +88,9 @@ public sealed record Validate : JsonApiResponse
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     public static async Task<Validate?> ValidateOAuth(TwitchSession session, bool dontRefresh, string baseAddress = "https://id.twitch.tv/oauth2/validate")
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session, dontRefresh: dontRefresh).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<Validate>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<Validate>(TwitchApi.SerializerOptions, session.CancellationToken).ConfigureAwait(false);
     }
 }

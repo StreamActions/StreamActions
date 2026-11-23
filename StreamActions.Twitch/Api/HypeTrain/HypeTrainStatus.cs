@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.HypeTrain.Objects;
 using StreamActions.Twitch.Exceptions;
@@ -86,14 +85,11 @@ public sealed record HypeTrainStatus
     /// </remarks>
     public static async Task<ResponseData<HypeTrainStatus>?> GetHypeTrainStatus(TwitchSession session, string broadcasterId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserToken(Scope.ChannelReadHypeTrain);

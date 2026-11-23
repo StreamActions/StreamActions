@@ -29,5 +29,5 @@ public sealed record CheckAutoModStatusParameters
     /// The list of messages to check.
     /// </summary>
     [JsonPropertyName("data")]
-    public IEnumerable<CheckAutoModStatusData>? Data { get; init; }
+    public IReadOnlyList<CheckAutoModStatusData>? Data { get; init; }
 }

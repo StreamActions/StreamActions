@@ -29,5 +29,5 @@ public sealed record PrimePaidUpgrade
     /// The type of subscription plan being used.
     /// </summary>
     [JsonPropertyName("sub_tier")]
-    public string? SubTier { get; init; }
+    public Subscribe.SubscriptionTiers? SubTier { get; init; }
 }

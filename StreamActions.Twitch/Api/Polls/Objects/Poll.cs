@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -194,14 +193,11 @@ public sealed record Poll
     /// </remarks>
     public static async Task<ResponseData<Poll>?> GetPolls(TwitchSession session, string broadcasterId, IEnumerable<string>? id = null, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
@@ -209,7 +205,7 @@ public sealed record Poll
         {
             if (idList.Count > 20)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 20").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 20");
             }
         }
 
@@ -291,64 +287,58 @@ public sealed record Poll
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<Poll>?> CreatePoll(TwitchSession session, PollCreationParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserToken(Scope.ChannelManagePolls);
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {
-            throw new ArgumentNullException(nameof(parameters.BroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.BroadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(parameters.Title))
         {
-            throw new ArgumentNullException(nameof(parameters.Title)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Title));
         }
 
         if (!parameters.Duration.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.Duration)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Duration));
         }
 
         if (parameters.Choices is null || parameters.Choices.Count == 0)
         {
-            throw new ArgumentNullException(nameof(parameters.Choices)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Choices));
         }
 
         if (parameters.Title.Length > 60)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "must be 60 characters or less").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "must be 60 characters or less");
         }
 
         if (parameters.Choices.Count is < 2 or > 5)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Choices), parameters.Choices.Count, "must provide 2-5 choices").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Choices), parameters.Choices.Count, "must provide 2-5 choices");
         }
 
         foreach (PollCreationChoice choice in parameters.Choices)
         {
             if (string.IsNullOrWhiteSpace(choice.Title))
             {
-                throw new ArgumentNullException(nameof(parameters.Choices), "a choice may not be null, empty, or whitespace").Log(TwitchApi.GetLogger());
+                throw new ArgumentNullException(nameof(parameters.Choices), "a choice may not be null, empty, or whitespace");
             }
             else if (choice.Title.Length > 25)
             {
-                throw new ArgumentOutOfRangeException(nameof(parameters.Choices), choice.Title, "a choices length must be <= 25").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(parameters.Choices), choice.Title, "a choices length must be <= 25");
             }
         }
 
         if (parameters.ChannelPointsVotingEnabled.HasValue && parameters.ChannelPointsVotingEnabled.Value && !parameters.ChannelPointsPerVote.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.ChannelPointsPerVote), "must be defined if ChannelPointsVotingEnabled is true").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.ChannelPointsPerVote), "must be defined if ChannelPointsVotingEnabled is true");
         }
+
+        session.RequireUserToken(Scope.ChannelManagePolls);
 
         if (Math.Clamp(parameters.Duration.Value, 15, 1800) != parameters.Duration.Value)
         {
@@ -402,37 +392,31 @@ public sealed record Poll
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<Poll>?> EndPoll(TwitchSession session, PollEndParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserToken(Scope.ChannelManagePolls);
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {
-            throw new ArgumentNullException(nameof(parameters.BroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.BroadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(parameters.Id))
         {
-            throw new ArgumentNullException(nameof(parameters.Id)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Id));
         }
 
         if (parameters.Status is null)
         {
-            throw new ArgumentNullException(nameof(parameters.Status)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Status));
         }
 
         if (parameters.Status is not PollStatus.Terminated and not PollStatus.Archived)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be one of Terminated or Archived").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be one of Terminated or Archived");
         }
+
+        session.RequireUserToken(Scope.ChannelManagePolls);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/polls", UriKind.Relative), session, content).ConfigureAwait(false);

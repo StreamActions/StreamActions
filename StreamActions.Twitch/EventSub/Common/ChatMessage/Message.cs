@@ -35,5 +35,5 @@ public sealed record Message
     /// Ordered list of chat message fragments.
     /// </summary>
     [JsonPropertyName("fragments")]
-    public IEnumerable<Fragment>? Fragments { get; init; }
+    public IReadOnlyList<Fragment>? Fragments { get; init; }
 }

@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.EventSub;
 /// <summary>
 /// The parameters for <see cref="ConduitShard.UpdateConduitShards(Common.TwitchSession, ConduitShardUpdateParameters)"/>.
 /// </summary>
-public record ConduitShardUpdateParameters
+public sealed record ConduitShardUpdateParameters
 {
     /// <summary>
     /// Conduit ID.
@@ -35,6 +35,6 @@ public record ConduitShardUpdateParameters
     /// List of shards to update.
     /// </summary>
     [JsonPropertyName("shards")]
-    public IEnumerable<ConduitShardUpdateShardParameters>? Shards { get; init; }
+    public IReadOnlyList<ConduitShardUpdateShardParameters>? Shards { get; init; }
 }
 

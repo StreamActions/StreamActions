@@ -20,6 +20,7 @@ using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomRewardRedemption.Objects;
 using System.Text.Json.Serialization;
+using static StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomRewardRedemption.Add;
 
 namespace StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomRewardRedemption;
 
@@ -29,7 +30,7 @@ namespace StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomRewardRedempt
 public sealed record Update : IEventSubType
 {
     /// <inheritdoc/>
-    public static Type EventSubConditionType => typeof(BroadcasterUserIdCondition);
+    public static Type EventSubConditionType => typeof(BroadcasterAndRewardIdCondition);
 
     /// <inheritdoc/>
     public static string Type => "channel.channel_points_custom_reward_redemption.update";
@@ -41,7 +42,7 @@ public sealed record Update : IEventSubType
     /// The redemption identifier.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// The requested broadcaster ID.
@@ -89,7 +90,7 @@ public sealed record Update : IEventSubType
     /// Defaults to unfulfilled. Possible values are unknown, unfulfilled, fulfilled, and canceled.
     /// </summary>
     [JsonPropertyName("status")]
-    public string? Status { get; init; }
+    public RedemptionStatuses? Status { get; init; }
 
     /// <summary>
     /// Basic information about the reward that was redeemed, at the time it was redeemed.

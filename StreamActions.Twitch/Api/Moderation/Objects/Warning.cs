@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -105,44 +104,38 @@ public sealed record Warning
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<Warning>?> WarnChatUser(TwitchSession session, string broadcasterId, string moderatorId, WarnChatUserParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (parameters.Data is null)
         {
-            throw new ArgumentNullException(nameof(WarnChatUserParameters.Data)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(WarnChatUserParameters.Data));
         }
 
         if (string.IsNullOrWhiteSpace(parameters.Data.UserId))
         {
-            throw new ArgumentNullException(nameof(WarnChatUserData.UserId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(WarnChatUserData.UserId));
         }
 
         if (string.IsNullOrWhiteSpace(parameters.Data.Reason))
         {
-            throw new ArgumentNullException(nameof(WarnChatUserData.Reason)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(WarnChatUserData.Reason));
         }
 
         if (parameters.Data.Reason.Length > 500)
         {
-            throw new ArgumentOutOfRangeException(nameof(WarnChatUserData.Reason), parameters.Data.Reason.Length, "length must be <= 500").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(WarnChatUserData.Reason), parameters.Data.Reason.Length, "length must be <= 500");
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageWarnings);

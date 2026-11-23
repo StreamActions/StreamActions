@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -170,6 +169,7 @@ public sealed record UnbanRequest
     /// <param name="first">The maximum number of items to return per page in response.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="UnbanRequest"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="status"/> is not a valid value of <see cref="UnbanRequestStatuses"/>.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ModeratorReadUnbanRequests"/> or <see cref="Scope.ModeratorManageUnbanRequests"/>.</exception>
     /// <remarks>
@@ -196,19 +196,21 @@ public sealed record UnbanRequest
     /// </remarks>
     public static async Task<ResponseData<UnbanRequest>?> GetUnbanRequests(TwitchSession session, string broadcasterId, string moderatorId, UnbanRequestStatuses status, string? userId = null, string? after = null, int first = 20)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
+        }
+
+        if (!Enum.IsDefined(status))
+        {
+            throw new ArgumentOutOfRangeException(nameof(status), status, "not a valid value of " + nameof(UnbanRequestStatuses));
         }
 
         session.RequireUserToken(Scope.ModeratorReadUnbanRequests, Scope.ModeratorManageUnbanRequests);
@@ -231,7 +233,8 @@ public sealed record UnbanRequest
         first = Math.Clamp(first, 1, 100);
         queryParameters.Add("first", first.ToString(CultureInfo.InvariantCulture));
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/unban_requests", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/unban_requests", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UnbanRequest>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -276,34 +279,28 @@ public sealed record UnbanRequest
     /// </remarks>
     public static async Task<ResponseData<UnbanRequest>?> ResolveUnbanRequest(TwitchSession session, string broadcasterId, string moderatorId, string unbanRequestId, ResolveUnbanRequestParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(unbanRequestId))
         {
-            throw new ArgumentNullException(nameof(unbanRequestId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(unbanRequestId));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (parameters.ResolutionText is not null && parameters.ResolutionText.Length > 500)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.ResolutionText.Length, "resolution_text must be 500 characters or less.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.ResolutionText.Length, "resolution_text must be 500 characters or less.");
         }
 
         session.RequireUserToken(Scope.ModeratorManageUnbanRequests);

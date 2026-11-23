@@ -46,6 +46,13 @@ public sealed record EventSubSession
     public int? KeepaliveTimeoutSeconds { get; init; }
 
     /// <summary>
+    /// The maximum amount of time that you should expect silence before receiving a <see cref="EventMetadata.MessageTypes.SessionKeepAlive"/> message.
+    /// This is also the time limit to enable at least one subscription on this session.
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan? KeepaliveTimeout => this.KeepaliveTimeoutSeconds.HasValue ? TimeSpan.FromSeconds(this.KeepaliveTimeoutSeconds.Value) : null;
+
+    /// <summary>
     /// The URL to use for reconnecting to the WebSocket.
     /// </summary>
     /// <remarks>

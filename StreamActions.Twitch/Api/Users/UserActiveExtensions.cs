@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Users.Objects;
 using StreamActions.Twitch.Exceptions;
@@ -104,10 +103,7 @@ public sealed record UserActiveExtensions
     /// </remarks>
     public static async Task<ResponseDataObject<UserActiveExtensions>?> GetUserActiveExtensions(TwitchSession session, string? userId = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserOrAppToken();
 
@@ -117,7 +113,8 @@ public sealed record UserActiveExtensions
             queryParams.Add("user_id", userId);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/users/extensions", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/users/extensions", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseDataObject<UserActiveExtensions>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -159,15 +156,9 @@ public sealed record UserActiveExtensions
     /// </remarks>
     public static async Task<ResponseDataObject<UserActiveExtensions>?> UpdateUserExtensions(TwitchSession session, UpdateUserExtensionsParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         session.RequireUserToken(Scope.UserEditBroadcast);
 

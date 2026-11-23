@@ -22,10 +22,10 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using StreamActions.Common.Attributes;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -119,25 +119,26 @@ public sealed record Token : JsonApiResponse
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<Token?> RefreshOAuth(TwitchSession session, string? baseAddress = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserToken();
 
         if (string.IsNullOrWhiteSpace(session.Token?.Refresh))
         {
-            throw new InvalidOperationException(nameof(TwitchToken.Refresh) + " is not a valid refresh token").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(TwitchToken.Refresh) + " is not a valid refresh token");
         }
 
-        baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
+        if (string.IsNullOrWhiteSpace(baseAddress))
+        {
+            OpenIdConnectConfiguration config = await GetOpenIdConnectConfigurationAsync(cancellationToken: session.CancellationToken).ConfigureAwait(false);
+            baseAddress = config.TokenEndpoint;
+        }
 
         using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "grant_type", "refresh_token" }, { "refresh_token", session.Token.Refresh ?? "" },
             { "client_id", session.CustomClientId ?? TwitchApi.ClientId ?? "" }, { "client_secret", session.CustomClientSecret ?? TwitchApi.ClientSecret ?? "" } });
         using TwitchSession requestSession = CreateTokenRequestSession(session);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions, session.CancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -163,15 +164,17 @@ public sealed record Token : JsonApiResponse
     {
         if (string.IsNullOrWhiteSpace(code))
         {
-            throw new ArgumentNullException(nameof(code)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(code));
         }
 
-        if (redirectUri is null)
+        ArgumentNullException.ThrowIfNull(redirectUri);
+
+        CancellationToken cancellationToken = session?.CancellationToken ?? CancellationToken.None;
+        if (string.IsNullOrWhiteSpace(baseAddress))
         {
-            throw new ArgumentNullException(nameof(redirectUri)).Log(TwitchApi.GetLogger());
+            OpenIdConnectConfiguration config = await GetOpenIdConnectConfigurationAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            baseAddress = config.TokenEndpoint;
         }
-
-        baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
 
         using FormUrlEncodedContent content = new(new Dictionary<string, string>
         {
@@ -183,7 +186,7 @@ public sealed record Token : JsonApiResponse
         });
         using TwitchSession? requestSession = session is not null ? CreateTokenRequestSession(session) : null;
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession ?? TwitchSession.Empty, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -194,13 +197,18 @@ public sealed record Token : JsonApiResponse
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
     public static async Task<Token?> AuthorizeApp(string? baseAddress = null, TwitchSession? session = null)
     {
-        baseAddress ??= _openIdConnectConfiguration.Value.TokenEndpoint;
+        CancellationToken cancellationToken = session?.CancellationToken ?? CancellationToken.None;
+        if (string.IsNullOrWhiteSpace(baseAddress))
+        {
+            OpenIdConnectConfiguration config = await GetOpenIdConnectConfigurationAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            baseAddress = config.TokenEndpoint;
+        }
 
         using FormUrlEncodedContent content = new(new Dictionary<string, string>{ { "grant_type", "client_credentials" },
             { "client_id", session?.CustomClientId ?? TwitchApi.ClientId ?? "" }, { "client_secret", session?.CustomClientSecret ?? TwitchApi.ClientSecret ?? "" } });
         using TwitchSession? requestSession = session is not null ? CreateTokenRequestSession(session) : null;
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession ?? TwitchSession.Empty, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -213,17 +221,14 @@ public sealed record Token : JsonApiResponse
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
     public static async Task<JsonApiResponse?> RevokeOAuth(TwitchSession session, string baseAddress = "https://id.twitch.tv/oauth2/revoke")
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserToken();
 
         using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "client_id", session.CustomClientId ?? TwitchApi.ClientId ?? "" }, { "token", session.Token?.OAuth ?? "" } });
         using TwitchSession requestSession = CreateTokenRequestSession(session);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions, session.CancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -234,10 +239,12 @@ public sealed record Token : JsonApiResponse
     internal static TwitchSession CreateTokenRequestSession(TwitchSession session) => new()
     {
         Token = TwitchToken.Empty,
+        CancellationToken = session.CancellationToken,
         CustomBaseUri = session.CustomBaseUri,
         CustomClientId = session.CustomClientId,
         CustomClientSecret = session.CustomClientSecret,
         CustomHttpClient = session.CustomHttpClient,
+        RateLimiter = session.RateLimiter,
         TimeProvider = session.TimeProvider
     };
 
@@ -247,22 +254,83 @@ public sealed record Token : JsonApiResponse
     private const string _defaultOpenIdConnectConfigurationUrl = "https://id.twitch.tv/oauth2/.well-known/openid-configuration";
 
     /// <summary>
-    /// The OpenID Connect configuration from Twitch.
+    /// Cached OpenID Connect configuration managers keyed by metadata address when using default HTTP transport.
     /// </summary>
-    internal static Lazy<OpenIdConnectConfiguration> _openIdConnectConfiguration = CreateOpenIdConnectConfiguration(_defaultOpenIdConnectConfigurationUrl);
+    private static readonly ConcurrentDictionary<string, ConfigurationManager<OpenIdConnectConfiguration>> _configurationManagers = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Sets the URL used to retrieve the OpenID Connect configuration.
+    /// The active default OpenID Connect metadata address.
+    /// </summary>
+    private static string _defaultOpenIdConnectMetadataAddress = _defaultOpenIdConnectConfigurationUrl;
+
+    /// <summary>
+    /// The default <see cref="ConfigurationManager{T}"/> for retrieving OpenID Connect discovery and JWKS metadata with automatic key rotation.
+    /// </summary>
+    private static ConfigurationManager<OpenIdConnectConfiguration> _defaultConfigurationManager = CreateConfigurationManager(_defaultOpenIdConnectConfigurationUrl, httpClient: null);
+
+    /// <summary>
+    /// Sets the URL used to retrieve the default OpenID Connect configuration.
     /// </summary>
     /// <param name="url">The OpenID Connect configuration URL.</param>
-    internal static void SetOpenIdConnectConfigurationUrl(string url = _defaultOpenIdConnectConfigurationUrl) => _openIdConnectConfiguration = CreateOpenIdConnectConfiguration(url);
+    internal static void SetOpenIdConnectConfigurationUrl(string url = _defaultOpenIdConnectConfigurationUrl)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(url);
+        ConfigurationManager<OpenIdConnectConfiguration> manager = CreateConfigurationManager(url, httpClient: null);
+        _defaultOpenIdConnectMetadataAddress = url;
+        _ = Interlocked.Exchange(ref _defaultConfigurationManager, manager);
+        _configurationManagers[url] = manager;
+    }
 
     /// <summary>
-    /// Creates a new <see cref="Lazy{T}"/> instance for retrieving the OpenID Connect configuration from the specified URL.
+    /// Gets a <see cref="ConfigurationManager{T}"/> for the specified metadata address and optional <see cref="HttpClient"/>.
     /// </summary>
-    /// <param name="url">The URL from which to retrieve the OpenID Connect configuration.</param>
-    /// <returns>A <see cref="Lazy{T}"/> resolving to <see cref="OpenIdConnectConfiguration"/>.</returns>
-    private static Lazy<OpenIdConnectConfiguration> CreateOpenIdConnectConfiguration(string url) => new(() => { HttpDocumentRetriever documentRetriever = new() { RequireHttps = url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) }; return OpenIdConnectConfigurationRetriever.GetAsync(url, documentRetriever, CancellationToken.None).ConfigureAwait(false).GetAwaiter().GetResult(); });
+    /// <param name="metadataAddress">The OpenID Connect metadata discovery URL.</param>
+    /// <param name="httpClient">Optional custom <see cref="HttpClient"/> for discovery and JWKS requests.</param>
+    /// <returns>A <see cref="ConfigurationManager{T}"/> instance.</returns>
+    internal static ConfigurationManager<OpenIdConnectConfiguration> GetConfigurationManager(string metadataAddress, HttpClient? httpClient = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(metadataAddress);
+
+        return httpClient is not null
+            ? CreateConfigurationManager(metadataAddress, httpClient)
+            : _configurationManagers.GetOrAdd(metadataAddress, static address => CreateConfigurationManager(address, httpClient: null));
+    }
+
+    /// <summary>
+    /// Asynchronously retrieves the <see cref="OpenIdConnectConfiguration"/> from the configured discovery endpoint.
+    /// </summary>
+    /// <param name="metadataAddress">Optional OpenID Connect metadata URL override.</param>
+    /// <param name="httpClient">Optional custom <see cref="HttpClient"/> for discovery and JWKS requests.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>The resolved <see cref="OpenIdConnectConfiguration"/>.</returns>
+    internal static Task<OpenIdConnectConfiguration> GetOpenIdConnectConfigurationAsync(
+        string? metadataAddress = null,
+        HttpClient? httpClient = null,
+        CancellationToken cancellationToken = default)
+    {
+        ConfigurationManager<OpenIdConnectConfiguration> manager = string.IsNullOrWhiteSpace(metadataAddress) && httpClient is null
+            ? Volatile.Read(ref _defaultConfigurationManager)
+            : GetConfigurationManager(
+                string.IsNullOrWhiteSpace(metadataAddress) ? _defaultOpenIdConnectMetadataAddress : metadataAddress,
+                httpClient);
+
+        return manager.GetConfigurationAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="ConfigurationManager{T}"/> for retrieving OpenID Connect metadata and JWKS keys.
+    /// </summary>
+    /// <param name="metadataAddress">The metadata discovery URL.</param>
+    /// <param name="httpClient">Optional custom <see cref="HttpClient"/>.</param>
+    /// <returns>A configured <see cref="ConfigurationManager{T}"/>.</returns>
+    private static ConfigurationManager<OpenIdConnectConfiguration> CreateConfigurationManager(string metadataAddress, HttpClient? httpClient)
+    {
+        HttpDocumentRetriever documentRetriever = httpClient is not null
+            ? new(httpClient) { RequireHttps = metadataAddress.StartsWith("https://", StringComparison.OrdinalIgnoreCase) }
+            : new() { RequireHttps = metadataAddress.StartsWith("https://", StringComparison.OrdinalIgnoreCase) };
+
+        return new(metadataAddress, new OpenIdConnectConfigurationRetriever(), documentRetriever);
+    }
 
     /// <summary>
     /// Validates and converts <see cref="IdToken"/>, if present, to a <see cref="JsonWebToken"/>.
@@ -271,20 +339,32 @@ public sealed record Token : JsonApiResponse
     public Task<JsonWebToken?> GetJwtTokenAsync() => this.GetJwtTokenAsync(null, null);
 
     /// <summary>
-    /// Validates and converts <see cref="IdToken"/>, if present, to a <see cref="JsonWebToken"/> using the specified expected audience and optional nonce.
+    /// Validates and converts <see cref="IdToken"/>, if present, to a <see cref="JsonWebToken"/> using the specified expected audience, optional nonce, and discovery overrides.
     /// </summary>
     /// <param name="expectedAudience">The expected JWT audience (<c>aud</c> claim). Defaults to <see cref="TwitchApi.ClientId"/> when <see langword="null"/>.</param>
     /// <param name="expectedNonce">The expected <c>nonce</c> claim value, or <see langword="null"/> or whitespace to skip nonce validation.</param>
+    /// <param name="metadataAddress">Optional OpenID Connect discovery URL override.</param>
+    /// <param name="httpClient">Optional custom <see cref="HttpClient"/> for discovery and JWKS requests.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>A <see cref="JsonWebToken"/> if <see cref="IdToken"/> is a valid JWT matching the expected audience and nonce, else <see langword="null"/>.</returns>
-    public async Task<JsonWebToken?> GetJwtTokenAsync(string? expectedAudience, string? expectedNonce = null)
+    public async Task<JsonWebToken?> GetJwtTokenAsync(
+        string? expectedAudience,
+        string? expectedNonce = null,
+        string? metadataAddress = null,
+        HttpClient? httpClient = null,
+        CancellationToken cancellationToken = default)
     {
         if (!string.IsNullOrWhiteSpace(this.IdToken))
         {
-            TokenValidationResult result = await new JsonWebTokenHandler().ValidateTokenAsync(this.IdToken, new()
+            OpenIdConnectConfiguration config = await GetOpenIdConnectConfigurationAsync(metadataAddress, httpClient, cancellationToken).ConfigureAwait(false);
+            TokenValidationResult result = await new JsonWebTokenHandler().ValidateTokenAsync(this.IdToken, new TokenValidationParameters
             {
-                IssuerSigningKeys = _openIdConnectConfiguration.Value.JsonWebKeySet.Keys,
+                IssuerSigningKeys = config.SigningKeys,
                 ValidAudience = expectedAudience ?? TwitchApi.ClientId,
-                ValidIssuer = _openIdConnectConfiguration.Value.Issuer,
+                ValidIssuer = config.Issuer,
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateIssuerSigningKey = true,
                 ValidateLifetime = true
             }).ConfigureAwait(false);
 

@@ -176,7 +176,7 @@ public sealed class DualTokenBucketRateLimiterTests
 
     [Fact]
     [Trait("Member", "WaitForRateLimit")]
-    public async Task WaitForRateLimit_ReturnsFalseAndReturnsToken_WhenLocalCanceled()
+    public async Task WaitForRateLimit_ThrowsOperationCanceledExceptionAndReturnsToken_WhenLocalCanceled()
     {
         using TokenBucketRateLimiter localBucket = new(1, TimeSpan.FromSeconds(10));
         using TokenBucketRateLimiter globalBucket = new(1, TimeSpan.FromSeconds(10));
@@ -191,10 +191,9 @@ public sealed class DualTokenBucketRateLimiterTests
 
         DualTokenBucketRateLimiter limiter = new(localBucket, globalBucket);
 
-        // Even though it's canceled, the method catches OperationCanceledException and returns false
-        bool result = await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(true);
+        Func<Task> act = async () => await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(true);
 
-        _ = result.Should().BeFalse();
+        _ = await act.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
         _ = globalBucket.Remaining.Should().Be(1); // Token should be returned
     }
 
@@ -222,7 +221,7 @@ public sealed class DualTokenBucketRateLimiterTests
 
     [Fact]
     [Trait("Member", "WaitForRateLimit")]
-    public async Task WaitForRateLimit_ReturnsFalseAndReturnsToken_WhenCanceled()
+    public async Task WaitForRateLimit_ThrowsOperationCanceledExceptionAndReturnsToken_WhenGlobalCanceled()
     {
         using TokenBucketRateLimiter localBucket = new(1, TimeSpan.FromSeconds(10));
         using TokenBucketRateLimiter globalBucket = new(1, TimeSpan.FromSeconds(10));
@@ -237,10 +236,9 @@ public sealed class DualTokenBucketRateLimiterTests
 
         DualTokenBucketRateLimiter limiter = new(localBucket, globalBucket);
 
-        // Even though it's canceled, the method catches OperationCanceledException and returns false
-        bool result = await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(true);
+        Func<Task> act = async () => await limiter.WaitForRateLimit(TimeSpan.FromSeconds(1), cts.Token).ConfigureAwait(true);
 
-        _ = result.Should().BeFalse();
+        _ = await act.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
         _ = localBucket.Remaining.Should().Be(1); // Token should be returned
     }
 

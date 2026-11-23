@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
@@ -74,10 +73,7 @@ public sealed record Conduit
     /// </remarks>
     public static async Task<ResponseData<Conduit>?> GetConduits(TwitchSession session)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireAppToken();
 
@@ -117,24 +113,18 @@ public sealed record Conduit
     [SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentionally targeting sub-property")]
     public static async Task<ResponseData<Conduit>?> CreateConduits(TwitchSession session, ConduitCreationParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (!parameters.ShardCount.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.ShardCount)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.ShardCount));
         }
 
         if (parameters.ShardCount.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.ShardCount), parameters.ShardCount.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.ShardCount), parameters.ShardCount.Value, "must be >= 1");
         }
 
         session.RequireAppToken();
@@ -180,29 +170,23 @@ public sealed record Conduit
     [SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentionally targeting sub-property")]
     public static async Task<ResponseData<Conduit>?> UpdateConduits(TwitchSession session, ConduitUpdateParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (!parameters.Id.HasValue || parameters.Id == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(parameters.Id)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Id));
         }
 
         if (!parameters.ShardCount.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.ShardCount)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.ShardCount));
         }
 
         if (parameters.ShardCount.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.ShardCount), parameters.ShardCount.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.ShardCount), parameters.ShardCount.Value, "must be >= 1");
         }
 
         session.RequireAppToken();
@@ -246,14 +230,11 @@ public sealed record Conduit
     /// </remarks>
     public static async Task<JsonApiResponse?> DeleteConduit(TwitchSession session, Guid id)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (id == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id));
         }
 
         session.RequireAppToken();

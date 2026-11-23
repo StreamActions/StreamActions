@@ -18,7 +18,6 @@
 
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
@@ -68,15 +67,9 @@ public sealed record ExtensionPubSubMessage
     /// </remarks>
     public static async Task<JsonApiResponse?> SendExtensionPubSubMessage(TwitchSession session, SendExtensionPubSubMessageParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         session.RequireJwtToken();
 

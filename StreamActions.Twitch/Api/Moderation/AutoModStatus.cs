@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -93,30 +92,24 @@ public sealed record AutoModStatus
     /// </remarks>
     public static async Task<ResponseData<AutoModStatus>?> CheckAutoModStatus(TwitchSession session, string broadcasterId, CheckAutoModStatusParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
-        if (parameters is null)
+        ArgumentNullException.ThrowIfNull(parameters);
+
+        if (parameters.Data is null || parameters.Data.Count == 0)
         {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters));
         }
 
-        if (parameters.Data is null || !parameters.Data.Any())
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
-
-        int count = parameters.Data.Count();
+        int count = parameters.Data.Count;
         if (count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters), count, "The list must contain at most 100 messages.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters), count, "The list must contain at most 100 messages.");
         }
 
         session.RequireUserOrAppToken(Scope.ModerationRead);
@@ -125,7 +118,8 @@ public sealed record AutoModStatus
         queryParameters.Add("broadcaster_id", broadcasterId);
 
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/enforcements/status", UriKind.Relative), queryParameters), session, jsonContent).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/enforcements/status", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<AutoModStatus>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -173,35 +167,29 @@ public sealed record AutoModStatus
     /// </remarks>
     public static async Task<JsonApiResponse?> ManageHeldAutoModMessage(TwitchSession session, ManageHeldAutoModMessageParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.UserId))
         {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters));
         }
 
         if (string.IsNullOrWhiteSpace(parameters.MsgId))
         {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters));
         }
 
         if (parameters.Action is null)
         {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageAutomod);
 
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/automod/message", UriKind.Relative)), session, jsonContent).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("/moderation/automod/message", UriKind.Relative), session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

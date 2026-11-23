@@ -78,7 +78,7 @@ public sealed record Message : IEventSubType
     /// A UUID that identifies the message.
     /// </summary>
     [JsonPropertyName("message_id")]
-    public string? MessageId { get; init; }
+    public Guid? MessageId { get; init; }
 
     /// <summary>
     /// The structured chat message.
@@ -96,7 +96,7 @@ public sealed record Message : IEventSubType
     /// List of chat badges.
     /// </summary>
     [JsonPropertyName("badges")]
-    public IEnumerable<Badge>? Badges { get; init; }
+    public IReadOnlyList<Badge>? Badges { get; init; }
 
     /// <summary>
     /// Optional. Metadata if this message is a cheer.
@@ -120,7 +120,7 @@ public sealed record Message : IEventSubType
     /// Optional. The ID of a channel points custom reward that was redeemed.
     /// </summary>
     [JsonPropertyName("channel_points_custom_reward_id")]
-    public string? ChannelPointsCustomRewardId { get; init; }
+    public Guid? ChannelPointsCustomRewardId { get; init; }
 
     /// <summary>
     /// Optional. The broadcaster user ID of the channel the message was sent from.
@@ -144,13 +144,13 @@ public sealed record Message : IEventSubType
     /// Optional. The UUID that identifies the source message from the channel the message was sent from.
     /// </summary>
     [JsonPropertyName("source_message_id")]
-    public string? SourceMessageId { get; init; }
+    public Guid? SourceMessageId { get; init; }
 
     /// <summary>
     /// Optional. The list of chat badges for the chatter in the channel the message was sent from.
     /// </summary>
     [JsonPropertyName("source_badges")]
-    public IEnumerable<Badge>? SourceBadges { get; init; }
+    public IReadOnlyList<Badge>? SourceBadges { get; init; }
 
     /// <summary>
     /// Optional. Determines if a message delivered during a shared chat session is only sent to the source channel.

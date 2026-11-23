@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Logging;
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using System.Drawing;
@@ -213,13 +212,11 @@ public static partial class Util
 
             if (!rs.IsEmpty && !gs.IsEmpty && !bs.IsEmpty)
             {
-                try
+                if (int.TryParse(rs, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int r)
+                    && int.TryParse(gs, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int g)
+                    && int.TryParse(bs, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int b))
                 {
-                    c = Color.FromArgb(int.Parse(rs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(gs, NumberStyles.HexNumber, CultureInfo.InvariantCulture), int.Parse(bs, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
-                }
-                catch (FormatException ex)
-                {
-                    GenericLogger.Error(Logger.GetLogger(typeof(Util)), "HexColorToColor", "Failed to parse hex color components.", ex);
+                    c = Color.FromArgb(r, g, b);
                 }
             }
         }

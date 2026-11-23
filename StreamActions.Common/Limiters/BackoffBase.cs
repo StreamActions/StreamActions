@@ -28,7 +28,7 @@ public abstract class BackoffBase
     /// <summary>
     /// The initial duration of the backoff, after a reset.
     /// </summary>
-    public TimeSpan IntialDuration => TimeSpan.FromTicks(this._initialDuration.Ticks);
+    public TimeSpan InitialDuration => TimeSpan.FromTicks(this._initialDuration.Ticks);
 
     /// <summary>
     /// Indicates if the current value of <see cref="NextDuration"/> is equal to <see cref="MaxDuration"/>.
@@ -36,7 +36,7 @@ public abstract class BackoffBase
     public bool IsMaxDuration => this.NextDuration.Ticks == this._maxDuration.Ticks;
 
     /// <summary>
-    /// Indicates if the current value of <see cref="NextDuration"/> is equal to <see cref="IntialDuration"/>.
+    /// Indicates if the current value of <see cref="NextDuration"/> is equal to <see cref="InitialDuration"/>.
     /// </summary>
     public bool IsReset => this.NextDuration.Ticks == this._initialDuration.Ticks;
 
@@ -55,7 +55,7 @@ public abstract class BackoffBase
     #region Public Methods
 
     /// <summary>
-    /// Resets <see cref="NextDuration"/> to <see cref="IntialDuration"/>.
+    /// Resets <see cref="NextDuration"/> to <see cref="InitialDuration"/>.
     /// </summary>
     /// <param name="timeout">The interval to wait for the lock, or -1 milliseconds to wait indefinitely.</param>
     /// <exception cref="TimeoutException">The lock timed out.</exception>

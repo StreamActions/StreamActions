@@ -71,7 +71,7 @@ public sealed record Online : IEventSubType
     /// The timestamp at which the stream went online at.
     /// </summary>
     [JsonPropertyName("started_at")]
-    public string? StartedAt { get; init; }
+    public DateTime? StartedAt { get; init; }
 
     /// <summary>
     /// The type of stream.

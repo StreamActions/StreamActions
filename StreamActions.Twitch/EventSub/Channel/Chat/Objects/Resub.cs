@@ -47,7 +47,7 @@ public sealed record Resub
     /// The type of subscription plan being used.
     /// </summary>
     [JsonPropertyName("sub_tier")]
-    public string? SubTier { get; init; }
+    public Subscribe.SubscriptionTiers? SubTier { get; init; }
 
     /// <summary>
     /// Optional. Whether or not this subscription is a Prime subscription.

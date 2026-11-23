@@ -18,8 +18,6 @@
 
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Protocols;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using StreamActions.Common.Net;
 using StreamActions.Core.Abstractions;
@@ -191,6 +189,7 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
         {
             using TwitchSession exchangeSession = new()
             {
+                CancellationToken = cancellationToken,
                 CustomClientId = clientId,
                 CustomClientSecret = clientSecret,
                 CustomHttpClient = httpClient,
@@ -237,6 +236,7 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
                 {
                     using TwitchSession userInfoSession = new()
                     {
+                        CancellationToken = cancellationToken,
                         CustomClientId = clientId,
                         CustomHttpClient = httpClient,
                         TimeProvider = this._timeProvider,
@@ -262,7 +262,8 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
                 PlatformTokenValidationResult validated = await this.ValidateTokenInternalAsync(
                     token.AccessToken,
                     clientId,
-                    httpClient).ConfigureAwait(false);
+                    httpClient,
+                    cancellationToken).ConfigureAwait(false);
 
                 if (validated.IsValid)
                 {
@@ -309,6 +310,7 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
         {
             using TwitchSession session = new()
             {
+                CancellationToken = cancellationToken,
                 CustomClientId = clientId,
                 CustomClientSecret = clientSecret,
                 CustomHttpClient = httpClient,
@@ -365,7 +367,8 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
             return await this.ValidateTokenInternalAsync(
                 accessToken,
                 TwitchApi.ClientId ?? "oauth-validate",
-                httpClient).ConfigureAwait(false);
+                httpClient,
+                cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -390,6 +393,7 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
         {
             using TwitchSession session = new()
             {
+                CancellationToken = cancellationToken,
                 CustomClientId = clientId,
                 CustomHttpClient = httpClient,
                 TimeProvider = this._timeProvider,
@@ -446,14 +450,17 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
     /// <param name="accessToken">The access token to validate.</param>
     /// <param name="clientId">The client identifier header value required by <see cref="TwitchApi"/>.</param>
     /// <param name="httpClient">Optional custom HTTP client.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The validation result.</returns>
     private async Task<PlatformTokenValidationResult> ValidateTokenInternalAsync(
         string accessToken,
         string clientId,
-        HttpClient? httpClient)
+        HttpClient? httpClient,
+        CancellationToken cancellationToken)
     {
         using TwitchSession session = new()
         {
+            CancellationToken = cancellationToken,
             CustomClientId = clientId,
             CustomHttpClient = httpClient,
             TimeProvider = this._timeProvider,
@@ -502,39 +509,15 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
         HttpClient? httpClient,
         CancellationToken cancellationToken)
     {
-        Uri oidcUri = new(this._endpoints.OpenIdConfigurationEndpoint, UriKind.Absolute);
-        HttpDocumentRetriever documentRetriever = httpClient is not null
-            ? new HttpDocumentRetriever(httpClient)
-            {
-                RequireHttps = string.Equals(oidcUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase),
-            }
-            : new HttpDocumentRetriever
-            {
-                RequireHttps = string.Equals(oidcUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase),
-            };
+        JsonWebToken? jwt = await TwitchOAuthClient.ValidateIdTokenAsync(
+            new Token { IdToken = idToken },
+            expectedAudience,
+            expectedNonce,
+            this._endpoints.OpenIdConfigurationEndpoint,
+            httpClient,
+            cancellationToken).ConfigureAwait(false);
 
-        OpenIdConnectConfiguration config = await OpenIdConnectConfigurationRetriever
-            .GetAsync(oidcUri.AbsoluteUri, documentRetriever, cancellationToken)
-            .ConfigureAwait(false);
-
-        JsonWebTokenHandler tokenHandler = new();
-        TokenValidationResult result = await tokenHandler.ValidateTokenAsync(idToken, new TokenValidationParameters
-        {
-            IssuerSigningKeys = config.SigningKeys,
-            ValidAudience = expectedAudience,
-            ValidIssuer = config.Issuer,
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateIssuerSigningKey = true,
-            ValidateLifetime = true,
-        }).ConfigureAwait(false);
-
-        return !result.IsValid || result.SecurityToken is not JsonWebToken jwt
-            ? throw new SecurityTokenException("Twitch OIDC ID token validation failed.", result.Exception)
-            : !string.IsNullOrWhiteSpace(expectedNonce)
-            && (!jwt.TryGetClaim("nonce", out Claim? nonceClaim) || !string.Equals(nonceClaim.Value, expectedNonce, StringComparison.Ordinal))
-            ? throw new SecurityTokenException("Twitch OIDC ID token nonce mismatch.")
-            : jwt;
+        return jwt ?? throw new SecurityTokenException("Twitch OIDC ID token validation failed.");
     }
 
     /// <summary>

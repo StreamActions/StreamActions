@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.Api.Channels.Objects;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
@@ -82,5 +83,5 @@ public sealed record Update : IEventSubType
     /// The channel's content classification label IDs.
     /// </summary>
     [JsonPropertyName("content_classification_labels")]
-    public IEnumerable<string>? ContentClassificationLabels { get; init; }
+    public IReadOnlyList<ContentClassificationLabel.LabelId>? ContentClassificationLabels { get; init; }
 }

@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
@@ -95,20 +94,17 @@ public sealed record UserAuthorization
     /// </remarks>
     public static async Task<ResponseData<UserAuthorization>?> GetAuthorizationByUser(TwitchSession session, IEnumerable<string> userIds)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         IReadOnlyList<string>? userIdList = userIds as IReadOnlyList<string> ?? userIds?.ToArray();
         if (userIdList is null || userIdList.Count == 0)
         {
-            throw new ArgumentNullException(nameof(userIds)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userIds));
         }
 
         if (userIdList.Count > 10)
         {
-            throw new ArgumentOutOfRangeException(nameof(userIds), userIdList.Count, "must have a count <= 10").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(userIds), userIdList.Count, "must have a count <= 10");
         }
 
         session.RequireAppToken();
@@ -116,7 +112,8 @@ public sealed record UserAuthorization
         NameValueCollection queryParams = [];
         queryParams.Add("user_id", userIdList);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/authorization/users", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/authorization/users", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UserAuthorization>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

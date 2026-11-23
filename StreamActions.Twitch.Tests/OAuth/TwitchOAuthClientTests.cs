@@ -599,9 +599,9 @@ public sealed class TwitchOAuthClientTests : IDisposable
         string signedIdToken = this.CreateSignedJwtWithNonce(rsa, customAudience, expectedNonce);
         Token token = new() { IdToken = signedIdToken };
 
-        JsonWebToken? validJwt = await TwitchOAuthClient.ValidateIdTokenAsync(token, customAudience, expectedNonce).ConfigureAwait(true);
-        JsonWebToken? wrongNonceJwt = await TwitchOAuthClient.ValidateIdTokenAsync(token, customAudience, "wrong_nonce").ConfigureAwait(true);
-        JsonWebToken? wrongAudienceJwt = await TwitchOAuthClient.ValidateIdTokenAsync(token, "wrong_audience", expectedNonce).ConfigureAwait(true);
+        JsonWebToken? validJwt = await TwitchOAuthClient.ValidateIdTokenAsync(token, customAudience, expectedNonce, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
+        JsonWebToken? wrongNonceJwt = await TwitchOAuthClient.ValidateIdTokenAsync(token, customAudience, "wrong_nonce", cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
+        JsonWebToken? wrongAudienceJwt = await TwitchOAuthClient.ValidateIdTokenAsync(token, "wrong_audience", expectedNonce, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = validJwt.Should().NotBeNull();
         _ = validJwt.Subject.Should().Be("141981764");

@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -98,16 +97,13 @@ public sealed record ExtensionLiveChannel
     /// </remarks>
     public static async Task<ResponseData<ExtensionLiveChannel>?> GetExtensionLiveChannels(TwitchSession session, string extensionId, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserOrAppToken();
 
         if (string.IsNullOrWhiteSpace(extensionId))
         {
-            throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(extensionId));
         }
 
         first = Math.Clamp(first, 1, 100);

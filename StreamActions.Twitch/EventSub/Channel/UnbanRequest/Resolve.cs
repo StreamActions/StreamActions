@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
@@ -106,5 +107,30 @@ public sealed record Resolve : IEventSubType
     /// Dictates whether the unban request was approved or denied. Can be the following: approved canceled denied
     /// </summary>
     [JsonPropertyName("status")]
-    public string? Status { get; init; }
+    public ResolutionStatuses? Status { get; init; }
+
+    /// <summary>
+    /// The resolution status of an unban request.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<ResolutionStatuses>))]
+    public enum ResolutionStatuses
+    {
+        /// <summary>
+        /// Approved.
+        /// </summary>
+        [JsonCustomEnum("approved")]
+        Approved,
+
+        /// <summary>
+        /// Canceled.
+        /// </summary>
+        [JsonCustomEnum("canceled")]
+        Canceled,
+
+        /// <summary>
+        /// Denied.
+        /// </summary>
+        [JsonCustomEnum("denied")]
+        Denied
+    }
 }

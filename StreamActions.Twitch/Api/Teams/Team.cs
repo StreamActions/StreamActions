@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Teams.Objects;
 using System.Collections.Specialized;
@@ -166,14 +165,11 @@ public sealed record Team
     /// </remarks>
     public static async Task<ResponseData<Team>?> GetChannelTeams(TwitchSession session, string broadcasterId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserOrAppToken();
@@ -181,7 +177,8 @@ public sealed record Team
         NameValueCollection queryParameters = [];
         queryParameters.Add("broadcaster_id", broadcasterId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/teams/channel", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/teams/channel", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Team>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -227,19 +224,16 @@ public sealed record Team
     /// </remarks>
     public static async Task<ResponseData<Team>?> GetTeams(TwitchSession session, string? teamId = null, string? teamName = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(teamId) && string.IsNullOrWhiteSpace(teamName))
         {
-            throw new ArgumentNullException(nameof(teamId) + "," + nameof(teamName), "Either a team ID or team name must be provided.").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(teamId) + "," + nameof(teamName), "Either a team ID or team name must be provided.");
         }
 
         if (!string.IsNullOrWhiteSpace(teamId) && !string.IsNullOrWhiteSpace(teamName))
         {
-            throw new ArgumentOutOfRangeException(nameof(teamId) + "," + nameof(teamName), "The team ID and team name parameters are mutually exclusive.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(teamId) + "," + nameof(teamName), "The team ID and team name parameters are mutually exclusive.");
         }
 
         session.RequireUserOrAppToken();
@@ -254,7 +248,8 @@ public sealed record Team
             queryParameters.Add("name", teamName);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/teams", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/teams", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Team>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

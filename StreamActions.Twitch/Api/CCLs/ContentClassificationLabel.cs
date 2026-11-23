@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Text.Json.Serialization;
@@ -76,10 +75,7 @@ public sealed record ContentClassificationLabel
     /// </remarks>
     public static async Task<ResponseData<ContentClassificationLabel>?> GetContentClassificationLabels(TwitchSession session, string? locale = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserOrAppToken();
 

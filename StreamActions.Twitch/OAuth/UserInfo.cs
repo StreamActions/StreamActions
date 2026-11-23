@@ -16,9 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using StreamActions.Common.Attributes;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
@@ -128,16 +128,17 @@ public sealed record UserInfo : JsonApiResponse
     /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.OpenID"/>.</exception>
     public static async Task<UserInfo?> GetUserInfo(TwitchSession session, string? baseAddress = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserToken(Scope.OpenID);
 
-        baseAddress ??= Token._openIdConnectConfiguration.Value.UserInfoEndpoint;
+        if (string.IsNullOrWhiteSpace(baseAddress))
+        {
+            OpenIdConnectConfiguration config = await Token.GetOpenIdConnectConfigurationAsync(cancellationToken: session.CancellationToken).ConfigureAwait(false);
+            baseAddress = config.UserInfoEndpoint;
+        }
 
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new(baseAddress), session).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<UserInfo>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<UserInfo>(TwitchApi.SerializerOptions, session.CancellationToken).ConfigureAwait(false);
     }
 }

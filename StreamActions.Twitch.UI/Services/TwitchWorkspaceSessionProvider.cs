@@ -17,12 +17,14 @@
  */
 
 using Microsoft.Extensions.DependencyInjection;
+using StreamActions.Common.Limiters;
 using StreamActions.Core.Abstractions;
 using StreamActions.Core.Models;
 using StreamActions.Core.Models.Entities;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.UI.Abstractions;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 
 namespace StreamActions.Twitch.UI.Services;
@@ -73,6 +75,16 @@ public sealed class TwitchWorkspaceSessionProvider : ITwitchWorkspaceSessionProv
     /// </summary>
     private readonly HttpMessageInvoker? _customHttpClient;
 
+    /// <summary>
+    /// Optional token lifecycle service used for proactive validation and single-flight 401 token refreshes.
+    /// </summary>
+    private readonly ITokenLifecycleService? _tokenLifecycleService;
+
+    /// <summary>
+    /// Shared per-credential rate limiters persisted across leased <see cref="TwitchSession"/> instances.
+    /// </summary>
+    private readonly ConcurrentDictionary<(Guid? WorkspaceId, TokenRole Role), TokenBucketRateLimiter> _rateLimiters = new();
+
     #endregion Private Fields
 
     #region Public Constructors
@@ -84,13 +96,15 @@ public sealed class TwitchWorkspaceSessionProvider : ITwitchWorkspaceSessionProv
     /// <param name="oauthClientConfigResolver">The OAuth application credential resolver.</param>
     /// <param name="workspaceStore">The workspace metadata store.</param>
     /// <param name="timeProvider">Optional <see cref="TimeProvider"/> override.</param>
+    /// <param name="tokenLifecycleService">Optional <see cref="ITokenLifecycleService"/> used for token resolution and 401 refresh callbacks.</param>
     [ActivatorUtilitiesConstructor]
     public TwitchWorkspaceSessionProvider(
         IPlatformCredentialStore credentialStore,
         IOAuthClientConfigResolver oauthClientConfigResolver,
         IWorkspaceStore workspaceStore,
-        TimeProvider? timeProvider = null)
-        : this(credentialStore, oauthClientConfigResolver, workspaceStore, timeProvider, customBaseUri: null, customHttpClient: null)
+        TimeProvider? timeProvider = null,
+        ITokenLifecycleService? tokenLifecycleService = null)
+        : this(credentialStore, oauthClientConfigResolver, workspaceStore, timeProvider, customBaseUri: null, customHttpClient: null, tokenLifecycleService: tokenLifecycleService)
     {
     }
 
@@ -103,13 +117,15 @@ public sealed class TwitchWorkspaceSessionProvider : ITwitchWorkspaceSessionProv
     /// <param name="timeProvider">Optional <see cref="TimeProvider"/> override.</param>
     /// <param name="customBaseUri">Optional custom Twitch Helix base URI (must end with a trailing slash).</param>
     /// <param name="customHttpClient">Optional custom <see cref="HttpMessageInvoker"/> override.</param>
+    /// <param name="tokenLifecycleService">Optional <see cref="ITokenLifecycleService"/> used for token resolution and 401 refresh callbacks.</param>
     public TwitchWorkspaceSessionProvider(
         IPlatformCredentialStore credentialStore,
         IOAuthClientConfigResolver oauthClientConfigResolver,
         IWorkspaceStore workspaceStore,
         TimeProvider? timeProvider,
         Uri? customBaseUri,
-        HttpMessageInvoker? customHttpClient = null)
+        HttpMessageInvoker? customHttpClient = null,
+        ITokenLifecycleService? tokenLifecycleService = null)
     {
         ArgumentNullException.ThrowIfNull(credentialStore);
         ArgumentNullException.ThrowIfNull(oauthClientConfigResolver);
@@ -121,6 +137,7 @@ public sealed class TwitchWorkspaceSessionProvider : ITwitchWorkspaceSessionProv
         this._timeProvider = timeProvider ?? TimeProvider.System;
         this._customBaseUri = customBaseUri;
         this._customHttpClient = customHttpClient;
+        this._tokenLifecycleService = tokenLifecycleService;
     }
 
     #endregion Public Constructors
@@ -137,7 +154,7 @@ public sealed class TwitchWorkspaceSessionProvider : ITwitchWorkspaceSessionProv
             return null;
         }
 
-        (TokenRole ResolvedRole, PlatformTokenPayload Payload)? tokenEntry = await this
+        (Guid? ScopeWorkspaceId, TokenRole ResolvedRole, PlatformTokenPayload Payload)? tokenEntry = await this
             .ResolveTokenPayloadAsync(workspaceId, cancellationToken)
             .ConfigureAwait(false);
         if (tokenEntry is null)
@@ -145,6 +162,7 @@ public sealed class TwitchWorkspaceSessionProvider : ITwitchWorkspaceSessionProv
             return null;
         }
 
+        Guid? scopeWorkspaceId = tokenEntry.Value.ScopeWorkspaceId;
         TokenRole resolvedRole = tokenEntry.Value.ResolvedRole;
         PlatformTokenPayload payload = tokenEntry.Value.Payload;
 
@@ -170,25 +188,33 @@ public sealed class TwitchWorkspaceSessionProvider : ITwitchWorkspaceSessionProv
             ? oauthConfig.ClientSecret
             : null;
 
-        TwitchToken twitchToken = new()
-        {
-            OAuth = payload.AccessToken,
-            Refresh = payload.RefreshToken,
-            Expires = payload.ExpiresAtUtc?.UtcDateTime,
-            Login = payload.PlatformUsername,
-            UserId = payload.PlatformUserId,
-            Scopes = MapScopes(payload.Scopes),
-            Type = resolvedRole == TokenRole.App
-                ? TwitchToken.TokenType.App
-                : TwitchToken.TokenType.User,
-        };
+        TwitchToken twitchToken = CreateTwitchToken(payload, resolvedRole);
+        TokenBucketRateLimiter sharedRateLimiter = this._rateLimiters.GetOrAdd(
+            (scopeWorkspaceId, resolvedRole),
+            _ => new TokenBucketRateLimiter(800, TimeSpan.FromSeconds(60), this._timeProvider));
+
+        Func<TwitchSession, CancellationToken, ValueTask<TwitchToken?>>? refreshTokenCallback = this._tokenLifecycleService is not null
+            ? async (_, ct) =>
+            {
+                TokenLifecycleResult refreshed = await this._tokenLifecycleService
+                    .EnsureValidTokenAsync(scopeWorkspaceId, TwitchPlatformId, resolvedRole, forceRefresh: true, ct)
+                    .ConfigureAwait(false);
+
+                return !refreshed.IsUsable || refreshed.Payload is null || string.IsNullOrWhiteSpace(refreshed.Payload.AccessToken)
+                    ? null
+                    : CreateTwitchToken(refreshed.Payload, resolvedRole);
+            }
+        : null;
 
         TwitchSession session = new()
         {
+            CancellationToken = cancellationToken,
             CustomBaseUri = this._customBaseUri,
             CustomClientId = clientId,
             CustomClientSecret = clientSecret,
             CustomHttpClient = this._customHttpClient,
+            RateLimiter = sharedRateLimiter,
+            RefreshTokenCallback = refreshTokenCallback,
             TimeProvider = this._timeProvider,
             Token = twitchToken,
         };
@@ -201,12 +227,31 @@ public sealed class TwitchWorkspaceSessionProvider : ITwitchWorkspaceSessionProv
     #region Private Methods
 
     /// <summary>
+    /// Creates a <see cref="TwitchToken"/> from a stored <see cref="PlatformTokenPayload"/> and <see cref="TokenRole"/>.
+    /// </summary>
+    /// <param name="payload">The decrypted platform token payload.</param>
+    /// <param name="resolvedRole">The resolved token role.</param>
+    /// <returns>A configured <see cref="TwitchToken"/>.</returns>
+    private static TwitchToken CreateTwitchToken(PlatformTokenPayload payload, TokenRole resolvedRole) => new()
+    {
+        OAuth = payload.AccessToken,
+        Refresh = payload.RefreshToken,
+        Expires = payload.ExpiresAtUtc?.UtcDateTime,
+        Login = payload.PlatformUsername,
+        UserId = payload.PlatformUserId,
+        Scopes = MapScopes(payload.Scopes),
+        Type = resolvedRole == TokenRole.App
+            ? TwitchToken.TokenType.App
+            : TwitchToken.TokenType.User,
+    };
+
+    /// <summary>
     /// Attempts to resolve an active Twitch token payload for the workspace, preferring broadcaster credentials and falling back to bot or app credentials.
     /// </summary>
     /// <param name="workspaceId">The workspace identifier.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>The resolved <see cref="TokenRole"/> and <see cref="PlatformTokenPayload"/>, or <see langword="null"/> if none is active.</returns>
-    private async ValueTask<(TokenRole ResolvedRole, PlatformTokenPayload Payload)?> ResolveTokenPayloadAsync(
+    /// <returns>The resolved scope workspace ID, <see cref="TokenRole"/>, and <see cref="PlatformTokenPayload"/>, or <see langword="null"/> if none is active.</returns>
+    private async ValueTask<(Guid? ScopeWorkspaceId, TokenRole ResolvedRole, PlatformTokenPayload Payload)?> ResolveTokenPayloadAsync(
         Guid workspaceId,
         CancellationToken cancellationToken)
     {
@@ -221,16 +266,32 @@ public sealed class TwitchWorkspaceSessionProvider : ITwitchWorkspaceSessionProv
 
         foreach ((Guid? scopeWorkspaceId, TokenRole role) in candidates)
         {
-            (bool found, CredentialStatus status, PlatformTokenPayload? payload) = await this._credentialStore
-                .TryGetTokenAsync(scopeWorkspaceId, TwitchPlatformId, role, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (found
-                && status == CredentialStatus.Active
-                && payload is not null
-                && !string.IsNullOrWhiteSpace(payload.AccessToken))
+            if (this._tokenLifecycleService is not null)
             {
-                return (role, payload);
+                TokenLifecycleResult result = await this._tokenLifecycleService
+                    .EnsureValidTokenAsync(scopeWorkspaceId, TwitchPlatformId, role, forceRefresh: false, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (result.IsUsable
+                    && result.Payload is not null
+                    && !string.IsNullOrWhiteSpace(result.Payload.AccessToken))
+                {
+                    return (scopeWorkspaceId, role, result.Payload);
+                }
+            }
+            else
+            {
+                (bool found, CredentialStatus status, PlatformTokenPayload? payload) = await this._credentialStore
+                    .TryGetTokenAsync(scopeWorkspaceId, TwitchPlatformId, role, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (found
+                    && status == CredentialStatus.Active
+                    && payload is not null
+                    && !string.IsNullOrWhiteSpace(payload.AccessToken))
+                {
+                    return (scopeWorkspaceId, role, payload);
+                }
             }
         }
 

@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.Moderate.Objects;
@@ -29,23 +30,61 @@ public sealed record AutomodTerms
     /// Either add or remove.
     /// </summary>
     [JsonPropertyName("action")]
-    public string? Action { get; init; }
+    public TermActions? Action { get; init; }
 
     /// <summary>
     /// Either blocked or permitted.
     /// </summary>
     [JsonPropertyName("list")]
-    public string? List { get; init; }
+    public TermLists? List { get; init; }
 
     /// <summary>
     /// Terms being added or removed.
     /// </summary>
     [JsonPropertyName("terms")]
-    public IReadOnlyCollection<string>? Terms { get; init; }
+    public IReadOnlyList<string>? Terms { get; init; }
 
     /// <summary>
     /// Whether the terms were added due to an Automod message approve/deny action.
     /// </summary>
     [JsonPropertyName("from_automod")]
     public bool? FromAutomod { get; init; }
+
+    /// <summary>
+    /// The action performed on the automod terms.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<TermActions>))]
+    public enum TermActions
+    {
+        /// <summary>
+        /// Terms were added.
+        /// </summary>
+        [JsonCustomEnum("add")]
+        Add,
+
+        /// <summary>
+        /// Terms were removed.
+        /// </summary>
+        [JsonCustomEnum("remove")]
+        Remove
+    }
+
+    /// <summary>
+    /// The automod term list that was modified.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<TermLists>))]
+    public enum TermLists
+    {
+        /// <summary>
+        /// The blocked terms list.
+        /// </summary>
+        [JsonCustomEnum("blocked")]
+        Blocked,
+
+        /// <summary>
+        /// The permitted terms list.
+        /// </summary>
+        [JsonCustomEnum("permitted")]
+        Permitted
+    }
 }

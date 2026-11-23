@@ -78,7 +78,7 @@ public sealed record Add : IEventSubType
     /// The ID of the redemption.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// An object that describes the reward that was redeemed.

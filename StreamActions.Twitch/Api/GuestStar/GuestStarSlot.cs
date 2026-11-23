@@ -18,7 +18,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -76,34 +75,31 @@ public sealed record GuestStarSlot
     /// </remarks>
     public static async Task<JsonApiResponse?> AssignGuestStarSlot(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string guestId, string slotId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            throw new ArgumentNullException(nameof(sessionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(sessionId));
         }
 
         if (string.IsNullOrWhiteSpace(guestId))
         {
-            throw new ArgumentNullException(nameof(guestId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(guestId));
         }
 
         if (string.IsNullOrWhiteSpace(slotId))
         {
-            throw new ArgumentNullException(nameof(slotId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(slotId));
         }
 
         session.RequireUserToken(Scope.ChannelManageGuestStar, Scope.ModeratorManageGuestStar);
@@ -117,7 +113,8 @@ public sealed record GuestStarSlot
             { "slot_id", slotId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/slot", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/slot", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -154,29 +151,26 @@ public sealed record GuestStarSlot
     /// </remarks>
     public static async Task<JsonApiResponse?> UpdateGuestStarSlot(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string sourceSlotId, string? destinationSlotId = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            throw new ArgumentNullException(nameof(sessionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(sessionId));
         }
 
         if (string.IsNullOrWhiteSpace(sourceSlotId))
         {
-            throw new ArgumentNullException(nameof(sourceSlotId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(sourceSlotId));
         }
 
         session.RequireUserToken(Scope.ChannelManageGuestStar, Scope.ModeratorManageGuestStar);
@@ -194,7 +188,8 @@ public sealed record GuestStarSlot
             queryParams.Add("destination_slot_id", destinationSlotId);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/guest_star/slot", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/slot", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -242,34 +237,31 @@ public sealed record GuestStarSlot
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentionally lowercasing per API requirement")]
     public static async Task<JsonApiResponse?> DeleteGuestStarSlot(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string guestId, string slotId, bool? shouldReinviteGuest = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            throw new ArgumentNullException(nameof(sessionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(sessionId));
         }
 
         if (string.IsNullOrWhiteSpace(guestId))
         {
-            throw new ArgumentNullException(nameof(guestId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(guestId));
         }
 
         if (string.IsNullOrWhiteSpace(slotId))
         {
-            throw new ArgumentNullException(nameof(slotId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(slotId));
         }
 
         session.RequireUserToken(Scope.ChannelManageGuestStar, Scope.ModeratorManageGuestStar);
@@ -288,7 +280,8 @@ public sealed record GuestStarSlot
             queryParams.Add("should_reinvite_guest", shouldReinviteGuest.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant());
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/slot", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/slot", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -333,29 +326,26 @@ public sealed record GuestStarSlot
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentionally lowercasing per API requirement")]
     public static async Task<JsonApiResponse?> UpdateGuestStarSlotSettings(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string slotId, bool? isAudioEnabled = null, bool? isVideoEnabled = null, bool? isLive = null, int? volume = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            throw new ArgumentNullException(nameof(sessionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(sessionId));
         }
 
         if (string.IsNullOrWhiteSpace(slotId))
         {
-            throw new ArgumentNullException(nameof(slotId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(slotId));
         }
 
         session.RequireUserToken(Scope.ChannelManageGuestStar, Scope.ModeratorManageGuestStar);
@@ -388,7 +378,8 @@ public sealed record GuestStarSlot
             queryParams.Add("volume", volume.Value.ToString(CultureInfo.InvariantCulture));
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/guest_star/slot_settings", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/slot_settings", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

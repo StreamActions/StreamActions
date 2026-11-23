@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -209,19 +208,16 @@ public sealed record ChannelPointsRedemption
     /// </remarks>
     public static async Task<ResponseData<ChannelPointsRedemption>?> GetCustomRewardRedemption(TwitchSession session, string broadcasterId, Guid rewardId, RedemptionStatus status = RedemptionStatus.Unfulfilled, IEnumerable<Guid>? id = null, RedemptionSort sort = RedemptionSort.Oldest, string? after = null, int first = 20)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (rewardId == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(rewardId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(rewardId));
         }
 
         IReadOnlyList<Guid>? idList = id as IReadOnlyList<Guid> ?? id?.ToArray();
@@ -229,18 +225,18 @@ public sealed record ChannelPointsRedemption
         {
             if (idList.Count > 50)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 50").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 50");
             }
         }
 
         if (!Enum.IsDefined(status))
         {
-            throw new ArgumentOutOfRangeException(nameof(status), status, "not a valid value of " + nameof(RedemptionStatus)).Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(status), status, "not a valid value of " + nameof(RedemptionStatus));
         }
 
         if (!Enum.IsDefined(sort))
         {
-            throw new ArgumentOutOfRangeException(nameof(sort), sort, "not a valid value of " + nameof(RedemptionSort)).Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(sort), sort, "not a valid value of " + nameof(RedemptionSort));
         }
 
         first = Math.Clamp(first, 1, 50);
@@ -275,7 +271,7 @@ public sealed record ChannelPointsRedemption
     }
 
     /// <summary>
-    /// Gets a list of redemptions for the specified custom reward.
+    /// Updates the status of one or more redemptions for a custom reward.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="id">A list of IDs that identify the redemptions to update. You may specify a maximum of 50 IDs.</param>
@@ -324,42 +320,33 @@ public sealed record ChannelPointsRedemption
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional.")]
     public static async Task<ResponseData<ChannelPointsRedemption>?> UpdateRedemptionStatus(TwitchSession session, IEnumerable<Guid> id, string broadcasterId, Guid rewardId, ChannelPointsRedemptionUpdateParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (rewardId == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(rewardId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(rewardId));
         }
 
-        if (id is null)
-        {
-            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(id);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         {
             int idCount = id.Count();
             if (idCount > 50)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 50").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idCount, "must have a count <= 50");
             }
         }
 
         if (parameters.Status is not RedemptionStatus.Fulfilled and not RedemptionStatus.Canceled)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be Fulfilled or Canceled").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be Fulfilled or Canceled");
         }
 
         session.RequireUserToken(Scope.ChannelManageRedemptions);

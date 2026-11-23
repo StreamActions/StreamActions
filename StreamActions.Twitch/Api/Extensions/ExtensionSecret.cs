@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Extensions.Objects;
 using System.Collections.Specialized;
@@ -75,16 +74,13 @@ public sealed record ExtensionSecret
     /// </remarks>
     public static async Task<ResponseData<ExtensionSecret>?> GetExtensionSecrets(TwitchSession session, string extensionId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireJwtToken();
 
         if (string.IsNullOrWhiteSpace(extensionId))
         {
-            throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(extensionId));
         }
 
         NameValueCollection queryParams = new()
@@ -128,16 +124,13 @@ public sealed record ExtensionSecret
     /// </remarks>
     public static async Task<ResponseData<ExtensionSecret>?> CreateExtensionSecret(TwitchSession session, string extensionId, int delay = 300)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireJwtToken();
 
         if (string.IsNullOrWhiteSpace(extensionId))
         {
-            throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(extensionId));
         }
 
         NameValueCollection queryParams = new()

@@ -41,7 +41,7 @@ public sealed record Disabled : IEventSubType
     /// The ID of the conduit.
     /// </summary>
     [JsonPropertyName("conduit_id")]
-    public string? ConduitId { get; init; }
+    public Guid? ConduitId { get; init; }
 
     /// <summary>
     /// The ID of the disabled shard.
@@ -53,7 +53,7 @@ public sealed record Disabled : IEventSubType
     /// The new status of the transport.
     /// </summary>
     [JsonPropertyName("status")]
-    public string? Status { get; init; }
+    public ConduitShard.ShardStatus? Status { get; init; }
 
     /// <summary>
     /// The disabled transport.

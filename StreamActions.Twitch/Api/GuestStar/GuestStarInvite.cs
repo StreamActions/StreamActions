@@ -19,7 +19,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -143,24 +142,21 @@ public sealed record GuestStarInvite
     /// </remarks>
     public static async Task<ResponseData<GuestStarInvite>?> GetGuestStarInvites(TwitchSession session, string broadcasterId, string moderatorId, string sessionId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            throw new ArgumentNullException(nameof(sessionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(sessionId));
         }
 
         session.RequireUserToken(Scope.ChannelReadGuestStar, Scope.ChannelManageGuestStar, Scope.ModeratorReadGuestStar, Scope.ModeratorManageGuestStar);
@@ -172,7 +168,8 @@ public sealed record GuestStarInvite
             { "session_id", sessionId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/invites", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/invites", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
 
         return await response.ReadFromJsonAsync<ResponseData<GuestStarInvite>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -213,29 +210,26 @@ public sealed record GuestStarInvite
     /// </remarks>
     public static async Task<JsonApiResponse?> SendGuestStarInvite(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string guestId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            throw new ArgumentNullException(nameof(sessionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(sessionId));
         }
 
         if (string.IsNullOrWhiteSpace(guestId))
         {
-            throw new ArgumentNullException(nameof(guestId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(guestId));
         }
 
         session.RequireUserToken(Scope.ChannelManageGuestStar, Scope.ModeratorManageGuestStar);
@@ -248,7 +242,8 @@ public sealed record GuestStarInvite
             { "guest_id", guestId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/invites", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/invites", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -292,29 +287,26 @@ public sealed record GuestStarInvite
     /// </remarks>
     public static async Task<JsonApiResponse?> DeleteGuestStarInvite(TwitchSession session, string broadcasterId, string moderatorId, string sessionId, string guestId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            throw new ArgumentNullException(nameof(sessionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(sessionId));
         }
 
         if (string.IsNullOrWhiteSpace(guestId))
         {
-            throw new ArgumentNullException(nameof(guestId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(guestId));
         }
 
         session.RequireUserToken(Scope.ChannelManageGuestStar, Scope.ModeratorManageGuestStar);
@@ -327,7 +319,8 @@ public sealed record GuestStarInvite
             { "guest_id", guestId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/invites", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/invites", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

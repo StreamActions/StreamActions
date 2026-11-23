@@ -83,7 +83,7 @@ public sealed record Progress : IEventSubType
     /// The contributors with the most points contributed.
     /// </summary>
     [JsonPropertyName("top_contributions")]
-    public IReadOnlyCollection<Contribution>? TopContributions { get; init; }
+    public IReadOnlyList<Contribution>? TopContributions { get; init; }
 
     /// <summary>
     /// The current level of the Hype Train.
@@ -95,7 +95,7 @@ public sealed record Progress : IEventSubType
     /// Optional. Non-null for a shared Hype Train. Contains the list of broadcasters in the shared Hype Train.
     /// </summary>
     [JsonPropertyName("shared_train_participants")]
-    public IReadOnlyCollection<Participant>? SharedTrainParticipants { get; init; }
+    public IReadOnlyList<Participant>? SharedTrainParticipants { get; init; }
 
     /// <summary>
     /// The time when the Hype Train started.

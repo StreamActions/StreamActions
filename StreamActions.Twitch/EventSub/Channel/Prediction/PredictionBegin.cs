@@ -41,7 +41,7 @@ public sealed record PredictionBegin : IEventSubType
     /// Channel Points Prediction ID.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// The requested broadcaster ID.
@@ -71,7 +71,7 @@ public sealed record PredictionBegin : IEventSubType
     /// An array of outcomes for the Channel Points Prediction.
     /// </summary>
     [JsonPropertyName("outcomes")]
-    public IReadOnlyCollection<Outcome>? Outcomes { get; init; }
+    public IReadOnlyList<Outcome>? Outcomes { get; init; }
 
     /// <summary>
     /// The time the Channel Points Prediction started.

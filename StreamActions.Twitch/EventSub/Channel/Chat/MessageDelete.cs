@@ -76,5 +76,5 @@ public sealed record MessageDelete : IEventSubType
     /// A UUID that identifies the message that was removed.
     /// </summary>
     [JsonPropertyName("message_id")]
-    public string? MessageId { get; init; }
+    public Guid? MessageId { get; init; }
 }

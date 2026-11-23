@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Channel.CustomPowerUpRedemption.Objects;
@@ -41,7 +42,7 @@ public sealed record Add : IEventSubType
     /// The redemption identifier.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// The requested broadcaster ID.
@@ -89,7 +90,7 @@ public sealed record Add : IEventSubType
     /// Defaults to unfulfilled.
     /// </summary>
     [JsonPropertyName("status")]
-    public string? Status { get; init; }
+    public RedemptionStatuses? Status { get; init; }
 
     /// <summary>
     /// Basic information about the power up that was redeemed.
@@ -102,4 +103,35 @@ public sealed record Add : IEventSubType
     /// </summary>
     [JsonPropertyName("redeemed_at")]
     public DateTime? RedeemedAt { get; init; }
+
+    /// <summary>
+    /// The status of the redemption.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<RedemptionStatuses>))]
+    public enum RedemptionStatuses
+    {
+        /// <summary>
+        /// Unknown status.
+        /// </summary>
+        [JsonCustomEnum("unknown")]
+        Unknown,
+
+        /// <summary>
+        /// Unfulfilled.
+        /// </summary>
+        [JsonCustomEnum("unfulfilled")]
+        Unfulfilled,
+
+        /// <summary>
+        /// Fulfilled.
+        /// </summary>
+        [JsonCustomEnum("fulfilled")]
+        Fulfilled,
+
+        /// <summary>
+        /// Canceled.
+        /// </summary>
+        [JsonCustomEnum("canceled")]
+        Canceled
+    }
 }

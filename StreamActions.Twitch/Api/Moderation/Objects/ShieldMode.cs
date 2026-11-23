@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -109,19 +108,16 @@ public sealed record ShieldMode
     /// </remarks>
     public static async Task<ResponseData<ShieldMode>?> GetShieldModeStatus(TwitchSession session, string broadcasterId, string moderatorId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorReadShieldMode, Scope.ModeratorManageShieldMode);
@@ -176,24 +172,21 @@ public sealed record ShieldMode
     /// </remarks>
     public static async Task<ResponseData<ShieldMode>?> UpdateShieldModeStatus(TwitchSession session, string broadcasterId, string moderatorId, ShieldModeUpdateParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (parameters is null || !parameters.IsActive.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageShieldMode);

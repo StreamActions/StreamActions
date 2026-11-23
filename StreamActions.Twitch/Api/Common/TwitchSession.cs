@@ -18,7 +18,6 @@
 
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Limiters;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
 
@@ -39,6 +38,11 @@ public sealed record TwitchSession : IDisposable
     #endregion Public Fields
 
     #region Public Properties
+
+    /// <summary>
+    /// Optional <see cref="System.Threading.CancellationToken"/> used for rate-limit waits, HTTP requests, and refresh operations on this session.
+    /// </summary>
+    public CancellationToken CancellationToken { get; init; }
 
     /// <summary>
     /// Optional custom base URI for Twitch Helix API requests, overriding the default base address configured on <see cref="TwitchApi"/>.
@@ -63,7 +67,12 @@ public sealed record TwitchSession : IDisposable
     /// <summary>
     /// Rate Limiter for TwitchAPI.
     /// </summary>
-    public TokenBucketRateLimiter RateLimiter { get; init; } = new(20, TimeSpan.FromSeconds(60));
+    public TokenBucketRateLimiter RateLimiter { get => field ??= new TokenBucketRateLimiter(800, TimeSpan.FromSeconds(60), this.TimeProvider); init; }
+
+    /// <summary>
+    /// Optional callback invoked when a 401 Unauthorized response triggers a token refresh, overriding the standalone SDK refresh flow.
+    /// </summary>
+    public Func<TwitchSession, CancellationToken, ValueTask<TwitchToken?>>? RefreshTokenCallback { get; init; }
 
     /// <summary>
     /// Optional <see cref="System.TimeProvider"/> for this session, defaulting to <see cref="System.TimeProvider.System"/> when <see langword="null"/>.
@@ -77,7 +86,7 @@ public sealed record TwitchSession : IDisposable
     public TwitchToken? Token
     {
         get;
-        internal set => field = value ?? throw new ArgumentNullException(nameof(value)).Log(TwitchApi.GetLogger());
+        internal set => field = value ?? throw new ArgumentNullException(nameof(value));
     }
 
     #endregion Public Properties
@@ -98,17 +107,17 @@ public sealed record TwitchSession : IDisposable
     {
         if (this.Token is null)
         {
-            throw new InvalidOperationException(nameof(this.Token) + " is null.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(this.Token) + " is null.");
         }
 
         if (string.IsNullOrWhiteSpace(this.Token.OAuth))
         {
-            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.");
         }
 
         if (this.Token.Type is not TwitchToken.TokenType.Jwt)
         {
-            throw new TokenTypeException(nameof(TwitchToken.TokenType.Jwt), (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString()).Log(TwitchApi.GetLogger());
+            throw new TokenTypeException(nameof(TwitchToken.TokenType.Jwt), (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString());
         }
     }
 
@@ -121,17 +130,17 @@ public sealed record TwitchSession : IDisposable
     {
         if (this.Token is null)
         {
-            throw new InvalidOperationException(nameof(this.Token) + " is null.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(this.Token) + " is null.");
         }
 
         if (string.IsNullOrWhiteSpace(this.Token.OAuth))
         {
-            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.");
         }
 
         if (this.Token.Type is not TwitchToken.TokenType.App)
         {
-            throw new TokenTypeException(nameof(TwitchToken.TokenType.App), (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString()).Log(TwitchApi.GetLogger());
+            throw new TokenTypeException(nameof(TwitchToken.TokenType.App), (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString());
         }
     }
 
@@ -149,17 +158,17 @@ public sealed record TwitchSession : IDisposable
     {
         if (this.Token is null)
         {
-            throw new InvalidOperationException(nameof(this.Token) + " is null.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(this.Token) + " is null.");
         }
 
         if (string.IsNullOrWhiteSpace(this.Token.OAuth))
         {
-            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.");
         }
 
         if (this.Token.Type is not TwitchToken.TokenType.App and not TwitchToken.TokenType.User)
         {
-            throw new TokenTypeException($"{nameof(TwitchToken.TokenType.App)} or {nameof(TwitchToken.TokenType.User)}", (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString()).Log(TwitchApi.GetLogger());
+            throw new TokenTypeException($"{nameof(TwitchToken.TokenType.App)} or {nameof(TwitchToken.TokenType.User)}", (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString());
         }
 
         if (this.Token.Type is TwitchToken.TokenType.User)
@@ -168,7 +177,7 @@ public sealed record TwitchSession : IDisposable
 
             if (scopes is not null && scopes.Length > 0 && Found.Length == 0)
             {
-                throw new TwitchScopeMissingException(Missing).Log(TwitchApi.GetLogger());
+                throw new TwitchScopeMissingException(Missing);
             }
         }
     }
@@ -187,24 +196,24 @@ public sealed record TwitchSession : IDisposable
     {
         if (this.Token is null)
         {
-            throw new InvalidOperationException(nameof(this.Token) + " is null.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(this.Token) + " is null.");
         }
 
         if (string.IsNullOrWhiteSpace(this.Token.OAuth))
         {
-            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(this.Token.OAuth) + " is null, empty, or whitespace.");
         }
 
         if (this.Token.Type is not TwitchToken.TokenType.User)
         {
-            throw new TokenTypeException(nameof(TwitchToken.TokenType.User), (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString()).Log(TwitchApi.GetLogger());
+            throw new TokenTypeException(nameof(TwitchToken.TokenType.User), (this.Token.Type ?? TwitchToken.TokenType.Unknown).ToString());
         }
 
         (Scope?[] Found, Scope?[] Missing) = this.Token.CheckScopes(scopes);
 
         if (scopes is not null && scopes.Length > 0 && Found.Length == 0)
         {
-            throw new TwitchScopeMissingException(Missing).Log(TwitchApi.GetLogger());
+            throw new TwitchScopeMissingException(Missing);
         }
     }
 

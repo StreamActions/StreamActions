@@ -35,5 +35,5 @@ public sealed record VideoMarkers
     /// A list of markers in this video. The list is in ascending order by when the marker was created.
     /// </summary>
     [JsonPropertyName("markers")]
-    public IEnumerable<StreamMarker>? Markers { get; init; }
+    public IReadOnlyList<StreamMarker>? Markers { get; init; }
 }

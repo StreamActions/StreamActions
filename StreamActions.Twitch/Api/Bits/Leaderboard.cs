@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -128,9 +127,11 @@ public sealed record Leaderboard
     /// </remarks>
     public static async Task<ResponseData<Leaderboard>?> GetBitsLeaderboard(TwitchSession session, int count = 10, LeaderboardPeriod period = LeaderboardPeriod.All, DateTime? startedAt = null, string? userId = null)
     {
-        if (session is null)
+        ArgumentNullException.ThrowIfNull(session);
+
+        if (startedAt.HasValue && period == LeaderboardPeriod.All)
         {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("Can not use " + nameof(startedAt) + " while " + nameof(period) + " is set to all");
         }
 
         session.RequireUserToken(Scope.BitsRead);
@@ -150,14 +151,7 @@ public sealed record Leaderboard
 
         if (startedAt.HasValue)
         {
-            if (period == LeaderboardPeriod.All)
-            {
-                throw new InvalidOperationException("Can not use " + nameof(startedAt) + " while " + nameof(period) + " is set to all").Log(TwitchApi.GetLogger());
-            }
-            else
-            {
-                queryParams.Add("started_at", startedAt.Value.Date.ToRfc3339());
-            }
+            queryParams.Add("started_at", startedAt.Value.Date.ToRfc3339());
         }
 
         Uri uri = Util.BuildUri(new("/bits/leaderboard", UriKind.Relative), queryParams);

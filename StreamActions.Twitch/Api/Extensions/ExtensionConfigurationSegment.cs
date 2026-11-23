@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
@@ -95,22 +94,19 @@ public sealed record ExtensionConfigurationSegment
     /// </remarks>
     public static async Task<ResponseData<ExtensionConfigurationSegment>?> GetExtensionConfigurationSegment(TwitchSession session, string extensionId, IEnumerable<string> segment, string? broadcasterId = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireJwtToken();
 
         if (string.IsNullOrWhiteSpace(extensionId))
         {
-            throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(extensionId));
         }
 
         IReadOnlyList<string>? segmentList = segment as IReadOnlyList<string> ?? segment?.ToArray();
         if (segmentList is null || segmentList.Count == 0)
         {
-            throw new ArgumentNullException(nameof(segment)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(segment));
         }
 
         List<string> segments = [];
@@ -126,7 +122,7 @@ public sealed record ExtensionConfigurationSegment
         {
             if (string.IsNullOrWhiteSpace(broadcasterId))
             {
-                throw new ArgumentNullException(nameof(broadcasterId), "broadcaster_id is required if segment is broadcaster or developer.").Log(TwitchApi.GetLogger());
+                throw new ArgumentNullException(nameof(broadcasterId), "broadcaster_id is required if segment is broadcaster or developer.");
             }
         }
 
@@ -141,7 +137,8 @@ public sealed record ExtensionConfigurationSegment
             queryParams.Add("broadcaster_id", broadcasterId);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/extensions/configurations", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/extensions/configurations", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ExtensionConfigurationSegment>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -175,15 +172,9 @@ public sealed record ExtensionConfigurationSegment
     /// </remarks>
     public static async Task<JsonApiResponse?> SetExtensionConfigurationSegment(TwitchSession session, SetExtensionConfigurationSegmentParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         session.RequireJwtToken();
 

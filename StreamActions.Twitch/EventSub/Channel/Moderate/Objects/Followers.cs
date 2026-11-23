@@ -29,5 +29,5 @@ public sealed record Followers
     /// The length of time, in minutes, that the followers must have followed the channel to participate in the chat room.
     /// </summary>
     [JsonPropertyName("follow_duration_minutes")]
-    public int FollowDurationMinutes { get; init; }
+    public int? FollowDurationMinutes { get; init; }
 }

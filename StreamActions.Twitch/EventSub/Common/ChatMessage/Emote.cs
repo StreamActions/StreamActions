@@ -48,7 +48,7 @@ public sealed record Emote
     /// The formats that the emote is available in.
     /// </summary>
     [JsonPropertyName("format")]
-    public IEnumerable<Formats>? Format { get; init; }
+    public IReadOnlyList<Formats>? Format { get; init; }
 
     /// <summary>
     /// The formats that an emote can be available in.

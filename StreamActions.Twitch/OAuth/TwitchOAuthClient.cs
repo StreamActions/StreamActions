@@ -20,7 +20,6 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Api.Common;
@@ -67,7 +66,7 @@ public static class TwitchOAuthClient
     {
         if (string.IsNullOrWhiteSpace(nonce))
         {
-            throw new ArgumentNullException(nameof(nonce)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(nonce));
         }
 
         List<string> oidcScopes = [];
@@ -234,14 +233,11 @@ public static class TwitchOAuthClient
     /// </remarks>
     public static async Task<JsonApiResponse?> RevokeTokenAsync(TwitchSession session, string revokeEndpoint = "https://id.twitch.tv/oauth2/revoke")
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(revokeEndpoint))
         {
-            throw new ArgumentNullException(nameof(revokeEndpoint)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(revokeEndpoint));
         }
 
         session.RequireUserOrAppToken();
@@ -253,7 +249,7 @@ public static class TwitchOAuthClient
         });
         using TwitchSession requestSession = Token.CreateTokenRequestSession(session);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(revokeEndpoint), requestSession, content).ConfigureAwait(false);
-        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
+        return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions, session.CancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -262,11 +258,20 @@ public static class TwitchOAuthClient
     /// <param name="token">The <see cref="Token"/> containing the <see cref="Token.IdToken"/> to validate.</param>
     /// <param name="expectedAudience">The expected JWT audience (<c>aud</c> claim). Defaults to <see cref="TwitchApi.ClientId"/> when <see langword="null"/>.</param>
     /// <param name="expectedNonce">The expected <c>nonce</c> claim value, or <see langword="null"/> or whitespace to skip nonce validation.</param>
+    /// <param name="metadataAddress">Optional OpenID Connect discovery URL override.</param>
+    /// <param name="httpClient">Optional custom <see cref="HttpClient"/> for discovery and JWKS requests.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>A validated <see cref="JsonWebToken"/>, or <see langword="null"/> if <see cref="Token.IdToken"/> is absent or invalid.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="token"/> is <see langword="null"/>.</exception>
-    public static Task<JsonWebToken?> ValidateIdTokenAsync(Token token, string? expectedAudience = null, string? expectedNonce = null) => token is null
-            ? throw new ArgumentNullException(nameof(token)).Log(TwitchApi.GetLogger())
-            : token.GetJwtTokenAsync(expectedAudience, expectedNonce);
+    public static Task<JsonWebToken?> ValidateIdTokenAsync(
+        Token token,
+        string? expectedAudience = null,
+        string? expectedNonce = null,
+        string? metadataAddress = null,
+        HttpClient? httpClient = null,
+        CancellationToken cancellationToken = default) => token is null
+            ? throw new ArgumentNullException(nameof(token))
+            : token.GetJwtTokenAsync(expectedAudience, expectedNonce, metadataAddress, httpClient, cancellationToken);
 
     /// <summary>
     /// Retrieves OpenID Connect UserInfo claims for the user token assigned to the specified <see cref="TwitchSession"/>.
@@ -317,22 +322,19 @@ public static class TwitchOAuthClient
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            throw new ArgumentNullException(nameof(clientId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(clientId));
         }
 
-        if (redirectUri is null)
-        {
-            throw new ArgumentNullException(nameof(redirectUri)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(redirectUri);
 
         if (string.IsNullOrWhiteSpace(state))
         {
-            throw new ArgumentNullException(nameof(state)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(state));
         }
 
         if (string.IsNullOrWhiteSpace(authorizeEndpoint))
         {
-            throw new ArgumentNullException(nameof(authorizeEndpoint)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(authorizeEndpoint));
         }
 
         NameValueCollection queryParameters = new()

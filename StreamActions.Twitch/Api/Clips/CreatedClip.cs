@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -104,19 +103,16 @@ public sealed record CreatedClip
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<CreatedClip>?> CreateClip(TwitchSession session, string broadcasterId, string? title = null, float? duration = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (duration.HasValue && (duration.Value < 5 || duration.Value > 60))
         {
-            throw new ArgumentOutOfRangeException(nameof(duration), duration.Value, "must be between 5 and 60").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(duration), duration.Value, "must be between 5 and 60");
         }
 
         session.RequireUserToken(Scope.ClipsEdit);
@@ -185,34 +181,31 @@ public sealed record CreatedClip
     /// </remarks>
     public static async Task<ResponseData<CreatedClip>?> CreateClipFromVod(TwitchSession session, string broadcasterId, string editorId, string vodId, int vodOffset, string title, float? duration = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(editorId))
         {
-            throw new ArgumentNullException(nameof(editorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(editorId));
         }
 
         if (string.IsNullOrWhiteSpace(vodId))
         {
-            throw new ArgumentNullException(nameof(vodId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(vodId));
         }
 
         if (string.IsNullOrWhiteSpace(title))
         {
-            throw new ArgumentNullException(nameof(title)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(title));
         }
 
         if (duration.HasValue && (duration.Value < 5 || duration.Value > 60))
         {
-            throw new ArgumentOutOfRangeException(nameof(duration), duration.Value, "must be between 5 and 60").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(duration), duration.Value, "must be between 5 and 60");
         }
 
         session.RequireUserOrAppToken(Scope.ChannelManageClips, Scope.EditorManageClips);

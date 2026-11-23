@@ -43,6 +43,12 @@ public sealed record Begin : IEventSubType
     public int? DurationSeconds { get; init; }
 
     /// <summary>
+    /// Length of the mid-roll ad break requested.
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan? Duration => this.DurationSeconds.HasValue ? TimeSpan.FromSeconds(this.DurationSeconds.Value) : null;
+
+    /// <summary>
     /// The UTC timestamp of when the ad break began.
     /// </summary>
     [JsonPropertyName("started_at")]

@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -198,14 +197,11 @@ public sealed record Prediction
     /// </remarks>
     public static async Task<ResponseData<Prediction>?> GetPredictions(TwitchSession session, string broadcasterId, IEnumerable<Guid>? id = null, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         IReadOnlyList<Guid>? idList = id as IReadOnlyList<Guid> ?? id?.ToArray();
@@ -213,7 +209,7 @@ public sealed record Prediction
         {
             if (idList.Count > 25)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 25").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 25");
             }
         }
 
@@ -293,59 +289,53 @@ public sealed record Prediction
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<Prediction>?> CreatePrediction(TwitchSession session, PredictionCreationParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserToken(Scope.ChannelManagePredictions);
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {
-            throw new ArgumentNullException(nameof(parameters.BroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.BroadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(parameters.Title))
         {
-            throw new ArgumentNullException(nameof(parameters.Title)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Title));
         }
 
         if (!parameters.PredictionWindowSeconds.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.PredictionWindowSeconds)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.PredictionWindowSeconds));
         }
 
         if (parameters.Outcomes is null || parameters.Outcomes.Count == 0)
         {
-            throw new ArgumentNullException(nameof(parameters.Outcomes)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Outcomes));
         }
 
         if (parameters.Title.Length > 45)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "must be 45 characters or less").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "must be 45 characters or less");
         }
 
         if (parameters.Outcomes.Count is < 2 or > 10)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Outcomes), parameters.Outcomes.Count, "must provide 2-10 outcomes").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Outcomes), parameters.Outcomes.Count, "must provide 2-10 outcomes");
         }
 
         foreach (PredictionCreationOutcome outcome in parameters.Outcomes)
         {
             if (string.IsNullOrWhiteSpace(outcome.Title))
             {
-                throw new ArgumentNullException(nameof(parameters.Outcomes), "an outcome may not be null, empty, or whitespace").Log(TwitchApi.GetLogger());
+                throw new ArgumentNullException(nameof(parameters.Outcomes), "an outcome may not be null, empty, or whitespace");
             }
             else if (outcome.Title.Length > 25)
             {
-                throw new ArgumentOutOfRangeException(nameof(parameters.Outcomes), outcome.Title, "an outcome length must be <= 25").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(parameters.Outcomes), outcome.Title, "an outcome length must be <= 25");
             }
         }
+
+        session.RequireUserToken(Scope.ChannelManagePredictions);
 
         if (Math.Clamp(parameters.PredictionWindowSeconds.Value, 30, 1800) != parameters.PredictionWindowSeconds.Value)
         {
@@ -399,37 +389,31 @@ public sealed record Prediction
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<Prediction>?> EndPrediction(TwitchSession session, PredictionEndParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserToken(Scope.ChannelManagePredictions);
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {
-            throw new ArgumentNullException(nameof(parameters.BroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.BroadcasterId));
         }
 
         if (parameters.Id == null || parameters.Id == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(parameters.Id)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Id));
         }
 
         if (parameters.Status is null or PredictionStatus.Invalid or PredictionStatus.Active)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be one of Resolved, Canceled, or Locked").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Status), parameters.Status, "must be one of Resolved, Canceled, or Locked");
         }
 
         if (parameters.Status == PredictionStatus.Resolved && (parameters.WinningOutcomeId == null || parameters.WinningOutcomeId == Guid.Empty))
         {
-            throw new ArgumentNullException(nameof(parameters.WinningOutcomeId), "must be provided when resolving a prediction").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.WinningOutcomeId), "must be provided when resolving a prediction");
         }
+
+        session.RequireUserToken(Scope.ChannelManagePredictions);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/predictions", UriKind.Relative), session, content).ConfigureAwait(false);

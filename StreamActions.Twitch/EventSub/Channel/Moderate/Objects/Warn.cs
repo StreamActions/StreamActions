@@ -53,5 +53,5 @@ public sealed record Warn
     /// Optional. Chat rules cited for the warning.
     /// </summary>
     [JsonPropertyName("chat_rules_cited")]
-    public IReadOnlyCollection<string>? ChatRulesCited { get; init; }
+    public IReadOnlyList<string>? ChatRulesCited { get; init; }
 }

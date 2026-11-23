@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -132,14 +131,11 @@ public sealed record BlockedUser
     /// </remarks>
     public static async Task<ResponseData<BlockedUser>?> GetBlockedUsers(TwitchSession session, string broadcasterId, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserToken(Scope.UserReadBlockedUsers);
@@ -155,7 +151,8 @@ public sealed record BlockedUser
             queryParams.Add("after", after);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/users/blocks", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/users/blocks", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<BlockedUser>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -195,14 +192,11 @@ public sealed record BlockedUser
     /// </remarks>
     public static async Task<JsonApiResponse?> BlockUser(TwitchSession session, string targetUserId, BlockSourceContext? sourceContext = null, BlockReason? reason = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(targetUserId))
         {
-            throw new ArgumentNullException(nameof(targetUserId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(targetUserId));
         }
 
         session.RequireUserToken(Scope.UserManageBlockedUsers);
@@ -220,7 +214,8 @@ public sealed record BlockedUser
             queryParams.Add("reason", reason.Value.JsonValue());
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/users/blocks", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/users/blocks", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -258,14 +253,11 @@ public sealed record BlockedUser
     /// </remarks>
     public static async Task<JsonApiResponse?> UnblockUser(TwitchSession session, string targetUserId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(targetUserId))
         {
-            throw new ArgumentNullException(nameof(targetUserId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(targetUserId));
         }
 
         session.RequireUserToken(Scope.UserManageBlockedUsers);
@@ -273,7 +265,8 @@ public sealed record BlockedUser
         NameValueCollection queryParams = [];
         queryParams.Add("target_user_id", targetUserId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/users/blocks", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/users/blocks", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

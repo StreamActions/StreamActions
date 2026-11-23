@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Channel.Moderate.Objects;
@@ -95,7 +96,7 @@ public sealed record Moderate : IEventSubType
     /// The action performed.
     /// </summary>
     [JsonPropertyName("action")]
-    public string? Action { get; init; }
+    public ModerationActions? Action { get; init; }
 
     /// <summary>
     /// Optional. Metadata associated with the followers command.
@@ -222,4 +223,215 @@ public sealed record Moderate : IEventSubType
     /// </summary>
     [JsonPropertyName("shared_chat_delete")]
     public SharedChatDelete? SharedChatDelete { get; init; }
+
+    /// <summary>
+    /// The moderation action performed.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<ModerationActions>))]
+    public enum ModerationActions
+    {
+        /// <summary>
+        /// Ban.
+        /// </summary>
+        [JsonCustomEnum("ban")]
+        Ban,
+
+        /// <summary>
+        /// Timeout.
+        /// </summary>
+        [JsonCustomEnum("timeout")]
+        Timeout,
+
+        /// <summary>
+        /// Unban.
+        /// </summary>
+        [JsonCustomEnum("unban")]
+        Unban,
+
+        /// <summary>
+        /// Untimeout.
+        /// </summary>
+        [JsonCustomEnum("untimeout")]
+        Untimeout,
+
+        /// <summary>
+        /// Clear chat.
+        /// </summary>
+        [JsonCustomEnum("clear")]
+        Clear,
+
+        /// <summary>
+        /// Emote-only mode enabled.
+        /// </summary>
+        [JsonCustomEnum("emoteonly")]
+        EmoteOnly,
+
+        /// <summary>
+        /// Emote-only mode disabled.
+        /// </summary>
+        [JsonCustomEnum("emoteonlyoff")]
+        EmoteOnlyOff,
+
+        /// <summary>
+        /// Followers-only mode enabled.
+        /// </summary>
+        [JsonCustomEnum("followers")]
+        Followers,
+
+        /// <summary>
+        /// Followers-only mode disabled.
+        /// </summary>
+        [JsonCustomEnum("followersoff")]
+        FollowersOff,
+
+        /// <summary>
+        /// Unique chat mode enabled.
+        /// </summary>
+        [JsonCustomEnum("uniquechat")]
+        UniqueChat,
+
+        /// <summary>
+        /// Unique chat mode disabled.
+        /// </summary>
+        [JsonCustomEnum("uniquechatoff")]
+        UniqueChatOff,
+
+        /// <summary>
+        /// Slow mode enabled.
+        /// </summary>
+        [JsonCustomEnum("slow")]
+        Slow,
+
+        /// <summary>
+        /// Slow mode disabled.
+        /// </summary>
+        [JsonCustomEnum("slowoff")]
+        SlowOff,
+
+        /// <summary>
+        /// Subscribers-only mode enabled.
+        /// </summary>
+        [JsonCustomEnum("subscribers")]
+        Subscribers,
+
+        /// <summary>
+        /// Subscribers-only mode disabled.
+        /// </summary>
+        [JsonCustomEnum("subscribersoff")]
+        SubscribersOff,
+
+        /// <summary>
+        /// Unraid.
+        /// </summary>
+        [JsonCustomEnum("unraid")]
+        Unraid,
+
+        /// <summary>
+        /// Delete message.
+        /// </summary>
+        [JsonCustomEnum("delete")]
+        Delete,
+
+        /// <summary>
+        /// Remove VIP.
+        /// </summary>
+        [JsonCustomEnum("unvip")]
+        Unvip,
+
+        /// <summary>
+        /// Add VIP.
+        /// </summary>
+        [JsonCustomEnum("vip")]
+        Vip,
+
+        /// <summary>
+        /// Raid.
+        /// </summary>
+        [JsonCustomEnum("raid")]
+        Raid,
+
+        /// <summary>
+        /// Add blocked term.
+        /// </summary>
+        [JsonCustomEnum("add_blocked_term")]
+        AddBlockedTerm,
+
+        /// <summary>
+        /// Add permitted term.
+        /// </summary>
+        [JsonCustomEnum("add_permitted_term")]
+        AddPermittedTerm,
+
+        /// <summary>
+        /// Remove blocked term.
+        /// </summary>
+        [JsonCustomEnum("remove_blocked_term")]
+        RemoveBlockedTerm,
+
+        /// <summary>
+        /// Remove permitted term.
+        /// </summary>
+        [JsonCustomEnum("remove_permitted_term")]
+        RemovePermittedTerm,
+
+        /// <summary>
+        /// Add moderator.
+        /// </summary>
+        [JsonCustomEnum("mod")]
+        Mod,
+
+        /// <summary>
+        /// Remove moderator.
+        /// </summary>
+        [JsonCustomEnum("unmod")]
+        Unmod,
+
+        /// <summary>
+        /// Approve unban request.
+        /// </summary>
+        [JsonCustomEnum("approve_unban_request")]
+        ApproveUnbanRequest,
+
+        /// <summary>
+        /// Deny unban request.
+        /// </summary>
+        [JsonCustomEnum("deny_unban_request")]
+        DenyUnbanRequest,
+
+        /// <summary>
+        /// Warn user.
+        /// </summary>
+        [JsonCustomEnum("warn")]
+        Warn,
+
+        /// <summary>
+        /// Shared chat ban.
+        /// </summary>
+        [JsonCustomEnum("shared_chat_ban")]
+        SharedChatBan,
+
+        /// <summary>
+        /// Shared chat timeout.
+        /// </summary>
+        [JsonCustomEnum("shared_chat_timeout")]
+        SharedChatTimeout,
+
+        /// <summary>
+        /// Shared chat unban.
+        /// </summary>
+        [JsonCustomEnum("shared_chat_unban")]
+        SharedChatUnban,
+
+        /// <summary>
+        /// Shared chat untimeout.
+        /// </summary>
+        [JsonCustomEnum("shared_chat_untimeout")]
+        SharedChatUntimeout,
+
+        /// <summary>
+        /// Shared chat delete message.
+        /// </summary>
+        [JsonCustomEnum("shared_chat_delete")]
+        SharedChatDelete
+    }
 }

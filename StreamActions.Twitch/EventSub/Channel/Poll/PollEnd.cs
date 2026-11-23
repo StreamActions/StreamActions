@@ -71,7 +71,7 @@ public sealed record PollEnd : IEventSubType
     /// An array of choices for the poll. Includes vote counts.
     /// </summary>
     [JsonPropertyName("choices")]
-    public IReadOnlyCollection<Choice>? Choices { get; init; }
+    public IReadOnlyList<Choice>? Choices { get; init; }
 
     /// <summary>
     /// Not supported.

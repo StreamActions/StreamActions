@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -116,44 +115,38 @@ public sealed record Ban
     /// </remarks>
     public static async Task<ResponseData<Ban>?> BanUser(TwitchSession session, string broadcasterId, string moderatorId, BanUserParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (parameters.Data is null)
         {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters));
         }
 
         if (string.IsNullOrWhiteSpace(parameters.Data.UserId))
         {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters));
         }
 
         if (parameters.Data.DurationSeconds.HasValue && (parameters.Data.DurationSeconds < 1 || parameters.Data.DurationSeconds > 1209600))
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.Data.DurationSeconds, "duration must be between 1 and 1,209,600 seconds.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.Data.DurationSeconds, "duration must be between 1 and 1,209,600 seconds.");
         }
 
         if (parameters.Data.Reason is not null && parameters.Data.Reason.Length > 500)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.Data.Reason.Length, "reason must be 500 characters or less.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.Data.Reason.Length, "reason must be 500 characters or less.");
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageBannedUsers);
@@ -163,7 +156,8 @@ public sealed record Ban
         queryParameters.Add("moderator_id", moderatorId);
 
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/bans", UriKind.Relative), queryParameters), session, jsonContent).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/bans", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Ban>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -217,24 +211,21 @@ public sealed record Ban
     /// </remarks>
     public static async Task<JsonApiResponse?> UnbanUser(TwitchSession session, string broadcasterId, string moderatorId, string userId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageBannedUsers);
@@ -244,7 +235,8 @@ public sealed record Ban
         queryParameters.Add("moderator_id", moderatorId);
         queryParameters.Add("user_id", userId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/moderation/bans", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/bans", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

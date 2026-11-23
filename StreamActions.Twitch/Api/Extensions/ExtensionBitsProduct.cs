@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Net.Http.Json;
@@ -61,10 +60,7 @@ public sealed record ExtensionBitsProduct
     /// </remarks>
     public static async Task<ResponseData<ExtensionProductData>?> GetExtensionBitsProducts(TwitchSession session, bool shouldIncludeAll = false)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireAppToken();
 
@@ -109,15 +105,9 @@ public sealed record ExtensionBitsProduct
     /// </remarks>
     public static async Task<ResponseData<ExtensionProductData>?> UpdateExtensionBitsProduct(TwitchSession session, UpdateExtensionBitsProductParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         session.RequireAppToken();
 

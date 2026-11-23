@@ -18,7 +18,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.GuestStar.Objects;
 using StreamActions.Twitch.Exceptions;
@@ -81,19 +80,16 @@ public sealed record GuestStarSession
     /// </remarks>
     public static async Task<ResponseData<GuestStarSession>?> GetGuestStarSession(TwitchSession session, string broadcasterId, string moderatorId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         session.RequireUserToken(Scope.ChannelReadGuestStar, Scope.ChannelManageGuestStar, Scope.ModeratorReadGuestStar, Scope.ModeratorManageGuestStar);
@@ -104,7 +100,8 @@ public sealed record GuestStarSession
             { "moderator_id", moderatorId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/guest_star/session", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/session", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
 
         return await response.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -151,14 +148,11 @@ public sealed record GuestStarSession
     /// </remarks>
     public static async Task<ResponseData<GuestStarSession>?> CreateGuestStarSession(TwitchSession session, string broadcasterId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserToken(Scope.ChannelManageGuestStar);
@@ -168,7 +162,8 @@ public sealed record GuestStarSession
             { "broadcaster_id", broadcasterId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/guest_star/session", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/session", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
 
         return await response.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
@@ -208,19 +203,16 @@ public sealed record GuestStarSession
     /// </remarks>
     public static async Task<ResponseData<GuestStarSession>?> EndGuestStarSession(TwitchSession session, string broadcasterId, string sessionId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(sessionId))
         {
-            throw new ArgumentNullException(nameof(sessionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(sessionId));
         }
 
         session.RequireUserToken(Scope.ChannelManageGuestStar);
@@ -231,7 +223,8 @@ public sealed record GuestStarSession
             { "session_id", sessionId }
         };
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/guest_star/session", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/guest_star/session", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
 
         return await response.ReadFromJsonAsync<ResponseData<GuestStarSession>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }

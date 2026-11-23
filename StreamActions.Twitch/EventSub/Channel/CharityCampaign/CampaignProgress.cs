@@ -77,13 +77,13 @@ public sealed record CampaignProgress : IEventSubType
     /// A URL to an image of the charity's logo. The image's type is PNG and its size is 100px X 100px.
     /// </summary>
     [JsonPropertyName("charity_logo")]
-    public string? CharityLogo { get; init; }
+    public Uri? CharityLogo { get; init; }
 
     /// <summary>
     /// A URL to the charity's website.
     /// </summary>
     [JsonPropertyName("charity_website")]
-    public string? CharityWebsite { get; init; }
+    public Uri? CharityWebsite { get; init; }
 
     /// <summary>
     /// An object that contains the current amount of donations that the campaign has received.

@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -131,10 +130,7 @@ public sealed record DropEntitlement
     /// </remarks>
     public static async Task<ResponseData<DropEntitlement>?> GetDropsEntitlements(TwitchSession session, IEnumerable<string>? ids = null, string? userId = null, string? gameId = null, FulfillmentStatuses? fulfillmentStatus = null, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserOrAppToken();
 
@@ -145,7 +141,7 @@ public sealed record DropEntitlement
             List<string> idsList = [.. ids];
             if (idsList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(ids), idsList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(ids), idsList.Count, "must have a count <= 100");
             }
             queryParameters.Add("id", idsList);
         }
@@ -207,20 +203,14 @@ public sealed record DropEntitlement
     /// </remarks>
     public static async Task<ResponseData<UpdateDropsEntitlementsStatus>?> UpdateDropsEntitlements(TwitchSession session, UpdateDropsEntitlementsParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         session.RequireUserOrAppToken();
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/entitlements/drops", UriKind.Relative)), session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, new("/entitlements/drops", UriKind.Relative), session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<UpdateDropsEntitlementsStatus>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

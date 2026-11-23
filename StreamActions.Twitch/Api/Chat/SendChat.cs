@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Chat.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -105,49 +104,43 @@ public sealed record SendChat
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<SendChat>?> SendChatMessage(TwitchSession session, SendChatParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {
-            throw new ArgumentNullException(nameof(parameters.BroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.BroadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(parameters.SenderId))
         {
-            throw new ArgumentNullException(nameof(parameters.SenderId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.SenderId));
         }
 
         if (string.IsNullOrWhiteSpace(parameters.Message))
         {
-            throw new ArgumentNullException(nameof(parameters.Message)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Message));
         }
 
         if (parameters.ReplyParentMessageId is not null && string.IsNullOrWhiteSpace(parameters.ReplyParentMessageId))
         {
-            throw new ArgumentNullException(nameof(parameters.ReplyParentMessageId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.ReplyParentMessageId));
         }
 
         if (parameters.Message.Length > 500)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Message), parameters.Message.Length, "length must be < 500").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Message), parameters.Message.Length, "length must be <= 500");
         }
 
         if (parameters.ForSourceOnly.HasValue && session.Token?.Type is TwitchToken.TokenType.User)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.ForSourceOnly), "must be null when using a user token").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.ForSourceOnly), "must be null when using a user token");
         }
 
         if (parameters.Pin == true && (!string.IsNullOrWhiteSpace(parameters.ReplyParentMessageId) || parameters.ForSourceOnly.HasValue))
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Pin), parameters.Pin, "cannot be combined with ReplyParentMessageId or ForSourceOnly").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Pin), parameters.Pin, "cannot be combined with ReplyParentMessageId or ForSourceOnly");
         }
 
         session.RequireUserOrAppToken(Scope.UserWriteChat);

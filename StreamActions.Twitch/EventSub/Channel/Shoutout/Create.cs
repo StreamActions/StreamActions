@@ -100,17 +100,17 @@ public sealed record Create : IEventSubType
     /// The UTC timestamp (in RFC3339 format) of when the moderator sent the Shoutout.
     /// </summary>
     [JsonPropertyName("started_at")]
-    public string? StartedAt { get; init; }
+    public DateTime? StartedAt { get; init; }
 
     /// <summary>
     /// The UTC timestamp (in RFC3339 format) of when the broadcaster may send a Shoutout to a different broadcaster.
     /// </summary>
     [JsonPropertyName("cooldown_ends_at")]
-    public string? CooldownEndsAt { get; init; }
+    public DateTime? CooldownEndsAt { get; init; }
 
     /// <summary>
     /// The UTC timestamp (in RFC3339 format) of when the broadcaster may send another Shoutout to the broadcaster in to_broadcaster_user_id.
     /// </summary>
     [JsonPropertyName("target_cooldown_ends_at")]
-    public string? TargetCooldownEndsAt { get; init; }
+    public DateTime? TargetCooldownEndsAt { get; init; }
 }

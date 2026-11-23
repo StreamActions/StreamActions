@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -114,24 +113,22 @@ public sealed record Raid
     /// </remarks>
     public static async Task<ResponseData<Raid>?> StartARaid(TwitchSession session, string fromBroadcasterId, string toBroadcasterId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserToken(Scope.ChannelManageRaids);
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(fromBroadcasterId))
         {
-            throw new ArgumentNullException(nameof(fromBroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(fromBroadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(toBroadcasterId))
         {
-            throw new ArgumentNullException(nameof(toBroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(toBroadcasterId));
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/raids", UriKind.Relative), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId } }), session).ConfigureAwait(false);
+        session.RequireUserToken(Scope.ChannelManageRaids);
+
+        Uri uri = Util.BuildUri(new("/raids", UriKind.Relative), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<Raid>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -183,19 +180,17 @@ public sealed record Raid
     /// </remarks>
     public static async Task<JsonApiResponse?> CancelARaid(TwitchSession session, string broadcasterId)
     {
-        if (session is null)
+        ArgumentNullException.ThrowIfNull(session);
+
+        if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserToken(Scope.ChannelManageRaids);
 
-        if (string.IsNullOrWhiteSpace(broadcasterId))
-        {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
-        }
-
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/raids", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } }), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/raids", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

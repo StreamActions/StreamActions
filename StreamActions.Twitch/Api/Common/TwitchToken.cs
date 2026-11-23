@@ -16,9 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.OAuth;
-using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
@@ -124,7 +122,7 @@ public sealed record TwitchToken
     /// <returns>A new TwitchToken.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="response"/> is <see langword="null"/>.</exception>
     public static TwitchToken FromApiResponse(Token response, TokenType type, string? userId = null, string? login = null) => response is null
-            ? throw new ArgumentNullException(nameof(response)).Log(Logger.GetLogger<TwitchToken>())
+            ? throw new ArgumentNullException(nameof(response))
             : new() { Expires = response.Expires, Login = login, OAuth = response.AccessToken, Refresh = response.RefreshToken, Scopes = response.Scopes, Type = type, UserId = userId };
 
     /// <summary>
@@ -135,9 +133,9 @@ public sealed record TwitchToken
     /// <returns>A new TwitchToken.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="response"/> or <paramref name="oldToken"/> is <see langword="null"/>.</exception>
     public static TwitchToken FromApiResponse(Token response, TwitchToken oldToken) => response is null
-            ? throw new ArgumentNullException(nameof(response)).Log(Logger.GetLogger<TwitchToken>())
+            ? throw new ArgumentNullException(nameof(response))
             : (oldToken is null
-            ? throw new ArgumentNullException(nameof(oldToken)).Log(Logger.GetLogger<TwitchToken>())
+            ? throw new ArgumentNullException(nameof(oldToken))
             : oldToken with { Expires = response.Expires, OAuth = response.AccessToken, Refresh = response.RefreshToken, Scopes = response.Scopes });
 
     /// <summary>

@@ -41,7 +41,7 @@ public sealed record CommunitySubGift
     /// The type of subscription plan being used.
     /// </summary>
     [JsonPropertyName("sub_tier")]
-    public string? SubTier { get; init; }
+    public Subscribe.SubscriptionTiers? SubTier { get; init; }
 
     /// <summary>
     /// Optional. The amount of gifts the gifter has given in this channel. Null if anonymous.

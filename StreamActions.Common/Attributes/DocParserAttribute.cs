@@ -19,7 +19,7 @@
 namespace StreamActions.Common.Attributes;
 
 /// <summary>
-/// Indicates the URI, issue, and diff parser associated with a <see cref="Interfaces.IComponent"/>, allowing a GitHub Actions job to automatically detect when the source documentation has changed.
+/// Indicates the URI, issue, and diff parser associated with a component, allowing a GitHub Actions job to automatically detect when the source documentation has changed.
 /// </summary>
 /// <param name="friendlyName">The friendly name of the documentation, to be used when updating issues programmatically.</param>
 /// <param name="issueId">The GitHub issue number for tracking the API.</param>

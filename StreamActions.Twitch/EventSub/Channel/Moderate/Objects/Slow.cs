@@ -29,5 +29,11 @@ public sealed record Slow
     /// The amount of time, in seconds, that users need to wait between sending messages.
     /// </summary>
     [JsonPropertyName("wait_time_seconds")]
-    public int WaitTimeSeconds { get; init; }
+    public int? WaitTimeSeconds { get; init; }
+
+    /// <summary>
+    /// The amount of time that users need to wait between sending messages.
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan? WaitTime => this.WaitTimeSeconds.HasValue ? TimeSpan.FromSeconds(this.WaitTimeSeconds.Value) : null;
 }

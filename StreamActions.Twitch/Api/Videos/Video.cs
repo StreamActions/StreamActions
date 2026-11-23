@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Videos.Objects;
 using StreamActions.Twitch.Exceptions;
@@ -158,7 +157,7 @@ public sealed record Video
     /// The segments that Twitch Audio Recognition muted; otherwise, <see langword="null"/>.
     /// </summary>
     [JsonPropertyName("muted_segments")]
-    public IEnumerable<MutedVideoSegment>? MutedSegments { get; init; }
+    public IReadOnlyList<MutedVideoSegment>? MutedSegments { get; init; }
 
     /// <summary>
     /// The video's viewable state.
@@ -297,19 +296,14 @@ public sealed record Video
     public static async Task<ResponseData<Video>?> GetVideos(TwitchSession session, IEnumerable<string>? id = null, string? userId = null, string? gameId = null, string? language = null,
         VideoPeriod period = VideoPeriod.All, VideoSort sort = VideoSort.Time, VideoType type = VideoType.All, int first = 20, string? before = null, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
 
         if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(gameId) && (idList is null || idList.Count == 0))
         {
-            throw new ArgumentNullException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "must provide at least one of these parameters").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "must provide at least one of these parameters");
         }
-
-        session.RequireUserOrAppToken();
 
         bool hasId = false;
         if (!string.IsNullOrWhiteSpace(userId))
@@ -321,7 +315,7 @@ public sealed record Video
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "can not mix these parameters");
             }
             hasId = true;
         }
@@ -330,21 +324,23 @@ public sealed record Video
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(userId) + "," + nameof(gameId), "can not mix these parameters");
             }
 
             if (idList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 100");
             }
         }
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after)).Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after));
         }
 
         first = Math.Clamp(first, 1, 100);
+
+        session.RequireUserOrAppToken();
 
         NameValueCollection queryParams = [];
 
@@ -425,20 +421,17 @@ public sealed record Video
     /// </remarks>
     public static async Task<ResponseData<string>?> DeleteVideos(TwitchSession session, IEnumerable<string> id)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
         if (idList is null || idList.Count == 0)
         {
-            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id));
         }
 
         if (idList.Count > 5)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 5").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 5");
         }
 
         session.RequireUserToken(Scope.ChannelManageVideos);

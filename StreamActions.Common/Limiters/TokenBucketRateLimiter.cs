@@ -37,12 +37,14 @@ public sealed class TokenBucketRateLimiter : IDisposable
     public TokenBucketRateLimiter(int limit, TimeSpan period, TimeProvider? timeProvider = null)
     {
         this._timeProvider = timeProvider ?? TimeProvider.System;
+        long currentTicks = this._timeProvider.GetUtcNow().UtcTicks;
         lock (this._lock)
         {
-            _ = Interlocked.Exchange(ref this._limit, Math.Max(limit, 1));
-            _ = Interlocked.Exchange(ref this._remaining, this._limit);
-            _ = Interlocked.Exchange(ref this._period, Math.Max(period.Ticks, 1));
-            _ = Interlocked.Exchange(ref this._nextReset, this._timeProvider.GetUtcNow().UtcTicks + this._period);
+            this._limit = Math.Max(limit, 1);
+            this._remaining = this._limit;
+            this._period = Math.Max(period.Ticks, 1);
+            this._nextReset = currentTicks + this._period;
+            this._lastRefillTicks = currentTicks;
         }
     }
 
@@ -98,7 +100,7 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <summary>
     /// The timestamp when entire bucket will be reset to full again, as a <see cref="DateTime"/>.
     /// </summary>
-    public DateTime NextResetDateTime => new(this.GetNextReset());
+    public DateTime NextResetDateTime => new(this.GetNextReset(), DateTimeKind.Utc);
 
     /// <summary>
     /// The period over which the bucket normally refills from empty to full, in <see cref="TimeSpan.Ticks"/>.
@@ -156,10 +158,9 @@ public sealed class TokenBucketRateLimiter : IDisposable
             long nextReset = -1;
             if (headerResetType == HeaderResetType.ISO8601)
             {
-                DateTime? dt = DateTime.Parse(resetS, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
-                if (dt.HasValue)
+                if (DateTime.TryParse(resetS, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime parsedDt))
                 {
-                    nextReset = dt.Value.Ticks;
+                    nextReset = parsedDt.Ticks;
                 }
             }
             else if (long.TryParse(resetS, out long reset))
@@ -192,11 +193,11 @@ public sealed class TokenBucketRateLimiter : IDisposable
         {
             if (limit >= 1 && this._limit != limit)
             {
-                _ = Interlocked.Exchange(ref this._limit, limit);
+                this._limit = limit;
 
                 if (limit < this._remaining)
                 {
-                    _ = Interlocked.Exchange(ref this._remaining, limit);
+                    this._remaining = limit;
                 }
             }
         }
@@ -211,9 +212,11 @@ public sealed class TokenBucketRateLimiter : IDisposable
     {
         lock (this._lock)
         {
-            if (nextReset >= this._timeProvider.GetUtcNow().UtcTicks && this._nextReset != nextReset)
+            long currentTicks = this._timeProvider.GetUtcNow().UtcTicks;
+            if (nextReset >= currentTicks && this._nextReset != nextReset)
             {
-                _ = Interlocked.Exchange(ref this._nextReset, nextReset);
+                this._nextReset = nextReset;
+                this._lastRefillTicks = currentTicks;
             }
         }
     }
@@ -236,7 +239,7 @@ public sealed class TokenBucketRateLimiter : IDisposable
         {
             if (period >= 1 && this._period != period)
             {
-                _ = Interlocked.Exchange(ref this._period, period);
+                this._period = period;
             }
         }
     }
@@ -253,7 +256,8 @@ public sealed class TokenBucketRateLimiter : IDisposable
             remaining = Math.Min(remaining, this._limit);
             if (remaining >= 0 && this._remaining != remaining)
             {
-                _ = Interlocked.Exchange(ref this._remaining, remaining);
+                this._remaining = remaining;
+                this._lastRefillTicks = this._timeProvider.GetUtcNow().UtcTicks;
             }
         }
     }
@@ -268,10 +272,11 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// <exception cref="OperationCanceledException">A cancellation was requested via <paramref name="cancellationToken"/> before a rate limit token could be acquired.</exception>
     public async Task WaitForRateLimit(TimeSpan timeout, CancellationToken? cancellationToken = null)
     {
+        bool hasTimeout = timeout != Timeout.InfiniteTimeSpan && timeout >= TimeSpan.Zero;
         long startTimestamp = this._timeProvider.GetTimestamp();
         while (true)
         {
-            if (this._timeProvider.GetElapsedTime(startTimestamp) > timeout)
+            if (hasTimeout && this._timeProvider.GetElapsedTime(startTimestamp) > timeout)
             {
                 throw new TimeoutException("Timed out waiting for the rate limit.");
             }
@@ -285,14 +290,8 @@ public sealed class TokenBucketRateLimiter : IDisposable
                 {
                     if (this._remaining > 0)
                     {
-                        if (Interlocked.Decrement(ref this._remaining) >= 0)
-                        {
-                            return;
-                        }
-                        else
-                        {
-                            _ = Interlocked.Exchange(ref this._remaining, 0);
-                        }
+                        this._remaining--;
+                        return;
                     }
                 }
                 finally
@@ -324,7 +323,7 @@ public sealed class TokenBucketRateLimiter : IDisposable
         {
             try
             {
-                _ = Interlocked.Increment(ref this._remaining);
+                this._remaining = Math.Min(this._limit, this._remaining + 1);
             }
             finally
             {
@@ -350,6 +349,11 @@ public sealed class TokenBucketRateLimiter : IDisposable
     /// The <see cref="TimeProvider"/> used for time operations.
     /// </summary>
     private readonly TimeProvider _timeProvider;
+
+    /// <summary>
+    /// The timestamp of the last token refill calculation, in <see cref="TimeSpan.Ticks"/>.
+    /// </summary>
+    private long _lastRefillTicks;
 
     /// <summary>
     /// The maximum number of tokens that can be in the bucket.
@@ -440,12 +444,16 @@ public sealed class TokenBucketRateLimiter : IDisposable
         {
             try
             {
-                long elapsed = this._timeProvider.GetUtcNow().UtcTicks - (this._nextReset - this._period);
-                float percent = elapsed / (float)this._period;
-                int addedTokens = (int)Math.Floor(percent * this._limit);
-                long nextTokenElapsed = (long)Math.Ceiling((addedTokens + 1) * (double)this._period / this._limit);
-                long ticksUntilNextToken = nextTokenElapsed - elapsed;
-                return ticksUntilNextToken > 0 ? TimeSpan.FromTicks(ticksUntilNextToken) : TimeSpan.Zero;
+                long currentTicks = this._timeProvider.GetUtcNow().UtcTicks;
+                if (currentTicks >= this._nextReset)
+                {
+                    return TimeSpan.Zero;
+                }
+
+                long ticksForNextToken = (long)(((Int128)this._period + this._limit - 1) / this._limit);
+                long nextTokenTicks = Math.Min(this._lastRefillTicks + ticksForNextToken, this._nextReset);
+                long ticksUntilNextToken = nextTokenTicks - currentTicks;
+                return ticksUntilNextToken > 0 ? TimeSpan.FromTicks(ticksUntilNextToken) : TimeSpan.FromMilliseconds(1);
             }
             finally
             {
@@ -469,25 +477,44 @@ public sealed class TokenBucketRateLimiter : IDisposable
         {
             try
             {
+                long currentTicks = this._timeProvider.GetUtcNow().UtcTicks;
                 if (this._remaining == this._limit)
                 {
+                    this._lastRefillTicks = currentTicks;
+                    if (currentTicks >= this._nextReset)
+                    {
+                        this._nextReset = currentTicks + this._period;
+                    }
+
                     return;
                 }
 
-                long currentTicks = this._timeProvider.GetUtcNow().UtcTicks;
                 if (currentTicks >= this._nextReset)
                 {
-                    _ = Interlocked.Exchange(ref this._remaining, this._limit);
-                    _ = Interlocked.Exchange(ref this._nextReset, currentTicks + this._period);
+                    this._remaining = this._limit;
+                    this._nextReset = currentTicks + this._period;
+                    this._lastRefillTicks = currentTicks;
                 }
                 else
                 {
-                    long elapsed = currentTicks - (this._nextReset - this._period);
-                    float percent = elapsed / (float)this._period;
-                    int addedTokens = (int)Math.Floor(percent * this._limit);
-                    if (Interlocked.Add(ref this._remaining, addedTokens) > this._limit)
+                    long elapsed = currentTicks - this._lastRefillTicks;
+                    if (elapsed > 0)
                     {
-                        _ = Interlocked.Exchange(ref this._remaining, this._limit);
+                        Int128 rawAdded = (Int128)elapsed * this._limit / this._period;
+                        int addedTokens = rawAdded >= this._limit ? this._limit : (int)rawAdded;
+                        if (addedTokens > 0)
+                        {
+                            if (this._remaining + addedTokens >= this._limit)
+                            {
+                                this._remaining = this._limit;
+                                this._lastRefillTicks = currentTicks;
+                            }
+                            else
+                            {
+                                this._remaining += addedTokens;
+                                this._lastRefillTicks += (long)((Int128)addedTokens * this._period / this._limit);
+                            }
+                        }
                     }
                 }
             }

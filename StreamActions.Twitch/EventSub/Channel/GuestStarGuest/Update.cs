@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
@@ -106,7 +107,7 @@ public sealed record Update : IEventSubType
     /// Current state of the guest.
     /// </summary>
     [JsonPropertyName("state")]
-    public string? State { get; init; }
+    public GuestStates? State { get; init; }
 
     /// <summary>
     /// User ID of the host.
@@ -143,4 +144,41 @@ public sealed record Update : IEventSubType
     /// </summary>
     [JsonPropertyName("host_volume")]
     public int? HostVolume { get; init; }
+
+    /// <summary>
+    /// The state of a Guest Star guest.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<GuestStates>))]
+    public enum GuestStates
+    {
+        /// <summary>
+        /// Invited.
+        /// </summary>
+        [JsonCustomEnum("invited")]
+        Invited,
+
+        /// <summary>
+        /// Accepted.
+        /// </summary>
+        [JsonCustomEnum("accepted")]
+        Accepted,
+
+        /// <summary>
+        /// Ready.
+        /// </summary>
+        [JsonCustomEnum("ready")]
+        Ready,
+
+        /// <summary>
+        /// Backstage.
+        /// </summary>
+        [JsonCustomEnum("backstage")]
+        Backstage,
+
+        /// <summary>
+        /// Live.
+        /// </summary>
+        [JsonCustomEnum("live")]
+        Live
+    }
 }

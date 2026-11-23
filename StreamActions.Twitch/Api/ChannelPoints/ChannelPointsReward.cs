@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.ChannelPoints.Objects;
 using StreamActions.Twitch.Api.Common;
@@ -216,14 +215,11 @@ public sealed record ChannelPointsReward
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "API Definition")]
     public static async Task<ResponseData<ChannelPointsReward>?> GetCustomReward(TwitchSession session, string broadcasterId, IEnumerable<Guid>? id = null, bool? onlyManageableRewards = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         IReadOnlyList<Guid>? idList = id as IReadOnlyList<Guid> ?? id?.ToArray();
@@ -231,7 +227,7 @@ public sealed record ChannelPointsReward
         {
             if (idList.Count > 50)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 50").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 50");
             }
         }
 
@@ -305,81 +301,75 @@ public sealed record ChannelPointsReward
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1862:Use the 'StringComparison' method overloads to perform case-insensitive string comparisons", Justification = "Intentional")]
     public static async Task<ResponseData<ChannelPointsReward>?> CreateCustomReward(TwitchSession session, string broadcasterId, ChannelPointsRewardCreationParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.Title))
         {
-            throw new ArgumentNullException(nameof(parameters.Title)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Title));
         }
 
         if (parameters.Title.Length > 45)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "length must be <= 45").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "length must be <= 45");
         }
 
         if (!parameters.Cost.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.Cost)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Cost));
         }
 
         if (parameters.Cost.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Cost), parameters.Cost.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Cost), parameters.Cost.Value, "must be >= 1");
         }
 
         session.RequireUserToken(Scope.ChannelManageRedemptions);
 
         if (!string.IsNullOrWhiteSpace(parameters.Prompt) && parameters.Prompt.Length > 200)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Prompt), parameters.Prompt.Length, "length must be <= 200").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Prompt), parameters.Prompt.Length, "length must be <= 200");
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.BackgroundColor) && !Util.IsValidHexColor(parameters.BackgroundColor))
         {
-            throw new InvalidOperationException(nameof(parameters.BackgroundColor) + " must be a valid hex triplet (#RRGGBB)").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(parameters.BackgroundColor) + " must be a valid hex triplet (#RRGGBB)");
         }
 
         if (parameters.IsMaxPerStreamEnabled.HasValue != parameters.MaxPerStream.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.IsMaxPerStreamEnabled) + "," + nameof(parameters.MaxPerStream), "must specify both or none").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.IsMaxPerStreamEnabled) + "," + nameof(parameters.MaxPerStream), "must specify both or none");
         }
 
         if (parameters.MaxPerStream.HasValue && parameters.MaxPerStream.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.Value, "must be >= 1");
         }
 
         if (parameters.IsMaxPerUserPerStreamEnabled.HasValue != parameters.MaxPerUserPerStream.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.IsMaxPerUserPerStreamEnabled) + "," + nameof(parameters.MaxPerUserPerStream), "must specify both or none").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.IsMaxPerUserPerStreamEnabled) + "," + nameof(parameters.MaxPerUserPerStream), "must specify both or none");
         }
 
         if (parameters.MaxPerUserPerStream.HasValue && parameters.MaxPerUserPerStream.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.Value, "must be >= 1");
         }
 
         if (parameters.IsGlobalCooldownEnabled.HasValue != parameters.GlobalCooldownSeconds.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.IsGlobalCooldownEnabled) + "," + nameof(parameters.GlobalCooldownSeconds), "must specify both or none").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.IsGlobalCooldownEnabled) + "," + nameof(parameters.GlobalCooldownSeconds), "must specify both or none");
         }
 
         if (parameters.GlobalCooldownSeconds.HasValue && parameters.GlobalCooldownSeconds.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.Value, "must be >= 1");
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.BackgroundColor) && parameters.BackgroundColor != parameters.BackgroundColor.ToUpperInvariant())
@@ -451,81 +441,75 @@ public sealed record ChannelPointsReward
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1862:Use the 'StringComparison' method overloads to perform case-insensitive string comparisons", Justification = "Intentional.")]
     public static async Task<ResponseData<ChannelPointsReward>?> UpdateCustomReward(TwitchSession session, string broadcasterId, Guid id, ChannelPointsRewardUpdateParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (id == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         session.RequireUserToken(Scope.ChannelManageRedemptions);
 
         if (parameters.Title is not null && string.IsNullOrWhiteSpace(parameters.Title))
         {
-            throw new ArgumentNullException(nameof(parameters.Title)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Title));
         }
 
         if (parameters.Title is not null && parameters.Title.Length > 45)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "length must be <= 45").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Title), parameters.Title.Length, "length must be <= 45");
         }
 
         if (parameters.Cost.HasValue && parameters.Cost.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Cost), parameters.Cost.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Cost), parameters.Cost.Value, "must be >= 1");
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.Prompt) && parameters.Prompt.Length > 200)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Prompt), parameters.Prompt.Length, "length must be <= 200").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Prompt), parameters.Prompt.Length, "length must be <= 200");
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.BackgroundColor) && !Util.IsValidHexColor(parameters.BackgroundColor))
         {
-            throw new InvalidOperationException(nameof(parameters.BackgroundColor) + " must be a valid hex triplet (#RRGGBB)").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException(nameof(parameters.BackgroundColor) + " must be a valid hex triplet (#RRGGBB)");
         }
 
         if (parameters.IsMaxPerStreamEnabled.HasValue != parameters.MaxPerStream.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.IsMaxPerStreamEnabled) + "," + nameof(parameters.MaxPerStream), "must specify both or none").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.IsMaxPerStreamEnabled) + "," + nameof(parameters.MaxPerStream), "must specify both or none");
         }
 
         if (parameters.MaxPerStream.HasValue && parameters.MaxPerStream.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerStream), parameters.MaxPerStream.Value, "must be >= 1");
         }
 
         if (parameters.IsMaxPerUserPerStreamEnabled.HasValue != parameters.MaxPerUserPerStream.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.IsMaxPerUserPerStreamEnabled) + "," + nameof(parameters.MaxPerUserPerStream), "must specify both or none").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.IsMaxPerUserPerStreamEnabled) + "," + nameof(parameters.MaxPerUserPerStream), "must specify both or none");
         }
 
         if (parameters.MaxPerUserPerStream.HasValue && parameters.MaxPerUserPerStream.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.MaxPerUserPerStream), parameters.MaxPerUserPerStream.Value, "must be >= 1");
         }
 
         if (parameters.IsGlobalCooldownEnabled.HasValue != parameters.GlobalCooldownSeconds.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.IsGlobalCooldownEnabled) + "," + nameof(parameters.GlobalCooldownSeconds), "must specify both or none").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.IsGlobalCooldownEnabled) + "," + nameof(parameters.GlobalCooldownSeconds), "must specify both or none");
         }
 
         if (parameters.GlobalCooldownSeconds.HasValue && parameters.GlobalCooldownSeconds.Value < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.Value, "must be >= 1").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.GlobalCooldownSeconds), parameters.GlobalCooldownSeconds.Value, "must be >= 1");
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.BackgroundColor) && parameters.BackgroundColor != parameters.BackgroundColor.ToUpperInvariant())
@@ -544,7 +528,7 @@ public sealed record ChannelPointsReward
             || parameters.IsMaxPerUserPerStreamEnabled.HasValue || parameters.MaxPerUserPerStream.HasValue || parameters.IsGlobalCooldownEnabled.HasValue
             || parameters.GlobalCooldownSeconds.HasValue || parameters.ShouldRedemptionsSkipRequestQueue.HasValue))
         {
-            throw new InvalidOperationException("must specify at least one parameter to update").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("must specify at least one parameter to update");
         }
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
@@ -602,19 +586,16 @@ public sealed record ChannelPointsReward
     /// </remarks>
     public static async Task<JsonApiResponse?> DeleteCustomReward(TwitchSession session, string broadcasterId, Guid id)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (id == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id));
         }
 
         session.RequireUserToken(Scope.ChannelManageRedemptions);

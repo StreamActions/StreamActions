@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Channel.SuspiciousUser.Objects;
@@ -84,19 +85,19 @@ public sealed record MessageEvent : IEventSubType
     /// A list of channel IDs where the suspicious user is also banned.
     /// </summary>
     [JsonPropertyName("shared_ban_channel_ids")]
-    public IReadOnlyCollection<string>? SharedBanChannelIds { get; init; }
+    public IReadOnlyList<string>? SharedBanChannelIds { get; init; }
 
     /// <summary>
     /// User types (if any) that apply to the suspicious user, can be manually_added, ban_evader, or banned_in_shared_channel.
     /// </summary>
     [JsonPropertyName("types")]
-    public IReadOnlyCollection<string>? Types { get; init; }
+    public IReadOnlyList<SuspiciousUserTypes>? Types { get; init; }
 
     /// <summary>
     /// A ban evasion likelihood value (if any) that as been applied to the user automatically by Twitch, can be unknown, possible, or likely.
     /// </summary>
     [JsonPropertyName("ban_evasion_evaluation")]
-    public string? BanEvasionEvaluation { get; init; }
+    public BanEvasionEvaluations? BanEvasionEvaluation { get; init; }
 
     /// <summary>
     /// The structured chat message.
@@ -108,5 +109,55 @@ public sealed record MessageEvent : IEventSubType
     /// The UUID that identifies the message.
     /// </summary>
     [JsonPropertyName("message_id")]
-    public string? MessageId { get; init; }
+    public Guid? MessageId { get; init; }
+
+    /// <summary>
+    /// Types that apply to a suspicious user.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<SuspiciousUserTypes>))]
+    public enum SuspiciousUserTypes
+    {
+        /// <summary>
+        /// Manually added.
+        /// </summary>
+        [JsonCustomEnum("manually_added")]
+        ManuallyAdded,
+
+        /// <summary>
+        /// Ban evader.
+        /// </summary>
+        [JsonCustomEnum("ban_evader")]
+        BanEvader,
+
+        /// <summary>
+        /// Banned in a shared channel.
+        /// </summary>
+        [JsonCustomEnum("banned_in_shared_channel")]
+        BannedInSharedChannel
+    }
+
+    /// <summary>
+    /// Ban evasion likelihood values.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<BanEvasionEvaluations>))]
+    public enum BanEvasionEvaluations
+    {
+        /// <summary>
+        /// Unknown.
+        /// </summary>
+        [JsonCustomEnum("unknown")]
+        Unknown,
+
+        /// <summary>
+        /// Possible.
+        /// </summary>
+        [JsonCustomEnum("possible")]
+        Possible,
+
+        /// <summary>
+        /// Likely.
+        /// </summary>
+        [JsonCustomEnum("likely")]
+        Likely
+    }
 }

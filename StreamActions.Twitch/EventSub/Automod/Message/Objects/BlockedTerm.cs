@@ -29,5 +29,5 @@ public sealed record BlockedTerm
     /// The list of blocked terms found in the message.
     /// </summary>
     [JsonPropertyName("terms_found")]
-    public IEnumerable<TermFound>? TermsFound { get; init; }
+    public IReadOnlyList<TermFound>? TermsFound { get; init; }
 }

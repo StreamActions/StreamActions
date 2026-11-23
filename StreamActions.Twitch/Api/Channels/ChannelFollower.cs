@@ -17,9 +17,7 @@
  */
 
 using StreamActions.Common;
-using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.OAuth;
 using System.Collections.Specialized;
@@ -69,8 +67,10 @@ public sealed record ChannelFollower
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelFollower"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="broadcasterId"/> is <see langword="null"/>; <paramref name="userId"/> or <paramref name="after"/> is not <see langword="null"/>, but is empty or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> is <see langword="null"/>; <see cref="TwitchToken.OAuth"/> is <see langword="null"/>, empty, or whitespace.</exception>
-    /// <exception cref="TokenTypeException"><see cref="TwitchToken.Type"/> is not <see cref="TwitchToken.TokenType.User"/>.</exception>
     /// <remarks>
+    /// <para>
+    /// This endpoint supports both <see cref="TwitchToken.TokenType.App"/> and <see cref="TwitchToken.TokenType.User"/> tokens.
+    /// </para>
     /// <para>
     /// If <paramref name="userId"/> is specified, the response will contain a single element
     /// in <see cref="ResponseData{TDataType}.Data"/> if <paramref name="userId"/> follows <paramref name="broadcasterId"/>,
@@ -81,7 +81,7 @@ public sealed record ChannelFollower
     /// The list is in descending order by <see cref="FollowedAt"/> (with the most recent follower first).
     /// </para>
     /// <para>
-    /// If <paramref name="session"/> does not have the scope <see cref="Scope.ModeratorReadFollowers"/>, only the total follower count will be included in the response.
+    /// If <paramref name="session"/> uses an <see cref="TwitchToken.TokenType.App"/> token or does not have the scope <see cref="Scope.ModeratorReadFollowers"/> (or the user is not the broadcaster or a moderator), only the total follower count will be included in the response.
     /// </para>
     /// <para>
     /// Response Codes:
@@ -103,27 +103,24 @@ public sealed record ChannelFollower
     /// </remarks>
     public static async Task<ResponseData<ChannelFollower>?> GetChannelFollowers(TwitchSession session, string broadcasterId, string? userId = null, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserToken();
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (userId is not null && string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         if (after is not null && string.IsNullOrWhiteSpace(after))
         {
-            throw new ArgumentNullException(nameof(after)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(after));
         }
+
+        session.RequireUserOrAppToken();
 
         first = Math.Clamp(first, 1, 100);
 

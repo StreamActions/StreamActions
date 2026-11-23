@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -141,29 +140,26 @@ public sealed record Announcement
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<JsonApiResponse?> SendChatAnnouncement(TwitchSession session, string broadcasterId, string moderatorId, Announcement message)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (message is null || string.IsNullOrWhiteSpace(message.Message))
         {
-            throw new ArgumentNullException(nameof(message)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(message));
         }
 
         if (message.ForSourceOnly.HasValue && session.Token?.Type is TwitchToken.TokenType.User)
         {
-            throw new ArgumentOutOfRangeException(nameof(message.ForSourceOnly), "must be null when using a user token").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(message.ForSourceOnly), "must be null when using a user token");
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageAnnouncements);

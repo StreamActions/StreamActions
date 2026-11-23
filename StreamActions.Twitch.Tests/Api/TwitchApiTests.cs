@@ -16,12 +16,13 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using Microsoft.Extensions.Logging;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
+using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 
 namespace StreamActions.Twitch.Tests.Api;
@@ -64,18 +65,6 @@ public sealed class TwitchApiTests : IDisposable
 
     #endregion IDisposable Implementation
 
-    #region Author
-
-    [Fact]
-    [Trait("Member", "Author")]
-    public void Author_ReturnsExpectedAuthor()
-    {
-        string? author = TwitchApi.Author;
-        _ = author.Should().Be("StreamActions Team");
-    }
-
-    #endregion Author
-
     #region ClientId
 
     [Fact]
@@ -89,42 +78,6 @@ public sealed class TwitchApiTests : IDisposable
 
     #endregion ClientId
 
-    #region Description
-
-    [Fact]
-    [Trait("Member", "Description")]
-    public void Description_ReturnsExpectedDescription()
-    {
-        string? description = TwitchApi.Description;
-        _ = description.Should().Be("Interacts with the Twitch Helix API");
-    }
-
-    #endregion Description
-
-    #region Id
-
-    [Fact]
-    [Trait("Member", "Id")]
-    public void Id_ReturnsExpectedGuid()
-    {
-        Guid expected = new("996E35EC-638A-4E5B-AEFC-84C800E16520");
-        _ = TwitchApi.Id.Should().Be(expected);
-    }
-
-    #endregion Id
-
-    #region Name
-
-    [Fact]
-    [Trait("Member", "Name")]
-    public void Name_ReturnsTwitchApi()
-    {
-        string? name = TwitchApi.Name;
-        _ = name.Should().Be(nameof(TwitchApi));
-    }
-
-    #endregion Name
-
     #region SerializerOptions
 
     [Fact]
@@ -137,42 +90,6 @@ public sealed class TwitchApiTests : IDisposable
     }
 
     #endregion SerializerOptions
-
-    #region Uri
-
-    [Fact]
-    [Trait("Member", "Uri")]
-    public void Uri_ReturnsExpectedUri()
-    {
-        Uri expected = new("https://github.com/StreamActions/StreamActions");
-        _ = TwitchApi.Uri.Should().Be(expected);
-    }
-
-    #endregion Uri
-
-    #region Version
-
-    [Fact]
-    [Trait("Member", "Version")]
-    public void Version_ReturnsExpectedVersion()
-    {
-        Version expected = new(1, 0, 0, 0);
-        _ = TwitchApi.Version.Should().Be(expected);
-    }
-
-    #endregion Version
-
-    #region GetLogger
-
-    [Fact]
-    [Trait("Member", "GetLogger")]
-    public void GetLogger_ReturnsNonNullLogger()
-    {
-        ILogger logger = TwitchApi.GetLogger();
-        _ = logger.Should().NotBeNull();
-    }
-
-    #endregion GetLogger
 
     #region Init
 
@@ -222,7 +139,7 @@ public sealed class TwitchApiTests : IDisposable
 
     [Fact]
     [Trait("Member", "PerformHttpRequest")]
-    public async Task PerformHttpRequest_WhenUserTokenReturns401_RefreshesTokenFiresEventAndRetries()
+    public async Task PerformHttpRequest_WhenUserTokenReturns401_RefreshesTokenAndRetries()
     {
         int attempt = 0;
         this._fixture.RegisterHandler("GET", "/helix/users", async context =>
@@ -255,38 +172,19 @@ public sealed class TwitchApiTests : IDisposable
         string initialOAuth = session.Token!.OAuth!;
         string initialRefresh = session.Token.Refresh!;
 
-        TaskCompletionSource<TokenRefreshedEventArgs> tokenRefreshed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        EventHandler<TokenRefreshedEventArgs> handler = (_, args) =>
-        {
-            if (ReferenceEquals(args.Session, session))
-            {
-                _ = tokenRefreshed.TrySetResult(args);
-            }
-        };
-        TwitchApi.OnTokenRefreshed += handler;
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new Uri("users", UriKind.Relative), session).ConfigureAwait(true);
 
-        try
-        {
-            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new Uri("users", UriKind.Relative), session).ConfigureAwait(true);
-
-            _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
-            _ = attempt.Should().Be(2);
-            _ = session.Token.OAuth.Should().Be(newBearer);
-            _ = session.Token.Refresh.Should().Be(newRefresh);
-            _ = session.Token.OAuth.Should().NotBe(initialOAuth);
-            _ = session.Token.Refresh.Should().NotBe(initialRefresh);
-            TokenRefreshedEventArgs eventArgs = await tokenRefreshed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
-            _ = eventArgs.Session.Should().BeSameAs(session);
-        }
-        finally
-        {
-            TwitchApi.OnTokenRefreshed -= handler;
-        }
+        _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _ = attempt.Should().Be(2);
+        _ = session.Token.OAuth.Should().Be(newBearer);
+        _ = session.Token.Refresh.Should().Be(newRefresh);
+        _ = session.Token.OAuth.Should().NotBe(initialOAuth);
+        _ = session.Token.Refresh.Should().NotBe(initialRefresh);
     }
 
     [Fact]
     [Trait("Member", "PerformHttpRequest")]
-    public async Task PerformHttpRequest_WhenAppTokenReturns401_RefreshesTokenFiresEventAndRetries()
+    public async Task PerformHttpRequest_WhenAppTokenReturns401_RefreshesTokenAndRetries()
     {
         int attempt = 0;
         this._fixture.RegisterHandler("GET", "/helix/app-resource", async context =>
@@ -317,31 +215,161 @@ public sealed class TwitchApiTests : IDisposable
         using TwitchSession session = TestTokenFactory.CreateAppSession();
         string initialOAuth = session.Token!.OAuth!;
 
-        TaskCompletionSource<TokenRefreshedEventArgs> tokenRefreshed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        EventHandler<TokenRefreshedEventArgs> handler = (_, args) =>
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new Uri("app-resource", UriKind.Relative), session).ConfigureAwait(true);
+
+        _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _ = attempt.Should().Be(2);
+        _ = session.Token.OAuth.Should().Be(newAppBearer);
+        _ = session.Token.OAuth.Should().NotBe(initialOAuth);
+    }
+
+    [Fact]
+    [Trait("Member", "PerformHttpRequest")]
+    public async Task PerformHttpRequest_WhenRefreshTokenCallbackProvidedAndReturns401_InvokesCallbackAndRetries()
+    {
+        int attempt = 0;
+        string? secondAuthHeader = null;
+        int callbackCount = 0;
+
+        using StubHttpMessageHandler handler = new(request =>
         {
-            if (ReferenceEquals(args.Session, session))
+            attempt++;
+            if (attempt == 1)
             {
-                _ = tokenRefreshed.TrySetResult(args);
+                return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+            }
+
+            secondAuthHeader = request.Headers.Authorization?.ToString();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"data":[]}""", Encoding.UTF8, "application/json")
+            };
+        });
+        using HttpMessageInvoker customInvoker = new(handler);
+        using TwitchSession session = new()
+        {
+            CustomHttpClient = customInvoker,
+            CustomBaseUri = new("https://custom.twitch.test/helix/"),
+            Token = new TwitchToken
+            {
+                OAuth = "expired-token",
+                Refresh = "refresh-token",
+                Type = TwitchToken.TokenType.User
+            },
+            RefreshTokenCallback = (s, ct) =>
+            {
+                callbackCount++;
+                return ValueTask.FromResult<TwitchToken?>(s.Token! with { OAuth = "callback-refreshed-token" });
             }
         };
-        TwitchApi.OnTokenRefreshed += handler;
 
-        try
-        {
-            HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new Uri("app-resource", UriKind.Relative), session).ConfigureAwait(true);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new("users", UriKind.Relative), session).ConfigureAwait(true);
 
-            _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
-            _ = attempt.Should().Be(2);
-            _ = session.Token.OAuth.Should().Be(newAppBearer);
-            _ = session.Token.OAuth.Should().NotBe(initialOAuth);
-            TokenRefreshedEventArgs eventArgs = await tokenRefreshed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
-            _ = eventArgs.Session.Should().BeSameAs(session);
-        }
-        finally
+        _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _ = attempt.Should().Be(2);
+        _ = callbackCount.Should().Be(1);
+        _ = secondAuthHeader.Should().Be("Bearer callback-refreshed-token");
+        _ = session.Token.OAuth.Should().Be("callback-refreshed-token");
+    }
+
+    [Fact]
+    [Trait("Member", "PerformHttpRequest")]
+    public async Task PerformHttpRequest_WhenRefreshTokenCallbackReturnsNull_DoesNotRetryAndReturnsUnauthorized()
+    {
+        int attempt = 0;
+        using StubHttpMessageHandler handler = new(_ =>
         {
-            TwitchApi.OnTokenRefreshed -= handler;
-        }
+            attempt++;
+            return new HttpResponseMessage(HttpStatusCode.Unauthorized)
+            {
+                Content = new StringContent("""{"status":401,"message":"Invalid token"}""", Encoding.UTF8, "application/json")
+            };
+        });
+        using HttpMessageInvoker customInvoker = new(handler);
+        using TwitchSession session = new()
+        {
+            CustomHttpClient = customInvoker,
+            CustomBaseUri = new("https://custom.twitch.test/helix/"),
+            Token = new TwitchToken
+            {
+                OAuth = "expired-token",
+                Type = TwitchToken.TokenType.User
+            },
+            RefreshTokenCallback = (_, _) => ValueTask.FromResult<TwitchToken?>(null)
+        };
+
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new("users", UriKind.Relative), session).ConfigureAwait(true);
+
+        _ = response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        _ = attempt.Should().Be(1);
+    }
+
+    [Fact]
+    [Trait("Member", "PerformHttpRequest")]
+    public async Task PerformHttpRequest_WhenPostWithJsonContentReturns401_RetriesWithoutObjectDisposedException()
+    {
+        int attempt = 0;
+        List<string> capturedBodies = [];
+        List<string?> capturedContentTypes = [];
+
+        using StubHttpMessageHandler handler = new(async request =>
+        {
+            attempt++;
+            string body = await request.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
+            capturedBodies.Add(body);
+            capturedContentTypes.Add(request.Content.Headers.ContentType?.MediaType);
+
+            return attempt == 1
+                ? new HttpResponseMessage(HttpStatusCode.Unauthorized)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""{"data":[]}""", Encoding.UTF8, "application/json")
+                };
+        });
+        using HttpMessageInvoker customInvoker = new(handler);
+        using TwitchSession session = new()
+        {
+            CustomHttpClient = customInvoker,
+            CustomBaseUri = new("https://custom.twitch.test/helix/"),
+            Token = new TwitchToken
+            {
+                OAuth = "expired-token",
+                Type = TwitchToken.TokenType.User
+            },
+            RefreshTokenCallback = (s, _) => ValueTask.FromResult<TwitchToken?>(s.Token! with { OAuth = "fresh-token" })
+        };
+
+        using JsonContent jsonContent = JsonContent.Create(new { broadcaster_id = "1234", message = "hello" });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new("chat/messages", UriKind.Relative), session, jsonContent).ConfigureAwait(true);
+
+        _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _ = attempt.Should().Be(2);
+        _ = capturedBodies.Should().HaveCount(2);
+        _ = capturedBodies[1].Should().Be(capturedBodies[0]);
+        _ = capturedBodies[1].Should().Contain("\"broadcaster_id\":\"1234\"");
+        _ = capturedContentTypes.Should().AllBe("application/json");
+    }
+
+    [Fact]
+    [Trait("Member", "PerformHttpRequest")]
+    public async Task PerformHttpRequest_WhenSessionCancellationTokenCanceled_ThrowsOperationCanceledException()
+    {
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync().ConfigureAwait(true);
+
+        using StubHttpMessageHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        using HttpMessageInvoker customInvoker = new(handler);
+        using TwitchSession session = new()
+        {
+            CancellationToken = cts.Token,
+            CustomHttpClient = customInvoker,
+            CustomBaseUri = new("https://custom.twitch.test/helix/"),
+            Token = TwitchToken.Empty
+        };
+
+        Func<Task> action = async () => await TwitchApi.PerformHttpRequest(HttpMethod.Get, new("users", UriKind.Relative), session).ConfigureAwait(true);
+
+        _ = await action.Should().ThrowAsync<OperationCanceledException>().ConfigureAwait(true);
     }
 
     [Fact]

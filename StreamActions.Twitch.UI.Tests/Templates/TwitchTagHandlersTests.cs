@@ -227,6 +227,111 @@ public sealed class TwitchTagHandlersTests
         }
     }
 
+    /// <summary>
+    /// Verifies <see cref="TwitchWorkspaceSessionProvider"/> shares the same <see cref="StreamActions.Common.Limiters.TokenBucketRateLimiter"/> across leases for the same credential and propagates cancellation tokens.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "TwitchWorkspaceSessionProvider")]
+    public async Task TwitchWorkspaceSessionProviderWhenLeasedMultipleTimesSharesRateLimiterAndPropagatesCancellationToken()
+    {
+        using CancellationTokenSource cts = new();
+        StubPlatformCredentialStore credentialStore = new();
+        credentialStore.AddCredential(
+            _workspaceId,
+            "twitch",
+            TokenRole.Broadcaster,
+            CredentialStatus.Active,
+            new PlatformTokenPayload("access-1", ClientId: "client-1"));
+
+        StubWorkspaceStore workspaceStore = new();
+        StubOAuthClientConfigResolver oauthResolver = new(new ResolvedOAuthClientConfig("twitch", "client-1", "secret-1"));
+        TwitchWorkspaceSessionProvider provider = new(credentialStore, oauthResolver, workspaceStore);
+
+        TwitchWorkspaceSessionLease? lease1 = await provider.GetSessionAsync(_workspaceId, cts.Token);
+        TwitchWorkspaceSessionLease? lease2 = await provider.GetSessionAsync(_workspaceId, cts.Token);
+        _ = lease1.Should().NotBeNull();
+        _ = lease2.Should().NotBeNull();
+
+        await using (lease1.ConfigureAwait(false))
+        await using (lease2.ConfigureAwait(false))
+        {
+            _ = lease1.TwitchSession.RateLimiter.Should().BeSameAs(lease2.TwitchSession.RateLimiter);
+            _ = lease1.TwitchSession.RateLimiter.Limit.Should().Be(800);
+            _ = lease1.TwitchSession.CancellationToken.Should().Be(cts.Token);
+        }
+    }
+
+    /// <summary>
+    /// Verifies <see cref="TwitchWorkspaceSessionProvider"/> uses <see cref="ITokenLifecycleService"/> for initial token resolution and 401 <see cref="TwitchSession.RefreshTokenCallback"/> retries.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "TwitchWorkspaceSessionProvider")]
+    public async Task TwitchWorkspaceSessionProviderWhenTokenLifecycleServiceProvidedAnd401OccursInvokesRefreshCallbackAndRetries()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TwitchHelixMockServer server = await TwitchHelixMockServer.StartAsync(ct);
+        await using (server.ConfigureAwait(false))
+        {
+            int callCount = 0;
+            server.RegisterHandler("GET", "/helix/streams", async httpContext =>
+            {
+                callCount++;
+                string auth = httpContext.Request.Headers.Authorization.ToString();
+                if (auth == "Bearer stale-access")
+                {
+                    httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    httpContext.Response.ContentType = "application/json";
+                    await httpContext.Response.WriteAsync("{\"status\":401,\"message\":\"Invalid token\"}", Encoding.UTF8).ConfigureAwait(false);
+                    return;
+                }
+
+                ResponseData<TwitchStream> payload = new()
+                {
+                    Status = System.Net.HttpStatusCode.OK,
+                    Data = [new TwitchStream { UserId = "9001", UserLogin = "mychannel", GameName = "Celeste" }],
+                };
+                httpContext.Response.StatusCode = StatusCodes.Status200OK;
+                httpContext.Response.ContentType = "application/json";
+                await httpContext.Response.WriteAsync(JsonSerializer.Serialize(payload, TwitchApi.SerializerOptions), Encoding.UTF8).ConfigureAwait(false);
+            });
+
+            StubPlatformCredentialStore credentialStore = new();
+            StubWorkspaceStore workspaceStore = new();
+            StubOAuthClientConfigResolver oauthResolver = new(new ResolvedOAuthClientConfig("twitch", "client-1", "secret-1"));
+            StubTokenLifecycleService tokenLifecycleService = new(
+                initialResult: new TokenLifecycleResult(
+                    TokenLifecycleStatus.Valid,
+                    new PlatformTokenPayload("stale-access", "refresh-1", PlatformUserId: "9001", PlatformUsername: "mychannel")),
+                refreshedResult: new TokenLifecycleResult(
+                    TokenLifecycleStatus.Refreshed,
+                    new PlatformTokenPayload("fresh-access", "refresh-2", PlatformUserId: "9001", PlatformUsername: "mychannel"),
+                    WasRefreshed: true));
+
+            TwitchWorkspaceSessionProvider provider = new(
+                credentialStore,
+                oauthResolver,
+                workspaceStore,
+                TimeProvider.System,
+                server.HelixBaseUri,
+                customHttpClient: null,
+                tokenLifecycleService: tokenLifecycleService);
+
+            TwitchWorkspaceSessionLease? lease = await provider.GetSessionAsync(_workspaceId, ct);
+            _ = lease.Should().NotBeNull();
+            await using (lease!.ConfigureAwait(false))
+            {
+                _ = lease!.TwitchSession.RefreshTokenCallback.Should().NotBeNull();
+                ResponseData<TwitchStream>? streams = await TwitchStream.GetStreams(lease.TwitchSession, userLogins: ["mychannel"]);
+
+                _ = streams.Should().NotBeNull();
+                _ = streams!.Data.Should().ContainSingle(s => s.GameName == "Celeste");
+                _ = callCount.Should().Be(2);
+                _ = tokenLifecycleService.Calls.Should().Equal([false, true]);
+                _ = lease.TwitchSession.Token!.OAuth.Should().Be("fresh-access");
+            }
+        }
+    }
+
     #endregion WorkspaceSessionProvider
 
     #region StreamAndChannelTags
@@ -1232,6 +1337,37 @@ public sealed class TwitchTagHandlersTests
         /// <inheritdoc />
         public ValueTask<bool> RemovePlatformAsync(Guid workspaceId, string platformId, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(false);
+    }
+
+    /// <summary>
+    /// Stub <see cref="ITokenLifecycleService"/> returning configured initial and forced-refresh results.
+    /// </summary>
+    /// <param name="initialResult">The result returned when <c>forceRefresh</c> is <see langword="false"/>.</param>
+    /// <param name="refreshedResult">The result returned when <c>forceRefresh</c> is <see langword="true"/>.</param>
+    private sealed class StubTokenLifecycleService(
+        TokenLifecycleResult initialResult,
+        TokenLifecycleResult refreshedResult) : ITokenLifecycleService
+    {
+        /// <summary>
+        /// Recorded <c>forceRefresh</c> flags passed to <see cref="EnsureValidTokenAsync"/>.
+        /// </summary>
+        public List<bool> Calls { get; } = [];
+
+        /// <inheritdoc />
+        public ValueTask<TokenLifecycleResult> EnsureValidTokenAsync(
+            Guid? workspaceId,
+            string platformId,
+            TokenRole tokenRole,
+            bool forceRefresh = false,
+            CancellationToken cancellationToken = default)
+        {
+            this.Calls.Add(forceRefresh);
+            return ValueTask.FromResult(forceRefresh ? refreshedResult : initialResult);
+        }
+
+        /// <inheritdoc />
+        public ValueTask RunMaintenancePassAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
     }
 
     #endregion Test Doubles

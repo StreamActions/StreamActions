@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
@@ -76,11 +77,42 @@ public sealed record Subscribe : IEventSubType
     /// The tier of the subscription. Valid values are 1000, 2000, and 3000.
     /// </summary>
     [JsonPropertyName("tier")]
-    public string? Tier { get; init; }
+    public SubscriptionTiers? Tier { get; init; }
 
     /// <summary>
     /// Whether the subscription is a gift.
     /// </summary>
     [JsonPropertyName("is_gift")]
     public bool? IsGift { get; init; }
+
+    /// <summary>
+    /// The tier of a subscription.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<SubscriptionTiers>))]
+    public enum SubscriptionTiers
+    {
+        /// <summary>
+        /// Tier 1.
+        /// </summary>
+        [JsonCustomEnum("1000")]
+        Tier1,
+
+        /// <summary>
+        /// Tier 2.
+        /// </summary>
+        [JsonCustomEnum("2000")]
+        Tier2,
+
+        /// <summary>
+        /// Tier 3.
+        /// </summary>
+        [JsonCustomEnum("3000")]
+        Tier3,
+
+        /// <summary>
+        /// Prime subscription.
+        /// </summary>
+        [JsonCustomEnum("Prime")]
+        Prime
+    }
 }

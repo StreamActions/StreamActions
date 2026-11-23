@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -83,14 +82,11 @@ public sealed record SearchCategory
     /// </remarks>
     public static async Task<ResponseData<SearchCategory>?> SearchCategories(TwitchSession session, string query, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(query))
         {
-            throw new ArgumentNullException(nameof(query)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(query));
         }
 
         session.RequireUserOrAppToken();

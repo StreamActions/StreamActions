@@ -29,7 +29,7 @@ public sealed record CustomPowerUp
     /// The power up identifier.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// The power up title.
@@ -41,7 +41,7 @@ public sealed record CustomPowerUp
     /// The power up cost in Bits.
     /// </summary>
     [JsonPropertyName("bits")]
-    public int Bits { get; init; }
+    public int? Bits { get; init; }
 
     /// <summary>
     /// The power up description.

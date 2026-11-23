@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Extensions.Objects;
 using System.Collections.Specialized;
@@ -206,16 +205,13 @@ public sealed record Extension
     /// </remarks>
     public static async Task<ResponseData<Extension>?> GetExtensions(TwitchSession session, string extensionId, string? extensionVersion = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireJwtToken();
 
         if (string.IsNullOrWhiteSpace(extensionId))
         {
-            throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(extensionId));
         }
 
         NameValueCollection queryParams = new()
@@ -268,16 +264,13 @@ public sealed record Extension
     /// </remarks>
     public static async Task<ResponseData<Extension>?> GetReleasedExtensions(TwitchSession session, string extensionId, string? extensionVersion = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserOrAppToken();
 
         if (string.IsNullOrWhiteSpace(extensionId))
         {
-            throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(extensionId));
         }
 
         NameValueCollection queryParams = new()

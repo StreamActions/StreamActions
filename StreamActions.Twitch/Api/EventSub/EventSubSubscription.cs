@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.EventSub.Conditions;
@@ -231,12 +230,7 @@ public sealed record EventSubSubscription
     /// </remarks>
     public static async Task<ResponseData<EventSubSubscription>?> GetEventSubSubscriptions(TwitchSession session, SubscriptionStatus? status = null, string? type = null, string? userId = null, Guid? subscriptionId = null, Guid? conduitId = null, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserOrAppToken();
+        ArgumentNullException.ThrowIfNull(session);
 
         NameValueCollection queryParams = [];
 
@@ -264,8 +258,10 @@ public sealed record EventSubSubscription
 
         if (filterCount > 1)
         {
-            throw new InvalidOperationException("Only one of status, type, userId, subscriptionId, or conduitId can be defined at the same time.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("Only one of status, type, userId, subscriptionId, or conduitId can be defined at the same time.");
         }
+
+        session.RequireUserOrAppToken();
 
         if (status.HasValue)
         {
@@ -361,70 +357,64 @@ public sealed record EventSubSubscription
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<EventSubSubscription>?> CreateEventSubSubscription(TwitchSession session, EventSubSubscriptionCreationParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserOrAppToken();
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrEmpty(parameters.Type))
         {
-            throw new ArgumentNullException(nameof(parameters.Type)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Type));
         }
 
         if (string.IsNullOrEmpty(parameters.Version))
         {
-            throw new ArgumentNullException(nameof(parameters.Version)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Version));
         }
 
         if (parameters.Condition is null)
         {
-            throw new ArgumentNullException(nameof(parameters.Condition)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Condition));
         }
 
         if (parameters.Transport is null)
         {
-            throw new ArgumentNullException(nameof(parameters.Transport)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Transport));
         }
 
         if (parameters.Transport.Method is null)
         {
-            throw new ArgumentNullException(nameof(parameters.Transport.Method)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Transport.Method));
         }
 
         if (parameters.Transport.Method is EventSubTransport.TransportMethod.Conduit && (!parameters.Transport.ConduitId.HasValue || parameters.Transport.ConduitId == Guid.Empty))
         {
-            throw new ArgumentNullException(nameof(parameters.Transport.ConduitId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Transport.ConduitId));
         }
 
         if (parameters.Transport.Method is EventSubTransport.TransportMethod.Webhook)
         {
             if (string.IsNullOrWhiteSpace(parameters.Transport.Callback))
             {
-                throw new ArgumentNullException(nameof(parameters.Transport.Callback)).Log(TwitchApi.GetLogger());
+                throw new ArgumentNullException(nameof(parameters.Transport.Callback));
             }
 
             if (string.IsNullOrWhiteSpace(parameters.Transport.Secret))
             {
-                throw new ArgumentNullException(nameof(parameters.Transport.Secret)).Log(TwitchApi.GetLogger());
+                throw new ArgumentNullException(nameof(parameters.Transport.Secret));
             }
 
             if (parameters.Transport.Secret.Length is < 10 or > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(parameters.Transport.Secret), parameters.Transport.Secret.Length, "length must be >= 10 and <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(parameters.Transport.Secret), parameters.Transport.Secret.Length, "length must be >= 10 and <= 100");
             }
         }
 
         if (parameters.Transport.Method is EventSubTransport.TransportMethod.Websocket && string.IsNullOrWhiteSpace(parameters.Transport.SessionId))
         {
-            throw new ArgumentNullException(nameof(parameters.Transport.SessionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Transport.SessionId));
         }
+
+        session.RequireUserOrAppToken();
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         Uri uri = Util.BuildUri(new("/eventsub/subscriptions", UriKind.Relative));
@@ -471,17 +461,14 @@ public sealed record EventSubSubscription
     /// </remarks>
     public static async Task<JsonApiResponse?> DeleteEventSubSubscription(TwitchSession session, Guid id)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserOrAppToken();
+        ArgumentNullException.ThrowIfNull(session);
 
         if (id == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id));
         }
+
+        session.RequireUserOrAppToken();
 
         Uri uri = Util.BuildUri(new("/eventsub/subscriptions", UriKind.Relative), new() { { "id", id.ToString() } });
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);

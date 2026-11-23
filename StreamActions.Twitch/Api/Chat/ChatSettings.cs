@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -138,13 +137,10 @@ public sealed record ChatSettings
     /// </remarks>
     public static async Task<ResponseData<ChatSettings>?> GetChatSettings(TwitchSession session, string broadcasterId, string? moderatorId = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorReadChatSettings, Scope.ModeratorManageChatSettings);
@@ -155,7 +151,8 @@ public sealed record ChatSettings
             query.Add("moderator_id", moderatorId);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/settings", UriKind.Relative), query), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/settings", UriKind.Relative), query);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -211,22 +208,16 @@ public sealed record ChatSettings
     /// </remarks>
     public static async Task<ResponseData<ChatSettings>?> UpdateChatSettings(TwitchSession session, string broadcasterId, string moderatorId, ChatSettings settings)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
-        if (settings is null)
-        {
-            throw new ArgumentNullException(nameof(settings)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(settings);
 
         session.RequireUserOrAppToken(Scope.ModeratorManageChatSettings);
 
@@ -237,7 +228,8 @@ public sealed record ChatSettings
         };
 
         using HttpContent content = JsonContent.Create(settings, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/chat/settings", UriKind.Relative), query), session, content).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/settings", UriKind.Relative), query);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

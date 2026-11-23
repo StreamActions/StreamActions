@@ -16,6 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -27,30 +29,43 @@ namespace StreamActions.Common.Json.Serialization;
 /// <typeparam name="T">An enum whose values should be converted.</typeparam>
 public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : struct, Enum
 {
-    #region Private Fields
+    #region Static Fields
 
     /// <summary>
-    /// A cached array of enum names and their corresponding parsed values, to avoid allocations and reflection during read operations.
+    /// Cached mappings between enum names and enum values.
     /// </summary>
-    private static readonly (string Name, T Value)[] _values = GetValues();
+    private static readonly (FrozenDictionary<string, T> StringToEnum, FrozenDictionary<T, string> EnumToString) _maps = BuildMaps();
 
     /// <summary>
-    /// Initializes the cached enum values and names for the generic type <typeparamref name="T"/>.
+    /// An alternate lookup for <see cref="_maps"/> supporting <see cref="ReadOnlySpan{T}"/> keys.
     /// </summary>
-    /// <returns>An array containing tuples of the enum string names and their typed values.</returns>
-    private static (string Name, T Value)[] GetValues()
+    private static readonly FrozenDictionary<string, T>.AlternateLookup<ReadOnlySpan<char>> _stringToEnumLookup = _maps.StringToEnum.GetAlternateLookup<ReadOnlySpan<char>>();
+
+    #endregion Static Fields
+
+    #region Private Methods
+
+    /// <summary>
+    /// Precomputes and caches the mapping between enum values and their lowercase string representations.
+    /// </summary>
+    /// <returns>A tuple containing the string-to-enum and enum-to-string frozen dictionaries.</returns>
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentional")]
+    private static (FrozenDictionary<string, T> StringToEnum, FrozenDictionary<T, string> EnumToString) BuildMaps()
     {
-        string[] names = Enum.GetNames<T>();
-        (string, T)[] values = new (string, T)[names.Length];
-        for (int i = 0; i < names.Length; i++)
+        Dictionary<string, T> stringToEnumMap = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<T, string> enumToStringMap = [];
+
+        foreach (string name in Enum.GetNames<T>())
         {
-            values[i] = (names[i], Enum.Parse<T>(names[i]));
+            T eval = Enum.Parse<T>(name);
+            stringToEnumMap[name] = eval;
+            enumToStringMap[eval] = name.ToLowerInvariant();
         }
 
-        return values;
+        return (stringToEnumMap.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase), enumToStringMap.ToFrozenDictionary());
     }
 
-    #endregion Private Fields
+    #endregion Private Methods
 
     #region Public Properties
 
@@ -64,22 +79,24 @@ public sealed class JsonLowerCaseEnumConverter<T> : JsonConverter<T> where T : s
     /// <inheritdoc/>
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        string val = reader.GetString()!;
-
-        foreach ((string Name, T Value) in _values)
+        if (reader.TokenType == JsonTokenType.Null)
         {
-            if (Name.Equals(val, StringComparison.InvariantCultureIgnoreCase))
-            {
-                return Value;
-            }
+            return default;
         }
 
-        return default;
+        if (reader.TokenType == JsonTokenType.String && !reader.HasValueSequence && reader.ValueSpan.Length <= 128)
+        {
+            Span<char> charBuffer = stackalloc char[128];
+            int charsWritten = reader.CopyString(charBuffer);
+            return _stringToEnumLookup.TryGetValue(charBuffer[..charsWritten], out T result) ? result : default;
+        }
+
+        return _stringToEnumLookup.TryGetValue(reader.GetString().AsSpan(), out T fallbackResult) ? fallbackResult : default;
     }
 
     /// <inheritdoc/>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentional")]
-    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => writer?.WriteStringValue(Enum.GetName(value)?.ToLowerInvariant());
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentional")]
+    public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => writer?.WriteStringValue(_maps.EnumToString.TryGetValue(value, out string? result) ? result : Enum.GetName(value)?.ToLowerInvariant());
 
     #endregion Public Methods
 }

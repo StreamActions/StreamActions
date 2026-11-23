@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -94,25 +93,22 @@ public sealed record Moderator
     /// </remarks>
     public static async Task<ResponseData<Moderator>?> GetModerators(TwitchSession session, string broadcasterId, IEnumerable<string>? userId = null, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         List<string> userIdList = userId?.ToList() ?? [];
         if (userIdList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(userId), userIdList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(userId), userIdList.Count, "must have a count <= 100");
         }
 
         if (after is not null && string.IsNullOrWhiteSpace(after))
         {
-            throw new ArgumentNullException(nameof(after)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(after));
         }
 
         session.RequireUserOrAppToken(Scope.ModerationRead, Scope.ChannelManageModerators, Scope.ModeratorReadModerators);
@@ -183,19 +179,16 @@ public sealed record Moderator
     /// </remarks>
     public static async Task<JsonApiResponse?> AddChannelModerator(TwitchSession session, string broadcasterId, string userId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
 
@@ -253,19 +246,16 @@ public sealed record Moderator
     /// </remarks>
     public static async Task<JsonApiResponse?> RemoveChannelModerator(TwitchSession session, string broadcasterId, string userId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
 

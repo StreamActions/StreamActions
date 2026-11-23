@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Bits.Objects;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -192,14 +191,11 @@ public sealed record CustomPowerUp
     /// </remarks>
     public static async Task<ResponseData<CustomPowerUp>?> GetCustomPowerUps(TwitchSession session, string broadcasterId, IEnumerable<string>? id = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
@@ -207,7 +203,7 @@ public sealed record CustomPowerUp
         {
             if (idList.Count > 50)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 50").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 50");
             }
         }
 
@@ -223,7 +219,8 @@ public sealed record CustomPowerUp
             queryParams.Add("id", idList);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/bits/custom_power_ups", UriKind.Relative), queryParams), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/bits/custom_power_ups", UriKind.Relative), queryParams);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<CustomPowerUp>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

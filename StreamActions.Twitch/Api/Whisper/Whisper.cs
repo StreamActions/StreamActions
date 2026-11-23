@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -107,27 +106,24 @@ public sealed record Whisper
     /// </remarks>
     public static async Task<JsonApiResponse?> SendWhisper(TwitchSession session, string fromUserId, string toUserId, Whisper message)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserToken(Scope.UserManageWhispers);
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(fromUserId))
         {
-            throw new ArgumentNullException(nameof(fromUserId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(fromUserId));
         }
 
         if (string.IsNullOrWhiteSpace(toUserId))
         {
-            throw new ArgumentNullException(nameof(toUserId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(toUserId));
         }
 
         if (message is null || string.IsNullOrWhiteSpace(message.Message))
         {
-            throw new ArgumentNullException(nameof(message)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(message));
         }
+
+        session.RequireUserToken(Scope.UserManageWhispers);
 
         Uri uri = Util.BuildUri(new("/whispers", UriKind.Relative), new() { { "from_user_id", fromUserId }, { "to_user_id", toUserId } });
         using JsonContent jsonContent = JsonContent.Create(message, options: TwitchApi.SerializerOptions);

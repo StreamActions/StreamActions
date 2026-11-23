@@ -17,6 +17,8 @@
  */
 
 using StreamActions.Common.Attributes;
+using System.Collections.Frozen;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.OAuth;
@@ -41,10 +43,10 @@ public sealed partial record Scope
     /// <summary>
     /// A <see cref="IReadOnlyDictionary{TKey, TValue}"/> mapping <see cref="Name"/> to a <see cref="Scope"/> object.
     /// </summary>
-    public static IReadOnlyDictionary<string, Scope> Scopes => (_scopes ??= []).AsReadOnly();
+    public static IReadOnlyDictionary<string, Scope> Scopes => ScopeCache.FrozenScopes;
 
     /// <summary>
-    /// Backing dictionary for <see cref="Scopes"/>.
+    /// Backing dictionary populated during static field initialization for <see cref="Scopes"/>.
     /// </summary>
     private static Dictionary<string, Scope>? _scopes;
 
@@ -89,7 +91,7 @@ public sealed partial record Scope
     #endregion Scopes
 
     /// <summary>
-    /// Constructor.
+    /// Constructor for known scopes registered in <see cref="Scopes"/>.
     /// </summary>
     /// <param name="name">The name of the scope, which is included in OAuth responses.</param>
     /// <param name="description">The description of the permissions provided by the scope.</param>
@@ -100,5 +102,39 @@ public sealed partial record Scope
 
         _scopes ??= [];
         _scopes.Add(name, this);
+    }
+
+    /// <summary>
+    /// Constructor for an unrecognized scope returned by Twitch without registering it in <see cref="Scopes"/>.
+    /// </summary>
+    /// <param name="name">The unknown scope name.</param>
+    private Scope(string name) => this.Name = name;
+
+    /// <summary>
+    /// Creates a <see cref="Scope"/> instance for an unrecognized scope name without adding it to <see cref="Scopes"/>.
+    /// </summary>
+    /// <param name="name">The scope name.</param>
+    /// <returns>A <see cref="Scope"/> representing <paramref name="name"/>.</returns>
+    internal static Scope CreateUnknown(string name) => new(name);
+
+    /// <summary>
+    /// Lazily initializes and caches the frozen dictionary of known <see cref="Scope"/> instances after all partial type fields are constructed.
+    /// </summary>
+    private static class ScopeCache
+    {
+        /// <summary>
+        /// The cached <see cref="FrozenDictionary{TKey, TValue}"/> mapping scope names to <see cref="Scope"/> instances.
+        /// </summary>
+        internal static readonly FrozenDictionary<string, Scope> FrozenScopes = BuildFrozenScopes();
+
+        /// <summary>
+        /// Ensures the <see cref="Scope"/> static constructor has executed across all partial files and freezes the registered scopes.
+        /// </summary>
+        /// <returns>A <see cref="FrozenDictionary{TKey, TValue}"/> of all known scopes.</returns>
+        private static FrozenDictionary<string, Scope> BuildFrozenScopes()
+        {
+            RuntimeHelpers.RunClassConstructor(typeof(Scope).TypeHandle);
+            return (_scopes ?? []).ToFrozenDictionary(StringComparer.Ordinal);
+        }
     }
 }

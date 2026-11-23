@@ -104,9 +104,16 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
             return;
         }
 
+        if (value is null)
+        {
+            writer.WriteNullValue();
+            return;
+        }
+
         ImmutableDictionary<string, string> propertyMap = this.MapToJsonPropertyNames();
         MemberInfo[] memberInfo = this.GetTypeofT().GetMembers();
 
+        writer.WriteStartObject();
         foreach (MemberInfo member in memberInfo)
         {
             if (member.MemberType is MemberTypes.Property or MemberTypes.Field)
@@ -128,6 +135,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
                 }
             }
         }
+        writer.WriteEndObject();
     }
 
     #endregion Public Methods
@@ -255,27 +263,33 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <returns>An <see cref="ImmutableDictionary{TKey, TValue}"/> with keys of <see cref="JsonPropertyNameAttribute.Name"/> and values of member names.</returns>
     protected virtual ImmutableDictionary<string, string> MapFromJsonPropertyNames()
     {
-        if (this._fromJsonPropertyNames is null)
+        ImmutableDictionary<string, string>? result = Volatile.Read(ref this._fromJsonPropertyNames);
+        if (result is null)
         {
             lock (_lockObj)
             {
-                Dictionary<string, string> map = [];
-                MemberInfo[] memberInfo = this.GetTypeofT().GetMembers();
-
-                foreach (MemberInfo member in memberInfo)
+                result = Volatile.Read(ref this._fromJsonPropertyNames);
+                if (result is null)
                 {
-                    Attribute? attribute = Attribute.GetCustomAttribute(member, typeof(JsonPropertyNameAttribute));
-                    if (attribute is not null)
-                    {
-                        map.Add((attribute as JsonPropertyNameAttribute)!.Name, member.Name);
-                    }
-                }
+                    Dictionary<string, string> map = [];
+                    MemberInfo[] memberInfo = this.GetTypeofT().GetMembers();
 
-                this._fromJsonPropertyNames = map.ToImmutableDictionary();
+                    foreach (MemberInfo member in memberInfo)
+                    {
+                        Attribute? attribute = Attribute.GetCustomAttribute(member, typeof(JsonPropertyNameAttribute));
+                        if (attribute is not null)
+                        {
+                            map.Add((attribute as JsonPropertyNameAttribute)!.Name, member.Name);
+                        }
+                    }
+
+                    result = map.ToImmutableDictionary();
+                    Volatile.Write(ref this._fromJsonPropertyNames, result);
+                }
             }
         }
 
-        return this._fromJsonPropertyNames;
+        return result;
     }
 
     /// <summary>
@@ -287,27 +301,33 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
     /// <returns>An <see cref="ImmutableDictionary{TKey, TValue}"/> with keys of member names and values of <see cref="JsonPropertyNameAttribute.Name"/>.</returns>
     protected virtual ImmutableDictionary<string, string> MapToJsonPropertyNames()
     {
-        if (this._toJsonPropertyNames is null)
+        ImmutableDictionary<string, string>? result = Volatile.Read(ref this._toJsonPropertyNames);
+        if (result is null)
         {
             lock (_lockObj)
             {
-                Dictionary<string, string> map = [];
-                MemberInfo[] memberInfo = this.GetTypeofT().GetMembers();
-
-                foreach (MemberInfo member in memberInfo)
+                result = Volatile.Read(ref this._toJsonPropertyNames);
+                if (result is null)
                 {
-                    Attribute? attribute = Attribute.GetCustomAttribute(member, typeof(JsonPropertyNameAttribute));
-                    if (attribute is not null)
-                    {
-                        map.Add(member.Name, (attribute as JsonPropertyNameAttribute)!.Name);
-                    }
-                }
+                    Dictionary<string, string> map = [];
+                    MemberInfo[] memberInfo = this.GetTypeofT().GetMembers();
 
-                this._toJsonPropertyNames = map.ToImmutableDictionary();
+                    foreach (MemberInfo member in memberInfo)
+                    {
+                        Attribute? attribute = Attribute.GetCustomAttribute(member, typeof(JsonPropertyNameAttribute));
+                        if (attribute is not null)
+                        {
+                            map.Add(member.Name, (attribute as JsonPropertyNameAttribute)!.Name);
+                        }
+                    }
+
+                    result = map.ToImmutableDictionary();
+                    Volatile.Write(ref this._toJsonPropertyNames, result);
+                }
             }
         }
 
-        return this._toJsonPropertyNames;
+        return result;
     }
 
     /// <summary>
@@ -409,7 +429,7 @@ public abstract class JsonCustomConverter<T> : JsonConverter<T>
                         {
                             return condition is not JsonIgnoreCondition.WhenWritingDefault and not JsonIgnoreCondition.WhenWritingNull;
                         }
-                        else if (value == defaultValue)
+                        else if (Equals(value, defaultValue))
                         {
                             return condition is not JsonIgnoreCondition.WhenWritingDefault;
                         }

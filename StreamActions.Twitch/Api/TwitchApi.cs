@@ -16,18 +16,14 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using Microsoft.Extensions.Logging;
 using StreamActions.Common.Attributes;
-using StreamActions.Common.Extensions;
-using StreamActions.Common.Interfaces;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.OAuth;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -37,46 +33,15 @@ namespace StreamActions.Twitch.Api;
 /// <summary>
 /// Handles validation of OAuth tokens and performs HTTP calls for the API.
 /// </summary>
-[Guid("996E35EC-638A-4E5B-AEFC-84C800E16520")]
 [DocParser("Twitch API", 72, "https://dev.twitch.tv/docs/api/reference/", "twitch/TwitchReferenceParser")]
-public sealed partial class TwitchApi : IApi
+public static partial class TwitchApi
 {
-
-    #region Public Events
-
-    /// <summary>
-    /// Fires when a <see cref="TwitchSession"/> has its OAuth token automatically refreshed as a result of a 401 response.
-    /// </summary>
-    public static event EventHandler<TokenRefreshedEventArgs>? OnTokenRefreshed;
-
-    #endregion Public Events
-
     #region Public Properties
-
-    /// <summary>
-    /// <inheritdoc cref="IComponent.Author"/>
-    /// </summary>
-    public static string? Author => "StreamActions Team";
 
     /// <summary>
     /// The currently initialized Client Id.
     /// </summary>
     public static string? ClientId { get; private set; }
-
-    /// <summary>
-    /// <inheritdoc cref="IComponent.Description"/>
-    /// </summary>
-    public static string? Description => "Interacts with the Twitch Helix API";
-
-    /// <summary>
-    /// <inheritdoc cref="IComponent.Id"/>
-    /// </summary>
-    public static Guid? Id => typeof(TwitchApi).GUID;
-
-    /// <summary>
-    /// <inheritdoc cref="IComponent.Name"/>
-    /// </summary>
-    public static string? Name => nameof(TwitchApi);
 
     /// <summary>
     /// The <see cref="JsonSerializerOptions"/> that should be used for all serialization and deserialization.
@@ -89,16 +54,6 @@ public sealed partial class TwitchApi : IApi
             new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
         }
     };
-
-    /// <summary>
-    /// <inheritdoc cref="IComponent.Uri"/>
-    /// </summary>
-    public static Uri? Uri => new("https://github.com/StreamActions/StreamActions");
-
-    /// <summary>
-    /// <inheritdoc cref="IComponent.Version"/>
-    /// </summary>
-    public static Version? Version => new(1, 0, 0, 0);
 
     #endregion Public Properties
 
@@ -115,7 +70,7 @@ public sealed partial class TwitchApi : IApi
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            throw new ArgumentNullException(nameof(clientId)).Log(_logger, atLocation: 3);
+            throw new ArgumentNullException(nameof(clientId));
         }
 
         ClientId = clientId;
@@ -145,48 +100,52 @@ public sealed partial class TwitchApi : IApi
     #region Internal Methods
 
     /// <summary>
-    /// Gets the logger for TwitchApi.
-    /// </summary>
-    /// <returns>An <see cref="ILogger"/>.</returns>
-    internal static ILogger GetLogger() => _logger;
-
-    /// <summary>
     /// Submits a HTTP request to the specified Uri and returns the response.
     /// </summary>
     /// <param name="method">The <see cref="HttpMethod"/> of the request.</param>
     /// <param name="uri">The uri to request. Relative uris resolve against the Helix base.</param>
     /// <param name="session">The <see cref="TwitchSession"/> to authorize the request.</param>
     /// <param name="content">The body of the request, for methods that require it.</param>
-    /// <param name="dontRefresh">Used by <see cref="Token.RefreshOAuth(TwitchSession, string?)"/> to prevent cyclic refresh loops.</param>
+    /// <param name="dontRefresh">Used to prevent cyclic refresh loops.</param>
     /// <returns>A <see cref="HttpResponseMessage"/> containing the response data.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">Did not call <see cref="Init(string, string?, string)"/> with a valid Client Id or <paramref name="session"/> does not have an OAuth token.</exception>
     /// <remarks>
     /// <para>
     /// Non-JSON responses are converted to the standard <c>{status,error,message}</c> format.
     /// </para>
     /// <para>
-    /// If a 401 is returned, one attempt will be made to refresh the OAuth token and try again.
-    /// The <paramref name="session"/> object is updated and <see cref="OnTokenRefreshed"/> is called on refresh success.
+    /// If a 401 is returned, one attempt will be made to refresh the OAuth token via <see cref="TwitchSession.RefreshTokenCallback"/> (when provided) or the standalone OAuth/App refresh flow, and retry the request.
     /// </para>
     /// </remarks>
     internal static async Task<HttpResponseMessage> PerformHttpRequest(HttpMethod method, Uri uri, TwitchSession session, HttpContent? content = null, bool dontRefresh = false)
     {
+        ArgumentNullException.ThrowIfNull(session);
+
         string? clientId = session.CustomClientId ?? ClientId;
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            throw new InvalidOperationException("Must call TwitchAPI.Init.").Log(_logger, atLocation: 3);
+            throw new InvalidOperationException("Must call TwitchAPI.Init.");
         }
 
         if (session.Token != TwitchToken.Empty && string.IsNullOrWhiteSpace(session.Token?.OAuth))
         {
-            throw new InvalidOperationException("Invalid OAuth token in session.").Log(_logger, atLocation: 3);
+            throw new InvalidOperationException("Invalid OAuth token in session.");
+        }
+
+        byte[]? bufferedContentBytes = null;
+        KeyValuePair<string, IEnumerable<string>>[]? bufferedContentHeaders = null;
+        if (content is not null)
+        {
+            bufferedContentBytes = await content.ReadAsByteArrayAsync(session.CancellationToken).ConfigureAwait(false);
+            bufferedContentHeaders = [.. content.Headers];
         }
 
         bool retry = false;
     performhttprequest_start:
         try
         {
-            await session.RateLimiter.WaitForRateLimit(TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+            await session.RateLimiter.WaitForRateLimit(TimeSpan.FromSeconds(30), session.CancellationToken).ConfigureAwait(false);
 
             Uri targetUri = !uri.IsAbsoluteUri && uri.OriginalString.StartsWith('/')
                 ? new(uri.OriginalString.TrimStart('/'), UriKind.Relative)
@@ -199,9 +158,30 @@ public sealed partial class TwitchApi : IApi
                 targetUri = new Uri(session.CustomBaseUri, targetUri);
             }
 
-            using HttpRequestMessage request = new(method, targetUri) { Version = _httpClient.DefaultRequestVersion, VersionPolicy = _httpClient.DefaultVersionPolicy };
+            using HttpRequestMessage request = new(method, targetUri);
+            if (session.CustomHttpClient is null)
+            {
+                request.Version = _httpClient.DefaultRequestVersion;
+                request.VersionPolicy = _httpClient.DefaultVersionPolicy;
+            }
+
             request.Headers.Add("Client-Id", clientId);
-            request.Content = content;
+            if (bufferedContentBytes is not null)
+            {
+                ByteArrayContent attemptContent = new(bufferedContentBytes);
+                if (bufferedContentHeaders is not null)
+                {
+                    foreach (KeyValuePair<string, IEnumerable<string>> header in bufferedContentHeaders)
+                    {
+                        if (!string.Equals(header.Key, "Content-Length", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _ = attemptContent.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                        }
+                    }
+                }
+
+                request.Content = attemptContent;
+            }
 
             if (session.Token != TwitchToken.Empty)
             {
@@ -209,98 +189,130 @@ public sealed partial class TwitchApi : IApi
             }
 
             HttpMessageInvoker httpClient = session.CustomHttpClient ?? _httpClient;
-            HttpResponseMessage response = await httpClient.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
+            HttpResponseMessage response = await httpClient.SendAsync(request, session.CancellationToken).ConfigureAwait(false);
 
-            if (!retry && !dontRefresh && response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session.Token != TwitchToken.Empty)
+            if (!retry && !dontRefresh && response.StatusCode == HttpStatusCode.Unauthorized && session.Token != TwitchToken.Empty)
             {
-                switch (session.Token.Type.GetValueOrDefault())
+                if (session.RefreshTokenCallback is not null)
                 {
-                    case TwitchToken.TokenType.User:
-                        if (!string.IsNullOrWhiteSpace(session.Token.Refresh))
+                    string? oldOAuth = session.Token.OAuth;
+                    if (await session._refreshLock.WaitAsync(TimeSpan.FromSeconds(30), session.CancellationToken).ConfigureAwait(false))
+                    {
+                        try
                         {
-                            string oldRefresh = session.Token.Refresh;
-                            if (await session._refreshLock.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false))
+                            if (session.Token.OAuth == oldOAuth)
                             {
-                                try
+                                TwitchToken? refreshed = await session.RefreshTokenCallback(session, session.CancellationToken).ConfigureAwait(false);
+                                if (refreshed is not null)
                                 {
-                                    if (session.Token.Refresh == oldRefresh)
-                                    {
-                                        Token? refresh = await Token.RefreshOAuth(session).ConfigureAwait(false);
+                                    session.Token = refreshed;
+                                    retry = true;
+                                }
+                            }
+                            else
+                            {
+                                retry = true;
+                            }
+                        }
+                        finally
+                        {
+                            _ = session._refreshLock.Release();
+                        }
+                    }
 
-                                        if (refresh is not null && refresh.IsSuccessStatusCode)
+                    if (retry)
+                    {
+                        response.Dispose();
+                        goto performhttprequest_start;
+                    }
+                }
+                else
+                {
+                    switch (session.Token.Type.GetValueOrDefault())
+                    {
+                        case TwitchToken.TokenType.User:
+                            if (!string.IsNullOrWhiteSpace(session.Token.Refresh))
+                            {
+                                string oldRefresh = session.Token.Refresh;
+                                if (await session._refreshLock.WaitAsync(TimeSpan.FromSeconds(30), session.CancellationToken).ConfigureAwait(false))
+                                {
+                                    try
+                                    {
+                                        if (session.Token.Refresh == oldRefresh)
                                         {
-                                            session.Token = TwitchToken.FromApiResponse(refresh, session.Token);
-                                            _ = OnTokenRefreshed?.InvokeAsync(null, new(session));
+                                            Token? refresh = await Token.RefreshOAuth(session).ConfigureAwait(false);
+
+                                            if (refresh is not null && refresh.IsSuccessStatusCode)
+                                            {
+                                                session.Token = TwitchToken.FromApiResponse(refresh, session.Token);
+                                                retry = true;
+                                            }
+                                        }
+                                        else
+                                        {
                                             retry = true;
                                         }
                                     }
-                                    else
+                                    finally
                                     {
-                                        retry = true;
+                                        _ = session._refreshLock.Release();
                                     }
                                 }
-                                finally
+
+                                if (retry)
                                 {
-                                    _ = session._refreshLock.Release();
+                                    response.Dispose();
+                                    goto performhttprequest_start;
                                 }
                             }
-
-                            if (retry)
+                            break;
+                        case TwitchToken.TokenType.App:
+                            if (!string.IsNullOrWhiteSpace(session.Token.OAuth))
                             {
-
-                                goto performhttprequest_start;
-                            }
-                        }
-                        break;
-                    case TwitchToken.TokenType.App:
-                        if (!string.IsNullOrWhiteSpace(session.Token.OAuth))
-                        {
-                            string oldOAuth = session.Token.OAuth;
-                            if (await session._refreshLock.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(false))
-                            {
-                                try
+                                string oldOAuth = session.Token.OAuth;
+                                if (await session._refreshLock.WaitAsync(TimeSpan.FromSeconds(30), session.CancellationToken).ConfigureAwait(false))
                                 {
-                                    if (session.Token.OAuth == oldOAuth)
+                                    try
                                     {
-                                        Token? refresh = await Token.AuthorizeApp(session: session).ConfigureAwait(false);
-
-                                        if (refresh is not null && refresh.IsSuccessStatusCode)
+                                        if (session.Token.OAuth == oldOAuth)
                                         {
-                                            session.Token = TwitchToken.FromApiResponse(refresh, session.Token);
-                                            _ = OnTokenRefreshed?.InvokeAsync(null, new(session));
+                                            Token? refresh = await Token.AuthorizeApp(session: session).ConfigureAwait(false);
+
+                                            if (refresh is not null && refresh.IsSuccessStatusCode)
+                                            {
+                                                session.Token = TwitchToken.FromApiResponse(refresh, session.Token);
+                                                retry = true;
+                                            }
+                                        }
+                                        else
+                                        {
                                             retry = true;
                                         }
                                     }
-                                    else
+                                    finally
                                     {
-                                        retry = true;
+                                        _ = session._refreshLock.Release();
                                     }
                                 }
-                                finally
+
+                                if (retry)
                                 {
-                                    _ = session._refreshLock.Release();
+                                    response.Dispose();
+                                    goto performhttprequest_start;
                                 }
                             }
-
-                            if (retry)
-                            {
-
-                                goto performhttprequest_start;
-                            }
-                        }
-                        break;
-                    case TwitchToken.TokenType.Jwt:
-                        break;
-                    case TwitchToken.TokenType.Unknown:
-                    default:
-                        _logger.Warning($"Unknown or uninitialized Twitch token: {Enum.GetName(session.Token.Type.GetValueOrDefault())}");
-                        break;
+                            break;
+                        case TwitchToken.TokenType.Jwt:
+                        case TwitchToken.TokenType.Unknown:
+                        default:
+                            break;
+                    }
                 }
             }
 
             if (response.Content.Headers?.ContentType?.MediaType != "application/json")
             {
-                string rcontent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string rcontent = await response.Content.ReadAsStringAsync(session.CancellationToken).ConfigureAwait(false);
                 if (!JSONRegex().IsMatch(rcontent))
                 {
                     response.Content = new StringContent(JsonSerializer.Serialize(new JsonApiResponse { Status = response.StatusCode, Message = rcontent }, SerializerOptions));
@@ -326,19 +338,7 @@ public sealed partial class TwitchApi : IApi
     /// </summary>
     private static HttpClient _httpClient = CreateHttpClient();
 
-    /// <summary>
-    /// The <see cref="ILogger"/> for logging.
-    /// </summary>
-    private static readonly ILogger _logger = Logger.GetLogger<TwitchApi>();
-
     #endregion Private Fields
-
-    #region Private Constructors
-
-    // Intentionally private to prevent instantiation and allow the interface inheritance. All methods are static.
-    private TwitchApi()
-    { }
-    #endregion Private Constructors
 
     #region Private Methods
 
@@ -352,6 +352,10 @@ public sealed partial class TwitchApi : IApi
         PooledConnectionLifetime = TimeSpan.FromMinutes(2)
     }, disposeHandler: true);
 
+    /// <summary>
+    /// Matches JSON object or array strings.
+    /// </summary>
+    /// <returns>A compiled <see cref="Regex"/>.</returns>
     [GeneratedRegex(@"^\s*[\{\[].*[\}\]]\s*$", RegexOptions.Singleline)]
     private static partial Regex JSONRegex();
 
@@ -359,14 +363,19 @@ public sealed partial class TwitchApi : IApi
 
     #region Private Classes
 
+    /// <summary>
+    /// Converter factory supporting nullable and non-nullable enums decorated with <see cref="JsonConverterAttribute"/>.
+    /// </summary>
     private sealed class CustomEnumConverterFactory : JsonConverterFactory
     {
+        /// <inheritdoc/>
         public override bool CanConvert(Type typeToConvert)
         {
             Type enumType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
             return enumType.IsEnum && enumType.GetCustomAttribute<JsonConverterAttribute>()?.ConverterType is not null;
         }
 
+        /// <inheritdoc/>
         public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
         {
             Type? underlyingType = Nullable.GetUnderlyingType(typeToConvert);
@@ -382,15 +391,25 @@ public sealed partial class TwitchApi : IApi
         }
     }
 
+    /// <summary>
+    /// Wraps a non-nullable enum converter to handle nullable enum properties.
+    /// </summary>
+    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <typeparam name="TConverter">The underlying enum converter type.</typeparam>
     private sealed class NullableEnumConverter<TEnum, TConverter> : JsonConverter<TEnum?>
         where TEnum : struct, Enum
         where TConverter : JsonConverter<TEnum>, new()
     {
+        /// <summary>
+        /// The inner converter for the non-nullable enum type.
+        /// </summary>
         private readonly TConverter _inner = new();
 
+        /// <inheritdoc/>
         public override TEnum? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
             reader.TokenType == JsonTokenType.Null ? null : this._inner.Read(ref reader, typeof(TEnum), options);
 
+        /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, TEnum? value, JsonSerializerOptions options)
         {
             if (value.HasValue)
@@ -404,16 +423,22 @@ public sealed partial class TwitchApi : IApi
         }
     }
 
+    /// <summary>
+    /// Serializes polymorphic <see cref="EventSubCondition"/> instances using their runtime type.
+    /// </summary>
     private sealed class EventSubConditionConverter : JsonConverter<EventSubCondition>
     {
+        /// <inheritdoc/>
         public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(EventSubCondition);
 
+        /// <inheritdoc/>
         public override EventSubCondition? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             reader.Skip();
             return null;
         }
 
+        /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, EventSubCondition value, JsonSerializerOptions options) =>
             JsonSerializer.Serialize(writer, value, value.GetType(), options);
     }

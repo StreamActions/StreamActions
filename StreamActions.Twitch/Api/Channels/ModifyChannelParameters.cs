@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.Channels.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -17,6 +16,7 @@ using StreamActions.Twitch.Api.Channels.Objects;
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.Api.Channels.Objects;
 using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 

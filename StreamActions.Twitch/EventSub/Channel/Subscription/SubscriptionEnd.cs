@@ -76,7 +76,7 @@ public sealed record SubscriptionEnd : IEventSubType
     /// The tier of the subscription that ended. Valid values are 1000, 2000, and 3000.
     /// </summary>
     [JsonPropertyName("tier")]
-    public string? Tier { get; init; }
+    public Subscribe.SubscriptionTiers? Tier { get; init; }
 
     /// <summary>
     /// Whether the subscription was a gift.

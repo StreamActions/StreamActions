@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -145,16 +144,13 @@ public sealed record ExtensionTransaction
     /// </remarks>
     public static async Task<ResponseData<ExtensionTransaction>?> GetExtensionTransactions(TwitchSession session, string extensionId, IEnumerable<string>? id = null, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireAppToken();
 
         if (string.IsNullOrWhiteSpace(extensionId))
         {
-            throw new ArgumentNullException(nameof(extensionId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(extensionId));
         }
 
         IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
@@ -162,7 +158,7 @@ public sealed record ExtensionTransaction
         {
             if (idList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 100");
             }
         }
 
@@ -195,7 +191,7 @@ public sealed record ExtensionTransaction
         {
             if (queryParams.AllKeys.Contains("id"))
             {
-                throw new InvalidOperationException("Can not use " + nameof(after) + " at the same time as " + nameof(id)).Log(TwitchApi.GetLogger());
+                throw new InvalidOperationException("Can not use " + nameof(after) + " at the same time as " + nameof(id));
             }
             else
             {

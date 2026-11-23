@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -297,19 +296,17 @@ public sealed record Emote
     /// </remarks>
     public static async Task<EmoteResponse?> GetChannelEmotes(TwitchSession session, string broadcasterId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserOrAppToken();
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/emotes", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } }), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/emotes", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<EmoteResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -340,14 +337,11 @@ public sealed record Emote
     /// </remarks>
     public static async Task<EmoteResponse?> GetGlobalEmotes(TwitchSession session)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserOrAppToken();
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/emotes/global", UriKind.Relative)), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new("/chat/emotes/global", UriKind.Relative), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<EmoteResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -384,26 +378,20 @@ public sealed record Emote
     /// </remarks>
     public static async Task<EmoteResponse?> GetEmoteSets(TwitchSession session, IEnumerable<string> emoteSetIds)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (emoteSetIds is null)
-        {
-            throw new ArgumentNullException(nameof(emoteSetIds)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(emoteSetIds);
 
         IReadOnlyList<string> emoteSetIdList = emoteSetIds as IReadOnlyList<string> ?? [.. emoteSetIds];
 
         if (emoteSetIdList.Count == 0)
         {
-            throw new ArgumentNullException(nameof(emoteSetIds)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(emoteSetIds));
         }
 
         if (emoteSetIdList.Count > 25)
         {
-            throw new ArgumentOutOfRangeException(nameof(emoteSetIds), emoteSetIdList.Count, "A maximum of 25 emote set ids can be specified.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(emoteSetIds), emoteSetIdList.Count, "A maximum of 25 emote set ids can be specified.");
         }
 
         session.RequireUserOrAppToken();
@@ -414,7 +402,8 @@ public sealed record Emote
             query.Add("emote_set_id", emoteSetId);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/emotes/set", UriKind.Relative), query), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/emotes/set", UriKind.Relative), query);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<EmoteResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -457,14 +446,11 @@ public sealed record Emote
     /// </remarks>
     public static async Task<EmoteResponse?> GetUserEmotes(TwitchSession session, string userId, string? broadcasterId = null, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         session.RequireUserToken(Scope.UserReadEmotes);
@@ -481,7 +467,8 @@ public sealed record Emote
             query.Add("after", after);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/emotes/user", UriKind.Relative), query), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/emotes/user", UriKind.Relative), query);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<EmoteResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

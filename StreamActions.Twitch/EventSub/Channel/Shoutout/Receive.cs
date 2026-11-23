@@ -82,5 +82,5 @@ public sealed record Receive : IEventSubType
     /// The UTC timestamp (in RFC3339 format) of when the moderator sent the Shoutout.
     /// </summary>
     [JsonPropertyName("started_at")]
-    public string? StartedAt { get; init; }
+    public DateTime? StartedAt { get; init; }
 }

@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.Streams.Objects;
 using StreamActions.Twitch.Exceptions;
@@ -58,7 +57,7 @@ public sealed record UserMarkers
     /// A list of videos that contain markers.
     /// </summary>
     [JsonPropertyName("videos")]
-    public IEnumerable<VideoMarkers>? Videos { get; init; }
+    public IReadOnlyList<VideoMarkers>? Videos { get; init; }
 
     /// <summary>
     /// Gets a list of markers from the user's most recent stream or from the specified VOD/video.
@@ -107,24 +106,21 @@ public sealed record UserMarkers
     /// </remarks>
     public static async Task<ResponseData<UserMarkers>?> GetStreamMarkers(TwitchSession session, string? userId = null, string? videoId = null, int first = 20, string? before = null, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(userId) && string.IsNullOrWhiteSpace(videoId))
         {
-            throw new ArgumentNullException(nameof(userId) + "," + nameof(videoId), "Either user ID or video ID must be provided.").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId) + "," + nameof(videoId), "Either user ID or video ID must be provided.");
         }
 
         if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(videoId))
         {
-            throw new ArgumentOutOfRangeException(nameof(userId) + "," + nameof(videoId), "The user ID and video ID parameters are mutually exclusive.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(userId) + "," + nameof(videoId), "The user ID and video ID parameters are mutually exclusive.");
         }
 
         if (!string.IsNullOrWhiteSpace(before) && !string.IsNullOrWhiteSpace(after))
         {
-            throw new InvalidOperationException("The before and after parameters are mutually exclusive.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after));
         }
 
         session.RequireUserToken(Scope.UserReadBroadcast, Scope.ChannelManageBroadcast);

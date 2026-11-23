@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -105,27 +104,24 @@ public sealed record FollowedChannel
     /// </remarks>
     public static async Task<ResponseData<FollowedChannel>?> GetFollowedChannels(TwitchSession session, string userId, string? broadcasterId = null, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserToken(Scope.UserReadFollows);
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         if (broadcasterId is not null && string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (after is not null && string.IsNullOrWhiteSpace(after))
         {
-            throw new ArgumentNullException(nameof(after)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(after));
         }
+
+        session.RequireUserToken(Scope.UserReadFollows);
 
         first = Math.Clamp(first, 1, 100);
 

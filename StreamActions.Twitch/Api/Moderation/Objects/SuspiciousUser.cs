@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -164,39 +163,33 @@ public sealed record SuspiciousUser
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<SuspiciousUser>?> AddSuspiciousStatus(TwitchSession session, string broadcasterId, string moderatorId, AddSuspiciousStatusParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.UserId))
         {
-            throw new ArgumentNullException(nameof(parameters.UserId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.UserId));
         }
 
         if (!parameters.Status.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.Status)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Status));
         }
 
         if (parameters.Status == SuspiciousStatuses.NoTreatment)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Status), "must be ACTIVE_MONITORING or RESTRICTED").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Status), "must be ACTIVE_MONITORING or RESTRICTED");
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageSuspiciousUsers);
@@ -249,24 +242,21 @@ public sealed record SuspiciousUser
     /// </remarks>
     public static async Task<ResponseData<SuspiciousUser>?> RemoveSuspiciousStatus(TwitchSession session, string broadcasterId, string moderatorId, string userId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageSuspiciousUsers);

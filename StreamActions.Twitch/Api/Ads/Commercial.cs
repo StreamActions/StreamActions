@@ -17,7 +17,6 @@
  */
 
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -116,24 +115,18 @@ public sealed record Commercial
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<ResponseData<Commercial>?> StartCommercial(TwitchSession session, StartCommercialParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.BroadcasterId))
         {
-            throw new ArgumentNullException(nameof(parameters.BroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.BroadcasterId));
         }
 
         if (!parameters.Length.HasValue)
         {
-            throw new ArgumentNullException(nameof(parameters.Length)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Length));
         }
 
         session.RequireUserOrAppToken(Scope.ChannelEditCommercial);

@@ -25,6 +25,7 @@ using StreamActions.Twitch.Tests.Infrastructure;
 using System.Globalization;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 using EventSubService = StreamActions.Twitch.EventSub.EventSub;
 
 namespace StreamActions.Twitch.Tests.EventSub;
@@ -669,6 +670,55 @@ public sealed class EventSubWebsocketTests : IDisposable
         _ = result.Exception.Should().NotBeNull();
         _ = result.Exception.Should().BeAssignableTo<Exception>();
         _ = result.Event.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken, TimeProvider?)"/> returns a <see cref="JsonException"/> in <see cref="EventSubWebsocketResult.Exception"/> when the payload is malformed JSON.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ReceiveWebsocketMessageAsync")]
+    public async Task ReceiveWebsocketMessageAsync_WhenMalformedJson_ReturnsCapturedJsonException()
+    {
+        this._fixture.QueueWebSocketAction(async (webSocket, httpContext) =>
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes("{not valid json");
+            await webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, TestContext.Current.CancellationToken).ConfigureAwait(false);
+        });
+
+        Uri wsUri = new($"{this._fixture.BaseUrl.Replace("http://", "ws://", StringComparison.OrdinalIgnoreCase)}/ws");
+        using ClientWebSocket ws = await EventSubService.ConnectWebsocketAsync(cancellationToken: TestContext.Current.CancellationToken, uri: wsUri).ConfigureAwait(true);
+        EventSubWebsocketResult result = await EventSubService.ReceiveWebsocketMessageAsync(ws, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        _ = result.Should().NotBeNull();
+        _ = result.Exception.Should().BeAssignableTo<JsonException>();
+        _ = result.Event.Should().BeNull();
+
+        await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubService.ReceiveWebsocketMessageAsync(WebSocket, CancellationToken, TimeProvider?)"/> returns an <see cref="InvalidDataException"/> in <see cref="EventSubWebsocketResult.Exception"/> when a message exceeds 256 KB.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ReceiveWebsocketMessageAsync")]
+    public async Task ReceiveWebsocketMessageAsync_WhenMessageExceedsMaxSize_ReturnsCapturedInvalidDataException()
+    {
+        this._fixture.QueueWebSocketAction(async (webSocket, httpContext) =>
+        {
+            byte[] oversized = new byte[(256 * 1024) + 1];
+            Array.Fill(oversized, (byte)'a');
+            await webSocket.SendAsync(new ArraySegment<byte>(oversized), WebSocketMessageType.Text, true, TestContext.Current.CancellationToken).ConfigureAwait(false);
+        });
+
+        Uri wsUri = new($"{this._fixture.BaseUrl.Replace("http://", "ws://", StringComparison.OrdinalIgnoreCase)}/ws");
+        using ClientWebSocket ws = await EventSubService.ConnectWebsocketAsync(cancellationToken: TestContext.Current.CancellationToken, uri: wsUri).ConfigureAwait(true);
+        EventSubWebsocketResult result = await EventSubService.ReceiveWebsocketMessageAsync(ws, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        _ = result.Should().NotBeNull();
+        _ = result.Exception.Should().BeOfType<InvalidDataException>();
+        _ = result.Event.Should().BeNull();
+
+        await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     #endregion ReceiveWebsocketMessageAsync

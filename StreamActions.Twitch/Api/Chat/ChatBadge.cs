@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Chat.Objects;
 using StreamActions.Twitch.Api.Common;
 using System.Net.Http.Json;
@@ -72,19 +71,17 @@ public sealed record ChatBadge
     /// </remarks>
     public static async Task<ResponseData<ChatBadge>?> GetChannelChatBadges(TwitchSession session, string broadcasterId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserOrAppToken();
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/badges", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } }), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/badges", UriKind.Relative), new() { { "broadcaster_id", broadcasterId } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatBadge>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -112,14 +109,11 @@ public sealed record ChatBadge
     /// </remarks>
     public static async Task<ResponseData<ChatBadge>?> GetGlobalChatBadges(TwitchSession session)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserOrAppToken();
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/chat/badges/global", UriKind.Relative)), session).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, new("/chat/badges/global", UriKind.Relative), session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ChatBadge>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

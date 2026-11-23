@@ -29,7 +29,7 @@ public sealed record Subscription
     /// The type of subscription plan being used.
     /// </summary>
     [JsonPropertyName("sub_tier")]
-    public string? SubTier { get; init; }
+    public Subscribe.SubscriptionTiers? SubTier { get; init; }
 
     /// <summary>
     /// Indicates if the subscription was obtained through Amazon Prime.

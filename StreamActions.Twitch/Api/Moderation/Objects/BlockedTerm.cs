@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -121,19 +120,16 @@ public sealed record BlockedTerm
     /// </remarks>
     public static async Task<ResponseData<BlockedTerm>?> GetBlockedTerms(TwitchSession session, string broadcasterId, string moderatorId, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorReadBlockedTerms, Scope.ModeratorManageBlockedTerms);
@@ -150,7 +146,8 @@ public sealed record BlockedTerm
             queryParameters.Add("after", after);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/blocked_terms", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/blocked_terms", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<BlockedTerm>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -194,34 +191,28 @@ public sealed record BlockedTerm
     /// </remarks>
     public static async Task<ResponseData<BlockedTerm>?> AddBlockedTerm(TwitchSession session, string broadcasterId, string moderatorId, AddBlockedTermParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (string.IsNullOrWhiteSpace(parameters.Text))
         {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters));
         }
 
         if (parameters.Text.Length is < 2 or > 500)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.Text.Length, "text must be between 2 and 500 characters.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters), parameters.Text.Length, "text must be between 2 and 500 characters.");
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageBlockedTerms);
@@ -231,7 +222,8 @@ public sealed record BlockedTerm
         queryParameters.Add("moderator_id", moderatorId);
 
         using JsonContent jsonContent = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/moderation/blocked_terms", UriKind.Relative), queryParameters), session, jsonContent).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/blocked_terms", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<BlockedTerm>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -273,24 +265,21 @@ public sealed record BlockedTerm
     /// </remarks>
     public static async Task<JsonApiResponse?> RemoveBlockedTerm(TwitchSession session, string broadcasterId, string moderatorId, string id)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         if (string.IsNullOrWhiteSpace(id))
         {
-            throw new ArgumentNullException(nameof(id)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageBlockedTerms);
@@ -300,7 +289,8 @@ public sealed record BlockedTerm
         queryParameters.Add("moderator_id", moderatorId);
         queryParameters.Add("id", id);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/moderation/blocked_terms", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/blocked_terms", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

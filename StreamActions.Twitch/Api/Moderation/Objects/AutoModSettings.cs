@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -147,19 +146,16 @@ public sealed record AutoModSettings
     /// </remarks>
     public static async Task<ResponseData<AutoModSettings>?> GetAutoModSettings(TwitchSession session, string broadcasterId, string moderatorId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorReadAutomodSettings, Scope.ModeratorManageAutomodSettings);
@@ -168,7 +164,8 @@ public sealed record AutoModSettings
         queryParameters.Add("broadcaster_id", broadcasterId);
         queryParameters.Add("moderator_id", moderatorId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/automod/settings", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/automod/settings", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<AutoModSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -229,25 +226,19 @@ public sealed record AutoModSettings
     /// </remarks>
     public static async Task<ResponseData<AutoModSettings>?> UpdateAutoModSettings(TwitchSession session, string broadcasterId, string moderatorId, AutoModSettings settings)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
-        if (settings is null)
-        {
-            throw new ArgumentNullException(nameof(settings)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(settings);
 
         bool hasIndividualSettings = settings.Aggression.HasValue ||
                                       settings.Bullying.HasValue ||
@@ -260,12 +251,12 @@ public sealed record AutoModSettings
 
         if (settings.OverallLevel.HasValue && hasIndividualSettings)
         {
-            throw new ArgumentOutOfRangeException(nameof(settings), "You may set either OverallLevel or the individual settings, but not both.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(settings), "You may set either OverallLevel or the individual settings, but not both.");
         }
 
         if (!settings.OverallLevel.HasValue && !hasIndividualSettings)
         {
-            throw new ArgumentNullException(nameof(settings), "You must specify either OverallLevel or at least one individual setting.").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(settings), "You must specify either OverallLevel or at least one individual setting.");
         }
 
         AutoModSettings clampedSettings = settings with
@@ -288,7 +279,8 @@ public sealed record AutoModSettings
         queryParameters.Add("moderator_id", moderatorId);
 
         using JsonContent jsonContent = JsonContent.Create(clampedSettings, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, Util.BuildUri(new("/moderation/automod/settings", UriKind.Relative), queryParameters), session, jsonContent).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/automod/settings", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, uri, session, jsonContent).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<AutoModSettings>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

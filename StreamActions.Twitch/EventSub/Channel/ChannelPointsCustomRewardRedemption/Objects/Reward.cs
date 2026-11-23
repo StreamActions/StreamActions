@@ -29,7 +29,7 @@ public sealed record Reward
     /// The reward identifier.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// The reward title.
@@ -41,7 +41,7 @@ public sealed record Reward
     /// The reward cost.
     /// </summary>
     [JsonPropertyName("cost")]
-    public int Cost { get; init; }
+    public int? Cost { get; init; }
 
     /// <summary>
     /// The reward description.

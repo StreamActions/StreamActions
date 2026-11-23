@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -90,14 +89,11 @@ public sealed record ModeratedChannel
     /// </remarks>
     public static async Task<ResponseData<ModeratedChannel>?> GetModeratedChannels(TwitchSession session, string userId, string? after = null, int first = 20)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         session.RequireUserOrAppToken(Scope.UserReadModeratedChannels);
@@ -113,7 +109,8 @@ public sealed record ModeratedChannel
         first = Math.Clamp(first, 1, 100);
         queryParameters.Add("first", first.ToString(CultureInfo.InvariantCulture));
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/channels", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/channels", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<ModeratedChannel>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

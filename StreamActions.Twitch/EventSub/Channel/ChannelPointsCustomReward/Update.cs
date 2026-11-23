@@ -29,7 +29,7 @@ namespace StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomReward;
 public sealed record Update : IEventSubType
 {
     /// <inheritdoc/>
-    public static Type EventSubConditionType => typeof(BroadcasterUserIdCondition);
+    public static Type EventSubConditionType => typeof(BroadcasterAndRewardIdCondition);
 
     /// <inheritdoc/>
     public static string Type => "channel.channel_points_custom_reward.update";
@@ -41,7 +41,7 @@ public sealed record Update : IEventSubType
     /// The reward identifier.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// The requested broadcaster ID.

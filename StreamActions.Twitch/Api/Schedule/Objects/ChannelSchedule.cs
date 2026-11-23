@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -120,20 +119,17 @@ public sealed record ChannelSchedule
     /// </remarks>
     public static async Task<ResponseDataObject<ChannelSchedule>?> GetChannelStreamSchedule(TwitchSession session, string broadcasterId, IEnumerable<string>? segmentIds = null, DateTime? startTime = null, int first = 20, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         List<string> segmentIdList = segmentIds?.ToList() ?? [];
         if (segmentIdList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(segmentIds), segmentIdList.Count, "The number of segment IDs must not exceed 100.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(segmentIds), segmentIdList.Count, "The number of segment IDs must not exceed 100.");
         }
 
         session.RequireUserOrAppToken();
@@ -159,7 +155,8 @@ public sealed record ChannelSchedule
             queryParameters.Add("after", after);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/schedule", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/schedule", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseDataObject<ChannelSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -195,14 +192,11 @@ public sealed record ChannelSchedule
     /// </remarks>
     public static async Task<string?> GetChannelICalendar(TwitchSession session, string broadcasterId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserOrAppToken();
@@ -210,7 +204,8 @@ public sealed record ChannelSchedule
         NameValueCollection queryParameters = [];
         queryParameters.Add("broadcaster_id", broadcasterId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/schedule/icalendar", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/schedule/icalendar", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         if (response.IsSuccessStatusCode)
         {
             JsonApiResponse? apiResponse = await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
@@ -281,14 +276,11 @@ public sealed record ChannelSchedule
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Intentionally lowercasing per API requirement")]
     public static async Task<JsonApiResponse?> UpdateChannelStreamSchedule(TwitchSession session, string broadcasterId, bool? isVacationEnabled = null, DateTime? vacationStartTime = null, DateTime? vacationEndTime = null, string? timezone = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         session.RequireUserToken(Scope.ChannelManageSchedule);
@@ -316,7 +308,8 @@ public sealed record ChannelSchedule
             queryParameters.Add("timezone", timezone);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/schedule/settings", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/schedule/settings", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -378,20 +371,14 @@ public sealed record ChannelSchedule
     /// </remarks>
     public static async Task<ResponseDataObject<ChannelSchedule>?> CreateChannelStreamScheduleSegment(TwitchSession session, string broadcasterId, CreateChannelStreamScheduleSegmentParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         session.RequireUserToken(Scope.ChannelManageSchedule);
 
@@ -399,7 +386,8 @@ public sealed record ChannelSchedule
         queryParameters.Add("broadcaster_id", broadcasterId);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/schedule/segment", UriKind.Relative), queryParameters), session, content).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/schedule/segment", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseDataObject<ChannelSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -466,25 +454,19 @@ public sealed record ChannelSchedule
     /// </remarks>
     public static async Task<ResponseDataObject<ChannelSchedule>?> UpdateChannelStreamScheduleSegment(TwitchSession session, string broadcasterId, string segmentId, UpdateChannelStreamScheduleSegmentParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(segmentId))
         {
-            throw new ArgumentNullException(nameof(segmentId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(segmentId));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         session.RequireUserToken(Scope.ChannelManageSchedule);
 
@@ -493,7 +475,8 @@ public sealed record ChannelSchedule
         queryParameters.Add("id", segmentId);
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, Util.BuildUri(new("/schedule/segment", UriKind.Relative), queryParameters), session, content).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/schedule/segment", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseDataObject<ChannelSchedule>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 
@@ -551,19 +534,16 @@ public sealed record ChannelSchedule
     /// </remarks>
     public static async Task<JsonApiResponse?> DeleteChannelStreamScheduleSegment(TwitchSession session, string broadcasterId, string segmentId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(segmentId))
         {
-            throw new ArgumentNullException(nameof(segmentId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(segmentId));
         }
 
         session.RequireUserToken(Scope.ChannelManageSchedule);
@@ -572,7 +552,8 @@ public sealed record ChannelSchedule
         queryParameters.Add("broadcaster_id", broadcasterId);
         queryParameters.Add("id", segmentId);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, Util.BuildUri(new("/schedule/segment", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/schedule/segment", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Delete, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

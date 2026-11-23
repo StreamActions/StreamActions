@@ -41,5 +41,5 @@ public sealed record Automod
     /// The bounds of the text that caused the message to be caught.
     /// </summary>
     [JsonPropertyName("boundaries")]
-    public IEnumerable<Boundary>? Boundaries { get; init; }
+    public IReadOnlyList<Boundary>? Boundaries { get; init; }
 }

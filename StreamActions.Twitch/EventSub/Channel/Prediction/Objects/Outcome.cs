@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.Prediction.Objects;
@@ -29,7 +30,7 @@ public sealed record Outcome
     /// The outcome ID.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// The outcome title.
@@ -41,7 +42,7 @@ public sealed record Outcome
     /// The color for the outcome. Valid values are pink and blue.
     /// </summary>
     [JsonPropertyName("color")]
-    public string? Color { get; init; }
+    public OutcomeColors? Color { get; init; }
 
     /// <summary>
     /// The number of users who used Channel Points on this outcome.
@@ -59,5 +60,24 @@ public sealed record Outcome
     /// An array of users who used the most Channel Points on this outcome.
     /// </summary>
     [JsonPropertyName("top_predictors")]
-    public IReadOnlyCollection<TopPredictor>? TopPredictors { get; init; }
+    public IReadOnlyList<TopPredictor>? TopPredictors { get; init; }
+
+    /// <summary>
+    /// The color for a prediction outcome.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<OutcomeColors>))]
+    public enum OutcomeColors
+    {
+        /// <summary>
+        /// Blue.
+        /// </summary>
+        [JsonCustomEnum("blue")]
+        Blue,
+
+        /// <summary>
+        /// Pink.
+        /// </summary>
+        [JsonCustomEnum("pink")]
+        Pink
+    }
 }

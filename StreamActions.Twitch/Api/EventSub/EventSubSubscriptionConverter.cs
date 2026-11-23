@@ -18,7 +18,7 @@
 
 using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub.Conditions;
-using System.Collections.Immutable;
+using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.Json;
 
@@ -45,10 +45,19 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
 
             if (string.IsNullOrWhiteSpace(subscriptionType))
             {
+                int objectDepth = newReader.CurrentDepth;
+                int targetPropertyDepth = objectDepth + 1;
                 string typeJsonPropertyName = this.MapToJsonPropertyNames().GetValueOrDefault(nameof(EventSubSubscription.Type), nameof(EventSubSubscription.Type));
                 while (newReader.Read())
                 {
-                    if (newReader.TokenType is JsonTokenType.PropertyName && newReader.GetString() == typeJsonPropertyName)
+                    if (newReader.TokenType is JsonTokenType.EndObject && newReader.CurrentDepth == objectDepth)
+                    {
+                        break;
+                    }
+
+                    if (newReader.CurrentDepth == targetPropertyDepth &&
+                        newReader.TokenType is JsonTokenType.PropertyName &&
+                        newReader.GetString() == typeJsonPropertyName)
                     {
                         if (newReader.Read() && newReader.TokenType is JsonTokenType.String)
                         {
@@ -83,7 +92,7 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
     /// <summary>
     /// Map of <see cref="EventSubSubscription.Type"/> to <see cref="EventSubCondition"/>.
     /// </summary>
-    private static readonly ImmutableDictionary<string, Type> _subscriptionTypesToConditions = new Func<ImmutableDictionary<string, Type>>(() =>
+    private static readonly FrozenDictionary<string, Type> _subscriptionTypesToConditions = new Func<FrozenDictionary<string, Type>>(() =>
     {
         Dictionary<string, Type> subscriptionTypesToConditions = [];
 
@@ -101,7 +110,7 @@ public sealed class EventSubSubscriptionConverter : JsonCustomConverter<EventSub
             }
         }
 
-        return subscriptionTypesToConditions.ToImmutableDictionary();
+        return subscriptionTypesToConditions.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
     })();
 
     #endregion Private Fields

@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -116,9 +115,11 @@ public sealed record ExtensionAnalytics
     /// </remarks>
     public static async Task<ResponseData<ExtensionAnalytics>?> GetExtensionAnalytics(TwitchSession session, string? extensionId = null, ExtensionReportType type = ExtensionReportType.OverviewV2, DateTime? startedAt = null, DateTime? endedAt = null, int first = 20, string? after = null)
     {
-        if (session is null)
+        ArgumentNullException.ThrowIfNull(session);
+
+        if ((!startedAt.HasValue && endedAt.HasValue) || (startedAt.HasValue && !endedAt.HasValue))
         {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("If " + nameof(startedAt) + " is specified, " + nameof(endedAt) + " must also be specified (and vice-versa)");
         }
 
         session.RequireUserToken(Scope.AnalyticsReadExtensions);
@@ -139,11 +140,6 @@ public sealed record ExtensionAnalytics
         if (!string.IsNullOrWhiteSpace(after))
         {
             queryParams.Add("after", after);
-        }
-
-        if ((!startedAt.HasValue && endedAt.HasValue) || (startedAt.HasValue && !endedAt.HasValue))
-        {
-            throw new InvalidOperationException("If " + nameof(startedAt) + " is specified, " + nameof(endedAt) + " must also be specified (and vice-versa)").Log(TwitchApi.GetLogger());
         }
 
         if (startedAt.HasValue && endedAt.HasValue)

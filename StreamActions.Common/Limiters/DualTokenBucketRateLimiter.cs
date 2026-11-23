@@ -16,6 +16,8 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Runtime.ExceptionServices;
+
 namespace StreamActions.Common.Limiters;
 
 /// <summary>
@@ -56,12 +58,14 @@ public sealed class DualTokenBucketRateLimiter(TokenBucketRateLimiter localBucke
     /// <param name="timeout">The interval to wait for the lock and rate limit, or -1 milliseconds to wait indefinitely.</param>
     /// <param name="cancellationToken">A cancellation token to cancel the wait.</param>
     /// <returns><see langword="true"/> if both tokens were acquired; <see langword="false"/> otherwise.</returns>
+    /// <exception cref="OperationCanceledException">A cancellation was requested via <paramref name="cancellationToken"/> before both rate limit tokens could be acquired.</exception>
     public async Task<bool> WaitForRateLimit(TimeSpan timeout, CancellationToken? cancellationToken = null)
     {
         Task gt = this.GlobalBucket.WaitForRateLimit(timeout, cancellationToken);
         Task lt = this.LocalBucket.WaitForRateLimit(timeout, cancellationToken);
 
         bool gotGt = false;
+        OperationCanceledException? canceledException = null;
         try
         {
             await gt.ConfigureAwait(false);
@@ -71,9 +75,9 @@ public sealed class DualTokenBucketRateLimiter(TokenBucketRateLimiter localBucke
         {
             // Don't need to process exception
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            // Don't need to process exception
+            canceledException = ex;
         }
 
         bool gotLt = false;
@@ -86,18 +90,22 @@ public sealed class DualTokenBucketRateLimiter(TokenBucketRateLimiter localBucke
         {
             // Don't need to process exception
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            // Don't need to process exception
+            canceledException = ex;
         }
 
         if (gotGt != gotLt)
         {
+            TimeSpan returnTimeout = timeout == Timeout.InfiniteTimeSpan || timeout > TimeSpan.FromSeconds(5)
+                ? timeout
+                : TimeSpan.FromSeconds(5);
+
             if (gotGt)
             {
                 try
                 {
-                    this.GlobalBucket.ReturnToken(timeout);
+                    this.GlobalBucket.ReturnToken(returnTimeout);
                 }
                 catch (TimeoutException)
                 {
@@ -109,13 +117,18 @@ public sealed class DualTokenBucketRateLimiter(TokenBucketRateLimiter localBucke
             {
                 try
                 {
-                    this.LocalBucket.ReturnToken(timeout);
+                    this.LocalBucket.ReturnToken(returnTimeout);
                 }
                 catch (TimeoutException)
                 {
                     // Don't need to process exception
                 }
             }
+        }
+
+        if (canceledException is not null)
+        {
+            ExceptionDispatchInfo.Throw(canceledException);
         }
 
         return gotGt && gotLt;

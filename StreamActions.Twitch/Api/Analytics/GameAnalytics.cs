@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -109,16 +108,18 @@ public sealed record GameAnalytics
     /// </item>
     /// <item>
     /// <term>404 Not Found</term>
-    /// <description>The specified extension does not exist.</description>
+    /// <description>The specified game does not exist.</description>
     /// </item>
     /// </list>
     /// </para>
     /// </remarks>
     public static async Task<ResponseData<GameAnalytics>?> GetGameAnalytics(TwitchSession session, string? gameId = null, GameReportType type = GameReportType.OverviewV2, DateTime? startedAt = null, DateTime? endedAt = null, int first = 20, string? after = null)
     {
-        if (session is null)
+        ArgumentNullException.ThrowIfNull(session);
+
+        if ((!startedAt.HasValue && endedAt.HasValue) || (startedAt.HasValue && !endedAt.HasValue))
         {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("If " + nameof(startedAt) + " is specified, " + nameof(endedAt) + " must also be specified (and vice-versa)");
         }
 
         session.RequireUserToken(Scope.AnalyticsReadGames);
@@ -139,11 +140,6 @@ public sealed record GameAnalytics
         if (!string.IsNullOrWhiteSpace(after))
         {
             queryParams.Add("after", after);
-        }
-
-        if ((!startedAt.HasValue && endedAt.HasValue) || (startedAt.HasValue && !endedAt.HasValue))
-        {
-            throw new InvalidOperationException("If " + nameof(startedAt) + " is specified, " + nameof(endedAt) + " must also be specified (and vice-versa)").Log(TwitchApi.GetLogger());
         }
 
         if (startedAt.HasValue && endedAt.HasValue)

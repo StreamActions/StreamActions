@@ -31,12 +31,25 @@ public sealed class TokenBucketRateLimiterTests
     public void ReturnToken_IncrementsRemainingTokenCount()
     {
         using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
+        limiter.UpdateRemaining(3);
         MethodInfo? returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", BindingFlags.Instance | BindingFlags.NonPublic);
 
-        long initial = limiter.Remaining;
+        int initial = limiter.Remaining;
         _ = returnTokenMethod!.Invoke(limiter, [TimeSpan.FromSeconds(1)]);
 
-        _ = limiter.Remaining.Should().Be((int)(initial + 1));
+        _ = limiter.Remaining.Should().Be(initial + 1);
+    }
+
+    [Fact]
+    [Trait("Member", "ReturnToken")]
+    public void ReturnToken_ClampsToLimit_WhenAlreadyAtLimit()
+    {
+        using TokenBucketRateLimiter limiter = new(5, TimeSpan.FromSeconds(10));
+        MethodInfo? returnTokenMethod = typeof(TokenBucketRateLimiter).GetMethod("ReturnToken", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        _ = returnTokenMethod!.Invoke(limiter, [TimeSpan.FromSeconds(1)]);
+
+        _ = limiter.Remaining.Should().Be(limiter.Limit);
     }
 
     [Fact]
@@ -299,6 +312,21 @@ public sealed class TokenBucketRateLimiterTests
 
     [Fact]
     [Trait("Member", "ParseHeaders")]
+    public void ParseHeaders_IgnoresInvalidISO8601ResetHeader()
+    {
+        using TokenBucketRateLimiter limiter = new(10, TimeSpan.FromSeconds(10));
+        long originalReset = limiter.NextReset;
+
+        using HttpResponseMessage response = new();
+        response.Headers.Add("Ratelimit-Reset", "not-a-valid-iso8601-date");
+
+        limiter.ParseHeaders(response.Headers, headerResetType: TokenBucketRateLimiter.HeaderResetType.ISO8601);
+
+        _ = limiter.NextReset.Should().Be(originalReset);
+    }
+
+    [Fact]
+    [Trait("Member", "ParseHeaders")]
     public void ParseHeaders_ThrowsArgumentOutOfRangeException_ForInvalidHeaderResetType()
     {
         using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromSeconds(10));
@@ -393,6 +421,48 @@ public sealed class TokenBucketRateLimiterTests
         _ = limiter.Remaining.Should().Be(0);
 
         Task secondWait = limiter.WaitForRateLimit(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        _ = secondWait.IsCompleted.Should().BeFalse();
+
+        timeProvider.Advance(TimeSpan.FromSeconds(10));
+        await secondWait.ConfigureAwait(true);
+        _ = limiter.Remaining.Should().Be(0);
+    }
+
+    [Fact]
+    [Trait("Member", "WaitForRateLimit")]
+    public async Task WaitForRateLimit_PartialRefillAcrossMultipleCalls_DoesNotMultiplyTokens()
+    {
+        TestTimeProvider timeProvider = new();
+        using TokenBucketRateLimiter limiter = new(10, TimeSpan.FromSeconds(10), timeProvider);
+        limiter.UpdateRemaining(0);
+
+        timeProvider.Advance(TimeSpan.FromSeconds(2.5));
+        await limiter.WaitForRateLimit(TimeSpan.Zero, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = limiter.Remaining.Should().Be(1);
+
+        timeProvider.Advance(TimeSpan.FromSeconds(0.4));
+        await limiter.WaitForRateLimit(TimeSpan.Zero, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = limiter.Remaining.Should().Be(0);
+
+        Task thirdWait = limiter.WaitForRateLimit(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        _ = thirdWait.IsCompleted.Should().BeFalse();
+
+        timeProvider.Advance(TimeSpan.FromSeconds(0.1));
+        await thirdWait.ConfigureAwait(true);
+        _ = limiter.Remaining.Should().Be(0);
+    }
+
+    [Fact]
+    [Trait("Member", "WaitForRateLimit")]
+    public async Task WaitForRateLimit_WithInfiniteTimeout_WaitsUntilTokenAvailable()
+    {
+        TestTimeProvider timeProvider = new();
+        using TokenBucketRateLimiter limiter = new(1, TimeSpan.FromSeconds(10), timeProvider);
+
+        await limiter.WaitForRateLimit(Timeout.InfiniteTimeSpan, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = limiter.Remaining.Should().Be(0);
+
+        Task secondWait = limiter.WaitForRateLimit(Timeout.InfiniteTimeSpan, TestContext.Current.CancellationToken);
         _ = secondWait.IsCompleted.Should().BeFalse();
 
         timeProvider.Advance(TimeSpan.FromSeconds(10));

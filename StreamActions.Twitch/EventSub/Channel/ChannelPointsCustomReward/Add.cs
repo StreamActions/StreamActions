@@ -41,7 +41,7 @@ public sealed record Add : IEventSubType
     /// The reward identifier.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// The requested broadcaster ID.

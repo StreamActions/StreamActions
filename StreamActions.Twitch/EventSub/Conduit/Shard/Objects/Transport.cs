@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.Api.EventSub.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Conduit.Shard.Objects;
@@ -29,13 +30,13 @@ public sealed record Transport
     /// The transport method (e.g. websocket or webhook).
     /// </summary>
     [JsonPropertyName("method")]
-    public string? Method { get; init; }
+    public ConduitShardTransport.TransportMethod? Method { get; init; }
 
     /// <summary>
     /// Optional. Webhook callback URL.
     /// </summary>
     [JsonPropertyName("callback")]
-    public string? Callback { get; init; }
+    public Uri? Callback { get; init; }
 
     /// <summary>
     /// Optional. WebSocket session ID.

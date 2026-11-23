@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.EventSub;
 /// <summary>
 /// The parameters for <see cref="Conduit.UpdateConduits(Common.TwitchSession, ConduitUpdateParameters)"/>.
 /// </summary>
-public record ConduitUpdateParameters
+public sealed record ConduitUpdateParameters
 {
     /// <summary>
     /// The ID of the conduit to update.

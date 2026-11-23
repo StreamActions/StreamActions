@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Channels.Objects;
 using StreamActions.Twitch.Api.Common;
@@ -146,20 +145,17 @@ public sealed partial record Channel
     /// </remarks>
     public static async Task<ResponseData<Channel>?> GetChannelInformation(TwitchSession session, IEnumerable<string> broadcasterId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         IReadOnlyList<string>? broadcasterIdList = broadcasterId as IReadOnlyList<string> ?? broadcasterId?.ToArray();
         if (broadcasterIdList is null || broadcasterIdList.Count == 0)
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (broadcasterIdList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(broadcasterId), broadcasterIdList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(broadcasterId), broadcasterIdList.Count, "must have a count <= 100");
         }
 
         session.RequireUserOrAppToken();
@@ -215,31 +211,23 @@ public sealed partial record Channel
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentional")]
     public static async Task<JsonApiResponse?> ModifyChannelInformation(TwitchSession session, string broadcasterId, ModifyChannelParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
-
-        session.RequireUserToken(Scope.ChannelManageBroadcast);
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (parameters.Title is not null && string.IsNullOrWhiteSpace(parameters.Title))
         {
-            throw new ArgumentNullException(nameof(parameters.Title)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Title));
         }
 
         if (parameters.Tags is not null && parameters.Tags.Count > 10)
         {
-            throw new ArgumentOutOfRangeException(nameof(parameters.Tags), parameters.Tags.Count, "must have a count <= 10").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(parameters.Tags), parameters.Tags.Count, "must have a count <= 10");
         }
 
         if (parameters.Tags is not null && parameters.Tags.Count > 0)
@@ -248,15 +236,15 @@ public sealed partial record Channel
             {
                 if (string.IsNullOrWhiteSpace(tag))
                 {
-                    throw new ArgumentNullException(nameof(parameters.Tags), "a tag may not be null, empty, or whitespace").Log(TwitchApi.GetLogger());
+                    throw new ArgumentNullException(nameof(parameters.Tags), "a tag may not be null, empty, or whitespace");
                 }
                 else if (!TagsRegex().IsMatch(tag))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(parameters.Tags), tag, "a tag may not contain whitespace or special characters").Log(TwitchApi.GetLogger());
+                    throw new ArgumentOutOfRangeException(nameof(parameters.Tags), tag, "a tag may not contain whitespace or special characters");
                 }
                 else if (tag.Length > 25)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(parameters.Tags), tag, "a tags length must be <= 25").Log(TwitchApi.GetLogger());
+                    throw new ArgumentOutOfRangeException(nameof(parameters.Tags), tag, "a tags length must be <= 25");
                 }
             }
         }
@@ -267,20 +255,22 @@ public sealed partial record Channel
             {
                 if (ccl is null)
                 {
-                    throw new ArgumentNullException(nameof(parameters.ContentClassificationLabels), "a content classification label entry may not be null").Log(TwitchApi.GetLogger());
+                    throw new ArgumentNullException(nameof(parameters.ContentClassificationLabels), "a content classification label entry may not be null");
                 }
 
                 if (ccl.Id is null)
                 {
-                    throw new ArgumentNullException(nameof(ContentClassificationLabel.Id)).Log(TwitchApi.GetLogger());
+                    throw new ArgumentNullException(nameof(ContentClassificationLabel.Id));
                 }
 
                 if (ccl.IsEnabled is null)
                 {
-                    throw new ArgumentNullException(nameof(ContentClassificationLabel.IsEnabled)).Log(TwitchApi.GetLogger());
+                    throw new ArgumentNullException(nameof(ContentClassificationLabel.IsEnabled));
                 }
             }
         }
+
+        session.RequireUserToken(Scope.ChannelManageBroadcast);
 
         if (parameters.Delay.HasValue && Math.Clamp(parameters.Delay.Value, 0, 900) != parameters.Delay.Value)
         {

@@ -23,7 +23,7 @@ namespace StreamActions.Twitch.Api.EventSub;
 /// <summary>
 /// The parameters for <see cref="Conduit.CreateConduits(Common.TwitchSession, ConduitCreationParameters)"/>.
 /// </summary>
-public record ConduitCreationParameters
+public sealed record ConduitCreationParameters
 {
     /// <summary>
     /// The number of shards to associate with this conduit.

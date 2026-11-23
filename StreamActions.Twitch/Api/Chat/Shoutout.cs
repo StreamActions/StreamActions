@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -91,29 +90,27 @@ public sealed record Shoutout
     /// </remarks>
     public static async Task<JsonApiResponse?> SendShoutout(TwitchSession session, string fromBroadcasterId, string toBroadcasterId, string moderatorId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(fromBroadcasterId))
         {
-            throw new ArgumentNullException(nameof(fromBroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(fromBroadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(toBroadcasterId))
         {
-            throw new ArgumentNullException(nameof(toBroadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(toBroadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(moderatorId))
         {
-            throw new ArgumentNullException(nameof(moderatorId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(moderatorId));
         }
 
         session.RequireUserOrAppToken(Scope.ModeratorManageShoutouts);
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, Util.BuildUri(new("/chat/shoutouts", UriKind.Relative), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId }, { "moderator_id", moderatorId } }), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/chat/shoutouts", UriKind.Relative), new() { { "from_broadcaster_id", fromBroadcasterId }, { "to_broadcaster_id", toBroadcasterId }, { "moderator_id", moderatorId } });
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

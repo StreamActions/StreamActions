@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.EventSub.Objects;
 using System.Collections.Specialized;
@@ -142,14 +141,11 @@ public sealed record ConduitShard
     /// </remarks>
     public static async Task<ResponseData<ConduitShard>?> GetConduitShards(TwitchSession session, Guid conduitId, ShardStatus? status = null, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (conduitId == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(conduitId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(conduitId));
         }
 
         session.RequireAppToken();
@@ -210,31 +206,25 @@ public sealed record ConduitShard
     [SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "Intentionally targeting sub-property")]
     public static async Task<ConduitShardUpdateResponse?> UpdateConduitShards(TwitchSession session, ConduitShardUpdateParameters parameters)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
-        if (parameters is null)
-        {
-            throw new ArgumentNullException(nameof(parameters)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(parameters);
 
         if (!parameters.ConduitId.HasValue || parameters.ConduitId == Guid.Empty)
         {
-            throw new ArgumentNullException(nameof(parameters.ConduitId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.ConduitId));
         }
 
         if (parameters.Shards is null)
         {
-            throw new ArgumentNullException(nameof(parameters.Shards)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(parameters.Shards));
         }
 
         {
-            int parametersShardsCount = parameters.Shards.Count();
+            int parametersShardsCount = parameters.Shards.Count;
             if (parametersShardsCount > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(parameters.Shards), parametersShardsCount, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(parameters.Shards), parametersShardsCount, "must have a count <= 100");
             }
         }
 
@@ -242,12 +232,12 @@ public sealed record ConduitShard
         {
             if (string.IsNullOrWhiteSpace(shard.Id))
             {
-                throw new ArgumentNullException(nameof(shard.Id)).Log(TwitchApi.GetLogger());
+                throw new ArgumentNullException(nameof(shard.Id));
             }
 
             if (shard.Transport is null)
             {
-                throw new ArgumentNullException(nameof(shard.Transport)).Log(TwitchApi.GetLogger());
+                throw new ArgumentNullException(nameof(shard.Transport));
             }
         }
 

@@ -74,7 +74,7 @@ public class LinearBackoffTests
         var backoff = new LinearBackoff(initial, max, step);
 
         // Assert
-        _ = backoff.IntialDuration.Should().Be(initial);
+        _ = backoff.InitialDuration.Should().Be(initial);
         _ = backoff.MaxDuration.Should().Be(max);
         _ = backoff.StepSize.Should().Be(step);
         _ = backoff.NextDuration.Should().Be(initial);

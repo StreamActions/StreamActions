@@ -17,6 +17,7 @@
  */
 
 using System.Text.Json.Serialization;
+using ApiAnnouncement = StreamActions.Twitch.Api.Chat.Announcement;
 
 namespace StreamActions.Twitch.EventSub.Channel.Chat.Objects;
 
@@ -29,5 +30,5 @@ public sealed record Announcement
     /// Color of the announcement.
     /// </summary>
     [JsonPropertyName("color")]
-    public string? Color { get; init; }
+    public ApiAnnouncement.AnnouncementColor? Color { get; init; }
 }

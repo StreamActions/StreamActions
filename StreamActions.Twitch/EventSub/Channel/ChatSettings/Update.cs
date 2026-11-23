@@ -85,6 +85,12 @@ public sealed record Update : IEventSubType
     public int? SlowModeWaitTimeSeconds { get; init; }
 
     /// <summary>
+    /// The amount of time that users need to wait between sending messages.
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan? SlowModeWaitTime => this.SlowModeWaitTimeSeconds.HasValue ? TimeSpan.FromSeconds(this.SlowModeWaitTimeSeconds.Value) : null;
+
+    /// <summary>
     /// A Boolean value that determines whether only users that subscribe to the broadcaster's channel can talk in the chat room.
     /// </summary>
     [JsonPropertyName("subscriber_mode")]

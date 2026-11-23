@@ -19,7 +19,6 @@
 using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Common.Net;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
@@ -190,14 +189,11 @@ public sealed record Subscription
     /// </remarks>
     public static async Task<SubscriptionResponse?> GetBroadcasterSubscriptions(TwitchSession session, string broadcasterId, IEnumerable<string>? userId = null, int first = 20, string? before = null, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         IReadOnlyList<string>? userIdList = userId as IReadOnlyList<string> ?? userId?.ToArray();
@@ -205,23 +201,13 @@ public sealed record Subscription
         {
             if (userIdList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(userId), userIdList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(userId), userIdList.Count, "must have a count <= 100");
             }
         }
 
-        session.RequireUserToken(Scope.ChannelReadSubscriptions);
-
-        first = Math.Clamp(first, 1, 100);
-
-        NameValueCollection queryParams = new()
-        {
-            { "broadcaster_id", broadcasterId },
-            { "first", first.ToString(CultureInfo.InvariantCulture) }
-        };
-
+        List<string> userIds = [];
         if (userIdList is not null && userIdList.Count > 0)
         {
-            List<string> userIds = [];
             foreach (string pollId in userIdList)
             {
                 if (!string.IsNullOrWhiteSpace(pollId))
@@ -234,24 +220,37 @@ public sealed record Subscription
             {
                 if (!string.IsNullOrWhiteSpace(after))
                 {
-                    throw new InvalidOperationException($"{nameof(userId)} can not be used at the same time as {nameof(after)}").Log(TwitchApi.GetLogger());
+                    throw new InvalidOperationException($"{nameof(userId)} can not be used at the same time as {nameof(after)}");
                 }
                 else if (!string.IsNullOrWhiteSpace(before))
                 {
-                    throw new InvalidOperationException($"{nameof(userId)} can not be used at the same time as {nameof(before)}").Log(TwitchApi.GetLogger());
+                    throw new InvalidOperationException($"{nameof(userId)} can not be used at the same time as {nameof(before)}");
                 }
-
-                queryParams.Add("user_id", userIds);
             }
+        }
+
+        if (!string.IsNullOrWhiteSpace(before) && !string.IsNullOrWhiteSpace(after))
+        {
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after));
+        }
+
+        session.RequireUserToken(Scope.ChannelReadSubscriptions);
+
+        first = Math.Clamp(first, 1, 100);
+
+        NameValueCollection queryParams = new()
+        {
+            { "broadcaster_id", broadcasterId },
+            { "first", first.ToString(CultureInfo.InvariantCulture) }
+        };
+
+        if (userIds.Count != 0)
+        {
+            queryParams.Add("user_id", userIds);
         }
 
         if (!string.IsNullOrWhiteSpace(before))
         {
-            if (!string.IsNullOrWhiteSpace(after))
-            {
-                throw new InvalidOperationException($"{nameof(before)} can not be used at the same time as {nameof(after)}").Log(TwitchApi.GetLogger());
-            }
-
             queryParams.Add("before", before);
         }
 
@@ -304,19 +303,16 @@ public sealed record Subscription
     /// </remarks>
     public static async Task<SubscriptionResponse?> CheckUserSubscription(TwitchSession session, string broadcasterId, string userId)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         session.RequireUserToken(Scope.UserReadSubscriptions);

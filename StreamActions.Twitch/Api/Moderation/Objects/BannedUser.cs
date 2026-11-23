@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -127,25 +126,22 @@ public sealed record BannedUser
     /// </remarks>
     public static async Task<ResponseData<BannedUser>?> GetBannedUsers(TwitchSession session, string broadcasterId, IEnumerable<string>? userIds = null, int first = 20, string? after = null, string? before = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(broadcasterId))
         {
-            throw new ArgumentNullException(nameof(broadcasterId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(broadcasterId));
         }
 
         List<string> userIdList = userIds?.ToList() ?? [];
         if (userIdList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(userIds), userIdList.Count, "The total number of user IDs must not exceed 100.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(userIds), userIdList.Count, "The total number of user IDs must not exceed 100.");
         }
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after)).Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after));
         }
 
         session.RequireUserOrAppToken(Scope.ModerationRead, Scope.ModeratorManageBannedUsers, Scope.ModeratorReadBannedUsers);
@@ -170,7 +166,8 @@ public sealed record BannedUser
             queryParameters.Add("before", before);
         }
 
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, Util.BuildUri(new("/moderation/banned", UriKind.Relative), queryParameters), session).ConfigureAwait(false);
+        Uri uri = Util.BuildUri(new("/moderation/banned", UriKind.Relative), queryParameters);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Get, uri, session).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<ResponseData<BannedUser>>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.ChannelPointsAutomaticRewardRedemption.Objects;
@@ -29,17 +30,54 @@ public sealed record Reward
     /// The type of reward.
     /// </summary>
     [JsonPropertyName("type")]
-    public string? Type { get; init; }
+    public RewardTypes? Type { get; init; }
 
     /// <summary>
     /// The reward cost.
     /// </summary>
     [JsonPropertyName("cost")]
-    public int Cost { get; init; }
+    public int? Cost { get; init; }
 
     /// <summary>
     /// An object that contains the unlocked emote if the reward is an unlocked emote.
     /// </summary>
     [JsonPropertyName("unlocked_emote")]
     public UnlockedEmote? UnlockedEmote { get; init; }
+
+    /// <summary>
+    /// The type of automatic reward.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<RewardTypes>))]
+    public enum RewardTypes
+    {
+        /// <summary>
+        /// Single message bypass sub mode.
+        /// </summary>
+        [JsonCustomEnum("single_message_bypass_sub_mode")]
+        SingleMessageBypassSubMode,
+
+        /// <summary>
+        /// Send highlighted message.
+        /// </summary>
+        [JsonCustomEnum("send_highlighted_message")]
+        SendHighlightedMessage,
+
+        /// <summary>
+        /// Random sub emote unlock.
+        /// </summary>
+        [JsonCustomEnum("random_sub_emote_unlock")]
+        RandomSubEmoteUnlock,
+
+        /// <summary>
+        /// Chosen sub emote unlock.
+        /// </summary>
+        [JsonCustomEnum("chosen_sub_emote_unlock")]
+        ChosenSubEmoteUnlock,
+
+        /// <summary>
+        /// Chosen modified sub emote unlock.
+        /// </summary>
+        [JsonCustomEnum("chosen_modified_sub_emote_unlock")]
+        ChosenModifiedSubEmoteUnlock
+    }
 }

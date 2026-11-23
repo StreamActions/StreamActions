@@ -31,11 +31,11 @@ public sealed record MaxPerUserPerStream
     /// Is the setting enabled.
     /// </summary>
     [JsonPropertyName("is_enabled")]
-    public bool IsEnabled { get; init; }
+    public bool? IsEnabled { get; init; }
 
     /// <summary>
     /// The max per user per stream limit.
     /// </summary>
     [JsonPropertyName("value")]
-    public int Value { get; init; }
+    public int? Value { get; init; }
 }

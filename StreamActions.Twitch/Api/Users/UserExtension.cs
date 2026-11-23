@@ -19,7 +19,6 @@
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -123,10 +122,7 @@ public sealed record UserExtension
     /// </remarks>
     public static async Task<ResponseData<UserExtension>?> GetUserExtensions(TwitchSession session)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         session.RequireUserToken(Scope.UserReadBroadcast, Scope.UserEditBroadcast);
 

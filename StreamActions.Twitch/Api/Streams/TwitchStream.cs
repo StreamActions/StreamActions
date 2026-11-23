@@ -20,7 +20,6 @@ using StreamActions.Common;
 using StreamActions.Common.Exceptions;
 using StreamActions.Common.Extensions;
 using StreamActions.Common.Json.Serialization;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Exceptions;
 using StreamActions.Twitch.OAuth;
@@ -90,7 +89,7 @@ public sealed record TwitchStream
     /// The tags applied to the stream.
     /// </summary>
     [JsonPropertyName("tags")]
-    public IEnumerable<string>? Tags { get; init; }
+    public IReadOnlyList<string>? Tags { get; init; }
 
     /// <summary>
     /// The number of users watching the stream.
@@ -130,7 +129,7 @@ public sealed record TwitchStream
     /// </remarks>
     [JsonPropertyName("tag_ids")]
     [Obsolete("Use Tags instead.")]
-    public IEnumerable<Guid>? TagIds { get; init; }
+    public IReadOnlyList<Guid>? TagIds { get; init; }
 
     /// <summary>
     /// Defines the type of stream.
@@ -187,38 +186,35 @@ public sealed record TwitchStream
     /// </remarks>
     public static async Task<ResponseData<TwitchStream>?> GetStreams(TwitchSession session, IEnumerable<string>? userIds = null, IEnumerable<string>? userLogins = null, IEnumerable<string>? gameIds = null, StreamTypes type = StreamTypes.All, IEnumerable<string>? languages = null, int first = 20, string? before = null, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         List<string> userIdList = userIds?.ToList() ?? [];
         if (userIdList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(userIds), userIdList.Count, "The number of user IDs must not exceed 100.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(userIds), userIdList.Count, "The number of user IDs must not exceed 100.");
         }
 
         List<string> userLoginList = userLogins?.ToList() ?? [];
         if (userLoginList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(userLogins), userLoginList.Count, "The number of user login names must not exceed 100.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(userLogins), userLoginList.Count, "The number of user login names must not exceed 100.");
         }
 
         List<string> gameIdList = gameIds?.ToList() ?? [];
         if (gameIdList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(gameIds), gameIdList.Count, "The number of game IDs must not exceed 100.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(gameIds), gameIdList.Count, "The number of game IDs must not exceed 100.");
         }
 
         List<string> languageList = languages?.ToList() ?? [];
         if (languageList.Count > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(languages), languageList.Count, "The number of languages must not exceed 100.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(languages), languageList.Count, "The number of languages must not exceed 100.");
         }
 
         if (!string.IsNullOrWhiteSpace(before) && !string.IsNullOrWhiteSpace(after))
         {
-            throw new InvalidOperationException("The before and after parameters are mutually exclusive.").Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after));
         }
 
         session.RequireUserOrAppToken();
@@ -304,14 +300,11 @@ public sealed record TwitchStream
     /// </remarks>
     public static async Task<ResponseData<TwitchStream>?> GetFollowedStreams(TwitchSession session, string userId, int first = 100, string? after = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            throw new ArgumentNullException(nameof(userId)).Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(userId));
         }
 
         session.RequireUserToken(Scope.UserReadFollows);

@@ -90,7 +90,7 @@ public sealed record Notification : IEventSubType
     /// The color of the user's name in the chat room.
     /// </summary>
     [JsonPropertyName("badges")]
-    public IEnumerable<Badge>? Badges { get; init; }
+    public IReadOnlyList<Badge>? Badges { get; init; }
 
     /// <summary>
     /// The message Twitch shows in the chat room for this notice.
@@ -102,7 +102,7 @@ public sealed record Notification : IEventSubType
     /// A UUID that identifies the message.
     /// </summary>
     [JsonPropertyName("message_id")]
-    public string? MessageId { get; init; }
+    public Guid? MessageId { get; init; }
 
     /// <summary>
     /// The structured chat message.
@@ -228,13 +228,13 @@ public sealed record Notification : IEventSubType
     /// Optional. The UUID that identifies the source message from the channel the message was sent from.
     /// </summary>
     [JsonPropertyName("source_message_id")]
-    public string? SourceMessageId { get; init; }
+    public Guid? SourceMessageId { get; init; }
 
     /// <summary>
     /// Optional. The list of chat badges for the chatter in the channel the message was sent from.
     /// </summary>
     [JsonPropertyName("source_badges")]
-    public IEnumerable<Badge>? SourceBadges { get; init; }
+    public IReadOnlyList<Badge>? SourceBadges { get; init; }
 
     /// <summary>
     /// Optional. Whether the notification is only sent to the source channel.

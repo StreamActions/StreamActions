@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -92,10 +91,7 @@ public sealed record Game
     /// </remarks>
     public static async Task<ResponseData<Game>?> GetGames(TwitchSession session, IEnumerable<string>? gameIds = null, IEnumerable<string>? gameNames = null, IEnumerable<string>? igdbIds = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         IReadOnlyList<string> gameIdList = gameIds as IReadOnlyList<string> ?? gameIds?.ToArray() ?? [];
         IReadOnlyList<string> gameNameList = gameNames as IReadOnlyList<string> ?? gameNames?.ToArray() ?? [];
@@ -105,12 +101,12 @@ public sealed record Game
 
         if (totalIds == 0)
         {
-            throw new ArgumentNullException(nameof(gameIds) + "," + nameof(gameNames) + "," + nameof(igdbIds), "At least one game ID, game name, or IGDB ID must be provided.").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(gameIds) + "," + nameof(gameNames) + "," + nameof(igdbIds), "At least one game ID, game name, or IGDB ID must be provided.");
         }
 
         if (totalIds > 100)
         {
-            throw new ArgumentOutOfRangeException(nameof(gameIds) + "," + nameof(gameNames) + "," + nameof(igdbIds), totalIds, "The total number of IDs, names, and IGDB IDs must not exceed 100.").Log(TwitchApi.GetLogger());
+            throw new ArgumentOutOfRangeException(nameof(gameIds) + "," + nameof(gameNames) + "," + nameof(igdbIds), totalIds, "The total number of IDs, names, and IGDB IDs must not exceed 100.");
         }
 
         session.RequireUserOrAppToken();
@@ -146,6 +142,7 @@ public sealed record Game
     /// <param name="before">The cursor that identifies the page of results to retrieve.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="Game"/> containing the response.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="after"/> and <paramref name="before"/> were both defined; <see cref="TwitchSession.Token"/> or <see cref="TwitchToken.OAuth"/> is <see langword="null"/> or whitespace.</exception>
     /// <remarks>
     /// <para>
     /// Response Codes:
@@ -167,9 +164,11 @@ public sealed record Game
     /// </remarks>
     public static async Task<ResponseData<Game>?> GetTopGames(TwitchSession session, int first = 20, string? after = null, string? before = null)
     {
-        if (session is null)
+        ArgumentNullException.ThrowIfNull(session);
+
+        if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after));
         }
 
         session.RequireUserOrAppToken();

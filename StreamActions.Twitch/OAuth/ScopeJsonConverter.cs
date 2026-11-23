@@ -29,7 +29,18 @@ public sealed class ScopeJsonConverter : JsonConverter<Scope>
     #region Public Methods
 
     /// <inheritdoc/>
-    public override Scope? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => Scope.Scopes.GetValueOrDefault(reader.GetString()!);
+    public override Scope? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType is JsonTokenType.Null)
+        {
+            return null;
+        }
+
+        string? value = reader.GetString();
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : Scope.Scopes.GetValueOrDefault(value) ?? Scope.CreateUnknown(value);
+    }
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, Scope value, JsonSerializerOptions options) => writer?.WriteStringValue(value?.Name);

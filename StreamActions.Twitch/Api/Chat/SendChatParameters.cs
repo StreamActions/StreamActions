@@ -16,7 +16,6 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Text.Json.Serialization;
 
@@ -93,10 +92,7 @@ public sealed record SendChatParameters
     /// <returns>The altered message.</returns>
     public static string ConvertMessageToSlashMe(string message)
     {
-        if (message is null)
-        {
-            throw new ArgumentNullException(nameof(message)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(message);
 
         if (message.StartsWith("/me "))
         {

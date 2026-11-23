@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using System.Text.Json.Serialization;
@@ -76,5 +77,48 @@ public sealed record Update : IEventSubType
     /// This setting determines how the guests are laid out within a browser source.
     /// </summary>
     [JsonPropertyName("group_layout")]
-    public string? GroupLayout { get; init; }
+    public GroupLayouts? GroupLayout { get; init; }
+
+    /// <summary>
+    /// The group layout for Guest Star browser sources.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<GroupLayouts>))]
+    public enum GroupLayouts
+    {
+        /// <summary>
+        /// Tiled layout.
+        /// </summary>
+        [JsonCustomEnum("tiled")]
+        Tiled,
+
+        /// <summary>
+        /// Screenshare layout.
+        /// </summary>
+        [JsonCustomEnum("screenshare")]
+        Screenshare,
+
+        /// <summary>
+        /// Horizontal top layout.
+        /// </summary>
+        [JsonCustomEnum("horizontal_top")]
+        HorizontalTop,
+
+        /// <summary>
+        /// Horizontal bottom layout.
+        /// </summary>
+        [JsonCustomEnum("horizontal_bottom")]
+        HorizontalBottom,
+
+        /// <summary>
+        /// Vertical left layout.
+        /// </summary>
+        [JsonCustomEnum("vertical_left")]
+        VerticalLeft,
+
+        /// <summary>
+        /// Vertical right layout.
+        /// </summary>
+        [JsonCustomEnum("vertical_right")]
+        VerticalRight
+    }
 }

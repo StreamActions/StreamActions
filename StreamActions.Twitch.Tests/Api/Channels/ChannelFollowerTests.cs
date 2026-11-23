@@ -118,15 +118,44 @@ public sealed class ChannelFollowerTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="ChannelFollower.GetChannelFollowers"/> throws <see cref="TokenTypeException"/> when session is not a user token.
+    /// Tests that <see cref="ChannelFollower.GetChannelFollowers"/> throws <see cref="TokenTypeException"/> when session is not a user or app token.
     /// </summary>
     [Fact]
     [Trait("Member", "GetChannelFollowers")]
     public async Task GetChannelFollowers_WhenSessionIsNotUserToken_ThrowsTokenTypeException()
     {
-        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        using TwitchSession session = TestTokenFactory.CreateJwtSession();
         Func<Task> action = async () => await ChannelFollower.GetChannelFollowers(session, "123456").ConfigureAwait(true);
         _ = await action.Should().ThrowAsync<TokenTypeException>().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="ChannelFollower.GetChannelFollowers"/> accepts an app token and sends a GET request.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetChannelFollowers")]
+    public async Task GetChannelFollowers_WhenSessionIsAppToken_SendsGetAndReturnsFollowers()
+    {
+        this._fixture.RegisterJsonResponse("GET", "/helix/channels/followers", new
+        {
+            total = 8,
+            data = Array.Empty<object>(),
+            pagination = new { }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<ChannelFollower>? response = await ChannelFollower.GetChannelFollowers(session, "123456").ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Total.Should().Be(8);
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Should().BeEmpty();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Method.Should().Be("GET");
+        _ = request.Path.Should().Be("/helix/channels/followers");
+        _ = request.QueryString.Should().Contain("broadcaster_id=123456");
     }
 
     /// <summary>

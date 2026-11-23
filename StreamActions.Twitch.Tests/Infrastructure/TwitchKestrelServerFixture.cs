@@ -492,7 +492,11 @@ public sealed class TwitchKestrelServerFixture : IAsyncLifetime, IDisposable, IA
 
         if (HttpMethods.IsPost(context.Request.Method) && string.Equals(normalizedPath, "/webhook", StringComparison.OrdinalIgnoreCase))
         {
-            EventSubWebhookResult webhookResult = await EventSubService.ProcessWebhook(context.Request, this.WebhookSecret).ConfigureAwait(false);
+            Dictionary<string, string?> webhookHeaders = context.Request.Headers.ToDictionary(
+                static kvp => kvp.Key,
+                static kvp => kvp.Value.FirstOrDefault(),
+                StringComparer.OrdinalIgnoreCase);
+            EventSubWebhookResult webhookResult = await EventSubService.ProcessWebhook(webhookHeaders, context.Request.Body, this.WebhookSecret, cancellationToken: context.RequestAborted).ConfigureAwait(false);
             context.Response.StatusCode = webhookResult.StatusCode ?? StatusCodes.Status200OK;
             if (!string.IsNullOrWhiteSpace(webhookResult.ContentType))
             {

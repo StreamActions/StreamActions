@@ -76,7 +76,7 @@ public sealed record Message : IEventSubType
     /// The tier of the users subscription.
     /// </summary>
     [JsonPropertyName("tier")]
-    public string? Tier { get; init; }
+    public Subscribe.SubscriptionTiers? Tier { get; init; }
 
     /// <summary>
     /// An object that contains the resubscription message and emote information needed to recreate the message.

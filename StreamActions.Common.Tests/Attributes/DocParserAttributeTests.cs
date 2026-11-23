@@ -23,7 +23,7 @@ namespace StreamActions.Common.Tests.Attributes;
 /// <summary>
 /// Performs unit testing on methods in <see cref="DocParserAttribute"/>.
 /// </summary>
-public class ETagAttributeTests
+public class DocParserAttributeTests
 {
     #region Constructor
 

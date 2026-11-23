@@ -40,11 +40,11 @@ public sealed record Grant : IEventSubType
     /// Individual event ID, as assigned by EventSub.
     /// </summary>
     [JsonPropertyName("id")]
-    public string? Id { get; init; }
+    public Guid? Id { get; init; }
 
     /// <summary>
     /// Entitlement object data.
     /// </summary>
     [JsonPropertyName("data")]
-    public IReadOnlyCollection<Objects.Entitlement>? Data { get; init; }
+    public IReadOnlyList<Objects.Entitlement>? Data { get; init; }
 }

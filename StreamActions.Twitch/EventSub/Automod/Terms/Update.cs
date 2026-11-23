@@ -89,36 +89,36 @@ public sealed record Update : IEventSubType
     /// The list of terms that had a status change.
     /// </summary>
     [JsonPropertyName("terms")]
-    public IEnumerable<string>? Terms { get; init; }
-}
-
-/// <summary>
-/// The status change applied to the terms.
-/// </summary>
-[JsonConverter(typeof(JsonCustomEnumConverter<TermAction>))]
-public enum TermAction
-{
-    /// <summary>
-    /// A term was added to the permitted list.
-    /// </summary>
-    [JsonCustomEnum("add_permitted")]
-    AddPermitted,
+    public IReadOnlyList<string>? Terms { get; init; }
 
     /// <summary>
-    /// A term was removed from the permitted list.
+    /// The status change applied to the terms.
     /// </summary>
-    [JsonCustomEnum("remove_permitted")]
-    RemovePermitted,
+    [JsonConverter(typeof(JsonCustomEnumConverter<TermAction>))]
+    public enum TermAction
+    {
+        /// <summary>
+        /// A term was added to the permitted list.
+        /// </summary>
+        [JsonCustomEnum("add_permitted")]
+        AddPermitted,
 
-    /// <summary>
-    /// A term was added to the blocked list.
-    /// </summary>
-    [JsonCustomEnum("add_blocked")]
-    AddBlocked,
+        /// <summary>
+        /// A term was removed from the permitted list.
+        /// </summary>
+        [JsonCustomEnum("remove_permitted")]
+        RemovePermitted,
 
-    /// <summary>
-    /// A term was removed from the blocked list.
-    /// </summary>
-    [JsonCustomEnum("remove_blocked")]
-    RemoveBlocked
+        /// <summary>
+        /// A term was added to the blocked list.
+        /// </summary>
+        [JsonCustomEnum("add_blocked")]
+        AddBlocked,
+
+        /// <summary>
+        /// A term was removed from the blocked list.
+        /// </summary>
+        [JsonCustomEnum("remove_blocked")]
+        RemoveBlocked
+    }
 }

@@ -59,7 +59,7 @@ public sealed record SubGift
     /// The type of subscription plan being used.
     /// </summary>
     [JsonPropertyName("sub_tier")]
-    public string? SubTier { get; init; }
+    public Subscribe.SubscriptionTiers? SubTier { get; init; }
 
     /// <summary>
     /// Optional. The ID of the associated community gift. Null if not associated with a community gift.

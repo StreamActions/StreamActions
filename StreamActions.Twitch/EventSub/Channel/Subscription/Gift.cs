@@ -82,7 +82,7 @@ public sealed record Gift : IEventSubType
     /// The tier of subscriptions in the subscription gift.
     /// </summary>
     [JsonPropertyName("tier")]
-    public string? Tier { get; init; }
+    public Subscribe.SubscriptionTiers? Tier { get; init; }
 
     /// <summary>
     /// The number of subscriptions gifted by this user in the channel. This value is null for anonymous gifts or if the gifter has opted out of sharing this information.

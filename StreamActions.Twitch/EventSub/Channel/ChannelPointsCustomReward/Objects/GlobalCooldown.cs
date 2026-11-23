@@ -29,11 +29,17 @@ public sealed record GlobalCooldown
     /// Is the setting enabled.
     /// </summary>
     [JsonPropertyName("is_enabled")]
-    public bool IsEnabled { get; init; }
+    public bool? IsEnabled { get; init; }
 
     /// <summary>
     /// The cooldown in seconds.
     /// </summary>
     [JsonPropertyName("seconds")]
-    public int Seconds { get; init; }
+    public int? Seconds { get; init; }
+
+    /// <summary>
+    /// The cooldown period.
+    /// </summary>
+    [JsonIgnore]
+    public TimeSpan? Cooldown => this.Seconds.HasValue ? TimeSpan.FromSeconds(this.Seconds.Value) : null;
 }

@@ -72,11 +72,22 @@ public sealed class EventSubWebhookTests : IDisposable
 
     [Fact]
     [Trait("Member", "ProcessWebhook")]
-    public async Task ProcessWebhook_WhenRequestIsNull_ThrowsArgumentNullException()
+    public async Task ProcessWebhook_WhenHeadersIsNull_ThrowsArgumentNullException()
     {
-        Func<Task> action = async () => await EventSubService.ProcessWebhook(null!, "secret").ConfigureAwait(true);
+        using MemoryStream body = new();
+        Func<Task> action = async () => await EventSubService.ProcessWebhook(null!, body, "secret").ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
-            .WithParameterName("request");
+            .WithParameterName("headers");
+    }
+
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public async Task ProcessWebhook_WhenBodyIsNull_ThrowsArgumentNullException()
+    {
+        Dictionary<string, string?> headers = new(StringComparer.OrdinalIgnoreCase);
+        Func<Task> action = async () => await EventSubService.ProcessWebhook(headers, (Stream)null!, "secret").ConfigureAwait(true);
+        _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
+            .WithParameterName("body");
     }
 
     [Theory]
@@ -86,14 +97,37 @@ public sealed class EventSubWebhookTests : IDisposable
     [InlineData("   ")]
     public async Task ProcessWebhook_WhenSecretIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSecret)
     {
-        DefaultHttpContext context = new();
-        Func<Task> action = async () => await EventSubService.ProcessWebhook(context.Request, invalidSecret!).ConfigureAwait(true);
+        Dictionary<string, string?> headers = new(StringComparer.OrdinalIgnoreCase);
+        using MemoryStream body = new();
+        Func<Task> action = async () => await EventSubService.ProcessWebhook(headers, body, invalidSecret!).ConfigureAwait(true);
         _ = (await action.Should().ThrowAsync<ArgumentNullException>().ConfigureAwait(true))
             .WithParameterName("secret");
     }
 
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public void ProcessWebhook_SpanOverload_WhenHeadersIsNull_ThrowsArgumentNullException()
+    {
+        Action action = () => _ = EventSubService.ProcessWebhook(null!, [], "secret");
+        _ = action.Should().Throw<ArgumentNullException>()
+            .And.ParamName.Should().Be("headers");
+    }
+
+    [Theory]
+    [Trait("Member", "ProcessWebhook")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ProcessWebhook_SpanOverload_WhenSecretIsNullOrWhitespace_ThrowsArgumentNullException(string? invalidSecret)
+    {
+        Dictionary<string, string?> headers = new(StringComparer.OrdinalIgnoreCase);
+        Action action = () => _ = EventSubService.ProcessWebhook(headers, [], invalidSecret!);
+        _ = action.Should().Throw<ArgumentNullException>()
+            .And.ParamName.Should().Be("secret");
+    }
+
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> returns a 200 OK status with the challenge string body when processing a verification request.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(IReadOnlyDictionary{string, string?}, Stream, string, TimeProvider?, CancellationToken)"/> returns a 200 OK status with the challenge string body when processing a verification request.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -104,26 +138,29 @@ public sealed class EventSubWebhookTests : IDisposable
         string challenge = "pogchamp-challenge-token-12345";
         string body = $$$"""{"challenge":"{{{challenge}}}","subscription":{"id":"sub-1","status":"webhook_callback_verification_pending","type":"channel.follow","version":"2","cost":0}}""";
 
-        DefaultHttpContext context = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers, MemoryStream bodyStream) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp,
             "webhook_callback_verification",
             body);
 
-        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+        await using (bodyStream.ConfigureAwait(true))
+        {
+            EventSubWebhookResult result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = result.Should().NotBeNull();
-        _ = result.IsVerified.Should().BeTrue();
-        _ = result.IsDuplicate.Should().BeNull();
-        _ = result.StatusCode.Should().Be(StatusCodes.Status200OK);
-        _ = result.ContentType.Should().Be("text/plain");
-        _ = result.Body.Should().Be(challenge);
-        _ = result.Event.Should().BeNull();
+            _ = result.Should().NotBeNull();
+            _ = result.IsVerified.Should().BeTrue();
+            _ = result.IsDuplicate.Should().BeNull();
+            _ = result.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            _ = result.ContentType.Should().Be("text/plain");
+            _ = result.Body.Should().Be(challenge);
+            _ = result.Event.Should().BeNull();
+        }
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> over HTTP returns a 200 OK response with the challenge string.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(IReadOnlyDictionary{string, string?}, Stream, string, TimeProvider?, CancellationToken)"/> over HTTP returns a 200 OK response with the challenge string.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -153,7 +190,7 @@ public sealed class EventSubWebhookTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> parses and returns a typed notification event with full metadata and subscription information.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(IReadOnlyDictionary{string, string?}, Stream, string, TimeProvider?, CancellationToken)"/> parses and returns a typed notification event with full metadata and subscription information.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -191,7 +228,7 @@ public sealed class EventSubWebhookTests : IDisposable
         }
         """;
 
-        DefaultHttpContext context = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers, MemoryStream bodyStream) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp,
@@ -200,12 +237,16 @@ public sealed class EventSubWebhookTests : IDisposable
             subscriptionType: "channel.follow",
             subscriptionVersion: "2");
 
-        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+        EventSubWebhookResult result;
+        await using (bodyStream.ConfigureAwait(true))
+        {
+            result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
+        }
 
         _ = result.Should().NotBeNull();
         _ = result.IsVerified.Should().BeTrue();
         _ = result.IsDuplicate.Should().BeFalse();
-        _ = result.StatusCode.Should().Be(StatusCodes.Status202Accepted);
+        _ = result.StatusCode.Should().Be((int)HttpStatusCode.Accepted);
         _ = result.ContentType.Should().BeNull();
         _ = result.Body.Should().BeNull();
         _ = result.Event.Should().NotBeNull();
@@ -301,7 +342,7 @@ public sealed class EventSubWebhookTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> parses and returns a revocation event with metadata and subscription details.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(IReadOnlyDictionary{string, string?}, Stream, string, TimeProvider?, CancellationToken)"/> parses and returns a revocation event with metadata and subscription details.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -330,7 +371,7 @@ public sealed class EventSubWebhookTests : IDisposable
         }
         """;
 
-        DefaultHttpContext context = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers, MemoryStream bodyStream) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp,
@@ -339,12 +380,16 @@ public sealed class EventSubWebhookTests : IDisposable
             subscriptionType: "channel.follow",
             subscriptionVersion: "2");
 
-        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+        EventSubWebhookResult result;
+        await using (bodyStream.ConfigureAwait(true))
+        {
+            result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
+        }
 
         _ = result.Should().NotBeNull();
         _ = result.IsVerified.Should().BeTrue();
         _ = result.IsDuplicate.Should().BeFalse();
-        _ = result.StatusCode.Should().Be(StatusCodes.Status202Accepted);
+        _ = result.StatusCode.Should().Be((int)HttpStatusCode.Accepted);
         _ = result.Event.Should().NotBeNull();
 
         EventSubEvent? eventSubEvent = result.Event as EventSubEvent;
@@ -375,7 +420,7 @@ public sealed class EventSubWebhookTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> returns 403 Forbidden when the message timestamp header is invalid or cannot be parsed.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(IReadOnlyDictionary{string, string?}, Stream, string, TimeProvider?, CancellationToken)"/> returns 403 Forbidden when the message timestamp header is invalid or cannot be parsed.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -385,7 +430,7 @@ public sealed class EventSubWebhookTests : IDisposable
         string timestamp = "not-a-valid-timestamp";
         string body = """{"subscription":{"id":"sub-1","type":"channel.follow","version":"2"}}""";
 
-        DefaultHttpContext context = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers, MemoryStream bodyStream) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp,
@@ -394,15 +439,18 @@ public sealed class EventSubWebhookTests : IDisposable
             subscriptionType: "channel.follow",
             subscriptionVersion: "2");
 
-        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+        await using (bodyStream.ConfigureAwait(true))
+        {
+            EventSubWebhookResult result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = result.Should().NotBeNull();
-        _ = result.IsVerified.Should().BeFalse();
-        _ = result.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+            _ = result.Should().NotBeNull();
+            _ = result.IsVerified.Should().BeFalse();
+            _ = result.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+        }
     }
 
     /// <summary>
-    /// Tests that <see cref="EventSubService.ProcessWebhook(HttpRequest, string, TimeProvider?)"/> returns 202 Accepted with a null event when the subscription type is unrecognized.
+    /// Tests that <see cref="EventSubService.ProcessWebhook(IReadOnlyDictionary{string, string?}, Stream, string, TimeProvider?, CancellationToken)"/> returns 202 Accepted with a null event when the subscription type is unrecognized.
     /// </summary>
     [Fact]
     [Trait("Member", "ProcessWebhook")]
@@ -412,7 +460,7 @@ public sealed class EventSubWebhookTests : IDisposable
         string timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
         string body = """{"subscription":{"id":"sub-1","type":"unknown.event.type","version":"1"}}""";
 
-        DefaultHttpContext context = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers, MemoryStream bodyStream) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp,
@@ -421,12 +469,15 @@ public sealed class EventSubWebhookTests : IDisposable
             subscriptionType: "unknown.event.type",
             subscriptionVersion: "1");
 
-        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+        await using (bodyStream.ConfigureAwait(true))
+        {
+            EventSubWebhookResult result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = result.Should().NotBeNull();
-        _ = result.IsVerified.Should().BeTrue();
-        _ = result.StatusCode.Should().Be(StatusCodes.Status202Accepted);
-        _ = result.Event.Should().BeNull();
+            _ = result.Should().NotBeNull();
+            _ = result.IsVerified.Should().BeTrue();
+            _ = result.StatusCode.Should().Be((int)HttpStatusCode.Accepted);
+            _ = result.Event.Should().BeNull();
+        }
     }
 
     [Fact]
@@ -508,7 +559,7 @@ public sealed class EventSubWebhookTests : IDisposable
         }
         """;
 
-        DefaultHttpContext context1 = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers1, MemoryStream bodyStream1) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             duplicateMessageId,
             timestamp,
@@ -517,11 +568,14 @@ public sealed class EventSubWebhookTests : IDisposable
             subscriptionType: "channel.follow",
             subscriptionVersion: "2");
 
-        EventSubWebhookResult firstResult = await EventSubService.ProcessWebhook(context1.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
-        _ = firstResult.IsDuplicate.Should().BeFalse();
-        _ = firstResult.Event.Should().NotBeNull();
+        await using (bodyStream1.ConfigureAwait(true))
+        {
+            EventSubWebhookResult firstResult = await EventSubService.ProcessWebhook(headers1, bodyStream1, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = firstResult.IsDuplicate.Should().BeFalse();
+            _ = firstResult.Event.Should().NotBeNull();
+        }
 
-        DefaultHttpContext context2 = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers2, MemoryStream bodyStream2) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             duplicateMessageId,
             timestamp,
@@ -530,10 +584,13 @@ public sealed class EventSubWebhookTests : IDisposable
             subscriptionType: "channel.follow",
             subscriptionVersion: "2");
 
-        EventSubWebhookResult secondResult = await EventSubService.ProcessWebhook(context2.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
-        _ = secondResult.StatusCode.Should().Be(StatusCodes.Status202Accepted);
-        _ = secondResult.IsDuplicate.Should().BeTrue();
-        _ = secondResult.Event.Should().BeNull();
+        await using (bodyStream2.ConfigureAwait(true))
+        {
+            EventSubWebhookResult secondResult = await EventSubService.ProcessWebhook(headers2, bodyStream2, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = secondResult.StatusCode.Should().Be((int)HttpStatusCode.Accepted);
+            _ = secondResult.IsDuplicate.Should().BeTrue();
+            _ = secondResult.Event.Should().BeNull();
+        }
     }
 
     [Fact]
@@ -617,33 +674,33 @@ public sealed class EventSubWebhookTests : IDisposable
         string timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
         string body = "{\"test\":true}";
 
-        DefaultHttpContext context = new();
+        Dictionary<string, string?> headers = new(StringComparer.OrdinalIgnoreCase);
         if (!omitId)
         {
-            context.Request.Headers["Twitch-Eventsub-Message-Id"] = messageId;
+            headers["Twitch-Eventsub-Message-Id"] = messageId;
         }
 
         if (!omitTimestamp)
         {
-            context.Request.Headers["Twitch-Eventsub-Message-Timestamp"] = timestamp;
+            headers["Twitch-Eventsub-Message-Timestamp"] = timestamp;
         }
 
         if (!omitType)
         {
-            context.Request.Headers["Twitch-Eventsub-Message-Type"] = "notification";
+            headers["Twitch-Eventsub-Message-Type"] = "notification";
         }
 
         if (!omitSignature)
         {
-            context.Request.Headers["Twitch-Eventsub-Message-Signature"] = ComputeHmacSha256(this._fixture.WebhookSecret, messageId, timestamp, body);
+            headers["Twitch-Eventsub-Message-Signature"] = ComputeHmacSha256(this._fixture.WebhookSecret, messageId, timestamp, body);
         }
 
         byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
-        context.Request.Body = new MemoryStream(bodyBytes);
+        using MemoryStream bodyStream = new(bodyBytes);
 
-        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+        EventSubWebhookResult result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = result.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        _ = result.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
         _ = result.IsVerified.Should().BeFalse();
     }
 
@@ -670,17 +727,115 @@ public sealed class EventSubWebhookTests : IDisposable
         string expiredTimestamp = DateTime.UtcNow.AddMinutes(-15).ToString("o", CultureInfo.InvariantCulture);
         string body = "{\"test\":true}";
 
-        DefaultHttpContext context = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers, MemoryStream bodyStream) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             expiredTimestamp,
             "notification",
             body);
 
-        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+        await using (bodyStream.ConfigureAwait(true))
+        {
+            EventSubWebhookResult result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = result.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+            _ = result.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+            _ = result.IsVerified.Should().BeFalse();
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public async Task ProcessWebhook_WhenTimestampInFutureExceedsSkew_ReturnsForbidden()
+    {
+        TestTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        string messageId = Guid.NewGuid().ToString();
+        string futureTimestamp = timeProvider.GetUtcNow().UtcDateTime.AddMinutes(5).ToString("o", CultureInfo.InvariantCulture);
+        string body = "{\"test\":true}";
+
+        (Dictionary<string, string?> headers, MemoryStream bodyStream) = CreateWebhookInput(
+            this._fixture.WebhookSecret,
+            messageId,
+            futureTimestamp,
+            "notification",
+            body);
+
+        await using (bodyStream.ConfigureAwait(true))
+        {
+            EventSubWebhookResult result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, timeProvider, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+            _ = result.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+            _ = result.IsVerified.Should().BeFalse();
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public async Task ProcessWebhook_WhenBodyExceedsMaxSizeStream_ReturnsPayloadTooLarge()
+    {
+        string messageId = Guid.NewGuid().ToString();
+        string timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        byte[] oversized = new byte[(256 * 1024) + 1];
+        Array.Fill(oversized, (byte)'a');
+
+        Dictionary<string, string?> headers = CreateWebhookHeaders(
+            this._fixture.WebhookSecret,
+            messageId,
+            timestamp,
+            "notification",
+            oversized);
+
+        using MemoryStream bodyStream = new(oversized);
+        EventSubWebhookResult result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        _ = result.StatusCode.Should().Be((int)HttpStatusCode.RequestEntityTooLarge);
         _ = result.IsVerified.Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public void ProcessWebhook_WhenBodyExceedsMaxSizeSpan_ReturnsPayloadTooLarge()
+    {
+        string messageId = Guid.NewGuid().ToString();
+        string timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        byte[] oversized = new byte[(256 * 1024) + 1];
+        Array.Fill(oversized, (byte)'a');
+
+        Dictionary<string, string?> headers = CreateWebhookHeaders(
+            this._fixture.WebhookSecret,
+            messageId,
+            timestamp,
+            "notification",
+            oversized);
+
+        EventSubWebhookResult result = EventSubService.ProcessWebhook(headers, oversized.AsSpan(), this._fixture.WebhookSecret);
+
+        _ = result.StatusCode.Should().Be((int)HttpStatusCode.RequestEntityTooLarge);
+        _ = result.IsVerified.Should().BeFalse();
+    }
+
+    [Fact]
+    [Trait("Member", "ProcessWebhook")]
+    public void ProcessWebhook_WhenHeadersCaseSensitiveDictionaryWithLowercaseKeys_VerifiesSuccessfully()
+    {
+        string messageId = Guid.NewGuid().ToString();
+        string timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+        string challenge = "case-insensitive-challenge";
+        string body = $$$"""{"challenge":"{{{challenge}}}"}""";
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
+
+        Dictionary<string, string?> headers = new(StringComparer.Ordinal)
+        {
+            ["twitch-eventsub-message-id"] = messageId,
+            ["twitch-eventsub-message-timestamp"] = timestamp,
+            ["twitch-eventsub-message-type"] = "webhook_callback_verification",
+            ["twitch-eventsub-message-signature"] = ComputeHmacSha256(this._fixture.WebhookSecret, messageId, timestamp, body)
+        };
+
+        EventSubWebhookResult result = EventSubService.ProcessWebhook(headers, bodyBytes.AsSpan(), this._fixture.WebhookSecret);
+
+        _ = result.IsVerified.Should().BeTrue();
+        _ = result.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        _ = result.Body.Should().Be(challenge);
     }
 
     [Fact]
@@ -713,7 +868,7 @@ public sealed class EventSubWebhookTests : IDisposable
         string timestamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
         string body = "{\"test\":true}";
 
-        DefaultHttpContext context = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers, MemoryStream bodyStream) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp,
@@ -721,10 +876,13 @@ public sealed class EventSubWebhookTests : IDisposable
             body,
             signatureOverride: "sha256=0000000000000000000000000000000000000000000000000000000000000000");
 
-        EventSubWebhookResult result = await EventSubService.ProcessWebhook(context.Request, this._fixture.WebhookSecret).ConfigureAwait(true);
+        await using (bodyStream.ConfigureAwait(true))
+        {
+            EventSubWebhookResult result = await EventSubService.ProcessWebhook(headers, bodyStream, this._fixture.WebhookSecret, cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = result.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-        _ = result.IsVerified.Should().BeFalse();
+            _ = result.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+            _ = result.IsVerified.Should().BeFalse();
+        }
     }
 
     [Fact]
@@ -761,28 +919,34 @@ public sealed class EventSubWebhookTests : IDisposable
         const string body = """{"challenge":"pogchamp-challenge"}""";
 
         timeProvider.Advance(TimeSpan.FromMinutes(9));
-        DefaultHttpContext validContext = CreateWebhookHttpContext(
+        (Dictionary<string, string?> validHeaders, MemoryStream validBodyStream) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp,
             "webhook_callback_verification",
             body);
 
-        EventSubWebhookResult validResult = await EventSubService.ProcessWebhook(validContext.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
-        _ = validResult.StatusCode.Should().Be(StatusCodes.Status200OK);
-        _ = validResult.IsVerified.Should().BeTrue();
+        await using (validBodyStream.ConfigureAwait(true))
+        {
+            EventSubWebhookResult validResult = await EventSubService.ProcessWebhook(validHeaders, validBodyStream, this._fixture.WebhookSecret, timeProvider, TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = validResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            _ = validResult.IsVerified.Should().BeTrue();
+        }
 
         timeProvider.Advance(TimeSpan.FromMinutes(2));
-        DefaultHttpContext expiredContext = CreateWebhookHttpContext(
+        (Dictionary<string, string?> expiredHeaders, MemoryStream expiredBodyStream) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp,
             "webhook_callback_verification",
             body);
 
-        EventSubWebhookResult expiredResult = await EventSubService.ProcessWebhook(expiredContext.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
-        _ = expiredResult.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-        _ = expiredResult.IsVerified.Should().BeFalse();
+        await using (expiredBodyStream.ConfigureAwait(true))
+        {
+            EventSubWebhookResult expiredResult = await EventSubService.ProcessWebhook(expiredHeaders, expiredBodyStream, this._fixture.WebhookSecret, timeProvider, TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = expiredResult.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+            _ = expiredResult.IsVerified.Should().BeFalse();
+        }
     }
 
     [Fact]
@@ -794,39 +958,48 @@ public sealed class EventSubWebhookTests : IDisposable
         const string body = "{}";
 
         string timestamp1 = timeProvider.GetUtcNow().UtcDateTime.ToString("o", CultureInfo.InvariantCulture);
-        DefaultHttpContext context1 = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers1, MemoryStream bodyStream1) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp1,
             "notification",
             body);
 
-        EventSubWebhookResult firstResult = await EventSubService.ProcessWebhook(context1.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
-        _ = firstResult.IsDuplicate.Should().BeFalse();
+        await using (bodyStream1.ConfigureAwait(true))
+        {
+            EventSubWebhookResult firstResult = await EventSubService.ProcessWebhook(headers1, bodyStream1, this._fixture.WebhookSecret, timeProvider, TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = firstResult.IsDuplicate.Should().BeFalse();
+        }
 
         timeProvider.Advance(TimeSpan.FromMinutes(5));
         string timestamp2 = timeProvider.GetUtcNow().UtcDateTime.ToString("o", CultureInfo.InvariantCulture);
-        DefaultHttpContext context2 = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers2, MemoryStream bodyStream2) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp2,
             "notification",
             body);
 
-        EventSubWebhookResult duplicateResult = await EventSubService.ProcessWebhook(context2.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
-        _ = duplicateResult.IsDuplicate.Should().BeTrue();
+        await using (bodyStream2.ConfigureAwait(true))
+        {
+            EventSubWebhookResult duplicateResult = await EventSubService.ProcessWebhook(headers2, bodyStream2, this._fixture.WebhookSecret, timeProvider, TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = duplicateResult.IsDuplicate.Should().BeTrue();
+        }
 
         timeProvider.Advance(TimeSpan.FromMinutes(6));
         string timestamp3 = timeProvider.GetUtcNow().UtcDateTime.ToString("o", CultureInfo.InvariantCulture);
-        DefaultHttpContext context3 = CreateWebhookHttpContext(
+        (Dictionary<string, string?> headers3, MemoryStream bodyStream3) = CreateWebhookInput(
             this._fixture.WebhookSecret,
             messageId,
             timestamp3,
             "notification",
             body);
 
-        EventSubWebhookResult afterPruneResult = await EventSubService.ProcessWebhook(context3.Request, this._fixture.WebhookSecret, timeProvider).ConfigureAwait(true);
-        _ = afterPruneResult.IsDuplicate.Should().BeFalse();
+        await using (bodyStream3.ConfigureAwait(true))
+        {
+            EventSubWebhookResult afterPruneResult = await EventSubService.ProcessWebhook(headers3, bodyStream3, this._fixture.WebhookSecret, timeProvider, TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = afterPruneResult.IsDuplicate.Should().BeFalse();
+        }
     }
 
     #endregion ProcessWebhook
@@ -841,18 +1014,29 @@ public sealed class EventSubWebhookTests : IDisposable
     /// <param name="timestamp">The message timestamp header value.</param>
     /// <param name="body">The raw body string.</param>
     /// <returns>The formatted signature starting with <c>sha256=</c>.</returns>
-    private static string ComputeHmacSha256(string secret, string messageId, string timestamp, string body)
+    private static string ComputeHmacSha256(string secret, string messageId, string timestamp, string body) =>
+        ComputeHmacSha256(secret, messageId, timestamp, Encoding.UTF8.GetBytes(body));
+
+    /// <summary>
+    /// Computes the HMAC-SHA256 signature for an EventSub webhook message from raw bytes.
+    /// </summary>
+    /// <param name="secret">The webhook secret key.</param>
+    /// <param name="messageId">The message ID header value.</param>
+    /// <param name="timestamp">The message timestamp header value.</param>
+    /// <param name="bodyBytes">The raw body bytes.</param>
+    /// <returns>The formatted signature starting with <c>sha256=</c>.</returns>
+    private static string ComputeHmacSha256(string secret, string messageId, string timestamp, ReadOnlySpan<byte> bodyBytes)
     {
         using IncrementalHash hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, Encoding.UTF8.GetBytes(secret));
         hmac.AppendData(Encoding.UTF8.GetBytes(messageId));
         hmac.AppendData(Encoding.UTF8.GetBytes(timestamp));
-        hmac.AppendData(Encoding.UTF8.GetBytes(body));
+        hmac.AppendData(bodyBytes);
         byte[] hash = hmac.GetHashAndReset();
         return "sha256=" + Convert.ToHexStringLower(hash);
     }
 
     /// <summary>
-    /// Creates a simulated incoming <see cref="DefaultHttpContext"/> populated with standard EventSub headers.
+    /// Creates simulated EventSub headers and body stream for direct <see cref="EventSubService.ProcessWebhook(IReadOnlyDictionary{string, string?}, Stream, string, TimeProvider?, CancellationToken)"/> calls.
     /// </summary>
     /// <param name="secret">The webhook secret key.</param>
     /// <param name="messageId">The message ID header value.</param>
@@ -862,8 +1046,8 @@ public sealed class EventSubWebhookTests : IDisposable
     /// <param name="subscriptionType">Optional subscription type header value.</param>
     /// <param name="subscriptionVersion">Optional subscription version header value.</param>
     /// <param name="signatureOverride">Optional signature override to test invalid signatures.</param>
-    /// <returns>A configured <see cref="DefaultHttpContext"/> instance.</returns>
-    private static DefaultHttpContext CreateWebhookHttpContext(
+    /// <returns>The constructed header dictionary and body <see cref="MemoryStream"/>.</returns>
+    private static (Dictionary<string, string?> Headers, MemoryStream BodyStream) CreateWebhookInput(
         string secret,
         string messageId,
         string timestamp,
@@ -873,30 +1057,61 @@ public sealed class EventSubWebhookTests : IDisposable
         string? subscriptionVersion = null,
         string? signatureOverride = null)
     {
-        DefaultHttpContext context = new();
-        context.Request.Headers["Twitch-Eventsub-Message-Id"] = messageId;
-        context.Request.Headers["Twitch-Eventsub-Message-Timestamp"] = timestamp;
-        context.Request.Headers["Twitch-Eventsub-Message-Type"] = messageType;
+        byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
+        Dictionary<string, string?> headers = CreateWebhookHeaders(
+            secret,
+            messageId,
+            timestamp,
+            messageType,
+            bodyBytes,
+            subscriptionType,
+            subscriptionVersion,
+            signatureOverride);
+
+        return (headers, new MemoryStream(bodyBytes));
+    }
+
+    /// <summary>
+    /// Creates simulated EventSub webhook headers for the specified raw body bytes.
+    /// </summary>
+    /// <param name="secret">The webhook secret key.</param>
+    /// <param name="messageId">The message ID header value.</param>
+    /// <param name="timestamp">The message timestamp header value.</param>
+    /// <param name="messageType">The message type header value.</param>
+    /// <param name="bodyBytes">The raw body bytes.</param>
+    /// <param name="subscriptionType">Optional subscription type header value.</param>
+    /// <param name="subscriptionVersion">Optional subscription version header value.</param>
+    /// <param name="signatureOverride">Optional signature override to test invalid signatures.</param>
+    /// <returns>A header dictionary populated with standard EventSub headers.</returns>
+    private static Dictionary<string, string?> CreateWebhookHeaders(
+        string secret,
+        string messageId,
+        string timestamp,
+        string messageType,
+        ReadOnlySpan<byte> bodyBytes,
+        string? subscriptionType = null,
+        string? subscriptionVersion = null,
+        string? signatureOverride = null)
+    {
+        Dictionary<string, string?> headers = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Twitch-Eventsub-Message-Id"] = messageId,
+            ["Twitch-Eventsub-Message-Timestamp"] = timestamp,
+            ["Twitch-Eventsub-Message-Type"] = messageType,
+            ["Twitch-Eventsub-Message-Signature"] = signatureOverride ?? ComputeHmacSha256(secret, messageId, timestamp, bodyBytes)
+        };
 
         if (subscriptionType is not null)
         {
-            context.Request.Headers["Twitch-Eventsub-Subscription-Type"] = subscriptionType;
+            headers["Twitch-Eventsub-Subscription-Type"] = subscriptionType;
         }
 
         if (subscriptionVersion is not null)
         {
-            context.Request.Headers["Twitch-Eventsub-Subscription-Version"] = subscriptionVersion;
+            headers["Twitch-Eventsub-Subscription-Version"] = subscriptionVersion;
         }
 
-        string signature = signatureOverride ?? ComputeHmacSha256(secret, messageId, timestamp, body);
-        context.Request.Headers["Twitch-Eventsub-Message-Signature"] = signature;
-
-        byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
-        context.Request.Body = new MemoryStream(bodyBytes);
-        context.Request.ContentLength = bodyBytes.Length;
-        context.Request.ContentType = "application/json";
-
-        return context;
+        return headers;
     }
 
     /// <summary>

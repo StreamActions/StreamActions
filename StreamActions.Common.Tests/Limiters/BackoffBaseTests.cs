@@ -52,7 +52,7 @@ public sealed class BackoffBaseTests
 
         TestBackoff backoff = new(initial, max);
 
-        _ = backoff.IntialDuration.Should().Be(initial);
+        _ = backoff.InitialDuration.Should().Be(initial);
         _ = backoff.MaxDuration.Should().Be(max);
         _ = backoff.NextDuration.Should().Be(initial);
         _ = backoff.IsReset.Should().BeTrue();
@@ -61,19 +61,19 @@ public sealed class BackoffBaseTests
 
     #endregion Constructor
 
-    #region IntialDuration
+    #region InitialDuration
 
     [Fact]
-    [Trait("Member", "IntialDuration")]
-    public void IntialDuration_ReturnsSetValue()
+    [Trait("Member", "InitialDuration")]
+    public void InitialDuration_ReturnsSetValue()
     {
         TimeSpan initial = TimeSpan.FromTicks(50);
         TestBackoff backoff = new(initial, TimeSpan.FromTicks(100));
 
-        _ = backoff.IntialDuration.Should().Be(initial);
+        _ = backoff.InitialDuration.Should().Be(initial);
     }
 
-    #endregion IntialDuration
+    #endregion InitialDuration
 
     #region MaxDuration
 

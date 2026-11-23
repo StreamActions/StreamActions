@@ -1,4 +1,3 @@
-using StreamActions.Twitch.Api.EventSub.Objects;
 /*
  * This file is part of StreamActions.
  * Copyright © 2019-2026 StreamActions Team (streamactions.github.io)
@@ -17,6 +16,7 @@ using StreamActions.Twitch.Api.EventSub.Objects;
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.Api.EventSub.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.Api.EventSub;
@@ -24,7 +24,7 @@ namespace StreamActions.Twitch.Api.EventSub;
 /// <summary>
 /// Represents the update parameters for a single shard in a conduit.
 /// </summary>
-public record ConduitShardUpdateShardParameters
+public sealed record ConduitShardUpdateShardParameters
 {
     /// <summary>
     /// Shard ID.

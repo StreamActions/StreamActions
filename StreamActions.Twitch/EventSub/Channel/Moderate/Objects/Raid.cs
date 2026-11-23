@@ -47,5 +47,5 @@ public sealed record Raid
     /// The viewer count.
     /// </summary>
     [JsonPropertyName("viewer_count")]
-    public int ViewerCount { get; init; }
+    public int? ViewerCount { get; init; }
 }

@@ -18,7 +18,6 @@
 
 using StreamActions.Common;
 using StreamActions.Common.Extensions;
-using StreamActions.Common.Logging;
 using StreamActions.Twitch.Api.Common;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -175,7 +174,7 @@ public sealed record Clip
     /// <list type="table">
     /// <item>
     /// <term>200 OK</term>
-    /// <description>Successfully started the commercial.</description>
+    /// <description>Successfully retrieved the clips.</description>
     /// </item>
     /// <item>
     /// <term>400 Bad Request</term>
@@ -196,16 +195,13 @@ public sealed record Clip
     public static async Task<ResponseData<Clip>?> GetClips(TwitchSession session, string? broadcasterId = null, string? gameId = null, IEnumerable<string>? id = null, DateTime? startedAt = null,
         DateTime? endedAt = null, int first = 20, string? before = null, string? after = null, bool? isFeatured = null)
     {
-        if (session is null)
-        {
-            throw new ArgumentNullException(nameof(session)).Log(TwitchApi.GetLogger());
-        }
+        ArgumentNullException.ThrowIfNull(session);
 
         IReadOnlyList<string>? idList = id as IReadOnlyList<string> ?? id?.ToArray();
 
         if (string.IsNullOrWhiteSpace(broadcasterId) && string.IsNullOrWhiteSpace(gameId) && (idList is null || idList.Count == 0))
         {
-            throw new ArgumentNullException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "must provide at least one of these parameters").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "must provide at least one of these parameters");
         }
 
         bool hasId = false;
@@ -218,7 +214,7 @@ public sealed record Clip
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix these parameters");
             }
             hasId = true;
         }
@@ -227,23 +223,23 @@ public sealed record Clip
         {
             if (hasId)
             {
-                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix these parameters").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id) + "," + nameof(broadcasterId) + "," + nameof(gameId), "can not mix these parameters");
             }
 
             if (idList.Count > 100)
             {
-                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 100").Log(TwitchApi.GetLogger());
+                throw new ArgumentOutOfRangeException(nameof(id), idList.Count, "must have a count <= 100");
             }
         }
 
         if (!string.IsNullOrWhiteSpace(after) && !string.IsNullOrWhiteSpace(before))
         {
-            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after)).Log(TwitchApi.GetLogger());
+            throw new InvalidOperationException("can only use one of " + nameof(before) + " or " + nameof(after));
         }
 
         if (startedAt.HasValue != endedAt.HasValue)
         {
-            throw new ArgumentNullException(nameof(startedAt) + "," + nameof(endedAt), "both parameters must be used together").Log(TwitchApi.GetLogger());
+            throw new ArgumentNullException(nameof(startedAt) + "," + nameof(endedAt), "both parameters must be used together");
         }
 
         session.RequireUserOrAppToken();
