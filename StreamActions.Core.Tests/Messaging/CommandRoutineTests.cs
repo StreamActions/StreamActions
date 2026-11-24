@@ -45,15 +45,15 @@ public sealed class CommandRoutineTests
 
     [Fact]
     [Trait("Member", "Parse")]
-    public void ParseTier1JsonSupportsOutOfOrderMetadataAndUnknownTaskerSteps()
+    public void ParseTier1JsonSupportsOutOfOrderMetadataAndUnknownActionBlockSteps()
     {
-        const string json = """{"steps":[{"message":"First","$type":"chat.send"},{"$type":"tasker.delay","durationMs":1000}]}""";
+        const string json = """{"steps":[{"message":"First","$type":"chat.send"},{"$type":"action_block.delay","durationMs":1000}]}""";
 
         CommandRoutine routine = CommandRoutine.Parse(json);
 
         _ = routine.Steps.Should().HaveCount(2);
         _ = routine.Steps[0].Should().BeOfType<ChatSendActionStep>().Which.Message.Should().Be("First");
-        _ = routine.Steps[1].Should().BeOfType<UnknownCommandRoutineStep>().Which.StepType.Should().Be("tasker.delay");
+        _ = routine.Steps[1].Should().BeOfType<UnknownCommandRoutineStep>().Which.StepType.Should().Be("action_block.delay");
         _ = routine.GetChatMessages().Should().Equal("First");
     }
 

@@ -31,7 +31,7 @@ using Xunit;
 namespace StreamActions.Core.Tests.Templates;
 
 /// <summary>
-/// Unit and integration tests for Milestone 09 universal Core <c>{tag}</c> handlers, abstractions, and context extensions.
+/// Unit and integration tests for additional universal Core <c>{tag}</c> handlers, abstractions, and context extensions.
 /// </summary>
 public sealed class AdditionalCoreTagHandlersTests
 {

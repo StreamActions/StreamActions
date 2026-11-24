@@ -139,12 +139,9 @@ public sealed class TemplateParser
 
         FlushLiteral(literal, nodes);
 
-        if (nodes.Count == 0)
-        {
-            return new LiteralNode(string.Empty);
-        }
-
-        return nodes.Count == 1
+        return nodes.Count == 0
+            ? new LiteralNode(string.Empty)
+            : nodes.Count == 1
             ? nodes[0]
             : new CompositeNode(nodes.AsReadOnly());
     }
@@ -190,7 +187,7 @@ public sealed class TemplateParser
 
         if (this._input[this._index] == '}')
         {
-            int length = (this._index - openBracePos) + 1;
+            int length = this._index - openBracePos + 1;
             this._diagnostics.Add(new TemplateDiagnostic(
                 TemplateDiagnosticSeverity.Error,
                 TemplateDiagnosticCode.EmptyTag,
@@ -406,12 +403,9 @@ public sealed class TemplateParser
 
         FlushLiteral(literal, parts);
 
-        if (parts.Count == 0)
-        {
-            return new LiteralNode(string.Empty);
-        }
-
-        return parts.Count == 1
+        return parts.Count == 0
+            ? new LiteralNode(string.Empty)
+            : parts.Count == 1
             ? parts[0]
             : new CompositeNode(parts.AsReadOnly());
     }

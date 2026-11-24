@@ -73,7 +73,7 @@ public enum MigrationDiagnosticSeverity
     Info = 0,
 
     /// <summary>
-    /// Non-fatal warning highlighting stripped security risks, ClearScript promotions, Tasker upgrades, or AST parse warnings.
+    /// Non-fatal warning highlighting stripped security risks, ClearScript promotions, Action Block upgrades, or AST parse warnings.
     /// </summary>
     Warning = 1,
 
@@ -129,9 +129,9 @@ public enum MigrationDiagnosticCode
     PromotedEvalToClearScript = 7,
 
     /// <summary>
-    /// A legacy side-effect tag was upgraded to one or more Tasker <see cref="MigratedActionBlockDescriptor"/> steps.
+    /// A legacy side-effect tag was upgraded to one or more Action Block <see cref="MigratedActionBlockDescriptor"/> steps.
     /// </summary>
-    UpgradedSideEffectToTasker = 8,
+    UpgradedSideEffectToActionBlocks = 8,
 
     /// <summary>
     /// A warning emitted by <see cref="TemplateParser"/> when validating the converted template.
@@ -167,11 +167,11 @@ public sealed record DiscoveredSecretReference(
     IReadOnlyList<string> AllowedHostPatterns);
 
 /// <summary>
-/// Describes a Tasker action block synthesized during Stage 2 or Stage 4 migration upgrades.
+/// Describes an Action Block synthesized during Stage 2 or Stage 4 migration upgrades.
 /// </summary>
-/// <param name="ActionType">The Tasker action type identifier (for example, <c>platform.invoke</c> or <c>script.clearscript</c>).</param>
+/// <param name="ActionType">The Action Block action type identifier (for example, <c>platform.invoke</c> or <c>script.clearscript</c>).</param>
 /// <param name="Parameters">The immutable key-value parameter map for the action block.</param>
-/// <param name="RequiredPermissionKey">The optional SMF permission key required to edit or execute this action block.</param>
+/// <param name="RequiredPermissionKey">The optional permission key required to edit or execute this action block.</param>
 /// <param name="RequiresBroadcasterReview">Whether the upgraded block requires explicit broadcaster review before enabling.</param>
 public sealed record MigratedActionBlockDescriptor(
     string ActionType,
@@ -204,8 +204,8 @@ public sealed record LegacyCommandMigrationRequest(
 /// <param name="MinRequiredArgs">Minimum required argument count extracted from <c>(requireargs ...)</c>.</param>
 /// <param name="DiscoveredSecrets">Workspace secrets discovered from migrated <c>(token)</c> placeholders.</param>
 /// <param name="ReferencedVirtualFiles">Virtual file names referenced by migrated file tags for datastore import.</param>
-/// <param name="RequiresTaskerUpgrade">Whether side-effect or complex script tags require upgrading the command to a Tasker routine.</param>
-/// <param name="UpgradedActions">Ordered list of synthesized Tasker action block descriptors.</param>
+/// <param name="RequiresActionBlockUpgrade">Whether side-effect or complex script tags require upgrading the command to an Action Blocks routine.</param>
+/// <param name="UpgradedActions">Ordered list of synthesized Action Block descriptors.</param>
 /// <param name="Diagnostics">Ordered list of migration diagnostics across all four stages.</param>
 public sealed record LegacyCommandMigrationResult(
     string ConvertedTemplate,
@@ -217,6 +217,6 @@ public sealed record LegacyCommandMigrationResult(
     int? MinRequiredArgs,
     IReadOnlyList<DiscoveredSecretReference> DiscoveredSecrets,
     IReadOnlyList<string> ReferencedVirtualFiles,
-    bool RequiresTaskerUpgrade,
+    bool RequiresActionBlockUpgrade,
     IReadOnlyList<MigratedActionBlockDescriptor> UpgradedActions,
     IReadOnlyList<MigrationDiagnostic> Diagnostics);

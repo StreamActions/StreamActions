@@ -76,13 +76,10 @@ public sealed class TagRegistry : ITagRegistry
         string trimmedTag = tagName.Trim();
         string normalizedPlatform = NormalizePlatformId(platformId);
 
-        if (normalizedPlatform.Length > 0
-            && this._handlers.TryGetValue(new TagRegistryKey(normalizedPlatform, trimmedTag), out ICommandTagHandler? platformHandler))
-        {
-            return platformHandler;
-        }
-
-        return this._handlers.TryGetValue(new TagRegistryKey(string.Empty, trimmedTag), out ICommandTagHandler? universalHandler)
+        return normalizedPlatform.Length > 0
+            && this._handlers.TryGetValue(new TagRegistryKey(normalizedPlatform, trimmedTag), out ICommandTagHandler? platformHandler)
+            ? platformHandler
+            : this._handlers.TryGetValue(new TagRegistryKey(string.Empty, trimmedTag), out ICommandTagHandler? universalHandler)
             ? universalHandler
             : null;
     }

@@ -982,7 +982,7 @@ else
         _settings?.ExternalOidcLoginMode != ExternalOidcLoginMode.Allowed;
 
     /// <summary>
-    /// Determines whether the custom bot account override toggle is blocked by root policy or Tier-1 SMF feature gate.
+    /// Determines whether the custom bot account override toggle is blocked by root policy or Tier-1 feature gate.
     /// </summary>
     /// <returns><see langword="true"/> if blocked; otherwise, <see langword="false"/>.</returns>
     private bool IsCustomBotOverrideBlockedByRoot() =>
@@ -990,7 +990,7 @@ else
         || (_botPolicy == InstanceBotAccountPolicy.DefaultWithOptionalOverride && !_customBotFeatureAllowed);
 
     /// <summary>
-    /// Determines whether custom OAuth app configuration for <paramref name="platformId"/> is blocked by root policy or Tier-1 SMF feature gate.
+    /// Determines whether custom OAuth app configuration for <paramref name="platformId"/> is blocked by root policy or Tier-1 feature gate.
     /// </summary>
     /// <param name="platformId">The platform identifier.</param>
     /// <returns><see langword="true"/> if blocked; otherwise, <see langword="false"/>.</returns>

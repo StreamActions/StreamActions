@@ -20,10 +20,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using StreamActions.Core.Abstractions;
+using StreamActions.Core.Actions;
 using StreamActions.Core.Models;
 using StreamActions.Core.Models.Entities;
 using StreamActions.Core.Models.Messaging;
 using StreamActions.Core.Permissions;
+using StreamActions.Core.Scripting;
 using StreamActions.Core.Templates;
 using StreamActions.Core.Templates.Handlers;
 using System.Diagnostics.CodeAnalysis;
@@ -366,7 +368,11 @@ public sealed partial class CommandDispatcher : ICommandDispatcher
                     permissionService,
                     cancellationToken).ConfigureAwait(false)
                 : customCommand is null
-                ? CommandDispatchResult.NotFound(normalizedTrigger)
+                ? await this.TryDispatchActionBlockOrScriptCommandAsync(
+                    invocation,
+                    normalizedTrigger,
+                    permissionService,
+                    cancellationToken).ConfigureAwait(false)
                 : await this.ExecuteCustomCommandAsync(
                 invocation,
                 customCommand,
@@ -1108,6 +1114,195 @@ public sealed partial class CommandDispatcher : ICommandDispatcher
         }
 
         return this._serviceProvider?.GetService(typeof(IPermissionService)) as IPermissionService;
+    }
+
+    /// <summary>
+    /// Attempts to dispatch an unmatched command trigger to a matching Action Block <c>On Command</c> profile or a VFS script-registered command.
+    /// </summary>
+    /// <param name="invocation">The inbound command invocation.</param>
+    /// <param name="normalizedTrigger">The normalized primary trigger.</param>
+    /// <param name="permissionService">Optional permission service for permission evaluation.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>The dispatch result, or <see cref="CommandDispatchResult.NotFound"/> if no Action Block profile or script command matched.</returns>
+    private async ValueTask<CommandDispatchResult> TryDispatchActionBlockOrScriptCommandAsync(
+        ICommandInvocation invocation,
+        string normalizedTrigger,
+        IPermissionService? permissionService,
+        CancellationToken cancellationToken)
+    {
+        if (this._serviceProvider is null)
+        {
+            return CommandDispatchResult.NotFound(normalizedTrigger);
+        }
+
+        PlatformUserIdentity actorIdentity = invocation.Sender.ToIdentity();
+
+        IActionBlockStore? actionBlockStore = this._serviceProvider.GetService(typeof(IActionBlockStore)) as IActionBlockStore;
+        IActionBlockTriggerDispatcher? triggerDispatcher = this._serviceProvider.GetService(typeof(IActionBlockTriggerDispatcher)) as IActionBlockTriggerDispatcher;
+        if (actionBlockStore is not null && triggerDispatcher is not null)
+        {
+            IReadOnlyList<WorkspaceActionBlockProfile> profiles = await actionBlockStore
+                .GetProfilesAsync(invocation.WorkspaceId, cancellationToken)
+                .ConfigureAwait(false);
+
+            bool hasMatchingProfile = profiles.Any(p =>
+                p.IsEnabled
+                && p.AttachedTaskId != Guid.Empty
+                && string.Equals(p.Trigger.TriggerId, BuiltInTriggerIds.ChatCommand, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(BuiltInCommandRegistry.NormalizeTrigger(p.Trigger.CommandTrigger), normalizedTrigger, StringComparison.OrdinalIgnoreCase));
+
+            if (hasMatchingProfile)
+            {
+                CommandDispatchResult? denied = await EvaluateCommandPermissionGateAsync(
+                    invocation.WorkspaceId,
+                    actorIdentity,
+                    normalizedTrigger,
+                    permissionService,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (denied is not null)
+                {
+                    return denied;
+                }
+
+                Dictionary<string, string> payload = new(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["senderLogin"] = invocation.Sender.Username,
+                    ["senderDisplayName"] = invocation.Sender.DisplayName,
+                    ["command"] = normalizedTrigger,
+                    ["rawArgs"] = invocation.RawArguments,
+                };
+
+                ActionBlockTriggerEvent triggerEvent = new(
+                    invocation.WorkspaceId,
+                    BuiltInTriggerIds.ChatCommand,
+                    invocation.PlatformId,
+                    (invocation as IChatMessage)?.Channel.ChannelId ?? string.Empty,
+                    (invocation as IChatMessage)?.Channel.ChannelName ?? string.Empty,
+                    actorIdentity,
+                    invocation,
+                    payload,
+                    CommandTrigger: normalizedTrigger);
+
+                IReadOnlyList<ActionExecutionTrace> traces = await triggerDispatcher
+                    .DispatchEventTriggerAsync(triggerEvent, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (traces.Count > 0)
+                {
+                    return traces.Any(static t => t.Succeeded)
+                        ? CommandDispatchResult.Success(normalizedTrigger)
+                        : CommandDispatchResult.Rejected(CommandDispatchStatus.Failed, normalizedTrigger, traces[0].FailureReason ?? "Action Block command failed.");
+                }
+            }
+        }
+
+        IWorkspaceScriptStore? scriptStore = this._serviceProvider.GetService(typeof(IWorkspaceScriptStore)) as IWorkspaceScriptStore;
+        IRunJsActionExecutor? scriptExecutor = this._serviceProvider.GetService(typeof(IRunJsActionExecutor)) as IRunJsActionExecutor;
+        if (scriptStore is not null && scriptExecutor is not null)
+        {
+            IReadOnlyList<WorkspaceScript> scripts = await scriptStore
+                .GetScriptsAsync(invocation.WorkspaceId, cancellationToken)
+                .ConfigureAwait(false);
+
+            foreach (WorkspaceScript script in scripts)
+            {
+                if (!script.IsEnabled)
+                {
+                    continue;
+                }
+
+                ScriptCommandRegistration? matchedRegistration = script.RegisteredCommands.FirstOrDefault(cmd =>
+                    string.Equals(BuiltInCommandRegistry.NormalizeTrigger(cmd.Trigger), normalizedTrigger, StringComparison.OrdinalIgnoreCase));
+
+                if (matchedRegistration is null)
+                {
+                    continue;
+                }
+
+                CommandDispatchResult? denied = await EvaluateCommandPermissionGateAsync(
+                    invocation.WorkspaceId,
+                    actorIdentity,
+                    normalizedTrigger,
+                    permissionService,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (denied is not null)
+                {
+                    return denied;
+                }
+
+                string bucketKey = $"script:{script.Id:N}:{normalizedTrigger}";
+                CooldownCheckResult cooldownCheck = this._cooldownTracker.CheckCooldown(
+                    invocation.WorkspaceId,
+                    bucketKey,
+                    invocation.PlatformId,
+                    invocation.Sender.PlatformUserId,
+                    matchedRegistration.GlobalCooldownSeconds,
+                    matchedRegistration.UserCooldownSeconds);
+
+                if (!cooldownCheck.IsAllowed)
+                {
+                    CommandDispatchStatus status = cooldownCheck.IsGlobalCooldown
+                        ? CommandDispatchStatus.OnGlobalCooldown
+                        : CommandDispatchStatus.OnUserCooldown;
+                    return CommandDispatchResult.Rejected(status, normalizedTrigger, $"Cooldown active ({Math.Ceiling(cooldownCheck.Remaining.TotalSeconds)}s remaining).");
+                }
+
+                _ = this._cooldownTracker.RecordExecution(
+                    invocation.WorkspaceId,
+                    bucketKey,
+                    invocation.PlatformId,
+                    invocation.Sender.PlatformUserId,
+                    matchedRegistration.GlobalCooldownSeconds,
+                    matchedRegistration.UserCooldownSeconds);
+
+                ScriptExecutionResult scriptResult = await scriptExecutor
+                    .DispatchCommandAsync(invocation, script, matchedRegistration, cancellationToken)
+                    .ConfigureAwait(false);
+
+                return scriptResult.Succeeded
+                    ? CommandDispatchResult.Success(normalizedTrigger)
+                    : CommandDispatchResult.Rejected(CommandDispatchStatus.Failed, normalizedTrigger, scriptResult.ErrorMessage ?? "Script command execution failed.");
+            }
+        }
+
+        return CommandDispatchResult.NotFound(normalizedTrigger);
+    }
+
+    /// <summary>
+    /// Evaluates <c>command.{trigger}</c> with fallback to <see cref="BuiltInPermissionKeys.ActionRunCommand"/>.
+    /// </summary>
+    private static async ValueTask<CommandDispatchResult?> EvaluateCommandPermissionGateAsync(
+        Guid workspaceId,
+        PlatformUserIdentity actorIdentity,
+        string primaryTrigger,
+        IPermissionService? permissionService,
+        CancellationToken cancellationToken)
+    {
+        if (permissionService is null)
+        {
+            return null;
+        }
+
+        PermissionEvaluationResult commandPerm = await permissionService
+            .EvaluateAsync(workspaceId, actorIdentity, $"command.{primaryTrigger}", cancellationToken)
+            .ConfigureAwait(false);
+
+        if (commandPerm.EffectiveState != PermissionState.Inherit)
+        {
+            return commandPerm.IsAllowed
+                ? null
+                : CommandDispatchResult.Rejected(CommandDispatchStatus.PermissionDenied, primaryTrigger, commandPerm.Reason);
+        }
+
+        PermissionEvaluationResult fallbackPerm = await permissionService
+            .EvaluateAsync(workspaceId, actorIdentity, BuiltInPermissionKeys.ActionRunCommand, cancellationToken)
+            .ConfigureAwait(false);
+
+        return fallbackPerm.IsAllowed
+            ? null
+            : CommandDispatchResult.Rejected(CommandDispatchStatus.PermissionDenied, primaryTrigger, fallbackPerm.Reason);
     }
 
     /// <summary>

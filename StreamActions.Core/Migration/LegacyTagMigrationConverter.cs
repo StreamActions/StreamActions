@@ -31,7 +31,7 @@ namespace StreamActions.Core.Migration;
 /// Deterministic 4-stage AST transpiler that converts legacy chatbot command templates
 /// (PhantomBot, Nightbot, StreamElements, Streamlabs, Firebot, Streamer.bot, and Mix It Up)
 /// into safe StreamActions <c>{tag}</c> templates, extracted command guards, secret references,
-/// virtual file references, and Tasker action block upgrade descriptors.
+/// virtual file references, and Action Block upgrade descriptors.
 /// </summary>
 /// <remarks>
 /// Initializes a new <see cref="LegacyTagMigrationConverter"/>.
@@ -90,7 +90,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
     /// Converts <paramref name="request"/> through the 4-stage migration pipeline and returns the validated result.
     /// </summary>
     /// <param name="request">The migration request containing command trigger, raw legacy template, and bot source.</param>
-    /// <returns>A <see cref="LegacyCommandMigrationResult"/> containing the transpiled template, AST parse result, extracted metadata, secrets, virtual files, Tasker upgrades, and diagnostics.</returns>
+    /// <returns>A <see cref="LegacyCommandMigrationResult"/> containing the transpiled template, AST parse result, extracted metadata, secrets, virtual files, Action Block upgrades, and diagnostics.</returns>
     public LegacyCommandMigrationResult Convert(LegacyCommandMigrationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -142,7 +142,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
             MinRequiredArgs: context.MinRequiredArgs,
             DiscoveredSecrets: context.BuildSecretReferences(),
             ReferencedVirtualFiles: context.ReferencedVirtualFiles.AsReadOnly(),
-            RequiresTaskerUpgrade: context.RequiresTaskerUpgrade,
+            RequiresActionBlockUpgrade: context.RequiresActionBlockUpgrade,
             UpgradedActions: context.UpgradedActions.AsReadOnly(),
             Diagnostics: context.Diagnostics.AsReadOnly());
     }
@@ -401,7 +401,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
             return true;
         }
 
-        // Stage 4: Side-Effect Tags upgraded to Tasker ActionBlocks
+        // Stage 4: Side-Effect Tags upgraded to Action Blocks
         if (TryConvertPhantomBotSideEffectTag(name, rawArgs, rawTag, context, out replacement))
         {
             return true;
@@ -694,7 +694,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
     /// <param name="rawArgs">The raw argument text.</param>
     /// <param name="rawTag">The full original tag fragment.</param>
     /// <param name="context">The migration context.</param>
-    /// <param name="replacement">Empty string when upgraded to a Tasker action block.</param>
+    /// <param name="replacement">Empty string when upgraded to an Action Block.</param>
     /// <returns><see langword="true"/> if matched as a side-effect tag; otherwise, <see langword="false"/>.</returns>
     private static bool TryConvertPhantomBotSideEffectTag(
         string name,
@@ -713,7 +713,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                     string roleArg = args.Count >= 2 ? StripOuterQuotes(string.Join(' ', args.Skip(1))) : string.Empty;
                     string op = name == "setrole" ? "discord.set_role" : "discord.remove_role";
 
-                    context.RequiresTaskerUpgrade = true;
+                    context.RequiresActionBlockUpgrade = true;
                     context.UpgradedActions.Add(new MigratedActionBlockDescriptor(
                         ActionType: "platform.invoke",
                         Parameters: new Dictionary<string, string>(StringComparer.Ordinal)
@@ -726,8 +726,8 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                         RequiresBroadcasterReview: false));
                     context.Diagnostics.Add(new MigrationDiagnostic(
                         MigrationDiagnosticSeverity.Warning,
-                        MigrationDiagnosticCode.UpgradedSideEffectToTasker,
-                        $"Upgraded ({name}) to Tasker 'platform.invoke' ({op}) gated by {BuiltInPermissionKeys.UiCommandsActionsDiscordRoles}.",
+                        MigrationDiagnosticCode.UpgradedSideEffectToActionBlocks,
+                        $"Upgraded ({name}) to Action Blocks 'platform.invoke' ({op}) gated by {BuiltInPermissionKeys.UiCommandsActionsDiscordRoles}.",
                         rawTag));
                     replacement = string.Empty;
                     return true;
@@ -736,7 +736,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
             case "setdiscordplaying":
                 {
                     string statusText = StripOuterQuotes(ConvertPhantomBot(rawArgs.Trim(), context, insideHttpTag: false));
-                    context.RequiresTaskerUpgrade = true;
+                    context.RequiresActionBlockUpgrade = true;
                     context.UpgradedActions.Add(new MigratedActionBlockDescriptor(
                         ActionType: "platform.invoke",
                         Parameters: new Dictionary<string, string>(StringComparer.Ordinal)
@@ -746,8 +746,8 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                         }.AsReadOnly()));
                     context.Diagnostics.Add(new MigrationDiagnostic(
                         MigrationDiagnosticSeverity.Warning,
-                        MigrationDiagnosticCode.UpgradedSideEffectToTasker,
-                        "Upgraded (setdiscordplaying) to Tasker 'platform.invoke' (discord.set_presence).",
+                        MigrationDiagnosticCode.UpgradedSideEffectToActionBlocks,
+                        "Upgraded (setdiscordplaying) to Action Blocks 'platform.invoke' (discord.set_presence).",
                         rawTag));
                     replacement = string.Empty;
                     return true;
@@ -763,7 +763,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                     string op = isEnabledOp ? "twitch.channel_points.set_enabled" : "twitch.channel_points.set_paused";
                     string flagKey = isEnabledOp ? "enabled" : "paused";
 
-                    context.RequiresTaskerUpgrade = true;
+                    context.RequiresActionBlockUpgrade = true;
                     context.UpgradedActions.Add(new MigratedActionBlockDescriptor(
                         ActionType: "platform.invoke",
                         Parameters: new Dictionary<string, string>(StringComparer.Ordinal)
@@ -774,8 +774,8 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                         }.AsReadOnly()));
                     context.Diagnostics.Add(new MigrationDiagnostic(
                         MigrationDiagnosticSeverity.Warning,
-                        MigrationDiagnosticCode.UpgradedSideEffectToTasker,
-                        $"Upgraded ({name}) to Tasker 'platform.invoke' ({op}).",
+                        MigrationDiagnosticCode.UpgradedSideEffectToActionBlocks,
+                        $"Upgraded ({name}) to Action Blocks 'platform.invoke' ({op}).",
                         rawTag));
                     replacement = string.Empty;
                     return true;
@@ -786,7 +786,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                 {
                     string amount = StripOuterQuotes(ConvertPhantomBot(rawArgs.Trim(), context, insideHttpTag: false));
                     string op = name == "addpointstoall" ? "add" : "take";
-                    context.RequiresTaskerUpgrade = true;
+                    context.RequiresActionBlockUpgrade = true;
                     context.UpgradedActions.Add(new MigratedActionBlockDescriptor(
                         ActionType: "loyalty.adjust_all",
                         Parameters: new Dictionary<string, string>(StringComparer.Ordinal)
@@ -798,8 +798,8 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                         RequiresBroadcasterReview: true));
                     context.Diagnostics.Add(new MigrationDiagnostic(
                         MigrationDiagnosticSeverity.Warning,
-                        MigrationDiagnosticCode.UpgradedSideEffectToTasker,
-                        $"Upgraded ({name}) to Tasker 'loyalty.adjust_all' (requires broadcaster review).",
+                        MigrationDiagnosticCode.UpgradedSideEffectToActionBlocks,
+                        $"Upgraded ({name}) to Action Blocks 'loyalty.adjust_all' (requires broadcaster review).",
                         rawTag));
                     replacement = string.Empty;
                     return true;
@@ -813,7 +813,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                     string cmdName = ConvertPhantomBot(cmdNameRaw, context, insideHttpTag: false);
                     string cmdArgs = ConvertPhantomBot(cmdArgsRaw, context, insideHttpTag: false);
 
-                    context.RequiresTaskerUpgrade = true;
+                    context.RequiresActionBlockUpgrade = true;
                     context.UpgradedActions.Add(new MigratedActionBlockDescriptor(
                         ActionType: "flow.delay",
                         Parameters: new Dictionary<string, string>(StringComparer.Ordinal)
@@ -829,8 +829,8 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                         }.AsReadOnly()));
                     context.Diagnostics.Add(new MigrationDiagnostic(
                         MigrationDiagnosticSeverity.Warning,
-                        MigrationDiagnosticCode.UpgradedSideEffectToTasker,
-                        "Upgraded (delaycommand) to Tasker 'flow.delay' + 'command.run' blocks.",
+                        MigrationDiagnosticCode.UpgradedSideEffectToActionBlocks,
+                        "Upgraded (delaycommand) to Action Blocks 'flow.delay' + 'command.run' blocks.",
                         rawTag));
                     replacement = string.Empty;
                     return true;
@@ -842,7 +842,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                     string sec = ConvertPhantomBot(secRaw, context, insideHttpTag: false);
                     string msg = ConvertPhantomBot(msgRaw, context, insideHttpTag: false);
 
-                    context.RequiresTaskerUpgrade = true;
+                    context.RequiresActionBlockUpgrade = true;
                     context.UpgradedActions.Add(new MigratedActionBlockDescriptor(
                         ActionType: "flow.delay",
                         Parameters: new Dictionary<string, string>(StringComparer.Ordinal)
@@ -857,8 +857,8 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                         }.AsReadOnly()));
                     context.Diagnostics.Add(new MigrationDiagnostic(
                         MigrationDiagnosticSeverity.Warning,
-                        MigrationDiagnosticCode.UpgradedSideEffectToTasker,
-                        "Upgraded (delaysay) to Tasker 'flow.delay' + 'chat.send' blocks.",
+                        MigrationDiagnosticCode.UpgradedSideEffectToActionBlocks,
+                        "Upgraded (delaysay) to Action Blocks 'flow.delay' + 'chat.send' blocks.",
                         rawTag));
                     replacement = string.Empty;
                     return true;
@@ -867,7 +867,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
             case "twitchsay":
                 {
                     string msg = ConvertPhantomBot(rawArgs.Trim(), context, insideHttpTag: false);
-                    context.RequiresTaskerUpgrade = true;
+                    context.RequiresActionBlockUpgrade = true;
                     context.UpgradedActions.Add(new MigratedActionBlockDescriptor(
                         ActionType: "chat.send",
                         Parameters: new Dictionary<string, string>(StringComparer.Ordinal)
@@ -877,8 +877,8 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                         }.AsReadOnly()));
                     context.Diagnostics.Add(new MigrationDiagnostic(
                         MigrationDiagnosticSeverity.Warning,
-                        MigrationDiagnosticCode.UpgradedSideEffectToTasker,
-                        "Upgraded (twitchsay) to Tasker 'chat.send' block.",
+                        MigrationDiagnosticCode.UpgradedSideEffectToActionBlocks,
+                        "Upgraded (twitchsay) to Action Blocks 'chat.send' block.",
                         rawTag));
                     replacement = string.Empty;
                     return true;
@@ -889,7 +889,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                     SplitFirstToken(rawArgs.Trim(), out string chanRaw, out string msgRaw);
                     string chan = ConvertPhantomBot(chanRaw, context, insideHttpTag: false);
                     string msg = ConvertPhantomBot(msgRaw, context, insideHttpTag: false);
-                    context.RequiresTaskerUpgrade = true;
+                    context.RequiresActionBlockUpgrade = true;
                     context.UpgradedActions.Add(new MigratedActionBlockDescriptor(
                         ActionType: "chat.send",
                         Parameters: new Dictionary<string, string>(StringComparer.Ordinal)
@@ -900,8 +900,8 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
                         }.AsReadOnly()));
                     context.Diagnostics.Add(new MigrationDiagnostic(
                         MigrationDiagnosticSeverity.Warning,
-                        MigrationDiagnosticCode.UpgradedSideEffectToTasker,
-                        "Upgraded (discordsay) to Tasker 'chat.send' block.",
+                        MigrationDiagnosticCode.UpgradedSideEffectToActionBlocks,
+                        "Upgraded (discordsay) to Action Blocks 'chat.send' block.",
                         rawTag));
                     replacement = string.Empty;
                     return true;
@@ -1559,7 +1559,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
         }
 
         // Complex $(eval) scripts: promote to Tier 3 ClearScript ActionBlock
-        context.RequiresTaskerUpgrade = true;
+        context.RequiresActionBlockUpgrade = true;
         context.UpgradedActions.Add(new MigratedActionBlockDescriptor(
             ActionType: "script.clearscript",
             Parameters: new Dictionary<string, string>(StringComparer.Ordinal)
@@ -3215,7 +3215,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
     #region Helpers & Context
 
     /// <summary>
-    /// Mutable per-conversion state tracking extracted guards, secrets, virtual files, upgraded Tasker actions, and diagnostics.
+    /// Mutable per-conversion state tracking extracted guards, secrets, virtual files, upgraded Action Block actions, and diagnostics.
     /// </summary>
     private sealed class MigrationContext
     {
@@ -3291,12 +3291,12 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
         public List<string> ReferencedVirtualFiles { get; } = [];
 
         /// <summary>
-        /// Gets or sets a value indicating whether Tasker routine upgrade is required.
+        /// Gets or sets a value indicating whether an Action Blocks routine upgrade is required.
         /// </summary>
-        public bool RequiresTaskerUpgrade { get; set; }
+        public bool RequiresActionBlockUpgrade { get; set; }
 
         /// <summary>
-        /// Gets the list of synthesized Tasker action block descriptors.
+        /// Gets the list of synthesized Action Block descriptors.
         /// </summary>
         public List<MigratedActionBlockDescriptor> UpgradedActions { get; } = [];
 
@@ -4393,7 +4393,7 @@ public sealed partial class LegacyTagMigrationConverter(ITagRegistry? tagRegistr
     }
 
     /// <summary>
-    /// Collapses redundant spaces left behind when stripping inline meta-guard, standalone secret, or Tasker-upgraded tags.
+    /// Collapses redundant spaces left behind when stripping inline meta-guard, standalone secret, or Action Block-upgraded tags.
     /// </summary>
     /// <param name="text">The template text to clean.</param>
     /// <returns>The normalized string.</returns>

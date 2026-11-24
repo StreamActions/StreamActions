@@ -22,7 +22,7 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Core.Commands;
 
 /// <summary>
-/// Base type for polymorphic action steps stored in a <see cref="CommandRoutine"/>, compatible with Milestone 10 Tasker action blocks.
+/// Base type for polymorphic action steps stored in a <see cref="CommandRoutine"/>, compatible with Action Blocks.
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(ChatSendActionStep), ChatSendActionStep.StepType)]

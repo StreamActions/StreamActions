@@ -230,12 +230,9 @@ public sealed class CountTagHandler : ICommandTagHandler
 
         if (positionalArgs.Count == 0)
         {
-            if (string.IsNullOrWhiteSpace(context.BoundCounterName))
-            {
-                return TagResult.Incomplete;
-            }
-
-            return await EvaluateBoundCounterAsync(
+            return string.IsNullOrWhiteSpace(context.BoundCounterName)
+                ? TagResult.Incomplete
+                : await EvaluateBoundCounterAsync(
                 context,
                 counterStore,
                 context.BoundCounterName.Trim(),
@@ -246,62 +243,47 @@ public sealed class CountTagHandler : ICommandTagHandler
         if (positionalArgs.Count == 1)
         {
             string single = positionalArgs[0];
-            if (TryParseInlineMutation(single, out InlineCounterOperation inlineOp))
-            {
-                if (string.IsNullOrWhiteSpace(context.BoundCounterName))
-                {
-                    return TagResult.Incomplete;
-                }
-
-                return await ExecuteInlineMutationAsync(
+            return TryParseInlineMutation(single, out InlineCounterOperation inlineOp)
+                ? string.IsNullOrWhiteSpace(context.BoundCounterName)
+                    ? TagResult.Incomplete
+                    : await ExecuteInlineMutationAsync(
                     context,
                     counterStore,
                     context.BoundCounterName.Trim(),
                     inlineOp,
                     noPrefix,
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            if (!string.IsNullOrWhiteSpace(context.BoundCounterName)
-                && string.Equals(single, context.BoundCounterName.Trim(), StringComparison.OrdinalIgnoreCase))
-            {
-                return await EvaluateBoundCounterAsync(
+                    cancellationToken).ConfigureAwait(false)
+                : !string.IsNullOrWhiteSpace(context.BoundCounterName)
+                && string.Equals(single, context.BoundCounterName.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? await EvaluateBoundCounterAsync(
                     context,
                     counterStore,
                     single,
                     noPrefix,
-                    cancellationToken).ConfigureAwait(false);
-            }
-
-            return await ReadCounterAsync(context, counterStore, single, cancellationToken).ConfigureAwait(false);
+                    cancellationToken).ConfigureAwait(false)
+                : await ReadCounterAsync(context, counterStore, single, cancellationToken).ConfigureAwait(false);
         }
 
         string first = positionalArgs[0];
         string second = positionalArgs[1];
 
-        if (TryParseInlineMutation(first, out InlineCounterOperation firstOp))
-        {
-            return await ExecuteInlineMutationAsync(
+        return TryParseInlineMutation(first, out InlineCounterOperation firstOp)
+            ? await ExecuteInlineMutationAsync(
                 context,
                 counterStore,
                 second,
                 firstOp,
                 noPrefix,
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        if (TryParseInlineMutation(second, out InlineCounterOperation secondOp))
-        {
-            return await ExecuteInlineMutationAsync(
+                cancellationToken).ConfigureAwait(false)
+            : TryParseInlineMutation(second, out InlineCounterOperation secondOp)
+            ? await ExecuteInlineMutationAsync(
                 context,
                 counterStore,
                 first,
                 secondOp,
                 noPrefix,
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        return TagResult.Incomplete;
+                cancellationToken).ConfigureAwait(false)
+            : TagResult.Incomplete;
     }
 
     /// <summary>
@@ -342,68 +324,59 @@ public sealed class CountTagHandler : ICommandTagHandler
                 return await SetResolvedCounterAsync(context, counterStore, counterName, 0, scopeMode, gameCategory, CounterMutationKind.Reset, includePrefix: false, cancellationToken).ConfigureAwait(false);
 
             case CounterUsageBehavior.SetFromArg1:
-            {
-                if (context.Arguments.Count > 0
-                    && long.TryParse(context.Arguments[0].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out long setValue))
                 {
-                    return await SetResolvedCounterAsync(context, counterStore, counterName, setValue, scopeMode, gameCategory, CounterMutationKind.Set, includePrefix: false, cancellationToken).ConfigureAwait(false);
+                    return context.Arguments.Count > 0
+                        && long.TryParse(context.Arguments[0].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out long setValue)
+                        ? await SetResolvedCounterAsync(context, counterStore, counterName, setValue, scopeMode, gameCategory, CounterMutationKind.Set, includePrefix: false, cancellationToken).ConfigureAwait(false)
+                        : await ReadResolvedCounterAsync(context, counterStore, counterName, scopeMode, gameCategory, cancellationToken).ConfigureAwait(false);
                 }
-
-                return await ReadResolvedCounterAsync(context, counterStore, counterName, scopeMode, gameCategory, cancellationToken).ConfigureAwait(false);
-            }
 
             case CounterUsageBehavior.Parameterized:
-            {
-                if (!context.CanMutateBoundCounter
-                    || context.Arguments.Count == 0
-                    || string.IsNullOrWhiteSpace(context.Arguments[0]))
                 {
-                    return await ReadResolvedCounterAsync(context, counterStore, counterName, scopeMode, gameCategory, cancellationToken).ConfigureAwait(false);
-                }
+                    if (!context.CanMutateBoundCounter
+                        || context.Arguments.Count == 0
+                        || string.IsNullOrWhiteSpace(context.Arguments[0]))
+                    {
+                        return await ReadResolvedCounterAsync(context, counterStore, counterName, scopeMode, gameCategory, cancellationToken).ConfigureAwait(false);
+                    }
 
-                string arg0 = context.Arguments[0].Trim();
-                if (string.Equals(arg0, "+", StringComparison.Ordinal))
-                {
-                    return await AdjustResolvedCounterAsync(
-                        context,
-                        counterStore,
-                        counterName,
-                        1,
-                        scopeMode,
-                        gameCategory,
-                        includePrefix: !noPrefix,
-                        cancellationToken).ConfigureAwait(false);
-                }
+                    string arg0 = context.Arguments[0].Trim();
+                    if (string.Equals(arg0, "+", StringComparison.Ordinal))
+                    {
+                        return await AdjustResolvedCounterAsync(
+                            context,
+                            counterStore,
+                            counterName,
+                            1,
+                            scopeMode,
+                            gameCategory,
+                            includePrefix: !noPrefix,
+                            cancellationToken).ConfigureAwait(false);
+                    }
 
-                if (string.Equals(arg0, "-", StringComparison.Ordinal))
-                {
-                    return await AdjustResolvedCounterAsync(
-                        context,
-                        counterStore,
-                        counterName,
-                        -1,
-                        scopeMode,
-                        gameCategory,
-                        includePrefix: !noPrefix,
-                        cancellationToken).ConfigureAwait(false);
+                    return string.Equals(arg0, "-", StringComparison.Ordinal)
+                        ? await AdjustResolvedCounterAsync(
+                            context,
+                            counterStore,
+                            counterName,
+                            -1,
+                            scopeMode,
+                            gameCategory,
+                            includePrefix: !noPrefix,
+                            cancellationToken).ConfigureAwait(false)
+                        : long.TryParse(arg0, NumberStyles.None, CultureInfo.InvariantCulture, out long targetValue)
+                        ? await SetResolvedCounterAsync(
+                            context,
+                            counterStore,
+                            counterName,
+                            targetValue,
+                            scopeMode,
+                            gameCategory,
+                            CounterMutationKind.Set,
+                            includePrefix: !noPrefix,
+                            cancellationToken).ConfigureAwait(false)
+                        : await ReadResolvedCounterAsync(context, counterStore, counterName, scopeMode, gameCategory, cancellationToken).ConfigureAwait(false);
                 }
-
-                if (long.TryParse(arg0, NumberStyles.None, CultureInfo.InvariantCulture, out long targetValue))
-                {
-                    return await SetResolvedCounterAsync(
-                        context,
-                        counterStore,
-                        counterName,
-                        targetValue,
-                        scopeMode,
-                        gameCategory,
-                        CounterMutationKind.Set,
-                        includePrefix: !noPrefix,
-                        cancellationToken).ConfigureAwait(false);
-                }
-
-                return await ReadResolvedCounterAsync(context, counterStore, counterName, scopeMode, gameCategory, cancellationToken).ConfigureAwait(false);
-            }
 
             default:
                 return await ReadResolvedCounterAsync(context, counterStore, counterName, scopeMode, gameCategory, cancellationToken).ConfigureAwait(false);

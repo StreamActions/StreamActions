@@ -21,16 +21,22 @@ WORKDIR /src
 
 COPY Directory.Build.props Directory.Packages.props StreamActions.sln LICENSE ./
 COPY StreamActions.Common/StreamActions.Common.csproj StreamActions.Common/
+COPY StreamActions.Twitch/StreamActions.Twitch.csproj StreamActions.Twitch/
 COPY StreamActions.Core/StreamActions.Core.csproj StreamActions.Core/
 COPY StreamActions.Database/StreamActions.Database.csproj StreamActions.Database/
+COPY StreamActions.Scripting/StreamActions.Scripting.csproj StreamActions.Scripting/
+COPY StreamActions.Twitch.UI/StreamActions.Twitch.UI.csproj StreamActions.Twitch.UI/
 COPY StreamActions.Web/StreamActions.Web.csproj StreamActions.Web/
 COPY StreamActions.Daemon/StreamActions.Daemon.csproj StreamActions.Daemon/
 
 RUN dotnet restore StreamActions.Daemon/StreamActions.Daemon.csproj
 
 COPY StreamActions.Common/ StreamActions.Common/
+COPY StreamActions.Twitch/ StreamActions.Twitch/
 COPY StreamActions.Core/ StreamActions.Core/
 COPY StreamActions.Database/ StreamActions.Database/
+COPY StreamActions.Scripting/ StreamActions.Scripting/
+COPY StreamActions.Twitch.UI/ StreamActions.Twitch.UI/
 COPY StreamActions.Web/ StreamActions.Web/
 COPY StreamActions.Daemon/ StreamActions.Daemon/
 
@@ -43,7 +49,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:aac50ceef10391e78a899e3d2ccd00b
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl libstdc++6 \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /etc/streamactions /var/lib/streamactions/plugins /var/lib/streamactions/backups /var/log/streamactions \
     && chown -R $APP_UID:$APP_UID /etc/streamactions /var/lib/streamactions /var/log/streamactions

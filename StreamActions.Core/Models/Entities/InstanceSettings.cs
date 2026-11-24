@@ -129,6 +129,26 @@ public sealed class InstanceSettings
     public StepUpSudoPolicy StepUpSudoPolicy { get; set; } = StepUpSudoPolicy.Required;
 
     /// <summary>
+    /// Gets or sets the post-stream grace period in minutes during which stream-session scripts and schedules remain active after <c>stream.offline</c>.
+    /// </summary>
+    public int PostStreamGracePeriodMinutes { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets the inactivity timeout in minutes before off-stream event-triggered ClearScript isolates are automatically unloaded.
+    /// </summary>
+    public int OffStreamScriptIdleTimeoutMinutes { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets the per-invocation CPU execution timeout in seconds for ClearScript V8 script calls.
+    /// </summary>
+    public int ClearScriptExecutionTimeoutSeconds { get; set; } = 2;
+
+    /// <summary>
+    /// Gets or sets the maximum number of concurrent ClearScript V8 executions allowed per workspace.
+    /// </summary>
+    public int ClearScriptMaxConcurrencyPerWorkspace { get; set; } = 4;
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when settings were last updated.
     /// </summary>
     public DateTimeOffset UpdatedAtUtc { get; set; }

@@ -25,7 +25,7 @@ using StreamActions.Core.Permissions;
 namespace StreamActions.Core.Services;
 
 /// <summary>
-/// Implements the two-tier SMF and PhantomBot permission evaluation pipeline with <see cref="HybridCache"/> caching.
+/// Implements the two-tier SMF-style and PhantomBot-style permission evaluation pipeline with <see cref="HybridCache"/> caching.
 /// </summary>
 public sealed class PermissionService : IPermissionService
 {
@@ -229,6 +229,15 @@ public sealed class PermissionService : IPermissionService
     {
         PermissionEvaluationResult result = await this.EvaluateAsync(workspaceId, actor, permissionKey, cancellationToken).ConfigureAwait(false);
         return result.IsAllowed;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<WorkspaceResourceQuotas> GetEffectiveResourceQuotasAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<GroupWithGrants> globalGroups = await this.GetGlobalGroupsWithGrantsAsync(workspaceId, cancellationToken).ConfigureAwait(false);
+        return WorkspaceResourceQuotas.ResolveEffective(globalGroups.Select(static g => g.Group));
     }
 
     /// <inheritdoc />

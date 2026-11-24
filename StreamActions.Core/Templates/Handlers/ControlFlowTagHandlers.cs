@@ -127,17 +127,11 @@ public sealed class IfTagHandler : ICommandTagHandler
             return TagResult.Incomplete;
         }
 
-        if (conditionMatched)
-        {
-            return await thenNode.EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
-        }
-
-        if (elseNode is not null)
-        {
-            return await elseNode.EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
-        }
-
-        return TagResult.Complete(string.Empty);
+        return conditionMatched
+            ? await thenNode.EvaluateAsync(context, cancellationToken).ConfigureAwait(false)
+            : elseNode is not null
+            ? await elseNode.EvaluateAsync(context, cancellationToken).ConfigureAwait(false)
+            : TagResult.Complete(string.Empty);
     }
 
     /// <summary>
@@ -163,12 +157,7 @@ public sealed class IfTagHandler : ICommandTagHandler
         }
 
         TagResult right = await rightNode.EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
-        if (!right.IsComplete || context.IsCanceled)
-        {
-            return false;
-        }
-
-        return ComparisonTagHandler.EvaluateComparison(operatorName, left.Value, right.Value);
+        return right.IsComplete && !context.IsCanceled && ComparisonTagHandler.EvaluateComparison(operatorName, left.Value, right.Value);
     }
 
     /// <summary>
@@ -221,12 +210,9 @@ public sealed class ComparisonTagHandler(string tagName) : ICommandTagHandler
         }
 
         TagResult right = await unevaluatedArgs[1].EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
-        if (!right.IsComplete || context.IsCanceled)
-        {
-            return TagResult.Incomplete;
-        }
-
-        return TagResult.Complete(EvaluateComparison(this.TagName, left.Value, right.Value) ? "true" : "false");
+        return !right.IsComplete || context.IsCanceled
+            ? TagResult.Incomplete
+            : TagResult.Complete(EvaluateComparison(this.TagName, left.Value, right.Value) ? "true" : "false");
     }
 
     /// <summary>
@@ -268,20 +254,12 @@ public sealed class ComparisonTagHandler(string tagName) : ICommandTagHandler
         bool isLeftNumber = double.TryParse(left.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double leftNumber);
         bool isRightNumber = double.TryParse(right.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double rightNumber);
 
-        if (string.Equals(op, "gt", StringComparison.OrdinalIgnoreCase))
-        {
-            return isLeftNumber && isRightNumber
+        return string.Equals(op, "gt", StringComparison.OrdinalIgnoreCase)
+            ? isLeftNumber && isRightNumber
                 ? leftNumber > rightNumber
-                : StringComparer.OrdinalIgnoreCase.Compare(left, right) > 0;
-        }
-
-        if (string.Equals(op, "lt", StringComparison.OrdinalIgnoreCase))
-        {
-            return isLeftNumber && isRightNumber
+                : StringComparer.OrdinalIgnoreCase.Compare(left, right) > 0
+            : string.Equals(op, "lt", StringComparison.OrdinalIgnoreCase) && (isLeftNumber && isRightNumber
                 ? leftNumber < rightNumber
-                : StringComparer.OrdinalIgnoreCase.Compare(left, right) < 0;
-        }
-
-        return false;
+                : StringComparer.OrdinalIgnoreCase.Compare(left, right) < 0);
     }
 }

@@ -138,21 +138,15 @@ internal static class TimeTagFormatting
                 $"{totalDays}d {duration.Hours}h {duration.Minutes}m {duration.Seconds}s");
         }
 
-        if (duration.Hours > 0)
-        {
-            return string.Create(
+        return duration.Hours > 0
+            ? string.Create(
                 CultureInfo.InvariantCulture,
-                $"{duration.Hours}h {duration.Minutes}m {duration.Seconds}s");
-        }
-
-        if (duration.Minutes > 0)
-        {
-            return string.Create(
+                $"{duration.Hours}h {duration.Minutes}m {duration.Seconds}s")
+            : duration.Minutes > 0
+            ? string.Create(
                 CultureInfo.InvariantCulture,
-                $"{duration.Minutes}m {duration.Seconds}s");
-        }
-
-        return string.Create(CultureInfo.InvariantCulture, $"{duration.Seconds}s");
+                $"{duration.Minutes}m {duration.Seconds}s")
+            : string.Create(CultureInfo.InvariantCulture, $"{duration.Seconds}s");
     }
 }
 

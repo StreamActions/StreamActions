@@ -317,7 +317,7 @@ public sealed class BuiltInCommandRegistry : IBuiltInCommandRegistry
     /// <param name="rawTrigger">The raw trigger text.</param>
     /// <returns>The normalized trigger, or <see cref="string.Empty"/> when blank.</returns>
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "StreamActions normalizes command triggers to lowercase invariant.")]
-    internal static string NormalizeTrigger(string? rawTrigger) =>
+    public static string NormalizeTrigger(string? rawTrigger) =>
         string.IsNullOrWhiteSpace(rawTrigger)
             ? string.Empty
             : rawTrigger.Trim().TrimStart('!').Trim().ToLowerInvariant();

@@ -270,7 +270,7 @@ public sealed class TotpService : ITotpService
         Span<byte> hash = stackalloc byte[20];
         _ = HMACSHA1.HashData(keyBytes, counterBytes, hash);
 
-        int offset = hash[hash.Length - 1] & 0x0F;
+        int offset = hash[^1] & 0x0F;
         int binaryCode = ((hash[offset] & 0x7F) << 24)
             | ((hash[offset + 1] & 0xFF) << 16)
             | ((hash[offset + 2] & 0xFF) << 8)

@@ -112,7 +112,7 @@ public sealed class PermissionStoreTests
         IReadOnlyList<PermissionDescriptor> dangerousGlobal = [.. registry.GetAll().Where(static d => d.IsGloballyGated && d.IsDangerousGlobalFeature)];
 
         _ = standardGlobal.Should().HaveCount(12);
-        _ = dangerousGlobal.Should().HaveCount(5);
+        _ = dangerousGlobal.Should().HaveCount(7);
 
         foreach (PermissionDescriptor standard in standardGlobal)
         {

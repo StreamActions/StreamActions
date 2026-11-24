@@ -24,6 +24,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using StreamActions.Core.Abstractions;
 using StreamActions.Core.Configuration;
 using StreamActions.Core.Models;
+using StreamActions.Core.Scripting;
 using StreamActions.Database.Interceptors;
 using StreamActions.Database.Providers;
 using StreamActions.Database.Security;
@@ -124,6 +125,9 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IMfaCredentialStore, MfaCredentialStore>();
         services.TryAddSingleton<WorkspaceCacheService>();
         services.TryAddSingleton<ICommandRepository, CommandRepository>();
+        services.TryAddSingleton<IActionBlockStore, ActionBlockStore>();
+        services.TryAddSingleton<IWorkspaceCommandPermissionTracker, WorkspaceCommandPermissionTracker>();
+        services.TryAddSingleton<IWorkspaceScriptStore, WorkspaceScriptStore>();
         services.TryAddSingleton<ICounterStore, CounterStore>();
         services.TryAddSingleton<IViewerLoyaltyStore, ViewerLoyaltyStore>();
         services.TryAddSingleton<DatabaseMigrationService>();

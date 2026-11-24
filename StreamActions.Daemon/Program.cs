@@ -32,6 +32,8 @@ using StreamActions.Daemon.Services;
 using StreamActions.Daemon.Telemetry;
 using StreamActions.Database;
 using StreamActions.Database.Services;
+using StreamActions.Scripting;
+using StreamActions.Scripting.Runtime;
 using StreamActions.Twitch.UI;
 using StreamActions.Web;
 using System.Diagnostics.CodeAnalysis;
@@ -88,6 +90,8 @@ public partial class Program
                 _ = services.AddStreamActionsDatabase(hostContext.Configuration);
                 _ = services.AddStreamActionsWeb();
                 _ = services.AddStreamActionsTwitchUi();
+                services.TryAddSingleton<ITwitchSessionLeaseProvider, TwitchUiSessionLeaseProvider>();
+                _ = services.AddStreamActionsScripting();
                 _ = services.AddHttpClient();
 
                 services.TryAddSingleton<TwitchPlatformOAuthProvider>();

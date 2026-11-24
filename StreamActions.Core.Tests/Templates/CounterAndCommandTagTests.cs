@@ -25,7 +25,6 @@ using StreamActions.Core.Abstractions;
 using StreamActions.Core.Configuration;
 using StreamActions.Core.Models;
 using StreamActions.Core.Models.Entities;
-using StreamActions.Core.Models.Messaging;
 using StreamActions.Core.Services;
 using StreamActions.Core.Templates;
 using Xunit;

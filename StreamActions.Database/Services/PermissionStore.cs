@@ -344,6 +344,9 @@ public sealed class PermissionStore : IPermissionStore
                 existing.Name = trimmedName;
                 existing.MappedPlatformDesignation = trimmedDesignation;
                 existing.MappedOidcGroupClaim = trimmedOidcClaim;
+                existing.MaxClearScriptTotalRamBytes = group.MaxClearScriptTotalRamBytes;
+                existing.MaxActionBlocksPerFlow = group.MaxActionBlocksPerFlow;
+                existing.MaxActionBlockFlowRuntimeSeconds = group.MaxActionBlockFlowRuntimeSeconds;
                 persisted = existing;
             }
             else
@@ -355,6 +358,9 @@ public sealed class PermissionStore : IPermissionStore
                     Name = trimmedName,
                     MappedPlatformDesignation = trimmedDesignation,
                     MappedOidcGroupClaim = trimmedOidcClaim,
+                    MaxClearScriptTotalRamBytes = group.MaxClearScriptTotalRamBytes,
+                    MaxActionBlocksPerFlow = group.MaxActionBlocksPerFlow,
+                    MaxActionBlockFlowRuntimeSeconds = group.MaxActionBlockFlowRuntimeSeconds,
                 };
                 _ = db.PermissionGroups.Add(persisted);
             }
@@ -901,8 +907,20 @@ public sealed class PermissionStore : IPermissionStore
                 Id = Guid.CreateVersion7(),
                 WorkspaceId = null,
                 Name = BuiltInPermissionKeys.DefaultWorkspacePlanGroupName,
+                MaxClearScriptTotalRamBytes = WorkspaceResourceQuotas.DefaultMaxClearScriptTotalRamBytes,
+                MaxActionBlocksPerFlow = WorkspaceResourceQuotas.DefaultMaxActionBlocksPerFlow,
+                MaxActionBlockFlowRuntimeSeconds = WorkspaceResourceQuotas.DefaultMaxActionBlockFlowRuntimeSeconds,
             };
             _ = db.PermissionGroups.Add(defaultGroup);
+            changed = true;
+        }
+        else if (!defaultGroup.MaxClearScriptTotalRamBytes.HasValue
+            || !defaultGroup.MaxActionBlocksPerFlow.HasValue
+            || !defaultGroup.MaxActionBlockFlowRuntimeSeconds.HasValue)
+        {
+            defaultGroup.MaxClearScriptTotalRamBytes ??= WorkspaceResourceQuotas.DefaultMaxClearScriptTotalRamBytes;
+            defaultGroup.MaxActionBlocksPerFlow ??= WorkspaceResourceQuotas.DefaultMaxActionBlocksPerFlow;
+            defaultGroup.MaxActionBlockFlowRuntimeSeconds ??= WorkspaceResourceQuotas.DefaultMaxActionBlockFlowRuntimeSeconds;
             changed = true;
         }
 
@@ -983,6 +1001,46 @@ public sealed class PermissionStore : IPermissionStore
         }
 
         return (defaultGroup, changed);
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask DeleteWorkspacePermissionKeyAsync(
+        Guid workspaceId,
+        string permissionKey,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(permissionKey);
+
+        string normalizedKey = NormalizeValue(permissionKey);
+        int deletedCount = 0;
+
+        StreamActionsDbContext db = await this._dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await using (db.ConfigureAwait(false))
+        {
+            List<Guid> groupIds = await db.PermissionGroups
+                .Where(x => x.WorkspaceId == workspaceId)
+                .Select(static x => x.Id)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (groupIds.Count > 0)
+            {
+                deletedCount += await db.PermissionGrants
+                    .Where(x => groupIds.Contains(x.GroupId) && x.PermissionKey == normalizedKey)
+                    .ExecuteDeleteAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            deletedCount += await db.UserPermissionOverrides
+                .Where(x => x.WorkspaceId == workspaceId && x.PermissionKey == normalizedKey)
+                .ExecuteDeleteAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (deletedCount > 0)
+        {
+            await this._eventBus.PublishAsync(new PermissionsInvalidatedEvent(workspaceId), cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>

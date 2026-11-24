@@ -125,6 +125,16 @@ public static class BuiltInPermissionKeys
     public const string FeatureScriptingClearScript = "feature.scripting.clearscript";
 
     /// <summary>
+    /// Allows workspace ClearScript scripts to remain permanently loaded in memory across stream sessions.
+    /// </summary>
+    public const string FeatureScriptingClearScriptPersistent = "feature.scripting.clearscript.persistent";
+
+    /// <summary>
+    /// Allows Timer and Cron Action Block profiles to execute outside of live stream sessions and the 30-minute post-stream grace period.
+    /// </summary>
+    public const string FeatureActionBlocksOfflineSchedule = "feature.action_blocks.offline_schedule";
+
+    /// <summary>
     /// Enables third-party plugin execution within a workspace.
     /// </summary>
     public const string FeaturePlugins = "feature.plugins";
@@ -223,6 +233,16 @@ public static class BuiltInPermissionKeys
     /// Allows creating or editing command actions that assign or remove Discord roles.
     /// </summary>
     public const string UiCommandsActionsDiscordRoles = "ui.commands.actions.discord_roles";
+
+    /// <summary>
+    /// Allows viewing running Action Block flows and loaded ClearScript V8 instances in the workspace Task Manager.
+    /// </summary>
+    public const string UiTaskManagerView = "ui.task_manager.view";
+
+    /// <summary>
+    /// Allows killing running Action Block flows and unloading ClearScript V8 script instances in the workspace Task Manager.
+    /// </summary>
+    public const string UiTaskManagerKill = "ui.task_manager.kill";
 
     /// <summary>
     /// Allows timing out users in chat.

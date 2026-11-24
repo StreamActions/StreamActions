@@ -213,4 +213,16 @@ public interface IPermissionStore
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
     ValueTask SeedBuiltInWorkspaceGroupsAsync(Guid workspaceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes all workspace-scoped permission grants and user overrides associated with <paramref name="permissionKey"/>.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <param name="permissionKey">The permission key to remove from all workspace permission groups and overrides.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    ValueTask DeleteWorkspacePermissionKeyAsync(
+        Guid workspaceId,
+        string permissionKey,
+        CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 }

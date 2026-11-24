@@ -21,6 +21,7 @@ using StreamActions.Core.Abstractions;
 using StreamActions.Core.Commands;
 using StreamActions.Core.Models.Entities;
 using StreamActions.Core.Models.Metadata;
+using StreamActions.Core.Scripting;
 using System.Text.Json;
 
 namespace StreamActions.Database.Services;
@@ -56,15 +57,22 @@ public sealed class CommandRepository : ICommandRepository
     private readonly IEventBus _eventBus;
 
     /// <summary>
+    /// Optional tracker cleaning up dynamic command permission grants when the last reference is deleted.
+    /// </summary>
+    private readonly IWorkspaceCommandPermissionTracker? _commandPermissionTracker;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="CommandRepository"/> class.
     /// </summary>
     /// <param name="dbContextFactory">The database context factory.</param>
     /// <param name="cache">The workspace cache service.</param>
     /// <param name="eventBus">The event bus used to publish invalidation events.</param>
+    /// <param name="commandPermissionTracker">Optional command permission tracker.</param>
     public CommandRepository(
         IDbContextFactory<StreamActionsDbContext> dbContextFactory,
         WorkspaceCacheService cache,
-        IEventBus eventBus)
+        IEventBus eventBus,
+        IWorkspaceCommandPermissionTracker? commandPermissionTracker = null)
     {
         ArgumentNullException.ThrowIfNull(dbContextFactory);
         ArgumentNullException.ThrowIfNull(cache);
@@ -73,6 +81,7 @@ public sealed class CommandRepository : ICommandRepository
         this._dbContextFactory = dbContextFactory;
         this._cache = cache;
         this._eventBus = eventBus;
+        this._commandPermissionTracker = commandPermissionTracker;
     }
 
     /// <inheritdoc/>
@@ -206,10 +215,20 @@ public sealed class CommandRepository : ICommandRepository
     public async ValueTask DeleteAsync(Guid workspaceId, Guid commandId, CancellationToken cancellationToken = default)
     {
         int deleted;
+        string? deletedTrigger = null;
 
         StreamActionsDbContext db = await this._dbContextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         await using (db.ConfigureAwait(false))
         {
+            if (this._commandPermissionTracker is not null)
+            {
+                deletedTrigger = await db.CustomCommands
+                    .Where(x => x.WorkspaceId == workspaceId && x.Id == commandId)
+                    .Select(static x => x.Trigger)
+                    .FirstOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
             deleted = await db.CustomCommands
                 .Where(x => x.WorkspaceId == workspaceId && x.Id == commandId)
                 .ExecuteDeleteAsync(cancellationToken)
@@ -220,6 +239,13 @@ public sealed class CommandRepository : ICommandRepository
         {
             await this._cache.InvalidateAsync(workspaceId, _cacheDomain, cancellationToken).ConfigureAwait(false);
             await this._eventBus.PublishAsync(new CommandsInvalidatedEvent(workspaceId), cancellationToken).ConfigureAwait(false);
+
+            if (this._commandPermissionTracker is not null && !string.IsNullOrWhiteSpace(deletedTrigger))
+            {
+                _ = await this._commandPermissionTracker
+                    .CleanupOrphanedCommandPermissionsAsync(workspaceId, [deletedTrigger], cancellationToken)
+                    .ConfigureAwait(false);
+            }
         }
     }
 

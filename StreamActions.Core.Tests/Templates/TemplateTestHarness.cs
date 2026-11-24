@@ -100,9 +100,7 @@ internal static class TemplateTestHarness
         bool canMutateBoundCounter = false,
         TimeProvider? timeProvider = null,
         int chainDepth = 0,
-        IEnumerable<string>? visitedCommandTriggers = null)
-    {
-        return new TagEvaluationContext(
+        IEnumerable<string>? visitedCommandTriggers = null) => new(
             message ?? CreateChatCommand(),
             registry ?? CoreTagRegistryFactory.CreateDefaultRegistry(),
             currentGameCategory: currentGameCategory,
@@ -114,7 +112,6 @@ internal static class TemplateTestHarness
             timeProvider: timeProvider,
             chainDepth: chainDepth,
             visitedCommandTriggers: visitedCommandTriggers);
-    }
 
     /// <summary>
     /// In-memory <see cref="ICounterStore"/> test double supporting Global and PerGame counters.

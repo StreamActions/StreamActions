@@ -17,7 +17,9 @@
  */
 
 using Microsoft.EntityFrameworkCore;
+using StreamActions.Core.Actions;
 using StreamActions.Core.Models.Entities;
+using StreamActions.Core.Scripting;
 
 namespace StreamActions.Database;
 
@@ -168,6 +170,21 @@ public class StreamActionsDbContext : DbContext
     /// Gets the instance settings table.
     /// </summary>
     public DbSet<InstanceSettings> InstanceSettings => this.Set<InstanceSettings>();
+
+    /// <summary>
+    /// Gets the Action Block tasks table.
+    /// </summary>
+    public DbSet<WorkspaceActionBlockTask> WorkspaceActionBlockTasks => this.Set<WorkspaceActionBlockTask>();
+
+    /// <summary>
+    /// Gets the Action Block trigger profiles table.
+    /// </summary>
+    public DbSet<WorkspaceActionBlockProfile> WorkspaceActionBlockProfiles => this.Set<WorkspaceActionBlockProfile>();
+
+    /// <summary>
+    /// Gets the Workspace VFS ClearScript scripts table.
+    /// </summary>
+    public DbSet<WorkspaceScript> WorkspaceScripts => this.Set<WorkspaceScript>();
 
     /// <summary>
     /// Applies the shared StreamActions EF Core defaults (<see cref="QueryTrackingBehavior.NoTracking"/> and snake_case naming)

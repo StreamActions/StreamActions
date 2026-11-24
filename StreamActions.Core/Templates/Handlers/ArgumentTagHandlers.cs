@@ -55,12 +55,9 @@ public sealed class PositionalArgumentTagHandler : ICommandTagHandler
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (this._zeroBasedIndex >= context.Arguments.Count)
-        {
-            return ValueTask.FromResult(TagResult.Incomplete);
-        }
-
-        return ValueTask.FromResult(TagResult.FromNonEmpty(context.Arguments[this._zeroBasedIndex]));
+        return this._zeroBasedIndex >= context.Arguments.Count
+            ? ValueTask.FromResult(TagResult.Incomplete)
+            : ValueTask.FromResult(TagResult.FromNonEmpty(context.Arguments[this._zeroBasedIndex]));
     }
 }
 

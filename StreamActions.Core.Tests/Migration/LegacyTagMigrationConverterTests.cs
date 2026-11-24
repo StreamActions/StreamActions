@@ -27,7 +27,7 @@ namespace StreamActions.Core.Tests.Migration;
 
 /// <summary>
 /// Unit tests for <see cref="LegacyTagMigrationConverter"/> covering all 4 pipeline stages,
-/// all 7 legacy bot syntaxes, security exclusions, Tasker upgrades, and AST validation.
+/// all 7 legacy bot syntaxes, security exclusions, Action Block upgrades, and AST validation.
 /// </summary>
 public sealed class LegacyTagMigrationConverterTests
 {
@@ -58,7 +58,7 @@ public sealed class LegacyTagMigrationConverterTests
         _ = result.MinRequiredArgs.Should().BeNull();
         _ = result.DiscoveredSecrets.Should().BeEmpty();
         _ = result.ReferencedVirtualFiles.Should().BeEmpty();
-        _ = result.RequiresTaskerUpgrade.Should().BeFalse();
+        _ = result.RequiresActionBlockUpgrade.Should().BeFalse();
         _ = result.UpgradedActions.Should().BeEmpty();
         _ = result.Diagnostics.Should().BeEmpty();
     }
@@ -292,7 +292,7 @@ public sealed class LegacyTagMigrationConverterTests
             LegacyBotSource.Nightbot));
 
         _ = result.ConvertedTemplate.Should().Be(expected);
-        _ = result.RequiresTaskerUpgrade.Should().BeFalse();
+        _ = result.RequiresActionBlockUpgrade.Should().BeFalse();
         _ = result.UpgradedActions.Should().BeEmpty();
         _ = result.Diagnostics.Should().Contain(d => d.Code == MigrationDiagnosticCode.TranspiledEvalExpression);
         _ = result.ParseResult.IsValid.Should().BeTrue();
@@ -310,7 +310,7 @@ public sealed class LegacyTagMigrationConverterTests
             LegacyBotSource.Nightbot));
 
         _ = result.ConvertedTemplate.Should().Be("Result:");
-        _ = result.RequiresTaskerUpgrade.Should().BeTrue();
+        _ = result.RequiresActionBlockUpgrade.Should().BeTrue();
         _ = result.UpgradedActions.Should().ContainSingle();
         MigratedActionBlockDescriptor block = result.UpgradedActions[0];
         _ = block.ActionType.Should().Be("script.clearscript");
@@ -518,10 +518,10 @@ public sealed class LegacyTagMigrationConverterTests
 
     #endregion
 
-    #region Stage4TaskerAndValidation
+    #region Stage4ActionBlocksAndValidation
 
     [Fact]
-    [Trait("Member", "Stage4TaskerAndValidation")]
+    [Trait("Member", "Stage4ActionBlocksAndValidation")]
     public void ConvertWhenDiscordAndChannelPointSideEffectsPresentUpgradesToPlatformInvokeBlocks()
     {
         LegacyTagMigrationConverter converter = new();
@@ -530,7 +530,7 @@ public sealed class LegacyTagMigrationConverterTests
             "(setrole (touser), VIP) (removerole (1), Guest) (setdiscordplaying Elden Ring) (cpsetenabled reward-1, true) (cpsetpaused reward-2, false) Done!"));
 
         _ = result.ConvertedTemplate.Should().Be("Done!");
-        _ = result.RequiresTaskerUpgrade.Should().BeTrue();
+        _ = result.RequiresActionBlockUpgrade.Should().BeTrue();
         _ = result.UpgradedActions.Should().HaveCount(5);
 
         _ = result.UpgradedActions[0].ActionType.Should().Be("platform.invoke");
@@ -556,13 +556,13 @@ public sealed class LegacyTagMigrationConverterTests
         _ = result.UpgradedActions[4].Parameters["paused"].Should().Be("false");
 
         _ = result.Diagnostics.Should().Contain(d =>
-            d.Code == MigrationDiagnosticCode.UpgradedSideEffectToTasker
+            d.Code == MigrationDiagnosticCode.UpgradedSideEffectToActionBlocks
             && d.Severity == MigrationDiagnosticSeverity.Warning);
     }
 
     [Fact]
-    [Trait("Member", "Stage4TaskerAndValidation")]
-    public void ConvertWhenMassLoyaltyAndDelayAndSayTagsPresentUpgradesToTaskerActionBlocks()
+    [Trait("Member", "Stage4ActionBlocksAndValidation")]
+    public void ConvertWhenMassLoyaltyAndDelayAndSayTagsPresentUpgradesToActionBlocks()
     {
         LegacyTagMigrationConverter converter = new();
         LegacyCommandMigrationResult result = converter.Convert(new LegacyCommandMigrationRequest(
@@ -570,7 +570,7 @@ public sealed class LegacyTagMigrationConverterTests
             "(addpointstoall 100) (takepointsfromall 50) (delaycommand 5 shoutout (1)) (delaysay 10 Hi (sender)!) (twitchsay Twitch hello) (discordsay #general Discord hello)"));
 
         _ = result.ConvertedTemplate.Should().BeEmpty();
-        _ = result.RequiresTaskerUpgrade.Should().BeTrue();
+        _ = result.RequiresActionBlockUpgrade.Should().BeTrue();
         _ = result.UpgradedActions.Should().HaveCount(8);
 
         _ = result.UpgradedActions[0].ActionType.Should().Be("loyalty.adjust_all");
@@ -604,7 +604,7 @@ public sealed class LegacyTagMigrationConverterTests
     }
 
     [Fact]
-    [Trait("Member", "Stage4TaskerAndValidation")]
+    [Trait("Member", "Stage4ActionBlocksAndValidation")]
     public void ConvertWhenUnclosedBraceOrUnknownTagInOutputForwardsParseDiagnostics()
     {
         LegacyTagMigrationConverter converter = new();
@@ -623,7 +623,7 @@ public sealed class LegacyTagMigrationConverterTests
     }
 
     [Fact]
-    [Trait("Member", "Stage4TaskerAndValidation")]
+    [Trait("Member", "Stage4ActionBlocksAndValidation")]
     public void ConvertWhenCustomTagRegistryIncludesPlatformTagsProducesZeroWarnings()
     {
         TagRegistry registry = CoreTagRegistryFactory.CreateDefaultRegistry();

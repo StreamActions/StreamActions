@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using StreamActions.Core.Abstractions;
+using StreamActions.Core.Actions;
 using StreamActions.Core.Commands;
 using StreamActions.Core.Configuration;
 using StreamActions.Core.Permissions;
@@ -88,6 +89,24 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<CommandCooldownTracker>();
         services.TryAddSingleton<ICommandDispatcher, CommandDispatcher>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPlugin, CommandsPlugin>());
+
+        services.TryAddSingleton<IRuntimeExecutionTracker, RuntimeExecutionTracker>();
+        foreach (IPlatformActionHandler action in CoreActionBlockCatalogFactory.CreateDefaultActions())
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton(action));
+        }
+
+        foreach (ITriggerDescriptor trigger in CoreActionBlockCatalogFactory.CreateDefaultTriggers())
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton(trigger));
+        }
+
+        services.TryAddSingleton<IActionBlockCatalog, ActionBlockCatalog>();
+        services.TryAddSingleton<IActionFlowRunner, ActionFlowRunner>();
+        services.TryAddSingleton<ActionBlockTriggerDispatcher>();
+        services.TryAddSingleton<IActionBlockTriggerDispatcher>(static sp => sp.GetRequiredService<ActionBlockTriggerDispatcher>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ActionBlockTriggerDispatcher>(static sp => sp.GetRequiredService<ActionBlockTriggerDispatcher>()));
+        services.TryAddSingleton<ActionBlockBindingService>();
 
         return services;
     }

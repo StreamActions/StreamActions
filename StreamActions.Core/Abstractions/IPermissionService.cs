@@ -136,4 +136,14 @@ public interface IPermissionService
         PlatformUserIdentity actor,
         bool viewerIsRootOrGlobalAdmin = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolves the effective Tier 1 resource consumption quotas for a workspace using the <c>MAX</c> non-null limit across all assigned global groups, falling back to <see cref="WorkspaceResourceQuotas.DefaultBaseline"/>.
+    /// </summary>
+    /// <param name="workspaceId">The workspace identifier.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>The resolved <see cref="WorkspaceResourceQuotas"/>.</returns>
+    ValueTask<WorkspaceResourceQuotas> GetEffectiveResourceQuotasAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default);
 }

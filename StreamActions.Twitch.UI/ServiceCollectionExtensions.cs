@@ -18,8 +18,10 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using StreamActions.Core.Actions;
 using StreamActions.Core.Templates;
 using StreamActions.Twitch.UI.Abstractions;
+using StreamActions.Twitch.UI.Actions;
 using StreamActions.Twitch.UI.Services;
 using StreamActions.Twitch.UI.Templates;
 
@@ -47,6 +49,11 @@ public static class ServiceCollectionExtensions
         foreach (ICommandTagHandler handler in TwitchTagRegistryFactory.CreateDefaultHandlers())
         {
             services.TryAddEnumerable(ServiceDescriptor.Singleton(handler));
+        }
+
+        foreach (IPlatformActionHandler actionHandler in TwitchActionBlockCatalogFactory.CreateDefaultActions())
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton(actionHandler));
         }
 
         return services;

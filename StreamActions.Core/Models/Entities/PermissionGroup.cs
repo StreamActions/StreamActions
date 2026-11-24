@@ -47,4 +47,19 @@ public sealed class PermissionGroup
     /// Gets or sets the optional OIDC group claim value mapped to this group.
     /// </summary>
     public string? MappedOidcGroupClaim { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional Tier 1 ClearScript V8 total heap quota in bytes for workspaces assigned to this global group.
+    /// </summary>
+    public long? MaxClearScriptTotalRamBytes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional Tier 1 maximum Action Blocks per flow quota for workspaces assigned to this global group.
+    /// </summary>
+    public int? MaxActionBlocksPerFlow { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional Tier 1 maximum runtime in seconds per Action Block flow for workspaces assigned to this global group.
+    /// </summary>
+    public int? MaxActionBlockFlowRuntimeSeconds { get; set; }
 }
