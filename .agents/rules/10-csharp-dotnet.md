@@ -6,7 +6,7 @@ globs: "**/*.cs, **/*.razor, **/*.csproj, **/*.sln, **/*.slnx, **/Directory.Buil
 # C# / .NET Standards
 
 ## Verification
-- After creating or editing any `.cs` or `.razor` file, follow the `dotnet-build-verify` skill (format → verify-no-changes → build → test) until it reports clean
+- After creating or editing any `.cs` or `.razor` file, follow the `dotnet-build-verify` skill for your role (format → verify-no-changes → build → test): implementers verify and fix until clean, while the orchestrator verifies and delegates fixes
 
 ## Central Package Management
 - `Directory.Packages.props` sets `ManagePackageVersionsCentrally`. Package versions are declared only there, as `<PackageVersion Include="..." Version="..." />`

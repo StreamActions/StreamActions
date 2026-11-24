@@ -4,7 +4,7 @@ description: >-
   Model probe for model enum value "pro"
 mainAgent: false
 subagent: true
-model: flash
+model: pro
 commandExecutionPolicy: sandbox
 ---
 

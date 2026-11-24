@@ -1,7 +1,7 @@
 ---
 name: triage-sweeper
 description: >-
-  Flash-tier read-only Stage 1 sweep. Returns ranked candidate hotspots for
+  Hydrogen-tier read-only Stage 1 sweep. Returns ranked candidate hotspots for
   the auditors; never assigns severity.
 mainAgent: false
 subagent: true
@@ -11,6 +11,8 @@ tools:
   - view_file
   - run_command
 ---
+
+Agent-ID: triage-sweeper
 
 # Triage Sweeper
 

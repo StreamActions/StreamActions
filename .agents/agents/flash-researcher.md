@@ -1,8 +1,9 @@
 ---
 name: flash-researcher
 description: >-
-  Flash-tier read-only research (codebase, Twitch docs, Diff parsers, coverage
-  triage). Returns a Context Packet or Coverage Packet. Safe to run in parallel.
+  Hydrogen-tier read-only research (codebase, Twitch docs, Diff parsers,
+  coverage triage). Returns a Context Packet or Coverage Packet. Safe to run in
+  parallel.
 mainAgent: false
 subagent: true
 model: flash
@@ -15,6 +16,8 @@ tools:
 skills:
   - cobertura-summary
 ---
+
+Agent-ID: flash-researcher
 
 # Flash Researcher
 

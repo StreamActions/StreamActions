@@ -51,7 +51,9 @@ Every delegation and every report uses one of these formats. Keep reports under 
 GOAL: <one sentence>
 ACCEPTANCE: <bullet criteria>
 MODE: INTERACTIVE | SCHEDULED            (auditors only)
-ATTEMPT: <n>/2                           (rapid-coder only)
+TARGET: implement | <SIG list, each with its verbatim diagnostic line>
+PRIOR: none | <SIG>: <agent> tried <change @ file::member> -> <result>   (one line each)
+BUDGET: rapid-coder: 2 per SIG, 8 verify cycles | deep-debugger: 3 failed fix experiments
 FILES:
   EDIT: <absolute path> [Lx-Ly]
   REFERENCE: <absolute path> [Lx-Ly] - <why: pattern to mirror>
@@ -59,24 +61,77 @@ RULES: <AGENTS.md paths in scope> ; <.agents/rules files> ; <user overrides>
 FACTS: <authoritative facts inline: API fields, types, scopes, signatures, status codes, source URL per fact>
 VERIFY: <exact commands, or "skill dotnet-build-verify: <project> <files> <test project + filter>">
 ```
+`TARGET`, `PRIOR`, and `BUDGET` apply to `rapid-coder` and `deep-debugger` packets only.
 
 ### Result Report (returned by any agent)
 ```
-STATUS: DONE | BLOCKED | NEEDS_DECISION
+STATUS: DONE | BLOCKED | NEEDS_DECISION | NEEDS_FACTS
 CHANGED:
   - <path>: <one line>
 VERIFIED:
   - <command>: PASS | FAIL
-REMAINING: <diagnostic id + file:line, or "none">
+LEDGER: <SIG> n=<k> resolved|unresolved ; ...     (omit if no attempts were made)
+REMAINING: none | <SIG> + <verbatim diagnostic> [PRE-EXISTING]
 NOTES: <at most 3 lines>
 ```
+- `DONE` requires `REMAINING: none`, or only items tagged `[PRE-EXISTING]` (failures outside the packet's scope that were not attempted)
 
 ### Escalation Packet (appended to a BLOCKED Result Report)
 ```
-SYMPTOM: <exact diagnostic / failing test / runtime error, with file:line>
+SIG: <normalized signature>
+DIAGNOSTIC: <verbatim line(s)>
+REPRO: <exact command that shows it>
 ATTEMPTS:
-  1. <change made> -> <result>
-  2. <change made> -> <result>
+  1. <change @ file::member> -> <resulting SIG / diagnostic>
+  2. <change @ file::member> -> <resulting SIG / diagnostic>
+FILES TOUCHED: <path>: complete | partial | experimental
 HYPOTHESES: <ranked, with evidence>
-SCOPE SIGNALS: <cross-project | async/concurrency | serialization | environment-dependent | unknown>
+SCOPE SIGNALS: race/deadlock | async-ordering | DI/runtime-state | intermittent/env | serialization | unknown
 ```
+
+## Escalation contract
+This section is the only definition of attempts and escalation. Other files point here.
+
+### Error signature (SIG): never contains line numbers
+| Kind | SIG format |
+| :-- | :-- |
+| Format, analyzer, or compiler | `<DiagId>@<repo-relative file>::<Type.Member>`, for example `CA1311@StreamActions.Core/Chat/Foo.cs::Foo.Parse` |
+| Test failure | `TEST:<FullyQualifiedTestName>:<ExceptionType or AssertionKind>` |
+| Runtime | `RT:<ExceptionType>@<top in-repo frame Type.Member>` |
+| Python | `PY:<test id>:<ExceptionType>` |
+| Environment | `ENV:<code>` (for example `MSB3026`, a restore failure). Not an attempt: report it per `05-sandbox-execution.md` and stop |
+
+**Lineage rule:** a new SIG that appears in the same `file::member` right after an attempt on SIG A shares A's counter, so one error turning into another never resets it.
+
+### `rapid-coder`: self-contained cap per run
+- An **attempt** is one code change aimed at a SIG, followed by rerunning the step that reported it. Rerunning an unchanged command is not an attempt and is not allowed. `dotnet format` auto-fix is not an attempt
+- A **verify cycle** is one pass of format, build, and test after an edit batch. One batch may target several SIGs, and each targeted SIG uses one attempt
+- After each cycle, print one line: `LEDGER: <SIG> n=<k> resolved|unresolved`
+- Stop and return `STATUS: BLOCKED` with an Escalation Packet as soon as any SIG has 2 failed attempts, or after 8 verify cycles. Never make a third attempt on a SIG. Never revert work with `git`
+- Failures outside the packet's scope are reported as `[PRE-EXISTING]` and not attempted
+
+### `deep-debugger`: capped budget
+- At most 3 failed fix experiments in total. Reproduction and instrumentation runs do not count
+- Fix the root cause with the smallest change, add one regression test, then verify. Return mechanical spread (call sites, extra tests, cleanup) as a `FOLLOW-UP` blueprint for `rapid-coder`
+- When the budget is spent, return `STATUS: BLOCKED` with ranked findings. There is no further agent tier
+
+### `orchestrator`: owns attempts across invocations
+Keep this block in your turn text and update it after every Result Report:
+```
+ESCALATION LEDGER
+| unit | SIG | rapid-coder runs | deep-debugger runs | last status |
+```
+| Event | Action |
+| :-- | :-- |
+| `rapid-coder` returns `DONE` with `REMAINING: none` (or only `[PRE-EXISTING]`) | Integrate, then run Validator verification |
+| `rapid-coder` returns `BLOCKED` | Send `deep-debugger` the Escalation Packet, with `PRIOR` built from its `ATTEMPTS`. Never send the same SIG back to `rapid-coder` |
+| `rapid-coder` returns `DONE` with other `REMAINING` items | Treat as `BLOCKED` |
+| `rapid-coder` returns `NEEDS_FACTS` | Run `flash-researcher`, then re-dispatch `rapid-coder` (not a failed run) |
+| Any agent returns `NEEDS_DECISION` | Ask the user and end your turn |
+| No report, malformed report, or crash | Re-dispatch once with the same packet and `NOTES: infra retry`. A second failure counts as `BLOCKED` |
+| Validator verification shows a SIG not in the ledger | Dispatch `rapid-coder` with that SIG as `TARGET` and `PRIOR: none` |
+| Validator verification shows a SIG already in the ledger with a `rapid-coder` run | Dispatch `deep-debugger` with `PRIOR` from the ledger |
+| `deep-debugger` returns `DONE` with a `FOLLOW-UP` | Dispatch the blueprint to `rapid-coder` as an `implement` unit |
+| `deep-debugger` returns `BLOCKED`, or its SIG reappears | Stop. Report both Escalation Packets to the user. No further `deep-debugger` run on that SIG without the user's approval |
+
+Per SIG the maximum is: 1 `rapid-coder` run (2 internal attempts), 1 infra retry, 1 `deep-debugger` run (3 experiments), then the user. The orchestrator never fixes a SIG in the ledger itself.
