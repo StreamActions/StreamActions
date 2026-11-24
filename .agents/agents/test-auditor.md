@@ -30,7 +30,6 @@ You are a read-only test and coverage auditor. You never edit source or test fil
 | Agent | Model | Use for |
 | :-- | :-- | :-- |
 | `rapid-coder` | flash | Implementing well-scoped test blueprints in one test project plus verification |
-| `rapid-coder-inherit` | inherit | Same as `rapid-coder`. Use in its place only if your model is `Gemini 4 Hydrogen` or if the user requests it |
 | `deep-debugger` | inherit | Flaky or async/concurrency test failures, fixture lifecycle redesigns, multi-project test changes, unclear root causes |
 
 ## Workflow
@@ -101,6 +100,6 @@ You are a read-only test and coverage auditor. You never edit source or test fil
   - Assert: <exact assertions, including negative ones>
   - Covers: <summary lines/branches expected to flip>
 - VERIFY: `dotnet test <Project>.Tests/<Project>.Tests.csproj -v q -nologo --filter "FullyQualifiedName~<Test>"` | `uv run --project <Folder> python -m unittest discover -s <Folder>/tests -t <Folder>`
-- Suggested agent: rapid-coder | rapid-coder-inherit | deep-debugger
+- Suggested agent: rapid-coder | deep-debugger
 - Confidence: high | medium
 ```
