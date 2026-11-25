@@ -12,6 +12,7 @@ trigger: always_on
 ## Command shape (keeps auto-approval prefix matching working)
 - The first token must be the binary (`dotnet`, `git`, `uv`). Pass paths as arguments instead of using `cd` or `Set-Location`
 - One command per call. No chaining with `;`, `&&`, `||`, or pipes. No `$(...)` substitution and no shell variables
+- When using `Get-ChildItem` in PowerShell, always pass the path to the target folder explicitly with `-Path`, because PowerShell can otherwise search the entire `Documents` folder instead of the project folder
 - Keep output small:
 	- `dotnet build|test`: use `-v q -nologo`, target a specific `.csproj` instead of the solution, and use `--filter` with `dotnet test`
 	- `dotnet format`: use `--include <files>`
