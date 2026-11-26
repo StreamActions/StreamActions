@@ -240,11 +240,11 @@ public sealed partial class ActionFlowRunner : IActionFlowRunner
                     $"Task '{rootTask.Name}' defines {rootBlockCount} blocks, exceeding workspace quota MaxActionBlocksPerFlow ({maxBlocksPerFlow}).");
             }
 
-            using CancellationTokenSource killCts = new();
+            using CancellationTokenSource terminateCts = new();
             using CancellationTokenSource runtimeBudgetCts = new(TimeSpan.FromSeconds(maxRuntimeSeconds), this._timeProvider);
             using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken,
-                killCts.Token,
+                terminateCts.Token,
                 runtimeBudgetCts.Token);
 
             this._executionTracker.RegisterFlow(
@@ -259,7 +259,7 @@ public sealed partial class ActionFlowRunner : IActionFlowRunner
                     CurrentStepName: rootTask.Name,
                     startedAtUtc,
                     maxRuntimeSeconds),
-                () => killCts.Cancel());
+                () => terminateCts.Cancel());
 
             PlatformUserIdentity actor = request.ActorIdentity
                 ?? request.Message?.Sender.ToIdentity()
@@ -320,7 +320,7 @@ public sealed partial class ActionFlowRunner : IActionFlowRunner
                     FinalVariables: new Dictionary<string, string>(rootContext.Variables, StringComparer.OrdinalIgnoreCase),
                     DryRunOutboundMessages: dryRunMessages);
             }
-            catch (OperationCanceledException) when (runtimeBudgetCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested && !killCts.IsCancellationRequested)
+            catch (OperationCanceledException) when (runtimeBudgetCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested && !terminateCts.IsCancellationRequested)
             {
                 return new ActionExecutionTrace(
                     executionId,
@@ -332,7 +332,7 @@ public sealed partial class ActionFlowRunner : IActionFlowRunner
                     DryRunOutboundMessages: dryRunMessages,
                     FailureReason: $"Action block flow exceeded MaxActionBlockFlowRuntimeSeconds ({maxRuntimeSeconds}s).");
             }
-            catch (OperationCanceledException) when (killCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (terminateCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
                 return new ActionExecutionTrace(
                     executionId,

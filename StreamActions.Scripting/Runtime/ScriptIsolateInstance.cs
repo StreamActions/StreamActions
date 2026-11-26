@@ -46,7 +46,7 @@ internal sealed partial class ScriptIsolateInstance : IDisposable
     private readonly V8ScriptEngine _engine;
 
     /// <summary>
-    /// Lifetime cancellation source triggered when this script is unloaded or killed by Task Manager.
+    /// Lifetime cancellation source triggered when this script is unloaded or terminated by Task Manager.
     /// </summary>
     private readonly CancellationTokenSource _lifetimeCts = new();
 
@@ -153,7 +153,7 @@ internal sealed partial class ScriptIsolateInstance : IDisposable
     /// <summary>Gets the <see cref="ScriptContextObject"/> bound to this isolate.</summary>
     public ScriptContextObject ContextObject { get; }
 
-    /// <summary>Gets a value indicating whether this isolate has been disposed or killed.</summary>
+    /// <summary>Gets a value indicating whether this isolate has been disposed or terminated.</summary>
     public bool IsDisposed => Volatile.Read(ref this._disposed) != 0;
 
     /// <summary>
@@ -346,7 +346,7 @@ internal sealed partial class ScriptIsolateInstance : IDisposable
     /// <summary>
     /// Interrupts any active V8 execution and disposes this isolate cleanly.
     /// </summary>
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Surgical kill/dispose must swallow V8 interrupt exceptions cleanly.")]
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Surgical termination/disposal must swallow V8 interrupt exceptions cleanly.")]
     public void Dispose()
     {
         if (Interlocked.Exchange(ref this._disposed, 1) != 0)

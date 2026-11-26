@@ -182,7 +182,7 @@ public sealed class ClearScriptSandboxAndIsolateTests
         _ = resA.ReturnValue.Should().Be("secret-A");
         _ = resB.ReturnValue.Should().Be("none");
 
-        // Host kill-switch Security:DisableClearScript blocks execution immediately.
+        // Host disable switch Security:DisableClearScript blocks execution immediately.
         rig.BootstrapOptions.Security.DisableClearScript = true;
         ScriptExecutionResult disabledResult = await runtime.ExecuteScriptAsync(
             new ScriptExecutionRequest { WorkspaceId = rig.WorkspaceId, ScriptId = scriptA.Id, EntryFunction = "run" },

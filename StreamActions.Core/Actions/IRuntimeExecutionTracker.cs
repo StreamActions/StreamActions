@@ -90,7 +90,7 @@ public sealed record WorkspaceRuntimeSummary(
     int LoadedScriptCount);
 
 /// <summary>
-/// Provides real-time observability and surgical kill controls over running Action Block flows and loaded ClearScript V8 isolates.
+/// Provides real-time observability and surgical termination controls over running Action Block flows and loaded ClearScript V8 isolates.
 /// </summary>
 public interface IRuntimeExecutionTracker
 {
@@ -98,7 +98,7 @@ public interface IRuntimeExecutionTracker
     /// Registers a running Action Block flow with its cancellation hook.
     /// </summary>
     /// <param name="info">Initial flow metadata.</param>
-    /// <param name="cancelAction">Callback invoked when the flow is killed.</param>
+    /// <param name="cancelAction">Callback invoked when the flow is terminated.</param>
     void RegisterFlow(RunningActionFlowInfo info, Action cancelAction);
 
     /// <summary>
@@ -116,20 +116,20 @@ public interface IRuntimeExecutionTracker
     void UnregisterFlow(Guid executionId);
 
     /// <summary>
-    /// Registers or replaces the active metrics/kill delegate for a loaded ClearScript V8 isolate.
+    /// Registers or replaces the active metrics/termination delegate for a loaded ClearScript V8 isolate.
     /// </summary>
     /// <param name="workspaceId">The workspace identifier.</param>
     /// <param name="scriptId">The VFS script identifier.</param>
     /// <param name="snapshotProvider">Delegate returning current live metrics for the isolate.</param>
-    /// <param name="killAsync">Delegate performing surgical interrupt, detachment, and disposal of the isolate.</param>
+    /// <param name="terminateAsync">Delegate performing surgical interrupt, detachment, and disposal of the isolate.</param>
     void RegisterScriptIsolate(
         Guid workspaceId,
         Guid scriptId,
         Func<LoadedScriptInstanceInfo?> snapshotProvider,
-        Func<CancellationToken, ValueTask> killAsync);
+        Func<CancellationToken, ValueTask> terminateAsync);
 
     /// <summary>
-    /// Unregisters a ClearScript V8 isolate after normal unload or kill.
+    /// Unregisters a ClearScript V8 isolate after normal unload or termination.
     /// </summary>
     /// <param name="workspaceId">The workspace identifier.</param>
     /// <param name="scriptId">The VFS script identifier.</param>
@@ -161,7 +161,7 @@ public interface IRuntimeExecutionTracker
     /// <param name="executionId">The execution identifier to terminate.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> if a matching running flow was found and cancelled; otherwise, <see langword="false"/>.</returns>
-    ValueTask<bool> KillFlowAsync(Guid executionId, CancellationToken cancellationToken = default);
+    ValueTask<bool> TerminateFlowAsync(Guid executionId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Surgically interrupts, detaches (<c>$</c> exports and <c>$.bind</c>/<c>$.on</c> handlers), and disposes a specific ClearScript V8 isolate without disturbing other scripts.
@@ -170,7 +170,7 @@ public interface IRuntimeExecutionTracker
     /// <param name="scriptId">The VFS script identifier.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> if a matching loaded isolate was found and terminated; otherwise, <see langword="false"/>.</returns>
-    ValueTask<bool> KillScriptAsync(Guid workspaceId, Guid scriptId, CancellationToken cancellationToken = default);
+    ValueTask<bool> TerminateScriptAsync(Guid workspaceId, Guid scriptId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Terminates all running Action Block flows and unloads/disposes all ClearScript V8 isolates within <paramref name="workspaceId"/>.
@@ -178,6 +178,6 @@ public interface IRuntimeExecutionTracker
     /// <param name="workspaceId">The target workspace identifier.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The total number of flows and script isolates terminated.</returns>
-    ValueTask<int> KillAllForWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default);
+    ValueTask<int> TerminateAllForWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default);
 }
 

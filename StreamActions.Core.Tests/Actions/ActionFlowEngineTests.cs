@@ -265,8 +265,8 @@ public sealed class ActionFlowEngineTests
     }
 
     [Fact]
-    [Trait("Member", "KillFlowAsync")]
-    public async Task KillFlowAsyncWhenFlowIsRunningCancelsActiveFlowImmediately()
+    [Trait("Member", "TerminateFlowAsync")]
+    public async Task TerminateFlowAsyncWhenFlowIsRunningCancelsActiveFlowImmediately()
     {
         FakeTimeProvider fakeTime = new(new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero));
         using ActionBlockTestRig rig = new(fakeTime);
@@ -290,8 +290,8 @@ public sealed class ActionFlowEngineTests
             TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = executionId.Should().NotBe(Guid.Empty);
-        bool killed = await rig.ExecutionTracker.KillFlowAsync(executionId, TestContext.Current.CancellationToken);
-        _ = killed.Should().BeTrue();
+        bool terminated = await rig.ExecutionTracker.TerminateFlowAsync(executionId, TestContext.Current.CancellationToken);
+        _ = terminated.Should().BeTrue();
 
         ActionExecutionTrace trace = await running.ConfigureAwait(true);
         _ = trace.Succeeded.Should().BeFalse();

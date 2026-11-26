@@ -31,6 +31,12 @@ trigger: always_on
 - When resolving errors returned by GitHub Actions, always run your code review routine (to verify if changes are ready for PR/merge) after making changes to fix the errors
 - Do not refactor, flag, or create tasks for functions/methods based on having "too many parameters", being "too long", or "too complex", unless otherwise specified
 - Ignore parameter count limits during code reviews and task suggestions
+- Use inclusive, neutral language across code, identifiers, UI copy, comments, documentation, and planning docs (for example, `blocklist` instead of `blacklist`, `allowlist` instead of `whitelist`, `primary`/`main`/`root` instead of `master`, `secondary`/`replica`/`worker` instead of `slave`, `placeholder`/`sample` instead of `dummy`, `verify`/`smoke check` instead of `sanity check`, `isolated`/`dedicated` instead of `segregated`, `first-time`/`uncritically` instead of `blind`/`blindly`, and `terminate`/`stop`/`cancel`/`disable switch` instead of `kill`/`kill-switch`/`abort`)
+	- Exception: verbatim external API contracts, third-party package or URL names, and verbatim upstream issue titles
+- Do not reference planning documents (`.user/planning/`, `00-Main-Roadmap.md`, `plan-digest.md`, `99-Notes.md`), milestone labels (`Milestone 01`–`24`, `M01`–`M24`), or phrases like "planning docs" in production code, test code/fixtures, comments/XMLDoc, tracked documentation, PR titles/descriptions, or git commit messages; describe the actual feature or behavior instead
+- Production code must not refer to other products (for example, SMF, PhantomBot, OBS, Tasker, Nightbot, StreamElements, Streamlabs, Firebot, Streamer.bot, or Mix It Up) in identifiers, runtime strings, or XMLDoc/comments
+	- Exception: occasional brief portions of a comment or XMLDoc indicating design style or inspiration to give programmers context of intent (for example, `SMF-style`, `PhantomBot-style`, or `Inspired by Tasker`)
+	- Exception: dedicated migration importers or direct external-integration adapters/clients whose explicit purpose is importing from or interoperating with that product (for example, `StreamActions.Core/Migration/` or a dedicated protocol/platform client)
 
 ## Context trust (no re-research)
 - A Context Packet from the orchestrator, `flash-researcher`, or `triage-sweeper` is authoritative. Do not re-read files, re-fetch URLs, or re-run searches for facts it already contains
@@ -116,11 +122,15 @@ This section is the only definition of attempts and escalation. Other files poin
 - When the budget is spent, return `STATUS: BLOCKED` with ranked findings. There is no further agent tier
 
 ### `orchestrator`: owns attempts across invocations
-Keep this block in your turn text and update it after every Result Report:
-```
-ESCALATION LEDGER
+Keep this ledger in your turn text and update it after every Result Report, rendered directly as a Markdown table (never wrapped in a fenced code block):
+
+**ESCALATION LEDGER**
+
 | unit | SIG | rapid-coder runs | deep-debugger runs | last status |
-```
+| :-- | :-- | :-- | :-- | :-- |
+
+**Routing:**
+
 | Event | Action |
 | :-- | :-- |
 | `rapid-coder` returns `DONE` with `REMAINING: none` (or only `[PRE-EXISTING]`) | Integrate, then run Validator verification |

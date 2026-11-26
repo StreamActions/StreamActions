@@ -156,11 +156,11 @@ public sealed class ScriptLifecycleAndTaskManagerTests
 
     #endregion
 
-    #region TaskManagerSurgicalKill
+    #region TaskManagerSurgicalTermination
 
     [Fact]
-    [Trait("Member", "KillScriptAsync")]
-    public async Task KillScriptAsync_RemovesExportsAndHandlersWithoutAffectingOtherScripts()
+    [Trait("Member", "TerminateScriptAsync")]
+    public async Task TerminateScriptAsync_RemovesExportsAndHandlersWithoutAffectingOtherScripts()
     {
         using ScriptingTestRig rig = new();
         rig.GrantClearScriptFeature(rig.WorkspaceId, includePersistent: true);
@@ -196,9 +196,9 @@ public sealed class ScriptLifecycleAndTaskManagerTests
         _ = alphaSnapshot.Exports.Should().Contain("alphaExport");
         _ = alphaSnapshot.BoundEvents.Should().Contain("ping");
 
-        // Surgically kill script A.
-        bool killed = await rig.ExecutionTracker.KillScriptAsync(rig.WorkspaceId, scriptA.Id, TestContext.Current.CancellationToken);
-        _ = killed.Should().BeTrue();
+        // Surgically terminate script A.
+        bool terminated = await rig.ExecutionTracker.TerminateScriptAsync(rig.WorkspaceId, scriptA.Id, TestContext.Current.CancellationToken);
+        _ = terminated.Should().BeTrue();
         _ = rig.ExecutionTracker.GetLoadedScripts(rig.WorkspaceId).Should().ContainSingle().Which.ScriptId.Should().Be(scriptB.Id);
 
         // Script B remains operational and Script A's $ export & event binding are gone.
@@ -209,9 +209,9 @@ public sealed class ScriptLifecycleAndTaskManagerTests
         _ = checkRes.ReturnValue.Should().Be("undefined");
         _ = (await runtime.DispatchEventAsync(new ScriptEventDispatchRequest(rig.WorkspaceId, "ping", new Dictionary<string, object?>()), TestContext.Current.CancellationToken)).Should().Be(0);
 
-        // Root KillAllForWorkspaceAsync terminates remaining loaded scripts.
-        int killedAll = await rig.ExecutionTracker.KillAllForWorkspaceAsync(rig.WorkspaceId, TestContext.Current.CancellationToken);
-        _ = killedAll.Should().Be(1);
+        // Root TerminateAllForWorkspaceAsync terminates remaining loaded scripts.
+        int terminatedAll = await rig.ExecutionTracker.TerminateAllForWorkspaceAsync(rig.WorkspaceId, TestContext.Current.CancellationToken);
+        _ = terminatedAll.Should().Be(1);
         _ = rig.ExecutionTracker.GetLoadedScripts(rig.WorkspaceId).Should().BeEmpty();
     }
 

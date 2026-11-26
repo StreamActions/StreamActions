@@ -19,7 +19,7 @@
 namespace StreamActions.Core.Models.Entities;
 
 /// <summary>
-/// Represents a hashed verifier token for OBS overlays and external integrations within a <see cref="Workspace"/>.
+/// Represents a hashed verifier token for browser-source overlays and external integrations within a <see cref="Workspace"/>.
 /// </summary>
 public sealed class WorkspaceVerifierToken
 {

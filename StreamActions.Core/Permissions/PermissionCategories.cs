@@ -240,9 +240,9 @@ public static class BuiltInPermissionKeys
     public const string UiTaskManagerView = "ui.task_manager.view";
 
     /// <summary>
-    /// Allows killing running Action Block flows and unloading ClearScript V8 script instances in the workspace Task Manager.
+    /// Allows terminating running Action Block flows and unloading ClearScript V8 script instances in the workspace Task Manager.
     /// </summary>
-    public const string UiTaskManagerKill = "ui.task_manager.kill";
+    public const string UiTaskManagerTerminate = "ui.task_manager.terminate";
 
     /// <summary>
     /// Allows timing out users in chat.

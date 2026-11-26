@@ -843,7 +843,7 @@ public sealed partial class LoginAndWorkspaceTests
     {
         public TempDaemonDirectories()
         {
-            this.Root = Path.Combine(Path.GetTempPath(), $"sa-m05-test-{Guid.NewGuid():N}");
+            this.Root = Path.Combine(Path.GetTempPath(), $"sa-login-test-{Guid.NewGuid():N}");
             this.ConfigDir = Path.Combine(this.Root, "config");
             this.DataDir = Path.Combine(this.Root, "data");
             this.LogDir = Path.Combine(this.Root, "logs");
@@ -890,7 +890,7 @@ public sealed partial class LoginAndWorkspaceTests
             _ = builder.UseSetting("Bootstrap:Paths:LogDir", dirs.LogDir);
             _ = builder.UseSetting("Bootstrap:Paths:PluginsDir", dirs.PluginsDir);
             _ = builder.UseSetting("Bootstrap:Paths:BackupDir", dirs.BackupDir);
-            _ = builder.UseSetting("Bootstrap:Node:InstanceId", $"m05-test-{Guid.NewGuid():N}");
+            _ = builder.UseSetting("Bootstrap:Node:InstanceId", $"login-test-{Guid.NewGuid():N}");
             _ = builder.UseSetting("Bootstrap:Sentry:Enabled", "false");
 
             _ = builder.ConfigureServices(services =>
@@ -944,7 +944,7 @@ public sealed partial class LoginAndWorkspaceTests
         public static async Task<MockOAuthAndOidcServer> StartAsync(CancellationToken cancellationToken)
         {
             RSA rsa = RSA.Create(2048);
-            RsaSecurityKey signingKey = new(rsa) { KeyId = "mock-m05-key" };
+            RsaSecurityKey signingKey = new(rsa) { KeyId = "mock-oidc-key" };
 
             WebApplicationBuilder builder = WebApplication.CreateBuilder();
             _ = builder.WebHost.UseUrls("http://127.0.0.1:0");

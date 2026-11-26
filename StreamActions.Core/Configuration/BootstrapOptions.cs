@@ -57,7 +57,7 @@ public sealed class BootstrapOptions
     public PathBootstrapOptions Paths { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the immutable host security kill-switch bootstrap options.
+    /// Gets or sets the immutable host security disable switch bootstrap options.
     /// </summary>
     public SecurityBootstrapOptions Security { get; set; } = new();
 

@@ -34,7 +34,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace StreamActions.Scripting.Runtime;
 
 /// <summary>
-/// Manages per-workspace ClearScript V8 environments, host kill-switch and Tier 1 permission enforcement,
+/// Manages per-workspace ClearScript V8 environments, host disable switch and Tier 1 permission enforcement,
 /// and automatic stream-session / idle / persistent resident script unloading lifecycles.
 /// </summary>
 public sealed partial class ClearScriptRuntimeService : BackgroundService, IRunJsActionExecutor

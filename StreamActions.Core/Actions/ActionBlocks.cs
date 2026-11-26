@@ -102,7 +102,7 @@ public abstract record ActionBlock
     /// Executes this action block against the active <paramref name="context"/>.
     /// </summary>
     /// <param name="context">The active flow execution context.</param>
-    /// <param name="cancellationToken">A token linked to the flow's runtime budget and kill controls.</param>
+    /// <param name="cancellationToken">A token linked to the flow's runtime budget and termination controls.</param>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous step execution.</returns>
     public abstract ValueTask ExecuteAsync(
         IActionExecutionContext context,

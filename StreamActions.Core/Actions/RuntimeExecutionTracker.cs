@@ -67,13 +67,13 @@ public sealed class RuntimeExecutionTracker : IRuntimeExecutionTracker
         Guid workspaceId,
         Guid scriptId,
         Func<LoadedScriptInstanceInfo?> snapshotProvider,
-        Func<CancellationToken, ValueTask> killAsync)
+        Func<CancellationToken, ValueTask> terminateAsync)
     {
         ArgumentNullException.ThrowIfNull(snapshotProvider);
-        ArgumentNullException.ThrowIfNull(killAsync);
+        ArgumentNullException.ThrowIfNull(terminateAsync);
 
         ScriptTrackerKey key = new(workspaceId, scriptId);
-        this._scripts[key] = new TrackedScriptEntry(snapshotProvider, killAsync);
+        this._scripts[key] = new TrackedScriptEntry(snapshotProvider, terminateAsync);
     }
 
     /// <inheritdoc/>
@@ -156,7 +156,7 @@ public sealed class RuntimeExecutionTracker : IRuntimeExecutionTracker
 
     /// <inheritdoc/>
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Cancel callbacks on already-disposed flows must not prevent Task Manager cleanup.")]
-    public ValueTask<bool> KillFlowAsync(Guid executionId, CancellationToken cancellationToken = default)
+    public ValueTask<bool> TerminateFlowAsync(Guid executionId, CancellationToken cancellationToken = default)
     {
         if (!this._flows.TryRemove(executionId, out TrackedFlowEntry? entry))
         {
@@ -169,7 +169,7 @@ public sealed class RuntimeExecutionTracker : IRuntimeExecutionTracker
         }
         catch (ObjectDisposedException)
         {
-            // Flow completed concurrently with kill request.
+            // Flow completed concurrently with termination request.
         }
         catch (Exception)
         {
@@ -180,7 +180,7 @@ public sealed class RuntimeExecutionTracker : IRuntimeExecutionTracker
     }
 
     /// <inheritdoc/>
-    public async ValueTask<bool> KillScriptAsync(Guid workspaceId, Guid scriptId, CancellationToken cancellationToken = default)
+    public async ValueTask<bool> TerminateScriptAsync(Guid workspaceId, Guid scriptId, CancellationToken cancellationToken = default)
     {
         ScriptTrackerKey key = new(workspaceId, scriptId);
         if (!this._scripts.TryRemove(key, out TrackedScriptEntry? entry))
@@ -188,14 +188,14 @@ public sealed class RuntimeExecutionTracker : IRuntimeExecutionTracker
             return false;
         }
 
-        await entry.KillAsync(cancellationToken).ConfigureAwait(false);
+        await entry.TerminateAsync(cancellationToken).ConfigureAwait(false);
         return true;
     }
 
     /// <inheritdoc/>
-    public async ValueTask<int> KillAllForWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default)
+    public async ValueTask<int> TerminateAllForWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default)
     {
-        int killedCount = 0;
+        int terminatedCount = 0;
 
         List<Guid> flowIds = [.. this._flows.Values
             .Where(entry => entry.Info.WorkspaceId == workspaceId)
@@ -203,22 +203,22 @@ public sealed class RuntimeExecutionTracker : IRuntimeExecutionTracker
 
         foreach (Guid flowId in flowIds)
         {
-            if (await this.KillFlowAsync(flowId, cancellationToken).ConfigureAwait(false))
+            if (await this.TerminateFlowAsync(flowId, cancellationToken).ConfigureAwait(false))
             {
-                killedCount++;
+                terminatedCount++;
             }
         }
 
         List<ScriptTrackerKey> scriptKeys = [.. this._scripts.Keys.Where(k => k.WorkspaceId == workspaceId)];
         foreach (ScriptTrackerKey scriptKey in scriptKeys)
         {
-            if (await this.KillScriptAsync(scriptKey.WorkspaceId, scriptKey.ScriptId, cancellationToken).ConfigureAwait(false))
+            if (await this.TerminateScriptAsync(scriptKey.WorkspaceId, scriptKey.ScriptId, cancellationToken).ConfigureAwait(false))
             {
-                killedCount++;
+                terminatedCount++;
             }
         }
 
-        return killedCount;
+        return terminatedCount;
     }
 
     /// <summary>
@@ -250,9 +250,9 @@ public sealed class RuntimeExecutionTracker : IRuntimeExecutionTracker
     /// Tracking record for a loaded ClearScript V8 isolate.
     /// </summary>
     /// <param name="SnapshotProvider">Live metrics provider.</param>
-    /// <param name="KillAsync">Surgical kill callback.</param>
+    /// <param name="TerminateAsync">Surgical termination callback.</param>
     private sealed record TrackedScriptEntry(
         Func<LoadedScriptInstanceInfo?> SnapshotProvider,
-        Func<CancellationToken, ValueTask> KillAsync);
+        Func<CancellationToken, ValueTask> TerminateAsync);
 }
 
