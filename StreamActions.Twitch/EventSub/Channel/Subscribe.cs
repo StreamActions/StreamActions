@@ -107,12 +107,6 @@ public sealed record Subscribe : IEventSubType
         /// Tier 3.
         /// </summary>
         [JsonCustomEnum("3000")]
-        Tier3,
-
-        /// <summary>
-        /// Prime subscription.
-        /// </summary>
-        [JsonCustomEnum("Prime")]
-        Prime
+        Tier3
     }
 }

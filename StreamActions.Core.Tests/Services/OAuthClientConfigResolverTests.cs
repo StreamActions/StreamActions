@@ -223,6 +223,34 @@ public sealed class OAuthClientConfigResolverTests
         }
     }
 
+    [Fact]
+    [Trait("Member", "ResolveAsync")]
+    public async Task ResolveAsyncWhenPublicClientsConfiguredPreservesNullClientSecret()
+    {
+        (OAuthClientConfigResolver resolver, FakeInstanceSettingsService settingsService, FakeInstanceOAuthConfigService instanceOAuth, FakeWorkspaceStore workspaceStore, FakePermissionStore permissionStore, InMemoryEventBus eventBus, ServiceProvider provider) = CreateSut();
+        await using (provider.ConfigureAwait(false))
+        using (eventBus)
+        {
+            settingsService.Settings.InstanceOAuthAppPolicy = nameof(InstanceOAuthAppPolicy.InstanceWithOptionalOverride);
+            instanceOAuth.Credentials["twitch"] = new PlatformOAuthAppCredentials("public-inst-id", ClientSecret: null);
+
+            ResolvedOAuthClientConfig? resolvedInstance = await resolver.ResolveAsync("twitch", _workspaceId, cancellationToken: TestContext.Current.CancellationToken);
+            _ = resolvedInstance.Should().NotBeNull();
+            _ = resolvedInstance!.ClientId.Should().Be("public-inst-id");
+            _ = resolvedInstance.ClientSecret.Should().BeNull();
+            _ = resolvedInstance.IsWorkspaceOverride.Should().BeFalse();
+
+            GrantGlobalFeature(permissionStore, BuiltInPermissionKeys.FeatureCustomOAuthApp, PermissionState.Allow);
+            workspaceStore.CustomApps[(_workspaceId, "twitch")] = new PlatformOAuthAppCredentials("public-ws-id", ClientSecret: null);
+
+            ResolvedOAuthClientConfig? resolvedWorkspace = await resolver.ResolveAsync("twitch", _workspaceId, cancellationToken: TestContext.Current.CancellationToken);
+            _ = resolvedWorkspace.Should().NotBeNull();
+            _ = resolvedWorkspace!.ClientId.Should().Be("public-ws-id");
+            _ = resolvedWorkspace.ClientSecret.Should().BeNull();
+            _ = resolvedWorkspace.IsWorkspaceOverride.Should().BeTrue();
+        }
+    }
+
     #endregion
 
     private static void GrantGlobalFeature(FakePermissionStore permissionStore, string permissionKey, PermissionState state)
@@ -341,7 +369,7 @@ public sealed class OAuthClientConfigResolverTests
         public ValueTask<WorkspacePlatform> UpsertPlatformAsync(WorkspacePlatform platform, string? plaintextCustomClientSecret = null, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(platform);
 
-        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, CancellationToken cancellationToken = default) =>
+        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, bool clearClientSecret = false, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
         public ValueTask<PlatformOAuthAppCredentials?> GetCustomOAuthAppAsync(Guid workspaceId, string platformId, CancellationToken cancellationToken = default)

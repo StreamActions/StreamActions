@@ -173,11 +173,14 @@ internal static class SetupEndpoints
             : request.PlatformId.Trim().ToLowerInvariant();
 
         bool oauthCredentialsSaved = false;
-        if (!string.IsNullOrWhiteSpace(request.ClientId) && !string.IsNullOrWhiteSpace(request.ClientSecret))
+        if (!string.IsNullOrWhiteSpace(request.ClientId))
         {
+            string? clientSecret = string.IsNullOrWhiteSpace(request.ClientSecret)
+                ? null
+                : request.ClientSecret.Trim();
             PlatformOAuthAppCredentials credentials = new(
                 request.ClientId.Trim(),
-                request.ClientSecret.Trim());
+                clientSecret);
             await oauthConfigService.SetAsync(selectedPlatformId, credentials, cancellationToken).ConfigureAwait(false);
             oauthCredentialsSaved = true;
         }

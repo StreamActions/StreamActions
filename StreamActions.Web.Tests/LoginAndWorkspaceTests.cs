@@ -278,6 +278,74 @@ public sealed partial class LoginAndWorkspaceTests
         }
     }
 
+    /// <summary>
+    /// Verifies that Tier 4 custom OAuth login works with a Public PKCE client (no <c>customClientSecret</c>) rendered by <c>/login</c>.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "MapAuthEndpoints")]
+    public async Task RequireStreamerOAuthApp_Tier4PublicPkceClient_SucceedsWithoutClientSecret()
+    {
+        CancellationToken ct = XunitTestContext.Current.CancellationToken;
+        MockOAuthAndOidcServer mockServer = await MockOAuthAndOidcServer.StartAsync(ct);
+        await using (mockServer.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using IntegrationTestFactory factory = new(dirs, mockServer.TwitchEndpointOptions, new FakeTimeProvider(new DateTimeOffset(2026, 7, 1, 12, 0, 0, TimeSpan.Zero)));
+
+            IInstanceSettingsService settingsService = factory.Services.GetRequiredService<IInstanceSettingsService>();
+            InstanceSettings settings = await settingsService.GetAsync(ct);
+            settings.AllowOpenRegistration = true;
+            settings.InstanceOAuthAppPolicy = nameof(InstanceOAuthAppPolicy.RequireStreamerOAuthApp);
+            settings.ExternalOidcLoginMode = ExternalOidcLoginMode.Disabled;
+            await settingsService.UpdateAsync(settings, ct);
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            string loginHtml = await (await client.GetAsync(new Uri("/login", UriKind.Relative), ct)).Content.ReadAsStringAsync(ct);
+            string antiforgery = ExtractAntiforgeryToken(loginHtml);
+
+            using FormUrlEncodedContent publicTier4Form = new(
+            [
+                new KeyValuePair<string, string>("__RequestVerificationToken", antiforgery),
+                new KeyValuePair<string, string>("flow", "login"),
+                new KeyValuePair<string, string>("customClientId", "public-tier4-cid"),
+            ]);
+
+            HttpResponseMessage startResp = await client.PostAsync(new Uri("/auth/twitch/login", UriKind.Relative), publicTier4Form, ct);
+            _ = startResp.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            Dictionary<string, StringValues> startQuery = QueryHelpers.ParseQuery(startResp.Headers.Location!.Query);
+            _ = startQuery["client_id"].ToString().Should().Be("public-tier4-cid");
+            _ = startQuery["code_challenge_method"].ToString().Should().Be("S256");
+            _ = startQuery["code_challenge"].ToString().Should().NotBeNullOrWhiteSpace();
+
+            mockServer.IdTokenFactory = baseUrl => mockServer.CreateSignedIdToken(
+                issuer: baseUrl,
+                audience: "public-tier4-cid",
+                subject: "public-streamer-id",
+                preferredUsername: "public_streamer",
+                nonce: startQuery["nonce"].ToString());
+
+            HttpResponseMessage callbackResp = await client.GetAsync(
+                new Uri($"/auth/twitch/callback?code=public-code&state={Uri.EscapeDataString(startQuery["state"].ToString())}", UriKind.Relative),
+                ct);
+            _ = callbackResp.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = callbackResp.Headers.Location!.ToString().Should().Be("/");
+
+            IPanelUserStore userStore = factory.Services.GetRequiredService<IPanelUserStore>();
+            IWorkspaceStore wsStore = factory.Services.GetRequiredService<IWorkspaceStore>();
+            PanelUser user = (await userStore.GetByLoginIdentityAsync("twitch", "public-streamer-id", ct))!;
+            Workspace ws = (await wsStore.GetByOwnerAsync(user.Id, ct)).Should().ContainSingle().Subject;
+            PlatformOAuthAppCredentials? savedCreds = await wsStore.GetCustomOAuthAppAsync(ws.Id, "twitch", ct);
+            _ = savedCreds.Should().NotBeNull();
+            _ = savedCreds!.ClientId.Should().Be("public-tier4-cid");
+            _ = savedCreds.ClientSecret.Should().BeNull();
+        }
+    }
+
     #endregion
 
     #region PasskeyFirstLogin

@@ -24,8 +24,16 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.EventSub.Channel;
 
 /// <summary>
-/// An event that is sent when a broadcaster updates their channel information.
+/// An event that is sent when the category, title, content classification labels, or broadcast language of the broadcaster's channel changes.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Changes made by the broadcaster, by one of their editors, or by Twitch (for example, when Twitch applies the MatureGame label because the channel's category is a mature-rated game) all send notifications.
+/// </para>
+/// <para>
+/// A single update can send more than one notification. Label changes and changes to the channel's other properties are sent separately, and a category change can be followed by a label change that Twitch makes. Each notification contains all of the channel's values as of when Twitch prepared it and doesn't say which property changed.
+/// </para>
+/// </remarks>
 public sealed record Update : IEventSubType
 {
     /// <inheritdoc/>
@@ -56,25 +64,25 @@ public sealed record Update : IEventSubType
     public string? BroadcasterUserName { get; init; }
 
     /// <summary>
-    /// The channel's stream title.
+    /// The channel's stream title. Is an empty string if the broadcaster hasn't set a title.
     /// </summary>
     [JsonPropertyName("title")]
     public string? Title { get; init; }
 
     /// <summary>
-    /// The channel's broadcast language.
+    /// The channel's broadcast language, as a lowercase language code. This is usually an ISO 639-1 two-letter code, such as en, but can also be asl, zh-hk, or other. Is an empty string if no broadcast language is set.
     /// </summary>
     [JsonPropertyName("language")]
     public string? Language { get; init; }
 
     /// <summary>
-    /// The ID of the category that the channel is currently streaming in.
+    /// The ID of the channel's category. Is an empty string if the channel has no category, for example after the broadcaster removes it.
     /// </summary>
     [JsonPropertyName("category_id")]
     public string? CategoryId { get; init; }
 
     /// <summary>
-    /// The name of the category that the channel is currently streaming in.
+    /// The name of the channel's category. Is an empty string if the channel has no category.
     /// </summary>
     [JsonPropertyName("category_name")]
     public string? CategoryName { get; init; }

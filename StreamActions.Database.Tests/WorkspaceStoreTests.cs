@@ -248,7 +248,7 @@ public sealed class WorkspaceStoreTests
                 PlatformChannelId = "100",
             },
             cancellationToken: ct);
-        _ = await store.SetCustomOAuthAppAsync(workspace1Id, "twitch", "shared-cid", "secret-1", customRedirect, ct);
+        _ = await store.SetCustomOAuthAppAsync(workspace1Id, "twitch", "shared-cid", "secret-1", customRedirect, cancellationToken: ct);
 
         Workspace workspace2 = await store.CreateWorkspaceAsync(
             new Workspace
@@ -265,7 +265,7 @@ public sealed class WorkspaceStoreTests
                 CustomRedirectUri = customRedirect.ToString(),
             },
             ct);
-        _ = await store.SetCustomOAuthAppAsync(workspace2.Id, "twitch", "shared-cid", "secret-2", customRedirect, ct);
+        _ = await store.SetCustomOAuthAppAsync(workspace2.Id, "twitch", "shared-cid", "secret-2", customRedirect, cancellationToken: ct);
 
         PlatformOAuthAppCredentials? creds1 = await store.GetCustomOAuthAppAsync(workspace1Id, "twitch", ct);
         PlatformOAuthAppCredentials? creds2 = await store.GetCustomOAuthAppAsync(workspace2.Id, "twitch", ct);
@@ -281,6 +281,94 @@ public sealed class WorkspaceStoreTests
         platform1!.Role = PlatformRole.SimulcastPeer;
         WorkspacePlatform updated = await store.UpsertPlatformAsync(platform1, cancellationToken: ct);
         _ = updated.CustomRedirectUri.Should().Be(customRedirect.ToString());
+    }
+
+    [Fact]
+    [Trait("Member", "SetCustomOAuthAppAsync")]
+    public async Task SetAndGetCustomOAuthAppAsync_SupportsPublicClientsPreserveAndClearSecretAndRejectsUndecryptableSecret()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TestSqliteContextFactory factory = new();
+        (_, Guid workspaceId) = await factory.SeedWorkspaceAsync(ct);
+
+        FakeTimeProvider timeProvider = new();
+        using InMemoryEventBus eventBus = new(NullLogger<InMemoryEventBus>.Instance);
+        PermissionStore permissionStore = new(factory, timeProvider, eventBus);
+        SecretProtectionService protectionA = new(new EphemeralDataProtectionProvider(), NullLogger<SecretProtectionService>.Instance);
+        WorkspaceStore storeA = new(factory, protectionA, permissionStore, timeProvider);
+
+        Uri publicRedirect = new("https://panel.example.com/auth/twitch/callback");
+        _ = await storeA.UpsertPlatformAsync(
+            new WorkspacePlatform
+            {
+                WorkspaceId = workspaceId,
+                PlatformId = "twitch",
+                Role = PlatformRole.Primary,
+                PlatformChannelId = "999",
+            },
+            cancellationToken: ct);
+
+        // 1. Save a public client (no clientSecret).
+        WorkspacePlatform savedPublic = await storeA.SetCustomOAuthAppAsync(
+            workspaceId,
+            "twitch",
+            "public-cid",
+            clientSecret: null,
+            redirectUri: publicRedirect,
+            cancellationToken: ct);
+        _ = savedPublic.CustomClientId.Should().Be("public-cid");
+        _ = savedPublic.EncryptedCustomClientSecret.Should().BeNull();
+
+        PlatformOAuthAppCredentials? retrievedPublic = await storeA.GetCustomOAuthAppAsync(workspaceId, "twitch", ct);
+        _ = retrievedPublic.Should().NotBeNull();
+        _ = retrievedPublic!.ClientId.Should().Be("public-cid");
+        _ = retrievedPublic.ClientSecret.Should().BeNull();
+        _ = retrievedPublic.RedirectUri.Should().Be(publicRedirect);
+
+        // 2. Upgrade to confidential client.
+        _ = await storeA.SetCustomOAuthAppAsync(
+            workspaceId,
+            "twitch",
+            "conf-cid",
+            "conf-secret",
+            redirectUri: publicRedirect,
+            cancellationToken: ct);
+
+        // 3. Updating clientId with null clientSecret and clearClientSecret: false preserves existing secret.
+        _ = await storeA.SetCustomOAuthAppAsync(
+            workspaceId,
+            "twitch",
+            "conf-cid-2",
+            clientSecret: "   ",
+            redirectUri: publicRedirect,
+            cancellationToken: ct);
+
+        PlatformOAuthAppCredentials? preserved = await storeA.GetCustomOAuthAppAsync(workspaceId, "twitch", ct);
+        _ = preserved.Should().NotBeNull();
+        _ = preserved!.ClientId.Should().Be("conf-cid-2");
+        _ = preserved.ClientSecret.Should().Be("conf-secret");
+
+        // 4. Corrupt/undecryptable encrypted secret returns null (never silently downgrades to public).
+        SecretProtectionService protectionB = new(new EphemeralDataProtectionProvider(), NullLogger<SecretProtectionService>.Instance);
+        WorkspaceStore storeB = new(factory, protectionB, permissionStore, timeProvider);
+        PlatformOAuthAppCredentials? corrupt = await storeB.GetCustomOAuthAppAsync(workspaceId, "twitch", ct);
+        _ = corrupt.Should().BeNull();
+
+        // 5. Passing clearClientSecret: true clears the stored secret and transitions to public client.
+        WorkspacePlatform cleared = await storeA.SetCustomOAuthAppAsync(
+            workspaceId,
+            "twitch",
+            "conf-cid-2",
+            clientSecret: null,
+            redirectUri: publicRedirect,
+            clearClientSecret: true,
+            cancellationToken: ct);
+        _ = cleared.EncryptedCustomClientSecret.Should().BeNull();
+
+        PlatformOAuthAppCredentials? downgradedToPublic = await storeA.GetCustomOAuthAppAsync(workspaceId, "twitch", ct);
+        _ = downgradedToPublic.Should().NotBeNull();
+        _ = downgradedToPublic!.ClientId.Should().Be("conf-cid-2");
+        _ = downgradedToPublic.ClientSecret.Should().BeNull();
     }
 
     #endregion

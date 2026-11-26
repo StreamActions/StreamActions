@@ -54,6 +54,8 @@ public interface IPlatformOAuthProvider
     /// <param name="state">The CSRF protection state token.</param>
     /// <param name="forceVerify"><see langword="true"/> to force the user to re-approve authorization; otherwise, <see langword="false"/>.</param>
     /// <param name="nonce">An optional OIDC nonce value; when provided, requests an OIDC ID token.</param>
+    /// <param name="codeChallenge">An optional RFC 7636 PKCE code challenge.</param>
+    /// <param name="codeChallengeMethod">An optional RFC 7636 PKCE code challenge method (for example, <c>S256</c>).</param>
     /// <returns>The constructed authorization <see cref="Uri"/>.</returns>
     Uri BuildAuthorizationUri(
         string clientId,
@@ -61,37 +63,41 @@ public interface IPlatformOAuthProvider
         IReadOnlyCollection<string>? scopes,
         string state,
         bool forceVerify = false,
-        string? nonce = null);
+        string? nonce = null,
+        string? codeChallenge = null,
+        string? codeChallengeMethod = null);
 
     /// <summary>
     /// Exchanges an authorization code for OAuth tokens and resolves the authenticated user's platform identity.
     /// </summary>
     /// <param name="clientId">The OAuth application client identifier.</param>
-    /// <param name="clientSecret">The OAuth application client secret.</param>
+    /// <param name="clientSecret">The optional OAuth application client secret, or <see langword="null"/> for public clients.</param>
     /// <param name="code">The authorization code returned by the platform.</param>
     /// <param name="redirectUri">The redirect URI used when initiating the authorization request.</param>
     /// <param name="expectedNonce">The expected OIDC nonce when OpenID Connect was requested, or <see langword="null"/>.</param>
+    /// <param name="codeVerifier">An optional RFC 7636 PKCE code verifier matching the challenge sent during authorization.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The exchanged <see cref="PlatformOAuthTokenResult"/>.</returns>
     ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(
         string clientId,
-        string clientSecret,
+        string? clientSecret,
         string code,
         Uri redirectUri,
         string? expectedNonce = null,
+        string? codeVerifier = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Refreshes an expired or expiring OAuth access token using its refresh token.
     /// </summary>
     /// <param name="clientId">The OAuth application client identifier.</param>
-    /// <param name="clientSecret">The OAuth application client secret.</param>
+    /// <param name="clientSecret">The optional OAuth application client secret, or <see langword="null"/> for public clients.</param>
     /// <param name="refreshToken">The OAuth refresh token.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The refreshed <see cref="PlatformOAuthTokenResult"/>.</returns>
     ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(
         string clientId,
-        string clientSecret,
+        string? clientSecret,
         string refreshToken,
         CancellationToken cancellationToken = default);
 

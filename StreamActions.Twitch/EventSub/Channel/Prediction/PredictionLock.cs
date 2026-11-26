@@ -24,8 +24,16 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.EventSub.Channel.Prediction;
 
 /// <summary>
-/// An event that is sent when a Prediction was locked on a specified channel.
+/// An event that is sent when a Prediction is locked on the specified channel, either manually or automatically when its prediction window ends.
 /// </summary>
+/// <remarks>
+/// <para>
+/// A Prediction that is resolved or canceled while it's still active is never locked, so no lock notification is sent for it.
+/// </para>
+/// <para>
+/// The <see cref="Outcome.Users"/>, <see cref="Outcome.ChannelPoints"/>, and <see cref="Outcome.TopPredictors"/> values are the totals counted when the Prediction locked, and may not include predictions made just before it locked. The final totals are in the <see cref="PredictionEnd"/> notification.
+/// </para>
+/// </remarks>
 public sealed record PredictionLock : IEventSubType
 {
     /// <inheritdoc/>
@@ -80,7 +88,7 @@ public sealed record PredictionLock : IEventSubType
     public DateTime? StartedAt { get; init; }
 
     /// <summary>
-    /// The time the Channel Points Prediction locked.
+    /// The time the Channel Points Prediction was locked.
     /// </summary>
     [JsonPropertyName("locked_at")]
     public DateTime? LockedAt { get; init; }

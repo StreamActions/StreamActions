@@ -122,7 +122,7 @@ public sealed record Remove : IEventSubType
     public MaxPerUserPerStream? MaxPerUserPerStream { get; init; }
 
     /// <summary>
-    /// Custom background color for the reward.
+    /// Custom background color for the reward, as a hex color code with a # prefix (for example, #FA1ED2). Is an empty string if the reward doesn't have a background color.
     /// </summary>
     [JsonPropertyName("background_color")]
     public string? BackgroundColor { get; init; }
@@ -130,6 +130,11 @@ public sealed record Remove : IEventSubType
     /// <summary>
     /// Set of custom images of 1x, 2x and 4x sizes for the reward. Can be null if no images have been uploaded.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// When a reward is removed, its custom image files are deleted, so these URLs might no longer load.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("image")]
     public Image? Image { get; init; }
 
@@ -152,7 +157,7 @@ public sealed record Remove : IEventSubType
     public DateTime? CooldownExpiresAt { get; init; }
 
     /// <summary>
-    /// The number of redemptions redeemed during the current live stream. Counts against the max_per_stream limit. Null if the broadcasters stream isn't live or max_per_stream isn't enabled.
+    /// The number of redemptions redeemed during the current live stream. Counts against the max_per_stream limit. Null if the broadcaster's stream isn't live or max_per_stream isn't enabled.
     /// </summary>
     [JsonPropertyName("redemptions_redeemed_current_stream")]
     public int? RedemptionsRedeemedCurrentStream { get; init; }

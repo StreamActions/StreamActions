@@ -29,6 +29,7 @@ using AutomodSettingsUpdate = StreamActions.Twitch.EventSub.Automod.Settings.Upd
 using AutomodTermAction = StreamActions.Twitch.EventSub.Automod.Terms.Update.TermAction;
 using AutomodTermsUpdate = StreamActions.Twitch.EventSub.Automod.Terms.Update;
 using AutoRedemptionAdd = StreamActions.Twitch.EventSub.Channel.ChannelPointsAutomaticRewardRedemption.Add;
+using AutoRedemptionReward = StreamActions.Twitch.EventSub.Channel.ChannelPointsAutomaticRewardRedemption.Objects.Reward;
 using BitsTransactionCreate = StreamActions.Twitch.EventSub.Extension.BitsTransaction.Create;
 using BitsUse = StreamActions.Twitch.EventSub.Channel.Bits.Use;
 using ChannelBan = StreamActions.Twitch.EventSub.Channel.Ban;
@@ -43,6 +44,7 @@ using CharityDonate = StreamActions.Twitch.EventSub.Channel.CharityCampaign.Dona
 using CharityProgress = StreamActions.Twitch.EventSub.Channel.CharityCampaign.CampaignProgress;
 using CharityStart = StreamActions.Twitch.EventSub.Channel.CharityCampaign.CampaignStart;
 using CharityStop = StreamActions.Twitch.EventSub.Channel.CharityCampaign.CampaignStop;
+using ChatAnnouncementColor = StreamActions.Twitch.Api.Chat.Announcement.AnnouncementColor;
 using ChatClear = StreamActions.Twitch.EventSub.Channel.Chat.Clear;
 using ChatClearUserMessages = StreamActions.Twitch.EventSub.Channel.Chat.ClearUserMessages;
 using ChatMessage = StreamActions.Twitch.EventSub.Channel.Chat.Message;
@@ -70,7 +72,7 @@ using GuestStarSettingsUpdate = StreamActions.Twitch.EventSub.Channel.GuestStarS
 using HypeTrainBegin = StreamActions.Twitch.EventSub.Channel.HypeTrain.Begin;
 using HypeTrainEnd = StreamActions.Twitch.EventSub.Channel.HypeTrain.HypeTrainEnd;
 using HypeTrainProgress = StreamActions.Twitch.EventSub.Channel.HypeTrain.Progress;
-using LowTrustStatusEnum = StreamActions.Twitch.EventSub.Channel.SuspiciousUser.Objects.LowTrustStatus;
+using HypeTrainTypeEnum = StreamActions.Twitch.EventSub.Channel.HypeTrain.Objects.HypeTrainType;
 using ModeratorAdd = StreamActions.Twitch.EventSub.Channel.Moderator.Add;
 using ModeratorRemove = StreamActions.Twitch.EventSub.Channel.Moderator.Remove;
 using PollBegin = StreamActions.Twitch.EventSub.Channel.Poll.PollBegin;
@@ -95,6 +97,8 @@ using StreamOnline = StreamActions.Twitch.EventSub.Stream.Online;
 using SubscriptionEnd = StreamActions.Twitch.EventSub.Channel.Subscription.SubscriptionEnd;
 using SubscriptionGift = StreamActions.Twitch.EventSub.Channel.Subscription.Gift;
 using SubscriptionMessage = StreamActions.Twitch.EventSub.Channel.Subscription.Message;
+using SubscriptionMessageEmote = StreamActions.Twitch.EventSub.Channel.Subscription.Objects.SubscriptionMessageEmote;
+using SubscriptionMessageObject = StreamActions.Twitch.EventSub.Channel.Subscription.Objects.SubscriptionMessage;
 using SuspiciousUserMessage = StreamActions.Twitch.EventSub.Channel.SuspiciousUser.MessageEvent;
 using SuspiciousUserUpdate = StreamActions.Twitch.EventSub.Channel.SuspiciousUser.Update;
 using UnbanRequestCreate = StreamActions.Twitch.EventSub.Channel.UnbanRequest.Create;
@@ -284,6 +288,35 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserName.Should().Be("BadUser");
         _ = payload.Event.MessageId.Should().Be("bad-msg-123");
         _ = payload.Event.Reason.Should().Be(AutomodHold.HoldReason.Automod);
+    }
+
+    /// <summary>
+    /// Verifies that deserializing a automod.message.hold (version 2) EventSub payload with reason "unknown" maps to <see cref="AutomodHold.HoldReason.Unknown"/>.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeserializePayload")]
+    public void Deserialize_AutomodMessageHold_WhenReasonIsUnknown_MapsToUnknown()
+    {
+        string json = """
+        {
+          "subscription": { "type": "automod.message.hold", "version": "2" },
+          "event": {
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
+            "user_id": "4242",
+            "user_login": "baduser",
+            "user_name": "BadUser",
+            "message_id": "bad-msg-123",
+            "reason": "unknown"
+          }
+        }
+        
+        """;
+
+        EventPayload<AutomodHold> payload = DeserializePayload<AutomodHold>(json);
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Reason.Should().Be(AutomodHold.HoldReason.Unknown);
     }
 
     /// <summary>
@@ -786,7 +819,11 @@ public sealed class EventSubPayloadTests
             "user_id": "4242",
             "user_login": "pointsuser",
             "user_name": "PointsUser",
-            "id": "11111111-1111-1111-1111-111111111111"
+            "id": "11111111-1111-1111-1111-111111111111",
+            "reward": {
+              "type": "send_highlighted_message",
+              "channel_points": 500
+            }
           }
         }
         
@@ -804,6 +841,9 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserLogin.Should().Be("pointsuser");
         _ = payload.Event.UserName.Should().Be("PointsUser");
         _ = payload.Event.Id.Should().Be(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+        _ = payload.Event.Reward.Should().NotBeNull();
+        _ = payload.Event.Reward.Type.Should().Be(AutoRedemptionReward.RewardTypes.SendHighlightedMessage);
+        _ = payload.Event.Reward.ChannelPoints.Should().Be(500);
     }
 
     /// <summary>
@@ -1009,11 +1049,12 @@ public sealed class EventSubPayloadTests
           "subscription": { "type": "channel.charity_campaign.progress", "version": "1" },
           "event": {
             "id": "charity-1",
-            "broadcaster_id": "1337",
-            "broadcaster_login": "streamer",
-            "broadcaster_name": "Streamer",
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
             "charity_name": "St. Jude",
-            "charity_description": "Children Hospital"
+            "charity_description": "Children Hospital",
+            "charity_website": ""
           }
         }
         
@@ -1025,11 +1066,12 @@ public sealed class EventSubPayloadTests
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("charity-1");
-        _ = payload.Event.BroadcasterId.Should().Be("1337");
-        _ = payload.Event.BroadcasterLogin.Should().Be("streamer");
-        _ = payload.Event.BroadcasterName.Should().Be("Streamer");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.CharityName.Should().Be("St. Jude");
         _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
+        _ = payload.Event.CharityWebsite.Should().BeNull();
     }
 
     /// <summary>
@@ -1044,11 +1086,12 @@ public sealed class EventSubPayloadTests
           "subscription": { "type": "channel.charity_campaign.start", "version": "1" },
           "event": {
             "id": "charity-1",
-            "broadcaster_id": "1337",
-            "broadcaster_login": "streamer",
-            "broadcaster_name": "Streamer",
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
             "charity_name": "St. Jude",
-            "charity_description": "Children Hospital"
+            "charity_description": "Children Hospital",
+            "charity_website": "https://www.stjude.org"
           }
         }
         
@@ -1060,11 +1103,12 @@ public sealed class EventSubPayloadTests
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("charity-1");
-        _ = payload.Event.BroadcasterId.Should().Be("1337");
-        _ = payload.Event.BroadcasterLogin.Should().Be("streamer");
-        _ = payload.Event.BroadcasterName.Should().Be("Streamer");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.CharityName.Should().Be("St. Jude");
         _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
+        _ = payload.Event.CharityWebsite.Should().Be(new Uri("https://www.stjude.org"));
     }
 
     /// <summary>
@@ -1079,11 +1123,12 @@ public sealed class EventSubPayloadTests
           "subscription": { "type": "channel.charity_campaign.stop", "version": "1" },
           "event": {
             "id": "charity-1",
-            "broadcaster_id": "1337",
-            "broadcaster_login": "streamer",
-            "broadcaster_name": "Streamer",
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
             "charity_name": "St. Jude",
-            "charity_description": "Children Hospital"
+            "charity_description": "Children Hospital",
+            "charity_website": ""
           }
         }
         
@@ -1095,11 +1140,12 @@ public sealed class EventSubPayloadTests
         _ = payload.Subscription.Version.Should().Be("1");
         _ = payload.Event.Should().NotBeNull();
         _ = payload.Event.Id.Should().Be("charity-1");
-        _ = payload.Event.BroadcasterId.Should().Be("1337");
-        _ = payload.Event.BroadcasterLogin.Should().Be("streamer");
-        _ = payload.Event.BroadcasterName.Should().Be("Streamer");
+        _ = payload.Event.BroadcasterUserId.Should().Be("1337");
+        _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
+        _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.CharityName.Should().Be("St. Jude");
         _ = payload.Event.CharityDescription.Should().Be("Children Hospital");
+        _ = payload.Event.CharityWebsite.Should().BeNull();
     }
 
     /// <summary>
@@ -1229,7 +1275,8 @@ public sealed class EventSubPayloadTests
             "chatter_user_login": "chatter",
             "chatter_user_name": "Chatter",
             "message_id": "44444444-4444-4444-4444-444444444444",
-            "message": { "text": "Hello stream!" }
+            "message": { "text": "Hello stream!" },
+            "channel_points_animation_id": "anim-123"
           }
         }
         
@@ -1248,6 +1295,7 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.ChatterUserName.Should().Be("Chatter");
         _ = payload.Event!.MessageId.Should().Be(Guid.Parse("44444444-4444-4444-4444-444444444444"));
         _ = payload.Event.ChatMessage!.Text.Should().Be("Hello stream!");
+        _ = payload.Event.ChannelPointsAnimationId.Should().Be("anim-123");
     }
 
     /// <summary>
@@ -1324,6 +1372,105 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.ChatterUserName.Should().Be("Chatter");
         _ = payload.Event.TypeOfNotice.Should().Be(ChatNoticeType.Sub);
         _ = payload.Event.SystemMessage.Should().Be("Subscribed at Tier 1");
+    }
+
+    /// <summary>
+    /// Verifies that deserializing a channel.chat.notification (version 1) EventSub payload with announcement color, charity donation decimal places, pay it forward recipients, and gift paid upgrade gifter login maps all fields accurately.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeserializePayload")]
+    public void Deserialize_ChannelChatNotification_WhenOptionalSubObjectsProvided_MapsFieldsAndEmptyAnnouncementColorAsNull()
+    {
+        string json = """
+        {
+          "subscription": { "type": "channel.chat.notification", "version": "1" },
+          "event": {
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
+            "chatter_user_id": "4242",
+            "chatter_user_login": "chatter",
+            "chatter_user_name": "Chatter",
+            "notice_type": "announcement",
+            "system_message": "Announcement",
+            "announcement": {
+              "color": ""
+            },
+            "charity_donation": {
+              "charity_name": "St. Jude",
+              "amount": {
+                "value": 1000,
+                "decimal_places": 2,
+                "currency": "USD"
+              }
+            },
+            "pay_it_forward": {
+              "gifter_is_anonymous": false,
+              "gifter_user_id": "1001",
+              "gifter_user_name": "Gifter",
+              "gifter_user_login": "gifter",
+              "recipient_user_id": "2002",
+              "recipient_user_name": "Recipient",
+              "recipient_user_login": "recipient"
+            },
+            "gift_paid_upgrade": {
+              "gifter_is_anonymous": false,
+              "gifter_user_id": "1001",
+              "gifter_user_name": "Gifter",
+              "gifter_user_login": "gifter"
+            }
+          }
+        }
+        
+        """;
+
+        EventPayload<ChatNotification> payload = DeserializePayload<ChatNotification>(json);
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Announcement.Should().NotBeNull();
+        _ = payload.Event.Announcement.Color.Should().BeNull();
+        _ = payload.Event.CharityDonation.Should().NotBeNull();
+        _ = payload.Event.CharityDonation.Amount.Should().NotBeNull();
+        _ = payload.Event.CharityDonation.Amount.Value.Should().Be(1000);
+        _ = payload.Event.CharityDonation.Amount.DecimalPlaces.Should().Be(2);
+        _ = payload.Event.CharityDonation.Amount.Currency.Should().Be("USD");
+        _ = payload.Event.PayItForward.Should().NotBeNull();
+        _ = payload.Event.PayItForward.RecipientUserId.Should().Be("2002");
+        _ = payload.Event.PayItForward.RecipientUserName.Should().Be("Recipient");
+        _ = payload.Event.PayItForward.RecipientUserLogin.Should().Be("recipient");
+        _ = payload.Event.GiftPaidUpgrade.Should().NotBeNull();
+        _ = payload.Event.GiftPaidUpgrade.GifterUserLogin.Should().Be("gifter");
+    }
+
+    /// <summary>
+    /// Verifies that deserializing a channel.chat.notification (version 1) EventSub payload with a non-empty announcement color maps to the matching <see cref="ChatAnnouncementColor"/> value.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeserializePayload")]
+    public void Deserialize_ChannelChatNotification_WhenAnnouncementColorSpecified_MapsEnumColor()
+    {
+        string json = """
+        {
+          "subscription": { "type": "channel.chat.notification", "version": "1" },
+          "event": {
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
+            "chatter_user_id": "4242",
+            "chatter_user_login": "chatter",
+            "chatter_user_name": "Chatter",
+            "notice_type": "announcement",
+            "announcement": {
+              "color": "BLUE"
+            }
+          }
+        }
+        
+        """;
+
+        EventPayload<ChatNotification> payload = DeserializePayload<ChatNotification>(json);
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.Announcement.Should().NotBeNull();
+        _ = payload.Event.Announcement.Color.Should().Be(ChatAnnouncementColor.Blue);
     }
 
     /// <summary>
@@ -1650,6 +1797,36 @@ public sealed class EventSubPayloadTests
     }
 
     /// <summary>
+    /// Verifies that deserializing a channel.guest_star_guest.update (version beta) EventSub payload with state "removed" maps to <see cref="GuestStarGuestUpdate.GuestStates.Removed"/>.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeserializePayload")]
+    public void Deserialize_ChannelGuestStarGuestUpdate_WhenStateIsRemoved_MapsToRemoved()
+    {
+        string json = """
+        {
+          "subscription": { "type": "channel.guest_star_guest.update", "version": "beta" },
+          "event": {
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
+            "session_id": "session-1",
+            "guest_user_id": "4242",
+            "guest_user_login": "guest",
+            "guest_user_name": "Guest",
+            "slot_id": "1",
+            "state": "removed"
+          }
+        }
+        
+        """;
+
+        EventPayload<GuestStarGuestUpdate> payload = DeserializePayload<GuestStarGuestUpdate>(json);
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.State.Should().Be(GuestStarGuestUpdate.GuestStates.Removed);
+    }
+
+    /// <summary>
     /// Verifies that deserializing a channel.guest_star_session.begin (version beta) EventSub payload returns a populated <see cref="GuestStarSessionBegin"/> event with all fields mapped.
     /// </summary>
     [Fact]
@@ -1789,6 +1966,32 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.Progress.Should().Be(500);
         _ = payload.Event.Goal.Should().Be(1000);
         _ = payload.Event.Level.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Verifies that deserializing a channel.hype_train.begin (version 2) EventSub payload with type "mythic" maps to <see cref="HypeTrainTypeEnum.Mythic"/>.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeserializePayload")]
+    public void Deserialize_ChannelHypeTrainBegin_WhenTypeIsMythic_MapsToMythic()
+    {
+        string json = """
+        {
+          "subscription": { "type": "channel.hype_train.begin", "version": "2" },
+          "event": {
+            "id": "ht-1",
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
+            "type": "mythic"
+          }
+        }
+        
+        """;
+
+        EventPayload<HypeTrainBegin> payload = DeserializePayload<HypeTrainBegin>(json);
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.HypeTrainType.Should().Be(HypeTrainTypeEnum.Mythic);
     }
 
     /// <summary>
@@ -2174,6 +2377,35 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.WinningOutcomeId.Should().Be(Guid.Parse("88888888-8888-8888-8888-888888888888"));
         _ = payload.Event.Status.Should().Be(PredictionStatusEnum.Resolved);
         _ = payload.Event.Outcomes.Should().HaveCount(1);
+    }
+
+    /// <summary>
+    /// Verifies that deserializing a canceled channel.prediction.end (version 1) EventSub payload with an empty winning_outcome_id sets <see cref="PredictionEnd.WinningOutcomeId"/> to null.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeserializePayload")]
+    public void Deserialize_ChannelPredictionEnd_WhenCanceledWithEmptyWinningOutcomeId_ReturnsNullWinningOutcomeId()
+    {
+        string json = """
+        {
+          "subscription": { "type": "channel.prediction.end", "version": "1" },
+          "event": {
+            "id": "77777777-7777-7777-7777-777777777777",
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
+            "title": "Will we win?",
+            "winning_outcome_id": "",
+            "status": "canceled"
+          }
+        }
+        
+        """;
+
+        EventPayload<PredictionEnd> payload = DeserializePayload<PredictionEnd>(json);
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.WinningOutcomeId.Should().BeNull();
+        _ = payload.Event.Status.Should().Be(PredictionStatusEnum.Canceled);
     }
 
     /// <summary>
@@ -2582,6 +2814,16 @@ public sealed class EventSubPayloadTests
             "broadcaster_user_login": "streamer",
             "broadcaster_user_name": "Streamer",
             "tier": "1000",
+            "message": {
+              "text": "Kappa love the stream!",
+              "emotes": [
+                {
+                  "begin": 0,
+                  "end": 4,
+                  "id": "25"
+                }
+              ]
+            },
             "cumulative_months": 6,
             "duration_months": 1,
             "streak_months": 6
@@ -2602,9 +2844,53 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
         _ = payload.Event.Tier.Should().Be(ChannelSubscribe.SubscriptionTiers.Tier1);
+        _ = payload.Event.MessageObject.Should().BeOfType<SubscriptionMessageObject>();
+        _ = payload.Event.MessageObject.Should().NotBeNull();
+        _ = payload.Event.MessageObject.Text.Should().Be("Kappa love the stream!");
+        _ = payload.Event.MessageObject.Emotes.Should().HaveCount(1);
+        SubscriptionMessageEmote emote = payload.Event.MessageObject.Emotes[0];
+        _ = emote.Begin.Should().Be(0);
+        _ = emote.End.Should().Be(4);
+        _ = emote.Id.Should().Be("25");
         _ = payload.Event.CumulativeMonths.Should().Be(6);
         _ = payload.Event.DurationMonths.Should().Be(1);
         _ = payload.Event.StreakMonths.Should().Be(6);
+    }
+
+    /// <summary>
+    /// Verifies that deserializing a channel.subscription.message (version 1) EventSub payload with null emotes deserializes safely.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeserializePayload")]
+    public void Deserialize_ChannelSubscriptionMessage_WhenEmotesIsNull_ParsesMessageWithNullEmotes()
+    {
+        string json = """
+        {
+          "subscription": { "type": "channel.subscription.message", "version": "1" },
+          "event": {
+            "user_id": "4242",
+            "user_login": "subber",
+            "user_name": "Subber",
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
+            "tier": "1000",
+            "message": {
+              "text": "Great stream!",
+              "emotes": null
+            },
+            "cumulative_months": 2,
+            "duration_months": 1
+          }
+        }
+        
+        """;
+
+        EventPayload<SubscriptionMessage> payload = DeserializePayload<SubscriptionMessage>(json);
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.MessageObject.Should().NotBeNull();
+        _ = payload.Event.MessageObject.Text.Should().Be("Great stream!");
+        _ = payload.Event.MessageObject.Emotes.Should().BeNull();
     }
 
     /// <summary>
@@ -2668,7 +2954,16 @@ public sealed class EventSubPayloadTests
             "user_login": "sususer",
             "user_name": "SusUser",
             "low_trust_status": "active_monitoring",
-            "message_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+            "message": {
+              "message_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "text": "Hello chat",
+              "fragments": [
+                {
+                  "type": "text",
+                  "text": "Hello chat"
+                }
+              ]
+            }
           }
         }
         
@@ -2685,8 +2980,11 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("sususer");
         _ = payload.Event.UserName.Should().Be("SusUser");
-        _ = payload.Event.LowTrustStatus.Should().Be(LowTrustStatusEnum.ActiveMonitoring);
-        _ = payload.Event.MessageId.Should().Be(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        _ = payload.Event.LowTrustStatus.Should().Be(SuspiciousUserMessage.LowTrustStatuses.ActiveMonitoring);
+        _ = payload.Event.Message.Should().NotBeNull();
+        _ = payload.Event.Message.MessageId.Should().Be(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        _ = payload.Event.Message.Text.Should().Be("Hello chat");
+        _ = payload.Event.Message.Fragments.Should().HaveCount(1);
     }
 
     /// <summary>
@@ -2729,7 +3027,38 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("sususer");
         _ = payload.Event.UserName.Should().Be("SusUser");
-        _ = payload.Event.LowTrustStatus.Should().Be(LowTrustStatusEnum.Restricted);
+        _ = payload.Event.LowTrustStatus.Should().Be(SuspiciousUserUpdate.LowTrustStatuses.Restricted);
+    }
+
+    /// <summary>
+    /// Verifies that deserializing a channel.suspicious_user.update (version 1) EventSub payload with low_trust_status "no_treatment" maps to <see cref="SuspiciousUserUpdate.LowTrustStatuses.NoTreatment"/>.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "DeserializePayload")]
+    public void Deserialize_ChannelSuspiciousUserUpdate_WhenNoTreatment_MapsToNoTreatment()
+    {
+        string json = """
+        {
+          "subscription": { "type": "channel.suspicious_user.update", "version": "1" },
+          "event": {
+            "broadcaster_user_id": "1337",
+            "broadcaster_user_login": "streamer",
+            "broadcaster_user_name": "Streamer",
+            "moderator_user_id": "9001",
+            "moderator_user_login": "mod",
+            "moderator_user_name": "Mod",
+            "user_id": "4242",
+            "user_login": "sususer",
+            "user_name": "SusUser",
+            "low_trust_status": "no_treatment"
+          }
+        }
+        
+        """;
+
+        EventPayload<SuspiciousUserUpdate> payload = DeserializePayload<SuspiciousUserUpdate>(json);
+        _ = payload.Event.Should().NotBeNull();
+        _ = payload.Event.LowTrustStatus.Should().Be(SuspiciousUserUpdate.LowTrustStatuses.NoTreatment);
     }
 
     /// <summary>
@@ -2786,9 +3115,9 @@ public sealed class EventSubPayloadTests
             "broadcaster_user_id": "1337",
             "broadcaster_user_login": "streamer",
             "broadcaster_user_name": "Streamer",
-            "moderator_id": "9001",
-            "moderator_login": "mod",
-            "moderator_name": "Mod",
+            "moderator_user_id": "9001",
+            "moderator_user_login": "mod",
+            "moderator_user_name": "Mod",
             "user_id": "4242",
             "user_login": "banneduser",
             "user_name": "BannedUser",
@@ -2808,9 +3137,9 @@ public sealed class EventSubPayloadTests
         _ = payload.Event.BroadcasterUserId.Should().Be("1337");
         _ = payload.Event.BroadcasterUserLogin.Should().Be("streamer");
         _ = payload.Event.BroadcasterUserName.Should().Be("Streamer");
-        _ = payload.Event.ModeratorId.Should().Be("9001");
-        _ = payload.Event.ModeratorLogin.Should().Be("mod");
-        _ = payload.Event.ModeratorName.Should().Be("Mod");
+        _ = payload.Event.ModeratorUserId.Should().Be("9001");
+        _ = payload.Event.ModeratorUserLogin.Should().Be("mod");
+        _ = payload.Event.ModeratorUserName.Should().Be("Mod");
         _ = payload.Event.UserId.Should().Be("4242");
         _ = payload.Event.UserLogin.Should().Be("banneduser");
         _ = payload.Event.UserName.Should().Be("BannedUser");
@@ -3004,7 +3333,7 @@ public sealed class EventSubPayloadTests
     }
 
     /// <summary>
-    /// Verifies that deserializing a drop.entitlement.grant (version 1) EventSub payload returns a populated <see cref="DropEntitlementGrant"/> event with all fields mapped.
+    /// Verifies that deserializing a batched drop.entitlement.grant (version 1) EventSub payload returns a populated <see cref="EventPayload{TEventType}.Events"/> collection with all fields mapped.
     /// </summary>
     [Fact]
     [Trait("Member", "DeserializePayload")]
@@ -3013,35 +3342,48 @@ public sealed class EventSubPayloadTests
         string json = """
         {
           "subscription": { "type": "drop.entitlement.grant", "version": "1" },
-          "event": {
-            "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
-            "data": [
-              {
-                "entitlement_id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
-                "benefit_id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+          "events": [
+            {
+              "id": "OIsoE4U7xG6x7x8x9x0",
+              "data": {
+                "organization_id": "org-123",
+                "category_id": "cat-456",
+                "category_name": "Just Chatting",
+                "campaign_id": "camp-789",
                 "user_id": "4242",
                 "user_name": "User",
-                "user_login": "user"
+                "user_login": "user",
+                "entitlement_id": "MTIzNHw3ODkw",
+                "benefit_id": "benefit-abc",
+                "created_at": "2023-01-01T00:00:00Z"
               }
-            ]
-          }
+            }
+          ]
         }
         
         """;
 
-        EventPayload<DropEntitlementGrant> payload = DeserializePayload<DropEntitlementGrant>(json);
+        EventPayload<DropEntitlementGrant>? payload = JsonSerializer.Deserialize<EventPayload<DropEntitlementGrant>>(json, TwitchApi.SerializerOptions);
+        _ = payload.Should().NotBeNull();
         _ = payload.Subscription.Should().NotBeNull();
         _ = payload.Subscription.Type.Should().Be("drop.entitlement.grant");
         _ = payload.Subscription.Version.Should().Be("1");
-        _ = payload.Event.Should().NotBeNull();
-        _ = payload.Event.Id.Should().Be(Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"));
-        _ = payload.Event.Data.Should().HaveCount(1);
-        StreamActions.Twitch.EventSub.Drop.Entitlement.Objects.Entitlement entitlement = payload.Event.Data[0];
-        _ = entitlement.EntitlementId.Should().Be(Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"));
-        _ = entitlement.BenefitId.Should().Be(Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"));
-        _ = entitlement.UserId.Should().Be("4242");
-        _ = entitlement.UserName.Should().Be("User");
-        _ = entitlement.UserLogin.Should().Be("user");
+        _ = payload.Event.Should().BeNull();
+        _ = payload.Events.Should().NotBeNull();
+        _ = payload.Events.Should().HaveCount(1);
+        DropEntitlementGrant grant = payload.Events[0];
+        _ = grant.Id.Should().Be("OIsoE4U7xG6x7x8x9x0");
+        _ = grant.Data.Should().NotBeNull();
+        _ = grant.Data.OrganizationId.Should().Be("org-123");
+        _ = grant.Data.CategoryId.Should().Be("cat-456");
+        _ = grant.Data.CategoryName.Should().Be("Just Chatting");
+        _ = grant.Data.CampaignId.Should().Be("camp-789");
+        _ = grant.Data.UserId.Should().Be("4242");
+        _ = grant.Data.UserName.Should().Be("User");
+        _ = grant.Data.UserLogin.Should().Be("user");
+        _ = grant.Data.EntitlementId.Should().Be("MTIzNHw3ODkw");
+        _ = grant.Data.BenefitId.Should().Be("benefit-abc");
+        _ = grant.Data.CreatedAt.Should().Be(DateTime.Parse("2023-01-01T00:00:00Z", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
     }
 
     /// <summary>

@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Channel.Prediction.Objects;
@@ -68,9 +69,10 @@ public sealed record PredictionEnd : IEventSubType
     public string? Title { get; init; }
 
     /// <summary>
-    /// ID of the winning outcome.
+    /// ID of the winning outcome. Null if the prediction was canceled.
     /// </summary>
     [JsonPropertyName("winning_outcome_id")]
+    [JsonConverter(typeof(JsonEmptyStringToNullGuidConverter))]
     public Guid? WinningOutcomeId { get; init; }
 
     /// <summary>

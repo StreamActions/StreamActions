@@ -18,6 +18,7 @@
 
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
+using StreamActions.Twitch.EventSub.Channel.Subscription.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.Subscription;
@@ -82,7 +83,7 @@ public sealed record Message : IEventSubType
     /// An object that contains the resubscription message and emote information needed to recreate the message.
     /// </summary>
     [JsonPropertyName("message")]
-    public Common.ChatMessage.Message? MessageObject { get; init; }
+    public SubscriptionMessage? MessageObject { get; init; }
 
     /// <summary>
     /// The total number of months the user has been subscribed to the channel.

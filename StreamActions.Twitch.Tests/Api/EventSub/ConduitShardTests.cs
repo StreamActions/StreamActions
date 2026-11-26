@@ -213,6 +213,49 @@ public sealed class ConduitShardTests : IDisposable
         _ = request.Query.ContainsKey("after").Should().BeFalse();
     }
 
+    /// <summary>
+    /// Tests that <see cref="ConduitShard.GetConduitShards"/> correctly serializes and deserializes updated shard status values.
+    /// </summary>
+    /// <param name="status">The shard status enum value.</param>
+    /// <param name="expectedWireValue">The expected JSON/query string value.</param>
+    [Theory]
+    [Trait("Member", "GetConduitShards")]
+    [InlineData(ConduitShard.ShardStatus.WebsocketReceivedInboundTraffic, "websocket_received_inbound_traffic")]
+    [InlineData(ConduitShard.ShardStatus.NotificationFailuresExceeded, "notification_failures_exceeded")]
+    [InlineData(ConduitShard.ShardStatus.WebsocketFailedToReconnect, "websocket_failed_to_reconnect")]
+    public async Task GetConduitShards_WhenStatusIsUpdatedVariant_SerializesAndDeserializesCorrectly(ConduitShard.ShardStatus status, string expectedWireValue)
+    {
+        Guid conduitId = Guid.Parse("bf17725e-3991-4d1a-9694-845b412a8069");
+        this._fixture.RegisterJsonResponse("GET", "/helix/eventsub/conduits/shards", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = "0",
+                    status = expectedWireValue,
+                    transport = new
+                    {
+                        method = "websocket",
+                        session_id = "ws-session-123"
+                    }
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<ConduitShard>? response = await ConduitShard.GetConduitShards(session, conduitId, status: status).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+        _ = response.Data[0].Status.Should().Be(status);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["status"].ToString().Should().Be(expectedWireValue);
+    }
+
     #endregion GetConduitShards
 
     #region UpdateConduitShards

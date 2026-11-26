@@ -129,17 +129,15 @@ public sealed class GuestStarSessionTests : IDisposable
                 {
                   "slot_id": "0",
                   "user_id": "9321049",
-                  "user_display_name": "Cool_User",
-                  "user_login": "cool_user",
                   "is_live": true,
-                  "volume": 100,
+                  "volume": 200,
                   "assigned_at": "2023-01-02T04:16:53.325Z",
-                  "audio_settings": {
+                  "audio": {
                     "is_available": true,
                     "is_host_enabled": true,
                     "is_guest_enabled": true
                   },
-                  "video_settings": {
+                  "video": {
                     "is_available": true,
                     "is_host_enabled": true,
                     "is_guest_enabled": true
@@ -168,10 +166,8 @@ public sealed class GuestStarSessionTests : IDisposable
         GuestStarGuest guest = starSession.Guests[0];
         _ = guest.SlotId.Should().Be("0");
         _ = guest.UserId.Should().Be("9321049");
-        _ = guest.UserDisplayName.Should().Be("Cool_User");
-        _ = guest.UserLogin.Should().Be("cool_user");
         _ = guest.IsLive.Should().BeTrue();
-        _ = guest.Volume.Should().Be(100);
+        _ = guest.Volume.Should().Be(200);
         _ = guest.AssignedAt.Should().Be(DateTime.Parse("2023-01-02T04:16:53.325Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));
         _ = guest.AudioSettings.Should().NotBeNull();
         _ = guest.AudioSettings.IsHostEnabled.Should().BeTrue();
@@ -247,17 +243,15 @@ public sealed class GuestStarSessionTests : IDisposable
                 {
                   "slot_id": "0",
                   "user_id": "9321049",
-                  "user_display_name": "Cool_User",
-                  "user_login": "cool_user",
                   "is_live": true,
                   "volume": 100,
                   "assigned_at": "2023-01-02T04:16:53.325Z",
-                  "audio_settings": {
+                  "audio": {
                     "is_available": true,
                     "is_host_enabled": true,
                     "is_guest_enabled": true
                   },
-                  "video_settings": {
+                  "video": {
                     "is_available": true,
                     "is_host_enabled": true,
                     "is_guest_enabled": true
@@ -286,8 +280,6 @@ public sealed class GuestStarSessionTests : IDisposable
         GuestStarGuest guest = starSession.Guests[0];
         _ = guest.SlotId.Should().Be("0");
         _ = guest.UserId.Should().Be("9321049");
-        _ = guest.UserDisplayName.Should().Be("Cool_User");
-        _ = guest.UserLogin.Should().Be("cool_user");
         _ = guest.IsLive.Should().BeTrue();
         _ = guest.Volume.Should().Be(100);
         _ = guest.AssignedAt.Should().Be(DateTime.Parse("2023-01-02T04:16:53.325Z", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal));

@@ -407,7 +407,9 @@ public static partial class TwitchApi
 
         /// <inheritdoc/>
         public override TEnum? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-            reader.TokenType == JsonTokenType.Null ? null : this._inner.Read(ref reader, typeof(TEnum), options);
+            reader.TokenType == JsonTokenType.Null || (reader.TokenType == JsonTokenType.String && string.IsNullOrWhiteSpace(reader.GetString()))
+                ? null
+                : this._inner.Read(ref reader, typeof(TEnum), options);
 
         /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, TEnum? value, JsonSerializerOptions options)

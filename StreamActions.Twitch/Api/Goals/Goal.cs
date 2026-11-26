@@ -88,10 +88,10 @@ public sealed record Goal
     /// If type is <see cref="GoalType.NewSubscriptionCount"/>, this field is increased by 1 for each new subscription.
     /// </para>
     /// <para>
-    /// If type is <see cref="GoalType.NewBit"/>, this field is increased by the number of Bits used in a single cheer. For example, if a user cheers 100 Bits, this field is increased by 100.
+    /// If type is <see cref="GoalType.NewBit"/>, this field is increased by the number of Bits used on the channel.
     /// </para>
     /// <para>
-    /// If type is <see cref="GoalType.NewCheerer"/>, this field is increased by 1 for each unique new cheerer.
+    /// If type is <see cref="GoalType.NewCheerer"/>, this field is increased by 1 the first time each user Cheers on the channel after the goal starts. Other ways of using Bits don't count.
     /// </para>
     /// </remarks>
     [JsonPropertyName("current_amount")]

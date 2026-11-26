@@ -23,8 +23,13 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.EventSub.Automod.Settings;
 
 /// <summary>
-/// A notification is sent when a broadcasters automod settings are updated.
+/// A notification sent each time a broadcaster's AutoMod settings are saved, even if no level changed.
 /// </summary>
+/// <remarks>
+/// <para>
+/// This includes the changes that Shield Mode makes when it's turned on or off, and default settings that Twitch applies automatically. The notification contains all of the channel's current levels, not only the ones that changed.
+/// </para>
+/// </remarks>
 public sealed record Update : IEventSubType
 {
     /// <inheritdoc/>
@@ -55,19 +60,24 @@ public sealed record Update : IEventSubType
     public string? BroadcasterUserName { get; init; }
 
     /// <summary>
-    /// The ID of the moderator who changed the channel settings.
+    /// The ID of the user who changed the settings.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the broadcaster or one of the broadcaster's moderators. If Twitch changed the settings automatically, such as when it turns on AutoMod for a channel that has never configured it, this is the ID of Twitch's own account (12826).
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("moderator_user_id")]
     public string? ModeratorUserId { get; init; }
 
     /// <summary>
-    /// The moderators login.
+    /// The login of the user who changed the settings.
     /// </summary>
     [JsonPropertyName("moderator_user_login")]
     public string? ModeratorUserLogin { get; init; }
 
     /// <summary>
-    /// The moderators user name.
+    /// The display name of the user who changed the settings.
     /// </summary>
     [JsonPropertyName("moderator_user_name")]
     public string? ModeratorUserName { get; init; }
@@ -79,7 +89,7 @@ public sealed record Update : IEventSubType
     public int? Bullying { get; init; }
 
     /// <summary>
-    /// The default AutoMod level for the broadcaster. This field is null if the broadcaster has set one or more of the individual settings.
+    /// The default AutoMod level for the broadcaster. This field is null if the channel's AutoMod settings don't match one of the default levels, such as when the broadcaster has set one or more of the individual settings.
     /// </summary>
     [JsonPropertyName("overall_level")]
     public int? OverallLevel { get; init; }

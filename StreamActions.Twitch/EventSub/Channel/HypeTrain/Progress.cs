@@ -24,8 +24,13 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.EventSub.Channel.HypeTrain;
 
 /// <summary>
-/// An event that is sent when a Hype Train makes progress.
+/// An event that is sent when a Hype Train makes progress on the specified channel.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Notifications are sent periodically while a Hype Train is making progress. EventSub does not make strong assurances about the order of message delivery, so it is possible to receive <see cref="Progress"/> before you receive the corresponding <see cref="Begin"/> notification. When the Hype Train is over, <see cref="HypeTrainEnd"/> is emitted.
+/// </para>
+/// </remarks>
 public sealed record Progress : IEventSubType
 {
     /// <inheritdoc/>
@@ -64,6 +69,11 @@ public sealed record Progress : IEventSubType
     /// <summary>
     /// Total points contributed to the Hype Train.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For Bits contributions, each Bit counts as 1 point. For subscription contributions, each subscription (or each month of a multi-month gift) counts as 500, 1000, or 2500 points for a Tier 1, 2, or 3 subscription.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("total")]
     public int? Total { get; init; }
 
@@ -80,8 +90,13 @@ public sealed record Progress : IEventSubType
     public int? Goal { get; init; }
 
     /// <summary>
-    /// The contributors with the most points contributed.
+    /// The top contributor for each contribution type, with at most one entry per type, in no particular order.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The array is empty until there is a top contributor. Anonymous contributors are never listed. For a shared Hype Train, the array lists only the top contributors in this broadcaster's channel.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("top_contributions")]
     public IReadOnlyList<Contribution>? TopContributions { get; init; }
 

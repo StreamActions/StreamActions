@@ -57,26 +57,31 @@ public sealed record Moderate : IEventSubType
     public string? BroadcasterUserName { get; init; }
 
     /// <summary>
-    /// The channel in which the action originally occurred. Is the same as the broadcaster_user_id if not in shared chat.
+    /// The ID of the channel where the action originally took place. Is null unless <see cref="Action"/> is <see cref="ModerationActions.SharedChatBan"/>, <see cref="ModerationActions.SharedChatUnban"/>, <see cref="ModerationActions.SharedChatTimeout"/>, <see cref="ModerationActions.SharedChatUntimeout"/>, or <see cref="ModerationActions.SharedChatDelete"/>.
     /// </summary>
     [JsonPropertyName("source_broadcaster_user_id")]
     public string? SourceBroadcasterUserId { get; init; }
 
     /// <summary>
-    /// The channel in which the action originally occurred. Is the same as the broadcaster_user_login if not in shared chat.
+    /// The login of the channel where the action originally took place. Is null unless <see cref="Action"/> is one of the shared chat actions.
     /// </summary>
     [JsonPropertyName("source_broadcaster_user_login")]
     public string? SourceBroadcasterUserLogin { get; init; }
 
     /// <summary>
-    /// The channel in which the action originally occurred. Is null when the moderator action happens in the same channel as the broadcaster. Is not null when in a shared chat session, and the action happens in the channel of a participant other than the broadcaster.
+    /// The display name of the channel where the action originally took place. Is null unless <see cref="Action"/> is one of the shared chat actions.
     /// </summary>
     [JsonPropertyName("source_broadcaster_user_name")]
     public string? SourceBroadcasterUserName { get; init; }
 
     /// <summary>
-    /// The ID of the moderator who performed the action.
+    /// The ID of the user who performed the action.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For <see cref="ModerationActions.Raid"/> and <see cref="ModerationActions.Unraid"/>, this is the broadcaster or one of the broadcaster's editors. For the shared chat actions, it's the user who performed the action in the channel where it originally occurred. For all other actions, it's the broadcaster or one of the broadcaster's moderators. For <see cref="ModerationActions.Unvip"/>, it can also be the VIP who removed their own VIP status.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("moderator_user_id")]
     public string? ModeratorUserId { get; init; }
 

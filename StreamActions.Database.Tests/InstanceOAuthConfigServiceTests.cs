@@ -100,6 +100,34 @@ public sealed class InstanceOAuthConfigServiceTests
         IReadOnlyDictionary<string, PlatformOAuthAppCredentials> all = await service.GetAllAsync(ct);
         _ = all.Keys.Should().BeEquivalentTo("twitch", "discord");
     }
+
+    [Fact]
+    [Trait("Member", "SetAsync")]
+    public async Task SetAsync_WhenPublicClientHasNullOrWhitespaceSecret_PersistsAndDeserializesWithNullSecret()
+    {
+        using TestSqliteContextFactory factory = new();
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero));
+        using InstanceSettingsService settingsService = new(factory, timeProvider);
+        SecretProtectionService secretProtection = new(new EphemeralDataProtectionProvider(), NullLogger<SecretProtectionService>.Instance);
+        using InstanceOAuthConfigService service = new(settingsService, secretProtection);
+        CancellationToken ct = TestContext.Current.CancellationToken;
+
+        await service.SetAsync("twitch", new PlatformOAuthAppCredentials("public-twitch-id", ClientSecret: null), ct);
+        await service.SetAsync("kick", new PlatformOAuthAppCredentials("public-kick-id", ClientSecret: "   "), ct);
+
+        PlatformOAuthAppCredentials? twitch = await service.GetAsync("twitch", ct);
+        _ = twitch.Should().NotBeNull();
+        _ = twitch!.ClientId.Should().Be("public-twitch-id");
+        _ = twitch.ClientSecret.Should().BeNull();
+
+        PlatformOAuthAppCredentials? kick = await service.GetAsync("kick", ct);
+        _ = kick.Should().NotBeNull();
+        _ = kick!.ClientId.Should().Be("public-kick-id");
+        _ = kick.ClientSecret.Should().BeNull();
+
+        IReadOnlyDictionary<string, PlatformOAuthAppCredentials> all = await service.GetAllAsync(ct);
+        _ = all.Keys.Should().BeEquivalentTo("twitch", "kick");
+    }
     #endregion
 
     #region RemoveAsync

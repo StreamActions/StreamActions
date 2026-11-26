@@ -26,14 +26,14 @@ namespace StreamActions.Core.Models;
 /// </summary>
 /// <param name="PlatformId">The normalized lowercase platform identifier.</param>
 /// <param name="ClientId">The resolved OAuth client identifier.</param>
-/// <param name="ClientSecret">The resolved OAuth client secret.</param>
+/// <param name="ClientSecret">The optional resolved OAuth client secret, or <see langword="null"/> for public clients.</param>
 /// <param name="RedirectUri">The optional explicit redirect URI override.</param>
 /// <param name="IsWorkspaceOverride">A value indicating whether the credentials came from a workspace-level custom OAuth application.</param>
 /// <param name="WorkspaceId">The optional workspace identifier for which the configuration was resolved.</param>
 public sealed record ResolvedOAuthClientConfig(
     string PlatformId,
     string ClientId,
-    string ClientSecret,
+    string? ClientSecret = null,
     Uri? RedirectUri = null,
     bool IsWorkspaceOverride = false,
     Guid? WorkspaceId = null)

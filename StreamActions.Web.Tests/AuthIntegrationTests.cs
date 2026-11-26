@@ -18,6 +18,7 @@
 
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -34,10 +35,14 @@ using StreamActions.Core.Models.Entities;
 using StreamActions.Core.Permissions;
 using StreamActions.Daemon;
 using StreamActions.Daemon.Platforms;
+using StreamActions.Web.Endpoints;
 using StreamActions.Web.Security;
+using System.Buffers.Text;
 using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Xunit;
 
@@ -674,6 +679,265 @@ public sealed partial class AuthIntegrationTests
         }
     }
 
+    [Fact]
+    [Trait("Member", "MapAuthEndpoints")]
+    public async Task PlatformOAuth_ConfidentialClient_SendsPkceChallengeStoresCookieAndVerifiesOnCallback()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using AuthWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions);
+
+            await SeedInstanceOAuthAndSettingsAsync(factory.Services, allowOpenRegistration: true, InstanceOAuthAppPolicy.InstanceOnly, ct);
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            HttpResponseMessage startResponse = await client.GetAsync(new Uri("/auth/twitch/login?flow=login", UriKind.Relative), ct);
+            _ = startResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+            Dictionary<string, StringValues> startQuery = QueryHelpers.ParseQuery(startResponse.Headers.Location!.Query);
+            string state = startQuery["state"].ToString();
+            string nonce = startQuery["nonce"].ToString();
+            string codeChallenge = startQuery["code_challenge"].ToString();
+            string codeChallengeMethod = startQuery["code_challenge_method"].ToString();
+
+            _ = codeChallenge.Should().NotBeNullOrWhiteSpace();
+            _ = codeChallengeMethod.Should().Be("S256");
+
+            string? authFlowCookie = startResponse.Headers.GetValues("Set-Cookie")
+                .FirstOrDefault(static c => c.StartsWith($"{AuthClaims.AuthFlowCookieName}=", StringComparison.Ordinal));
+            _ = authFlowCookie.Should().NotBeNull();
+            string protectedValue = Uri.UnescapeDataString(authFlowCookie!.Split(';', 2)[0][(AuthClaims.AuthFlowCookieName.Length + 1)..]);
+            IDataProtectionProvider dataProtectionProvider = factory.Services.GetRequiredService<IDataProtectionProvider>();
+            ITimeLimitedDataProtector protector = dataProtectionProvider
+                .CreateProtector(AuthClaims.AuthFlowProtectorPurpose)
+                .ToTimeLimitedDataProtector();
+            AuthFlowCookiePayload? flowPayload = JsonSerializer.Deserialize<AuthFlowCookiePayload>(protector.Unprotect(protectedValue));
+            _ = flowPayload.Should().NotBeNull();
+            _ = flowPayload!.CodeVerifier.Should().NotBeNullOrWhiteSpace();
+            _ = Base64Url.EncodeToString(SHA256.HashData(Encoding.ASCII.GetBytes(flowPayload.CodeVerifier!)))
+                .Should().Be(codeChallenge);
+
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+                issuer: baseUrl,
+                audience: "instance-cid",
+                subject: "conf-pkce-user",
+                preferredUsername: "conf_pkce",
+                nonce: nonce);
+
+            HttpResponseMessage callbackResponse = await client.GetAsync(
+                new Uri($"/auth/twitch/callback?code=code-conf-pkce&state={Uri.EscapeDataString(state)}", UriKind.Relative),
+                ct);
+
+            _ = callbackResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = callbackResponse.Headers.Location!.ToString().Should().Be("/");
+
+            Dictionary<string, string> tokenForm = mockTwitch.TokenRequests.Should().ContainSingle().Subject;
+            _ = tokenForm["client_id"].Should().Be("instance-cid");
+            _ = tokenForm["client_secret"].Should().Be("instance-secret");
+            _ = tokenForm["code_verifier"].Should().Be(flowPayload.CodeVerifier);
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "MapAuthEndpoints")]
+    public async Task PlatformOAuth_PublicClient_CompletesLoginStartAndCallbackWithoutClientSecret()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using AuthWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions);
+
+            IInstanceSettingsService settingsService = factory.Services.GetRequiredService<IInstanceSettingsService>();
+            InstanceSettings settings = await settingsService.GetAsync(ct);
+            settings.AllowOpenRegistration = true;
+            settings.InstanceOAuthAppPolicy = InstanceOAuthAppPolicy.InstanceOnly.ToString();
+            await settingsService.UpdateAsync(settings, ct);
+
+            IInstanceOAuthConfigService oauthService = factory.Services.GetRequiredService<IInstanceOAuthConfigService>();
+            await oauthService.SetAsync("twitch", new PlatformOAuthAppCredentials("public-instance-cid", ClientSecret: null), ct);
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            HttpResponseMessage startResponse = await client.GetAsync(new Uri("/auth/twitch/login?flow=login", UriKind.Relative), ct);
+            _ = startResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+            Dictionary<string, StringValues> startQuery = QueryHelpers.ParseQuery(startResponse.Headers.Location!.Query);
+            _ = startQuery["client_id"].ToString().Should().Be("public-instance-cid");
+            string codeChallenge = startQuery["code_challenge"].ToString();
+            _ = codeChallenge.Should().NotBeNullOrWhiteSpace();
+            _ = startQuery["code_challenge_method"].ToString().Should().Be("S256");
+
+            string state = startQuery["state"].ToString();
+            string nonce = startQuery["nonce"].ToString();
+
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+                issuer: baseUrl,
+                audience: "public-instance-cid",
+                subject: "public-user-1",
+                preferredUsername: "public_streamer",
+                nonce: nonce);
+
+            HttpResponseMessage callbackResponse = await client.GetAsync(
+                new Uri($"/auth/twitch/callback?code=code-public&state={Uri.EscapeDataString(state)}", UriKind.Relative),
+                ct);
+
+            _ = callbackResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = callbackResponse.Headers.Location!.ToString().Should().Be("/");
+
+            Dictionary<string, string> tokenForm = mockTwitch.TokenRequests.Should().ContainSingle().Subject;
+            _ = tokenForm["client_id"].Should().Be("public-instance-cid");
+            _ = tokenForm.Should().NotContainKey("client_secret");
+            _ = tokenForm.Should().ContainKey("code_verifier");
+            _ = Base64Url.EncodeToString(SHA256.HashData(Encoding.ASCII.GetBytes(tokenForm["code_verifier"])))
+                .Should().Be(codeChallenge);
+
+            IPanelUserStore userStore = factory.Services.GetRequiredService<IPanelUserStore>();
+            PanelUser? user = await userStore.GetByLoginIdentityAsync("twitch", "public-user-1", ct);
+            _ = user.Should().NotBeNull();
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "MapAuthEndpoints")]
+    public async Task PlatformOAuth_PublicCustomApp_UnderRequireStreamerOAuthApp_SavesPublicCustomAppAndLogsIn()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using AuthWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions);
+
+            await SeedInstanceOAuthAndSettingsAsync(factory.Services, allowOpenRegistration: true, InstanceOAuthAppPolicy.RequireStreamerOAuthApp, ct);
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = true,
+                AllowAutoRedirect = false,
+            });
+
+            HttpResponseMessage loginPageResponse = await client.GetAsync(new Uri("/login", UriKind.Relative), ct);
+            string loginHtml = await loginPageResponse.Content.ReadAsStringAsync(ct);
+            string antiforgeryToken = ExtractAntiforgeryToken(loginHtml);
+
+            using FormUrlEncodedContent postForm = new(
+            [
+                new KeyValuePair<string, string>("__RequestVerificationToken", antiforgeryToken),
+                new KeyValuePair<string, string>("flow", "login"),
+                new KeyValuePair<string, string>("customClientId", "streamer-public-cid"),
+            ]);
+
+            HttpResponseMessage startResponse = await client.PostAsync(new Uri("/auth/twitch/login", UriKind.Relative), postForm, ct);
+            _ = startResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+
+            Dictionary<string, StringValues> query = QueryHelpers.ParseQuery(startResponse.Headers.Location!.Query);
+            _ = query["client_id"].ToString().Should().Be("streamer-public-cid");
+            _ = query["code_challenge"].ToString().Should().NotBeNullOrWhiteSpace();
+            _ = query["code_challenge_method"].ToString().Should().Be("S256");
+
+            string state = query["state"].ToString();
+            string nonce = query["nonce"].ToString();
+
+            mockTwitch.IdTokenFactory = baseUrl => mockTwitch.CreateSignedIdToken(
+                issuer: baseUrl,
+                audience: "streamer-public-cid",
+                subject: "streamer-public-1",
+                preferredUsername: "public_custom_streamer",
+                nonce: nonce);
+
+            HttpResponseMessage callbackResponse = await client.GetAsync(
+                new Uri($"/auth/twitch/callback?code=code-public-custom&state={Uri.EscapeDataString(state)}", UriKind.Relative),
+                ct);
+
+            _ = callbackResponse.StatusCode.Should().Be(HttpStatusCode.Redirect);
+            _ = callbackResponse.Headers.Location!.ToString().Should().Be("/");
+
+            Dictionary<string, string> tokenForm = mockTwitch.TokenRequests.Should().ContainSingle().Subject;
+            _ = tokenForm["client_id"].Should().Be("streamer-public-cid");
+            _ = tokenForm.Should().NotContainKey("client_secret");
+            _ = tokenForm["code_verifier"].Should().NotBeNullOrWhiteSpace();
+
+            IPanelUserStore userStore = factory.Services.GetRequiredService<IPanelUserStore>();
+            PanelUser? streamer = await userStore.GetByLoginIdentityAsync("twitch", "streamer-public-1", ct);
+            _ = streamer.Should().NotBeNull();
+
+            IWorkspaceStore wsStore = factory.Services.GetRequiredService<IWorkspaceStore>();
+            IReadOnlyList<Workspace> workspaces = await wsStore.GetByOwnerAsync(streamer!.Id, ct);
+            _ = workspaces.Should().ContainSingle();
+
+            PlatformOAuthAppCredentials? savedCustomApp = await wsStore.GetCustomOAuthAppAsync(workspaces[0].Id, "twitch", ct);
+            _ = savedCustomApp.Should().NotBeNull();
+            _ = savedCustomApp!.ClientId.Should().Be("streamer-public-cid");
+            _ = savedCustomApp.ClientSecret.Should().BeNull();
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "MapAuthEndpoints")]
+    public async Task PlatformCallback_WhenPublicClientAndCookieMissingCodeVerifier_FailsClosedWithBadRequest()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        MockTwitchOAuthServer mockTwitch = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (mockTwitch.ConfigureAwait(false))
+        {
+            using TempDaemonDirectories dirs = new();
+            using AuthWebTestApplicationFactory factory = new(dirs, mockTwitch.EndpointOptions);
+
+            IInstanceSettingsService settingsService = factory.Services.GetRequiredService<IInstanceSettingsService>();
+            InstanceSettings settings = await settingsService.GetAsync(ct);
+            settings.InstanceOAuthAppPolicy = InstanceOAuthAppPolicy.InstanceOnly.ToString();
+            await settingsService.UpdateAsync(settings, ct);
+
+            IInstanceOAuthConfigService oauthService = factory.Services.GetRequiredService<IInstanceOAuthConfigService>();
+            await oauthService.SetAsync("twitch", new PlatformOAuthAppCredentials("public-instance-cid", ClientSecret: null), ct);
+
+            IDataProtectionProvider dataProtectionProvider = factory.Services.GetRequiredService<IDataProtectionProvider>();
+            ITimeLimitedDataProtector protector = dataProtectionProvider
+                .CreateProtector(AuthClaims.AuthFlowProtectorPurpose)
+                .ToTimeLimitedDataProtector();
+
+            AuthFlowCookiePayload missingVerifierPayload = new()
+            {
+                State = "state-without-verifier",
+                Nonce = "nonce-1",
+                Flow = "login",
+                PlatformId = "twitch",
+                CodeVerifier = null,
+                ExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(5),
+            };
+            string protectedCookie = protector.Protect(JsonSerializer.Serialize(missingVerifierPayload), AuthEndpoints.AuthFlowLifetime);
+
+            using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                HandleCookies = false,
+                AllowAutoRedirect = false,
+            });
+
+            using HttpRequestMessage callbackRequest = new(
+                HttpMethod.Get,
+                new Uri("/auth/twitch/callback?code=code-1&state=state-without-verifier", UriKind.Relative));
+            callbackRequest.Headers.Add("Cookie", $"{AuthClaims.AuthFlowCookieName}={Uri.EscapeDataString(protectedCookie)}");
+
+            HttpResponseMessage callbackResponse = await client.SendAsync(callbackRequest, ct);
+
+            _ = callbackResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            _ = mockTwitch.TokenRequests.Should().BeEmpty();
+        }
+    }
+
     #endregion
 
     private static async Task SeedInstanceOAuthAndSettingsAsync(
@@ -823,6 +1087,7 @@ public sealed partial class AuthIntegrationTests
         public Func<string, string>? IdTokenFactory { get; set; }
         public string ValidatedUserId { get; set; } = "user-1";
         public string ValidatedLogin { get; set; } = "user_login";
+        public List<Dictionary<string, string>> TokenRequests { get; } = [];
 
         public static async Task<MockTwitchOAuthServer> StartAsync(CancellationToken cancellationToken)
         {
@@ -868,9 +1133,14 @@ public sealed partial class AuthIntegrationTests
                 });
             });
 
-            _ = app.MapPost("/oauth2/token", () =>
+            _ = app.MapPost("/oauth2/token", async (HttpRequest request) =>
             {
-                string? idToken = holder!.IdTokenFactory?.Invoke(holder.BaseUrl);
+                IFormCollection form = await request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
+                holder!.TokenRequests.Add(form.ToDictionary(
+                    static kvp => kvp.Key,
+                    static kvp => kvp.Value.ToString(),
+                    StringComparer.Ordinal));
+                string? idToken = holder.IdTokenFactory?.Invoke(holder.BaseUrl);
                 string[] scopes = idToken is not null ? ["openid", "chat:read"] : ["chat:read"];
                 return Results.Json(new
                 {

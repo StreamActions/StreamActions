@@ -38,7 +38,7 @@ public sealed record Resub
     public int? DurationMonths { get; init; }
 
     /// <summary>
-    /// The total number of months the user has subscribed.
+    /// The number of consecutive months the user has been subscribed. Is null if the user chose not to share their streak.
     /// </summary>
     [JsonPropertyName("streak_months")]
     public int? StreakMonths { get; init; }

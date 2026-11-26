@@ -159,6 +159,12 @@ public sealed record Message : IEventSubType
     public bool? IsSourceOnly { get; init; }
 
     /// <summary>
+    /// Optional. The ID of the channel points animation that was used.
+    /// </summary>
+    [JsonPropertyName("channel_points_animation_id")]
+    public string? ChannelPointsAnimationId { get; init; }
+
+    /// <summary>
     /// The type of message.
     /// </summary>
     [JsonConverter(typeof(JsonCustomEnumConverter<MessageType>))]
@@ -181,12 +187,6 @@ public sealed record Message : IEventSubType
         /// </summary>
         [JsonCustomEnum("channel_points_sub_only")]
         ChannelPointsSubOnly,
-
-        /// <summary>
-        /// User intro message.
-        /// </summary>
-        [JsonCustomEnum("user_intro")]
-        UserIntro,
 
         /// <summary>
         /// Power ups message effect message.

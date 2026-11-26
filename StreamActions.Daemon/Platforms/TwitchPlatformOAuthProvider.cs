@@ -145,7 +145,9 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
         IReadOnlyCollection<string>? scopes,
         string state,
         bool forceVerify = false,
-        string? nonce = null)
+        string? nonce = null,
+        string? codeChallenge = null,
+        string? codeChallengeMethod = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
         ArgumentNullException.ThrowIfNull(redirectUri);
@@ -160,29 +162,40 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
                 nonce,
                 forceVerify,
                 claimsJson: null,
-                authorizeEndpoint: this._endpoints.AuthorizeEndpoint)
+                authorizeEndpoint: this._endpoints.AuthorizeEndpoint,
+                codeChallenge: codeChallenge,
+                codeChallengeMethod: codeChallengeMethod)
             : TwitchOAuthClient.BuildAuthorizationUri(
                 clientId,
                 redirectUri,
                 scopes,
                 state,
                 forceVerify,
-                authorizeEndpoint: this._endpoints.AuthorizeEndpoint);
+                authorizeEndpoint: this._endpoints.AuthorizeEndpoint,
+                codeChallenge: codeChallenge,
+                codeChallengeMethod: codeChallengeMethod);
     }
 
     /// <inheritdoc />
     public async ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(
         string clientId,
-        string clientSecret,
+        string? clientSecret,
         string code,
         Uri redirectUri,
         string? expectedNonce = null,
+        string? codeVerifier = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(clientSecret);
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
         ArgumentNullException.ThrowIfNull(redirectUri);
+
+        string? normalizedSecret = string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret;
+        string? normalizedVerifier = string.IsNullOrWhiteSpace(codeVerifier) ? null : codeVerifier;
+        if (normalizedSecret is null && normalizedVerifier is null)
+        {
+            throw new ArgumentException("A client secret is required when no PKCE code verifier is provided.", nameof(clientSecret));
+        }
 
         (HttpClient? httpClient, bool shouldDisposeHttp) = this.AcquireHttpClient();
         try
@@ -191,14 +204,14 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
             {
                 CancellationToken = cancellationToken,
                 CustomClientId = clientId,
-                CustomClientSecret = clientSecret,
+                CustomClientSecret = normalizedSecret,
                 CustomHttpClient = httpClient,
                 TimeProvider = this._timeProvider,
                 Token = TwitchToken.Empty,
             };
 
             Token? token = await TwitchOAuthClient
-                .ExchangeAuthorizationCodeAsync(code, redirectUri, exchangeSession, this._endpoints.TokenEndpoint)
+                .ExchangeAuthorizationCodeAsync(code, redirectUri, exchangeSession, this._endpoints.TokenEndpoint, normalizedVerifier)
                 .ConfigureAwait(false);
 
             if (token is null || !token.IsSuccessStatusCode || string.IsNullOrWhiteSpace(token.AccessToken))
@@ -297,12 +310,11 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
     /// <inheritdoc />
     public async ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(
         string clientId,
-        string clientSecret,
+        string? clientSecret,
         string refreshToken,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(clientSecret);
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
 
         (HttpClient? httpClient, bool shouldDisposeHttp) = this.AcquireHttpClient();
@@ -312,7 +324,7 @@ internal sealed class TwitchPlatformOAuthProvider : IPlatformOAuthProvider
             {
                 CancellationToken = cancellationToken,
                 CustomClientId = clientId,
-                CustomClientSecret = clientSecret,
+                CustomClientSecret = string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret,
                 CustomHttpClient = httpClient,
                 TimeProvider = this._timeProvider,
                 Token = new TwitchToken

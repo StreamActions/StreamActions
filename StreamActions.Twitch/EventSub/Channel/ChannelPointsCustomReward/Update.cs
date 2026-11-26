@@ -26,6 +26,14 @@ namespace StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomReward;
 /// <summary>
 /// A custom channel points reward has been updated for the specified channel.
 /// </summary>
+/// <remarks>
+/// <para>
+/// A notification is sent when the reward is updated (including when it's paused or unpaused, or when a new custom image is uploaded for it), when a viewer redeems the reward and it has <see cref="MaxPerStream"/> or <see cref="GlobalCooldown"/> enabled, when the broadcaster's stream starts (for each reward that has <see cref="MaxPerStream"/> enabled and is in stock), or when the broadcaster's stream ends (for each reward that has <see cref="MaxPerStream"/> enabled).
+/// </para>
+/// <para>
+/// Each notification contains the reward's complete current settings and state, not only the values that changed. No notification is sent when a cooldown expires.
+/// </para>
+/// </remarks>
 public sealed record Update : IEventSubType
 {
     /// <inheritdoc/>
@@ -122,7 +130,7 @@ public sealed record Update : IEventSubType
     public MaxPerUserPerStream? MaxPerUserPerStream { get; init; }
 
     /// <summary>
-    /// Custom background color for the reward.
+    /// Custom background color for the reward, as a hex color code with a # prefix (for example, #FA1ED2). Is an empty string if the reward doesn't have a background color.
     /// </summary>
     [JsonPropertyName("background_color")]
     public string? BackgroundColor { get; init; }
@@ -152,7 +160,7 @@ public sealed record Update : IEventSubType
     public DateTime? CooldownExpiresAt { get; init; }
 
     /// <summary>
-    /// The number of redemptions redeemed during the current live stream. Counts against the max_per_stream limit. Null if the broadcasters stream isn't live or max_per_stream isn't enabled.
+    /// The number of redemptions redeemed during the current live stream. Counts against the max_per_stream limit. Null if the broadcaster's stream isn't live or max_per_stream isn't enabled.
     /// </summary>
     [JsonPropertyName("redemptions_redeemed_current_stream")]
     public int? RedemptionsRedeemedCurrentStream { get; init; }

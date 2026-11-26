@@ -26,8 +26,16 @@ using static StreamActions.Twitch.EventSub.Automod.Message.Hold;
 namespace StreamActions.Twitch.EventSub.Automod.Message;
 
 /// <summary>
-/// An event that is sent when a message in the automod queue had its status changed.
+/// An event that is sent when the broadcaster or a moderator approves or denies a message that AutoMod held for review.
 /// </summary>
+/// <remarks>
+/// <para>
+/// No notification is sent when a held message expires. A message can still be denied after it expires, and that sends a notification with <see cref="Status"/> set to <see cref="MessageStatus.Denied"/>.
+/// </para>
+/// <para>
+/// Messages that match any of the channel's private blocked terms or blocked links don't trigger a notification, even if they also match public ones.
+/// </para>
+/// </remarks>
 public sealed record Update : IEventSubType
 {
     /// <inheritdoc/>
@@ -58,37 +66,42 @@ public sealed record Update : IEventSubType
     public string? BroadcasterUserName { get; init; }
 
     /// <summary>
-    /// The message senders user ID.
+    /// The message sender's user ID.
     /// </summary>
     [JsonPropertyName("user_id")]
     public string? UserId { get; init; }
 
     /// <summary>
-    /// The message senders login name.
+    /// The message sender's login name.
     /// </summary>
     [JsonPropertyName("user_login")]
     public string? UserLogin { get; init; }
 
     /// <summary>
-    /// The message senders display name.
+    /// The message sender's display name.
     /// </summary>
     [JsonPropertyName("user_name")]
     public string? UserName { get; init; }
 
     /// <summary>
-    /// The ID of the moderator.
+    /// The ID of the user who approved or denied the message.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the broadcaster or one of the broadcaster's moderators, and may differ from the moderator_user_id in the subscription's condition.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("moderator_user_id")]
     public string? ModeratorUserId { get; init; }
 
     /// <summary>
-    /// The moderators user name.
+    /// The display name of the user who approved or denied the message.
     /// </summary>
     [JsonPropertyName("moderator_user_name")]
     public string? ModeratorUserName { get; init; }
 
     /// <summary>
-    /// The login of the moderator.
+    /// The login of the user who approved or denied the message.
     /// </summary>
     [JsonPropertyName("moderator_user_login")]
     public string? ModeratorUserLogin { get; init; }
@@ -106,13 +119,13 @@ public sealed record Update : IEventSubType
     public Common.ChatMessage.Message? Message { get; init; }
 
     /// <summary>
-    /// The messages status.
+    /// The message's status.
     /// </summary>
     [JsonPropertyName("status")]
     public MessageStatus? Status { get; init; }
 
     /// <summary>
-    /// The timestamp of when automod saved the message.
+    /// The UTC date and time (in RFC3339 format) of when Twitch received the chat message. It doesn't change when the message is approved or denied.
     /// </summary>
     [JsonPropertyName("held_at")]
     public DateTime? HeldAt { get; init; }
@@ -124,14 +137,19 @@ public sealed record Update : IEventSubType
     public HoldReason? Reason { get; init; }
 
     /// <summary>
-    /// Optional. If the message was caught by automod, this will be populated.
+    /// Optional. The details of the AutoMod check that caught the message. Is null unless <see cref="Reason"/> is <see cref="HoldReason.Automod"/>.
     /// </summary>
     [JsonPropertyName("automod")]
     public Objects.Automod? Automod { get; init; }
 
     /// <summary>
-    /// Optional. If the message was caught due to a blocked term or a blocked link, this will be populated.
+    /// Optional. The details of the blocked terms or blocked links that caught the message. Is null unless <see cref="Reason"/> is <see cref="HoldReason.BlockedTerm"/> or <see cref="HoldReason.BlockedLink"/>.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// At most one of <see cref="Automod"/> and <see cref="BlockedTerm"/> is populated, even if the message also matched the other check.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("blocked_term")]
     public BlockedTerm? BlockedTerm { get; init; }
 
@@ -151,12 +169,6 @@ public sealed record Update : IEventSubType
         /// The message was denied.
         /// </summary>
         [JsonCustomEnum("denied")]
-        Denied,
-
-        /// <summary>
-        /// The message status expired.
-        /// </summary>
-        [JsonCustomEnum("expired")]
-        Expired
+        Denied
     }
 }

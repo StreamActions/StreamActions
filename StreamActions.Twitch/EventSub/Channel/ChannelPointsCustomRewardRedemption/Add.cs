@@ -27,6 +27,11 @@ namespace StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomRewardRedempt
 /// <summary>
 /// A viewer has redeemed a custom channel points reward on the specified channel.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The notification is also sent when broadcasters redeem their own rewards.
+/// </para>
+/// </remarks>
 public sealed record Add : IEventSubType
 {
     /// <inheritdoc/>
@@ -81,13 +86,13 @@ public sealed record Add : IEventSubType
     public string? UserName { get; init; }
 
     /// <summary>
-    /// The user input provided. Null if not provided.
+    /// The user input provided. Empty string if not provided.
     /// </summary>
     [JsonPropertyName("user_input")]
     public string? UserInput { get; init; }
 
     /// <summary>
-    /// Defaults to unfulfilled. Possible values are unknown, unfulfilled, fulfilled, and canceled.
+    /// The redemption's status. Is <see cref="RedemptionStatuses.Fulfilled"/> if the reward skips the request queue; otherwise, <see cref="RedemptionStatuses.Unfulfilled"/>.
     /// </summary>
     [JsonPropertyName("status")]
     public RedemptionStatuses? Status { get; init; }

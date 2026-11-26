@@ -65,5 +65,16 @@ public sealed record EventPayload<TEventType> : EventPayload where TEventType : 
     /// </remarks>
     [JsonPropertyName("event")]
     public TEventType? Event { get; init; }
+
+    /// <summary>
+    /// The batched event data specific to the subscription type, containing information about the events that triggered the notification.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This field is used by batched <see cref="EventMetadata.MessageTypes.Notification"/> payloads such as <c>drop.entitlement.grant</c>.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("events")]
+    public IReadOnlyList<TEventType>? Events { get; init; }
 }
 

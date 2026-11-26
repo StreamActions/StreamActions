@@ -100,12 +100,14 @@ public sealed class InstanceOAuthConfigService : IInstanceOAuthConfigService, ID
         ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
         ArgumentNullException.ThrowIfNull(credentials);
         ArgumentException.ThrowIfNullOrWhiteSpace(credentials.ClientId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(credentials.ClientSecret);
 
         string normalizedPlatformId = NormalizePlatformId(platformId);
+        string? normalizedSecret = string.IsNullOrWhiteSpace(credentials.ClientSecret)
+            ? null
+            : credentials.ClientSecret.Trim();
         PlatformOAuthAppCredentials normalizedCredentials = new(
             credentials.ClientId.Trim(),
-            credentials.ClientSecret.Trim(),
+            normalizedSecret,
             credentials.RedirectUri);
 
         await this._gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -236,12 +238,21 @@ public sealed class InstanceOAuthConfigService : IInstanceOAuthConfigService, ID
 
         foreach (KeyValuePair<string, PlatformOAuthAppCredentials> entry in raw)
         {
-            if (string.IsNullOrWhiteSpace(entry.Key))
+            if (string.IsNullOrWhiteSpace(entry.Key)
+                || entry.Value is null
+                || string.IsNullOrWhiteSpace(entry.Value.ClientId))
             {
                 continue;
             }
 
-            normalized[NormalizePlatformId(entry.Key)] = entry.Value;
+            string? normalizedSecret = string.IsNullOrWhiteSpace(entry.Value.ClientSecret)
+                ? null
+                : entry.Value.ClientSecret.Trim();
+
+            normalized[NormalizePlatformId(entry.Key)] = new PlatformOAuthAppCredentials(
+                entry.Value.ClientId.Trim(),
+                normalizedSecret,
+                entry.Value.RedirectUri);
         }
 
         return normalized;

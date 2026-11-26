@@ -152,8 +152,14 @@ else if (_oidcLoginMode != ExternalOidcLoginMode.Required)
                                 <input id="custom-client-id-@provider.PlatformId" name="customClientId" type="text" autocomplete="off" required />
                             </div>
                             <div>
-                                <label for="custom-client-secret-@provider.PlatformId">Custom OAuth Client Secret</label>
-                                <input id="custom-client-secret-@provider.PlatformId" name="customClientSecret" type="password" autocomplete="new-password" required />
+                                <label for="custom-client-secret-@provider.PlatformId">Custom OAuth Client Secret (optional for Public PKCE clients)</label>
+                                <input id="custom-client-secret-@provider.PlatformId"
+                                       name="customClientSecret"
+                                       type="password"
+                                       autocomplete="new-password"
+                                       placeholder="Leave blank for Public PKCE clients"
+                                       aria-describedby="custom-client-secret-help-@provider.PlatformId" />
+                                <p id="custom-client-secret-help-@provider.PlatformId">Leave blank for Public PKCE clients (PKCE S256 is enabled automatically).</p>
                             </div>
                             <div>
                                 <label for="custom-redirect-uri-@provider.PlatformId">Custom Redirect URI (optional)</label>

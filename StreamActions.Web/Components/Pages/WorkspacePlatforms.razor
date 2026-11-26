@@ -246,6 +246,8 @@ else
 
                     @{
                         bool customOAuthBlocked = IsCustomOAuthBlockedByRoot(platformId);
+                        bool hasCustomClientId = !string.IsNullOrWhiteSpace(card.Attachment.CustomClientId);
+                        bool hasCustomSecret = !string.IsNullOrWhiteSpace(card.Attachment.EncryptedCustomClientSecret);
                     }
                     <div data-custom-oauth="@platformId">
                         <h4>Custom OAuth Application</h4>
@@ -255,6 +257,20 @@ else
                                 Custom OAuth application credentials are disabled (blocked by root policy).
                             </p>
                         }
+                        <p data-custom-oauth-mode="@platformId">
+                            @if (hasCustomSecret)
+                            {
+                                <span>Mode: <strong>Confidential</strong> (client secret stored + PKCE)</span>
+                            }
+                            else if (hasCustomClientId)
+                            {
+                                <span>Mode: <strong>Public PKCE</strong> (no client secret stored)</span>
+                            }
+                            else
+                            {
+                                <span>Mode: <strong>Not configured</strong> (leave Client Secret blank for a Public PKCE client)</span>
+                            }
+                        </p>
                         <p>
                             Redirect / Callback URI:
                             <code data-callback-uri="@platformId">@BuildCallbackUriDisplay(platformId)</code>
@@ -270,15 +286,29 @@ else
                         </div>
                         <div>
                             <label for="custom-client-secret-@platformId">
-                                Client Secret (@(!string.IsNullOrWhiteSpace(card.Attachment.EncryptedCustomClientSecret) ? "configured; leave blank to keep existing" : "write-only"))
+                                Client Secret (@(hasCustomSecret ? "configured; leave blank to keep existing" : "optional for Public PKCE clients; write-only"))
                             </label>
                             <input id="custom-client-secret-@platformId"
                                    type="password"
                                    disabled="@customOAuthBlocked"
                                    value="@GetClientSecretInput(platformId)"
+                                   placeholder="@(hasCustomSecret ? "Leave blank to keep existing secret" : "Optional for Public PKCE clients")"
                                    @onchange="(ChangeEventArgs args) => SetClientSecretInput(platformId, args.Value?.ToString())"
                                    autocomplete="new-password" />
                         </div>
+                        @if (hasCustomSecret)
+                        {
+                            <div>
+                                <label for="custom-clear-client-secret-@platformId">
+                                    <input id="custom-clear-client-secret-@platformId"
+                                           type="checkbox"
+                                           disabled="@customOAuthBlocked"
+                                           checked="@GetClearClientSecretInput(platformId)"
+                                           @onchange="(ChangeEventArgs args) => SetClearClientSecretInput(platformId, args.Value)" />
+                                    Clear stored client secret (switch to Public PKCE client)
+                                </label>
+                            </div>
+                        }
                         <div>
                             <label for="custom-redirect-uri-@platformId">Custom Redirect URI (optional)</label>
                             <input id="custom-redirect-uri-@platformId"
@@ -358,6 +388,11 @@ else
     /// Write-only UI inputs for custom OAuth client secrets keyed by platform identifier. Never populated from stored values.
     /// </summary>
     private readonly Dictionary<string, string> _customClientSecrets = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Tracks whether the user requested clearing the stored custom client secret on save, keyed by platform identifier.
+    /// </summary>
+    private readonly Dictionary<string, bool> _clearCustomClientSecrets = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Cached UI inputs for custom OAuth redirect URIs keyed by platform identifier.
@@ -612,6 +647,7 @@ else
         foreach (string platformId in customClientIds.Keys)
         {
             _ = _customClientSecrets.TryAdd(platformId, string.Empty);
+            _ = _clearCustomClientSecrets.TryAdd(platformId, false);
         }
 
         _platformStates = platformStates;
@@ -806,6 +842,7 @@ else
 
         string clientId = GetClientIdInput(platformId).Trim();
         string? clientSecret = GetClientSecretInput(platformId);
+        bool clearClientSecret = GetClearClientSecretInput(platformId);
         string rawRedirectUri = GetRedirectUriInput(platformId).Trim();
         if (string.IsNullOrWhiteSpace(clientId))
         {
@@ -826,15 +863,18 @@ else
             redirectUri = parsedUri;
         }
 
+        string? normalizedSecret = string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret.Trim();
         _ = await WorkspaceStore
             .SetCustomOAuthAppAsync(
                 _activeWorkspace.Workspace.Id,
                 platformId,
                 clientId,
-                string.IsNullOrWhiteSpace(clientSecret) ? null : clientSecret.Trim(),
-                redirectUri);
+                normalizedSecret,
+                redirectUri,
+                clearClientSecret: normalizedSecret is null && clearClientSecret);
 
         _customClientSecrets[platformId] = string.Empty;
+        _clearCustomClientSecrets[platformId] = false;
         await LoadDataAsync();
         _statusMessage = $"Saved custom OAuth credentials for '{platformId}'.";
     }
@@ -863,6 +903,7 @@ else
 
         _customClientIds[platformId] = string.Empty;
         _customClientSecrets[platformId] = string.Empty;
+        _clearCustomClientSecrets[platformId] = false;
         _customRedirectUris[platformId] = string.Empty;
         await LoadDataAsync();
         _statusMessage = $"Cleared custom OAuth credentials for '{platformId}'.";
@@ -1033,6 +1074,22 @@ else
     /// <param name="value">The new secret input value.</param>
     private void SetClientSecretInput(string platformId, string? value) =>
         _customClientSecrets[platformId] = value ?? string.Empty;
+
+    /// <summary>
+    /// Gets a value indicating whether clearing the stored custom client secret was requested for <paramref name="platformId"/>.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <returns><see langword="true"/> if clearing is requested; otherwise, <see langword="false"/>.</returns>
+    private bool GetClearClientSecretInput(string platformId) =>
+        _clearCustomClientSecrets.TryGetValue(platformId, out bool clear) && clear;
+
+    /// <summary>
+    /// Updates whether clearing the stored custom client secret is requested for <paramref name="platformId"/>.
+    /// </summary>
+    /// <param name="platformId">The platform identifier.</param>
+    /// <param name="value">The checkbox value.</param>
+    private void SetClearClientSecretInput(string platformId, object? value) =>
+        _clearCustomClientSecrets[platformId] = value is bool clear && clear;
 
     /// <summary>
     /// Builds the callback URI display string for custom OAuth app registration.

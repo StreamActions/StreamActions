@@ -78,6 +78,94 @@ public sealed class TwitchOAuthClientTests : IDisposable
 
     #endregion IDisposable Implementation
 
+    #region GenerateCodeVerifier
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.GenerateCodeVerifier"/> produces unique, RFC 7636-compliant 43-character verifiers.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GenerateCodeVerifier")]
+    public void GenerateCodeVerifier_WhenCalled_ReturnsUniqueRfc7636CompliantVerifiers()
+    {
+        string first = TwitchOAuthClient.GenerateCodeVerifier();
+        string second = TwitchOAuthClient.GenerateCodeVerifier();
+
+        _ = first.Should().NotBeNullOrWhiteSpace();
+        _ = first.Length.Should().BeInRange(43, 128);
+        _ = first.Should().MatchRegex("^[A-Za-z0-9\\-._~]+$");
+        _ = second.Should().MatchRegex("^[A-Za-z0-9\\-._~]+$");
+        _ = second.Should().NotBe(first);
+    }
+
+    #endregion GenerateCodeVerifier
+
+    #region ComputeCodeChallenge
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.ComputeCodeChallenge"/> throws <see cref="ArgumentNullException"/> when <c>codeVerifier</c> is <see langword="null"/>.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ComputeCodeChallenge")]
+    public void ComputeCodeChallenge_WhenCodeVerifierIsNull_ThrowsArgumentNullException()
+    {
+        Action action = () => _ = TwitchOAuthClient.ComputeCodeChallenge(null!);
+
+        _ = action.Should().Throw<ArgumentNullException>()
+            .WithParameterName("codeVerifier");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.ComputeCodeChallenge"/> throws <see cref="ArgumentException"/> when <paramref name="invalidVerifier"/> violates RFC 7636 length or character rules.
+    /// </summary>
+    /// <param name="invalidVerifier">The invalid PKCE code verifier.</param>
+    [Theory]
+    [Trait("Member", "ComputeCodeChallenge")]
+    [InlineData("")]
+    [InlineData("                                           ")]
+    [InlineData("too_short_verifier_under_43_characters_12")]
+    [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+    [InlineData("invalid+character_in_verifier_0123456789abcdef")]
+    [InlineData("invalid/character_in_verifier_0123456789abcdef")]
+    [InlineData("invalid=character_in_verifier_0123456789abcdef")]
+    public void ComputeCodeChallenge_WhenCodeVerifierInvalid_ThrowsArgumentException(string invalidVerifier)
+    {
+        Action action = () => _ = TwitchOAuthClient.ComputeCodeChallenge(invalidVerifier);
+
+        _ = action.Should().Throw<ArgumentException>()
+            .WithParameterName("codeVerifier");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.ComputeCodeChallenge"/> matches the RFC 7636 Appendix B S256 test vector.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ComputeCodeChallenge")]
+    public void ComputeCodeChallenge_WhenValidVerifierProvided_MatchesRfc7636TestVector()
+    {
+        const string rfc7636Verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+        const string expectedChallenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
+
+        string challenge = TwitchOAuthClient.ComputeCodeChallenge(rfc7636Verifier);
+
+        _ = challenge.Should().Be(expectedChallenge);
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.ComputeCodeChallenge"/> computes a 43-character unpadded base64url challenge from a generated verifier.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ComputeCodeChallenge")]
+    public void ComputeCodeChallenge_WithGeneratedVerifier_ReturnsUnpaddedBase64UrlChallenge()
+    {
+        string verifier = TwitchOAuthClient.GenerateCodeVerifier();
+        string challenge = TwitchOAuthClient.ComputeCodeChallenge(verifier);
+
+        _ = challenge.Length.Should().Be(43);
+        _ = challenge.Should().MatchRegex("^[A-Za-z0-9\\-_]+$");
+    }
+
+    #endregion ComputeCodeChallenge
+
     #region BuildAuthorizationUri
 
     /// <summary>
@@ -167,6 +255,100 @@ public sealed class TwitchOAuthClientTests : IDisposable
         _ = query["scope"].ToString().Should().Be("chat:read chat:edit");
         _ = query["state"].ToString().Should().Be("csrf_state_456");
         _ = query["force_verify"].ToString().Should().Be("true");
+        _ = query.Should().NotContainKey("code_challenge");
+        _ = query.Should().NotContainKey("code_challenge_method");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.BuildAuthorizationUri"/> defaults <c>code_challenge_method</c> to <c>S256</c> when <c>codeChallenge</c> is provided.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "BuildAuthorizationUri")]
+    public void BuildAuthorizationUri_WhenCodeChallengeProvidedWithoutMethod_DefaultsMethodToS256()
+    {
+        string verifier = TwitchOAuthClient.GenerateCodeVerifier();
+        string challenge = TwitchOAuthClient.ComputeCodeChallenge(verifier);
+
+        Uri result = TwitchOAuthClient.BuildAuthorizationUri(
+            "my_client_id",
+            new("http://localhost:3000/auth/callback"),
+            ["chat:read"],
+            "csrf_state_pkce",
+            codeChallenge: challenge);
+
+        Dictionary<string, StringValues> query = QueryHelpers.ParseQuery(result.Query);
+        _ = query["code_challenge"].ToString().Should().Be(challenge);
+        _ = query["code_challenge_method"].ToString().Should().Be("S256");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.BuildAuthorizationUri"/> includes <c>code_challenge</c> and <c>code_challenge_method=S256</c> when explicitly specified.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "BuildAuthorizationUri")]
+    public void BuildAuthorizationUri_WhenCodeChallengeAndS256Provided_IncludesPkceParameters()
+    {
+        const string challenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
+
+        Uri result = TwitchOAuthClient.BuildAuthorizationUri(
+            "my_client_id",
+            new("http://localhost:3000/auth/callback"),
+            null,
+            "csrf_state_pkce",
+            codeChallenge: challenge,
+            codeChallengeMethod: "S256");
+
+        Dictionary<string, StringValues> query = QueryHelpers.ParseQuery(result.Query);
+        _ = query["code_challenge"].ToString().Should().Be(challenge);
+        _ = query["code_challenge_method"].ToString().Should().Be("S256");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.BuildAuthorizationUri"/> throws <see cref="ArgumentException"/> for unsupported code challenge methods.
+    /// </summary>
+    /// <param name="unsupportedMethod">The unsupported PKCE code challenge method.</param>
+    [Theory]
+    [Trait("Member", "BuildAuthorizationUri")]
+    [InlineData("plain")]
+    [InlineData("s256")]
+    [InlineData("SHA256")]
+    public void BuildAuthorizationUri_WhenUnsupportedCodeChallengeMethodProvided_ThrowsArgumentException(string unsupportedMethod)
+    {
+        Action action = () => _ = TwitchOAuthClient.BuildAuthorizationUri(
+            "my_client_id",
+            new("http://localhost:3000/auth/callback"),
+            null,
+            "csrf_state_pkce",
+            codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+            codeChallengeMethod: unsupportedMethod);
+
+        _ = action.Should().Throw<ArgumentException>()
+            .WithParameterName("codeChallengeMethod");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.BuildAuthorizationUri"/> throws <see cref="ArgumentException"/> when <c>codeChallengeMethod</c> is provided without <c>codeChallenge</c>.
+    /// </summary>
+    /// <param name="codeChallenge">The missing or whitespace code challenge.</param>
+    /// <param name="codeChallengeMethod">The code challenge method.</param>
+    [Theory]
+    [Trait("Member", "BuildAuthorizationUri")]
+    [InlineData(null, "S256")]
+    [InlineData("", "S256")]
+    [InlineData("   ", "S256")]
+    [InlineData(null, "plain")]
+    public void BuildAuthorizationUri_WhenCodeChallengeMethodSetWithoutCodeChallenge_ThrowsArgumentException(string? codeChallenge, string codeChallengeMethod)
+    {
+        Action action = () => _ = TwitchOAuthClient.BuildAuthorizationUri(
+            "my_client_id",
+            new("http://localhost:3000/auth/callback"),
+            null,
+            "csrf_state_pkce",
+            codeChallenge: codeChallenge,
+            codeChallengeMethod: codeChallengeMethod);
+
+        _ = action.Should().Throw<ArgumentException>()
+            .WithParameterName(nameof(codeChallengeMethod));
     }
 
     #endregion BuildAuthorizationUri
@@ -244,6 +426,29 @@ public sealed class TwitchOAuthClientTests : IDisposable
         _ = query["claims"].ToString().Should().Be(claimsJson);
     }
 
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.BuildOidcAuthorizationUri"/> includes PKCE parameters and defaults <c>code_challenge_method</c> to <c>S256</c>.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "BuildOidcAuthorizationUri")]
+    public void BuildOidcAuthorizationUri_WhenCodeChallengeProvided_IncludesPkceParametersAndDefaultsMethodToS256()
+    {
+        const string challenge = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
+        Uri result = TwitchOAuthClient.BuildOidcAuthorizationUri(
+            "oidc_client_id",
+            new("http://localhost:3000/oidc"),
+            ["user:read:email"],
+            "oidc_state",
+            "oidc_nonce",
+            codeChallenge: challenge);
+
+        Dictionary<string, StringValues> query = QueryHelpers.ParseQuery(result.Query);
+        _ = query["scope"].ToString().Should().Be("openid user:read:email");
+        _ = query["nonce"].ToString().Should().Be("oidc_nonce");
+        _ = query["code_challenge"].ToString().Should().Be(challenge);
+        _ = query["code_challenge_method"].ToString().Should().Be("S256");
+    }
+
     #endregion BuildOidcAuthorizationUri
 
     #region ExchangeAuthorizationCodeAsync
@@ -291,6 +496,148 @@ public sealed class TwitchOAuthClientTests : IDisposable
         _ = request.Body.Should().Contain("code=auth_code_123");
         _ = request.Body.Should().Contain("client_id=custom_exchange_client");
         _ = request.Body.Should().Contain("client_secret=custom_exchange_secret");
+        _ = request.Body.Should().NotContain("code_verifier=");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.ExchangeAuthorizationCodeAsync"/> omits <c>client_secret</c> and sends <c>code_verifier</c> for public PKCE clients.
+    /// </summary>
+    /// <param name="publicSecret">The null or whitespace client secret.</param>
+    [Theory]
+    [Trait("Member", "ExchangeAuthorizationCodeAsync")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task ExchangeAuthorizationCodeAsync_WhenPublicPkceClientWithoutSecret_OmitsClientSecretAndPostsCodeVerifier(string? publicSecret)
+    {
+        string expectedBearer = TestTokenFactory.CreateToken("BEARER");
+        string verifier = TwitchOAuthClient.GenerateCodeVerifier();
+        this._fixture.RegisterJsonResponse("POST", "/oauth2/token", new
+        {
+            access_token = expectedBearer,
+            expires_in = 14400,
+            refresh_token = TestTokenFactory.CreateToken("REFRESH"),
+            scope = _authorizationScopes,
+            token_type = "bearer"
+        });
+
+        using TwitchSession session = new()
+        {
+            Token = TwitchToken.Empty,
+            CustomClientId = "public_pkce_client",
+            CustomClientSecret = publicSecret
+        };
+
+        Token? token = await TwitchOAuthClient.ExchangeAuthorizationCodeAsync(
+            "auth_code_pkce",
+            new("http://localhost:3000/callback"),
+            session,
+            $"{this._fixture.BaseUrl}/oauth2/token",
+            verifier).ConfigureAwait(true);
+
+        _ = token.Should().NotBeNull();
+        _ = token.AccessToken.Should().Be(expectedBearer);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("grant_type=authorization_code");
+        _ = request.Body.Should().Contain("client_id=public_pkce_client");
+        _ = request.Body.Should().Contain($"code_verifier={Uri.EscapeDataString(verifier)}");
+        _ = request.Body.Should().NotContain("client_secret");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.ExchangeAuthorizationCodeAsync"/> sends both <c>client_secret</c> and <c>code_verifier</c> for confidential PKCE clients.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ExchangeAuthorizationCodeAsync")]
+    public async Task ExchangeAuthorizationCodeAsync_WhenConfidentialPkceClientWithSecret_PostsClientSecretAndCodeVerifier()
+    {
+        string expectedBearer = TestTokenFactory.CreateToken("BEARER");
+        string verifier = TwitchOAuthClient.GenerateCodeVerifier();
+        this._fixture.RegisterJsonResponse("POST", "/oauth2/token", new
+        {
+            access_token = expectedBearer,
+            expires_in = 14400,
+            refresh_token = TestTokenFactory.CreateToken("REFRESH"),
+            scope = _authorizationScopes,
+            token_type = "bearer"
+        });
+
+        using TwitchSession session = new()
+        {
+            Token = TwitchToken.Empty,
+            CustomClientId = "confidential_pkce_client",
+            CustomClientSecret = "confidential_pkce_secret"
+        };
+
+        Token? token = await TwitchOAuthClient.ExchangeAuthorizationCodeAsync(
+            "auth_code_pkce",
+            new("http://localhost:3000/callback"),
+            session,
+            $"{this._fixture.BaseUrl}/oauth2/token",
+            verifier).ConfigureAwait(true);
+
+        _ = token.Should().NotBeNull();
+        _ = token.AccessToken.Should().Be(expectedBearer);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("client_id=confidential_pkce_client");
+        _ = request.Body.Should().Contain("client_secret=confidential_pkce_secret");
+        _ = request.Body.Should().Contain($"code_verifier={Uri.EscapeDataString(verifier)}");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.ExchangeAuthorizationCodeAsync"/> throws <see cref="ArgumentException"/> when <c>codeVerifier</c> violates RFC 7636 rules.
+    /// </summary>
+    /// <param name="invalidVerifier">The invalid code verifier.</param>
+    [Theory]
+    [Trait("Member", "ExchangeAuthorizationCodeAsync")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("short_verifier")]
+    [InlineData("invalid$character_in_verifier_0123456789abcdef")]
+    public async Task ExchangeAuthorizationCodeAsync_WhenCodeVerifierInvalid_ThrowsArgumentException(string invalidVerifier)
+    {
+        using TwitchSession session = new()
+        {
+            Token = TwitchToken.Empty,
+            CustomClientId = "public_pkce_client"
+        };
+
+        Func<Task> action = async () => await TwitchOAuthClient.ExchangeAuthorizationCodeAsync(
+            "auth_code_pkce",
+            new("http://localhost:3000/callback"),
+            session,
+            $"{this._fixture.BaseUrl}/oauth2/token",
+            invalidVerifier).ConfigureAwait(true);
+
+        _ = (await action.Should().ThrowAsync<ArgumentException>().ConfigureAwait(true))
+            .WithParameterName("codeVerifier");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.ExchangeAuthorizationCodeAsync"/> throws <see cref="InvalidOperationException"/> when <c>codeVerifier</c> is omitted and no client secret is configured.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "ExchangeAuthorizationCodeAsync")]
+    public async Task ExchangeAuthorizationCodeAsync_WhenCodeVerifierOmittedAndSecretMissing_ThrowsInvalidOperationException()
+    {
+        using TwitchSession session = new()
+        {
+            Token = TwitchToken.Empty,
+            CustomClientId = "confidential_without_secret",
+            CustomClientSecret = null
+        };
+
+        Func<Task> action = async () => await TwitchOAuthClient.ExchangeAuthorizationCodeAsync(
+            "auth_code",
+            new("http://localhost:3000/callback"),
+            session,
+            $"{this._fixture.BaseUrl}/oauth2/token").ConfigureAwait(true);
+
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
     }
 
     #endregion ExchangeAuthorizationCodeAsync
@@ -380,6 +727,54 @@ public sealed class TwitchOAuthClientTests : IDisposable
         _ = request.Body.Should().Contain("refresh_token=original_refresh_token");
         _ = request.Body.Should().Contain("client_id=custom_refresh_client");
         _ = request.Body.Should().Contain("client_secret=custom_refresh_secret");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="TwitchOAuthClient.RefreshTokenAsync"/> omits <c>client_secret</c> from the form body for public clients when no secret is configured.
+    /// </summary>
+    /// <param name="publicSecret">The null or whitespace client secret.</param>
+    [Theory]
+    [Trait("Member", "RefreshTokenAsync")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task RefreshTokenAsync_WhenPublicClientHasNoSecret_OmitsClientSecret(string? publicSecret)
+    {
+        string newBearer = TestTokenFactory.CreateToken("BEARER");
+        string newRefresh = TestTokenFactory.CreateToken("REFRESH");
+        this._fixture.RegisterJsonResponse("POST", "/oauth2/token", new
+        {
+            access_token = newBearer,
+            expires_in = 14000,
+            refresh_token = newRefresh,
+            scope = _refreshScopes,
+            token_type = "bearer"
+        });
+
+        using TwitchSession session = new()
+        {
+            CustomClientId = "public_refresh_client",
+            CustomClientSecret = publicSecret,
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                OAuth = TestTokenFactory.CreateToken("OLD"),
+                Refresh = "public_refresh_token"
+            }
+        };
+
+        Token? token = await TwitchOAuthClient.RefreshTokenAsync(session, $"{this._fixture.BaseUrl}/oauth2/token").ConfigureAwait(true);
+
+        _ = token.Should().NotBeNull();
+        _ = token.AccessToken.Should().Be(newBearer);
+        _ = token.RefreshToken.Should().Be(newRefresh);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("grant_type=refresh_token");
+        _ = request.Body.Should().Contain("refresh_token=public_refresh_token");
+        _ = request.Body.Should().Contain("client_id=public_refresh_client");
+        _ = request.Body.Should().NotContain("client_secret");
     }
 
     #endregion RefreshTokenAsync

@@ -27,8 +27,8 @@ public sealed partial record Scope
     public static readonly Scope ChannelManageClips = new("channel:manage:clips", "Manage Clips for a channel.");
 
     /// <summary>
-    /// Manage Clips for a channel as an editor.
+    /// Manage Clips as an editor.
     /// </summary>
     /// <value>editor:manage:clips</value>
-    public static readonly Scope EditorManageClips = new("editor:manage:clips", "Manage Clips for a channel as an editor.");
+    public static readonly Scope EditorManageClips = new("editor:manage:clips", "Manage Clips as an editor.");
 }

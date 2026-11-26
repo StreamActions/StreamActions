@@ -275,6 +275,61 @@ public sealed class EventSubSubscriptionTests : IDisposable
         _ = request.Query["conduit_id"].ToString().Should().Be(conduitId.ToString());
     }
 
+    /// <summary>
+    /// Tests that <see cref="EventSubSubscription.GetEventSubSubscriptions"/> deserializes <see cref="EventSubSubscription.IsBatchingEnabled"/>
+    /// and <see cref="EventSubSubscription.SubscriptionStatus.GuestStarModeratorRemoved"/> and serializes the status query parameter.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "GetEventSubSubscriptions")]
+    public async Task GetEventSubSubscriptions_WhenBatchingEnabledAndGuestStarModeratorRemoved_MapsPropertiesCorrectly()
+    {
+        Guid subId = Guid.Parse("f1c2a3b4-5678-90ab-cdef-1234567890ab");
+        DateTime createdAt = new(2023, 5, 20, 10, 0, 0, DateTimeKind.Utc);
+
+        this._fixture.RegisterJsonResponse("GET", "/helix/eventsub/subscriptions", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = subId.ToString(),
+                    status = "guest_star_moderator_removed",
+                    type = "drop.entitlement.grant",
+                    version = "1",
+                    condition = new
+                    {
+                        organization_id = "12345"
+                    },
+                    created_at = createdAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+                    cost = 0,
+                    is_batching_enabled = true,
+                    transport = new
+                    {
+                        method = "webhook",
+                        callback = "https://example.com/callback"
+                    }
+                }
+            }
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        ResponseData<EventSubSubscription>? response = await EventSubSubscription.GetEventSubSubscriptions(
+            session,
+            status: EventSubSubscription.SubscriptionStatus.GuestStarModeratorRemoved).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+
+        EventSubSubscription sub = response.Data[0];
+        _ = sub.Status.Should().Be(EventSubSubscription.SubscriptionStatus.GuestStarModeratorRemoved);
+        _ = sub.IsBatchingEnabled.Should().BeTrue();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Query["status"].ToString().Should().Be("guest_star_moderator_removed");
+    }
+
     #endregion GetEventSubSubscriptions
 
     #region CreateEventSubSubscription
@@ -743,6 +798,71 @@ public sealed class EventSubSubscriptionTests : IDisposable
         _ = request.Should().NotBeNull();
         _ = request.Body.Should().Contain("\"method\":\"conduit\"");
         _ = request.Body.Should().Contain(conduitId.ToString());
+        _ = request.Body.Should().NotContain("is_batching_enabled");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="EventSubSubscription.CreateEventSubSubscription"/> serializes <see cref="EventSubSubscriptionCreationParameters.IsBatchingEnabled"/>
+    /// when provided and deserializes it from the response.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "CreateEventSubSubscription")]
+    public async Task CreateEventSubSubscription_WhenBatchingEnabled_SendsIsBatchingEnabledAndReturnsSubscription()
+    {
+        Guid subId = Guid.Parse("f1c2a3b4-5678-90ab-cdef-1234567890ab");
+        DateTime createdAt = new(2023, 5, 20, 10, 0, 0, DateTimeKind.Utc);
+
+        this._fixture.RegisterJsonResponse("POST", "/helix/eventsub/subscriptions", new
+        {
+            data = new[]
+            {
+                new
+                {
+                    id = subId.ToString(),
+                    status = "enabled",
+                    type = "drop.entitlement.grant",
+                    version = "1",
+                    condition = new
+                    {
+                        organization_id = "12345"
+                    },
+                    created_at = createdAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+                    cost = 0,
+                    is_batching_enabled = true,
+                    transport = new
+                    {
+                        method = "webhook",
+                        callback = "https://example.com/callback"
+                    }
+                }
+            }
+        }, HttpStatusCode.Accepted);
+
+        using TwitchSession session = TestTokenFactory.CreateAppSession();
+        EventSubSubscriptionCreationParameters parameters = new()
+        {
+            Type = "drop.entitlement.grant",
+            Version = "1",
+            Condition = new DropEntitlementGrantCondition { OrganizationId = "12345" },
+            Transport = new()
+            {
+                Method = EventSubTransport.TransportMethod.Webhook,
+                Callback = "https://example.com/callback",
+                Secret = "supersecret12345"
+            },
+            IsBatchingEnabled = true
+        };
+
+        ResponseData<EventSubSubscription>? response = await EventSubSubscription.CreateEventSubSubscription(session, parameters).ConfigureAwait(true);
+
+        _ = response.Should().NotBeNull();
+        _ = response.Data.Should().NotBeNull();
+        _ = response.Data.Count.Should().Be(1);
+        _ = response.Data[0].IsBatchingEnabled.Should().BeTrue();
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("\"is_batching_enabled\":true");
     }
 
     #endregion CreateEventSubSubscription

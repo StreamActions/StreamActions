@@ -84,8 +84,8 @@ else
             <input id="client-id" name="clientId" type="text" autocomplete="off" />
         </div>
         <div>
-            <label for="client-secret">@(_isRootRecovery && _hasStoredOAuthCredentials ? "OAuth Client Secret (optional — leave blank to keep existing)" : "OAuth Client Secret")</label>
-            <input id="client-secret" name="clientSecret" type="password" autocomplete="new-password" />
+            <label for="client-secret">@(_isRootRecovery && _hasStoredOAuthCredentials ? "OAuth Client Secret (optional — leave blank to keep existing)" : "OAuth Client Secret (optional for Public PKCE clients)")</label>
+            <input id="client-secret" name="clientSecret" type="password" autocomplete="new-password" placeholder="Optional for Public PKCE clients" />
         </div>
         @if (_isRootRecovery)
         {

@@ -21,19 +21,19 @@ namespace StreamActions.Twitch.OAuth;
 public sealed partial record Scope
 {
     /// <summary>
-    /// View Bits information for a channel.
+    /// View Bits-related products and redemptions for a channel.
     /// </summary>
     /// <value>bits:read</value>
-    public static readonly Scope BitsRead = new("bits:read", "View Bits information for a channel.");
+    public static readonly Scope BitsRead = new("bits:read", "View Bits-related products and redemptions for a channel.");
 
     /// <summary>
-    /// Join your channel's chatroom as a bot user, and perform chat-related actions as that user.
+    /// Joins your channel's chatroom as a bot user, and perform chat-related actions as that user.
     /// </summary>
     /// <remarks>
     /// This scope is used on a broadcaster to allow access to the EventSub Chat subscriptions and sending chat messages when using an App Access Token. Alternatively, the bot user who was authorized with <see cref="UserBot"/> can be made a moderator.
     /// </remarks>
     /// <value>channel:bot</value>
-    public static readonly Scope ChannelBot = new("channel:bot", "Join your channel's chatroom as a bot user, and perform chat-related actions as that user.");
+    public static readonly Scope ChannelBot = new("channel:bot", "Joins your channel's chatroom as a bot user, and perform chat-related actions as that user.");
 
     /// <summary>
     /// Run commercials on a channel.

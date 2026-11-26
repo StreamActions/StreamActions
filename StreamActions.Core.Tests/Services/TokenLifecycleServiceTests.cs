@@ -291,6 +291,46 @@ public sealed class TokenLifecycleServiceTests
         }
     }
 
+    [Fact]
+    [Trait("Member", "EnsureValidTokenAsync")]
+    public async Task EnsureValidTokenAsyncWhenPublicClientHasNullSecretRefreshesTokenSuccessfully()
+    {
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero));
+        InMemoryCredentialStore credStore = new(timeProvider);
+        MockOAuthProvider oauthProvider = new(timeProvider);
+        FakeOAuthClientConfigResolver resolver = new(clientSecret: null);
+        ServiceCollection services = new();
+        _ = services.AddScoped<IOAuthClientConfigResolver>(_ => resolver);
+        ServiceProvider sp = services.BuildServiceProvider();
+
+        await using (sp.ConfigureAwait(false))
+        using (TokenLifecycleService service = new(
+            credStore,
+            [oauthProvider],
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            timeProvider,
+            NullLogger<TokenLifecycleService>.Instance))
+        {
+            _ = await credStore.SaveTokenAsync(
+                _workspaceId,
+                "twitch",
+                TokenRole.Broadcaster,
+                new PlatformTokenPayload("expired-access", "refresh-1", timeProvider.GetUtcNow().AddMinutes(1)),
+                CredentialStatus.Active,
+                TestContext.Current.CancellationToken);
+
+            TokenLifecycleResult result = await service.EnsureValidTokenAsync(
+                _workspaceId,
+                "twitch",
+                TokenRole.Broadcaster,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            _ = result.Status.Should().Be(TokenLifecycleStatus.Refreshed);
+            _ = oauthProvider.RefreshCallCount.Should().Be(1);
+            _ = oauthProvider.ReceivedClientSecrets.Should().ContainSingle().Which.Should().BeNull();
+        }
+    }
+
     #endregion
 
     private static ServiceProvider BuildScopeProvider()
@@ -300,7 +340,7 @@ public sealed class TokenLifecycleServiceTests
         return services.BuildServiceProvider();
     }
 
-    private sealed class FakeOAuthClientConfigResolver : IOAuthClientConfigResolver
+    private sealed class FakeOAuthClientConfigResolver(string? clientSecret = "test-client-secret") : IOAuthClientConfigResolver
     {
         public List<(string PlatformId, Guid? WorkspaceId, string? Flow)> CapturedCalls { get; } = [];
 
@@ -315,7 +355,7 @@ public sealed class TokenLifecycleServiceTests
             return ValueTask.FromResult<ResolvedOAuthClientConfig?>(new ResolvedOAuthClientConfig(
                 platformId,
                 "test-client-id",
-                "test-client-secret",
+                clientSecret,
                 WorkspaceId: workspaceId));
         }
     }
@@ -331,23 +371,25 @@ public sealed class TokenLifecycleServiceTests
         public IReadOnlyList<string> DefaultBotScopes => ["user:bot", "chat:read"];
         public int RefreshCallCount => Volatile.Read(ref this._refreshCallCount);
         public int ValidateCallCount => Volatile.Read(ref this._validateCallCount);
+        public List<string?> ReceivedClientSecrets { get; } = [];
         public TimeSpan RefreshDelay { get; init; } = TimeSpan.Zero;
         public bool FailRefresh { get; set; }
         public PlatformTokenValidationResult ValidationResult { get; set; } = new(IsValid: true);
 
-        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null) =>
+        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null, string? codeChallenge = null, string? codeChallengeMethod = null) =>
             throw new NotSupportedException();
 
-        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string clientSecret, string code, Uri redirectUri, string? expectedNonce = null, CancellationToken cancellationToken = default) =>
+        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string? clientSecret, string code, Uri redirectUri, string? expectedNonce = null, string? codeVerifier = null, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
-        public async ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string clientSecret, string refreshToken, CancellationToken cancellationToken = default)
+        public async ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string? clientSecret, string refreshToken, CancellationToken cancellationToken = default)
         {
             if (this.RefreshDelay > TimeSpan.Zero)
             {
                 await Task.Delay(this.RefreshDelay, cancellationToken).ConfigureAwait(false);
             }
 
+            this.ReceivedClientSecrets.Add(clientSecret);
             int callNumber = Interlocked.Increment(ref this._refreshCallCount);
             return this.FailRefresh
                 ? throw new InvalidOperationException("Refresh rejected by mock provider.")

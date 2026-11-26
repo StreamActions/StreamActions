@@ -16,9 +16,9 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
-using StreamActions.Twitch.EventSub.Channel.SuspiciousUser.Objects;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.SuspiciousUser;
@@ -92,8 +92,33 @@ public sealed record Update : IEventSubType
     public string? UserLogin { get; init; }
 
     /// <summary>
-    /// The status set for the suspicious user. Can be the following: none, active_monitoring, or restricted.
+    /// The status set for the suspicious user. Can be the following: no_treatment, active_monitoring, or restricted.
     /// </summary>
     [JsonPropertyName("low_trust_status")]
-    public LowTrustStatus? LowTrustStatus { get; init; }
+    public LowTrustStatuses? LowTrustStatus { get; init; }
+
+    /// <summary>
+    /// The status set for the suspicious user.
+    /// </summary>
+    [JsonConverter(typeof(JsonCustomEnumConverter<LowTrustStatuses>))]
+    public enum LowTrustStatuses
+    {
+        /// <summary>
+        /// No treatment.
+        /// </summary>
+        [JsonCustomEnum("no_treatment")]
+        NoTreatment,
+
+        /// <summary>
+        /// Active monitoring.
+        /// </summary>
+        [JsonCustomEnum("active_monitoring")]
+        ActiveMonitoring,
+
+        /// <summary>
+        /// Restricted.
+        /// </summary>
+        [JsonCustomEnum("restricted")]
+        Restricted
+    }
 }

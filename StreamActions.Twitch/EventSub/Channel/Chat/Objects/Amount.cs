@@ -34,8 +34,8 @@ public sealed record Amount
     /// <summary>
     /// The number of decimal places used by the currency.
     /// </summary>
-    [JsonPropertyName("decimal_place")]
-    public int? DecimalPlace { get; init; }
+    [JsonPropertyName("decimal_places")]
+    public int? DecimalPlaces { get; init; }
 
     /// <summary>
     /// The ISO-4217 three-letter currency code.

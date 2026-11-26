@@ -100,6 +100,36 @@ public sealed class AuthPagesTests
         _ = component.Markup.Should().NotContain("External SSO");
     }
 
+    /// <summary>
+    /// Verifies that the Tier 4 custom OAuth form does not mark <c>customClientSecret</c> as required and documents Public PKCE support.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Login")]
+    public void Login_WhenRequireStreamerOAuthApp_RendersOptionalCustomClientSecretForPublicPkce()
+    {
+        using BunitContext context = new();
+        _ = context.Services.AddSingleton<IPlatformOAuthProvider>(new StubPlatformOAuthProvider("twitch"));
+        _ = context.Services.AddSingleton<IInstanceSettingsService>(new StubInstanceSettingsService(new InstanceSettings
+        {
+            InstanceOAuthAppPolicy = nameof(InstanceOAuthAppPolicy.RequireStreamerOAuthApp),
+            ExternalOidcLoginMode = ExternalOidcLoginMode.Disabled,
+        }));
+        _ = context.Services.AddSingleton<IExternalOidcProviderStore>(new StubOidcProviderStore([]));
+        _ = context.Services.AddSingleton<AntiforgeryStateProvider>(new StubAntiforgeryStateProvider());
+
+        IRenderedComponent<Login> component = context.Render<Login>();
+
+        AngleSharp.Dom.IElement clientIdInput = component.Find("input[name='customClientId']");
+        AngleSharp.Dom.IElement clientSecretInput = component.Find("input[name='customClientSecret']");
+        AngleSharp.Dom.IElement clientSecretLabel = component.Find("label[for='custom-client-secret-twitch']");
+
+        _ = clientIdInput.HasAttribute("required").Should().BeTrue();
+        _ = clientSecretInput.HasAttribute("required").Should().BeFalse();
+        _ = clientSecretInput.GetAttribute("placeholder").Should().Contain("Public PKCE");
+        _ = clientSecretLabel.TextContent.Should().Contain("optional for Public PKCE clients");
+        _ = component.Find("#custom-client-secret-help-twitch").TextContent.Should().Contain("Public PKCE");
+    }
+
     [Fact]
     [Trait("Member", "Login")]
     public void Login_WhenPasskeyDisabledOrOidcRequired_HidesPasskeyFirstButton()
@@ -412,6 +442,75 @@ public sealed class AuthPagesTests
         _ = rootUser.MfaResetByAdminNoticePending.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="AdminAuth"/> supports saving a Public PKCE platform OAuth client, preserving an existing secret, and clearing a stored secret.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AdminAuth")]
+    public void AdminAuth_PlatformOAuth_SupportsPublicPkceSaveSecretPreservationAndSecretClearing()
+    {
+        using BunitContext context = new();
+        _ = context.AddAuthorization().SetAuthorized("root").SetPolicies(AuthClaims.RootOrGlobalAdminPolicy);
+
+        StubInstanceSettingsService settingsService = new(new InstanceSettings
+        {
+            StepUpSudoPolicy = StepUpSudoPolicy.Optional,
+        });
+        StubInstanceOAuthConfigService oauthService = new();
+
+        _ = context.Services.AddSingleton<IInstanceSettingsService>(settingsService);
+        _ = context.Services.AddSingleton<IInstanceOAuthConfigService>(oauthService);
+        _ = context.Services.AddSingleton<IExternalOidcProviderStore>(new StubOidcProviderStore([]));
+        _ = context.Services.AddSingleton<IPlatformOAuthProvider>(new StubPlatformOAuthProvider("twitch"));
+        _ = context.Services.AddSingleton<IMfaPolicyService>(new StubMfaPolicyService(settingsService));
+        _ = context.Services.AddSingleton(TimeProvider.System);
+
+        IRenderedComponent<AdminAuth> component = context.Render<AdminAuth>();
+
+        // 1. Initial save with Client ID only (Public PKCE client) succeeds without requiring Client Secret.
+        _ = component.Find("[data-platform-oauth-mode='true']").TextContent.Should().Contain("Not configured");
+        _ = component.FindAll("#platform-clear-client-secret").Should().BeEmpty();
+
+        component.Find("#platform-client-id").Change("public-twitch-cid");
+        component.Find("button:contains('Save Platform OAuth')").Click();
+
+        _ = oauthService.Stored.Should().ContainKey("twitch");
+        _ = oauthService.Stored["twitch"].ClientId.Should().Be("public-twitch-cid");
+        _ = oauthService.Stored["twitch"].ClientSecret.Should().BeNull();
+        _ = component.Find("[data-platform-oauth-mode='true']").TextContent.Should().Contain("Public PKCE");
+        _ = component.FindAll("#platform-clear-client-secret").Should().BeEmpty();
+
+        // 2. Re-rendering from stored Public PKCE config does not falsely mark _hasExistingPlatformSecret as true.
+        IRenderedComponent<AdminAuth> reloadedPublic = context.Render<AdminAuth>();
+        _ = reloadedPublic.Find("[data-platform-oauth-mode='true']").TextContent.Should().Contain("Public PKCE");
+        _ = reloadedPublic.FindAll("#platform-clear-client-secret").Should().BeEmpty();
+
+        // 3. Saving a secret transitions to Confidential mode and renders the clear-secret checkbox.
+        reloadedPublic.Find("#platform-client-secret").Change("initial-confidential-secret");
+        reloadedPublic.Find("button:contains('Save Platform OAuth')").Click();
+
+        _ = oauthService.Stored["twitch"].ClientSecret.Should().Be("initial-confidential-secret");
+        _ = reloadedPublic.Find("[data-platform-oauth-mode='true']").TextContent.Should().Contain("Confidential");
+        _ = reloadedPublic.FindAll("#platform-clear-client-secret").Should().ContainSingle();
+
+        // 4. Updating Client ID while leaving secret blank and checkbox unchecked preserves the existing secret.
+        reloadedPublic.Find("#platform-client-id").Change("updated-confidential-cid");
+        reloadedPublic.Find("button:contains('Save Platform OAuth')").Click();
+
+        _ = oauthService.Stored["twitch"].ClientId.Should().Be("updated-confidential-cid");
+        _ = oauthService.Stored["twitch"].ClientSecret.Should().Be("initial-confidential-secret");
+        _ = reloadedPublic.Find("[data-platform-oauth-mode='true']").TextContent.Should().Contain("Confidential");
+
+        // 5. Checking clear-secret and saving clears the stored secret and switches back to Public PKCE mode.
+        reloadedPublic.Find("#platform-clear-client-secret").Change(true);
+        reloadedPublic.Find("button:contains('Save Platform OAuth')").Click();
+
+        _ = oauthService.Stored["twitch"].ClientId.Should().Be("updated-confidential-cid");
+        _ = oauthService.Stored["twitch"].ClientSecret.Should().BeNull();
+        _ = reloadedPublic.Find("[data-platform-oauth-mode='true']").TextContent.Should().Contain("Public PKCE");
+        _ = reloadedPublic.FindAll("#platform-clear-client-secret").Should().BeEmpty();
+    }
+
     #endregion
 
     #region MainLayoutComponent
@@ -516,9 +615,9 @@ public sealed class AuthPagesTests
         public IReadOnlyList<string> DefaultLoginScopes => ["openid", "user:read:email"];
         public IReadOnlyList<string> DefaultBroadcasterScopes => ["chat:read", "chat:edit"];
         public IReadOnlyList<string> DefaultBotScopes => ["user:bot", "chat:read"];
-        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null) => throw new NotSupportedException();
-        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string clientSecret, string code, Uri redirectUri, string? expectedNonce = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null, string? codeChallenge = null, string? codeChallengeMethod = null) => throw new NotSupportedException();
+        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string? clientSecret, string code, Uri redirectUri, string? expectedNonce = null, string? codeVerifier = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string? clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<PlatformTokenValidationResult> ValidateTokenAsync(string accessToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask RevokeTokenAsync(string clientId, string token, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }

@@ -24,8 +24,13 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.EventSub.Automod.Terms;
 
 /// <summary>
-/// A notification is sent when a broadcasters automod terms are updated. Changes to private terms are not sent.
+/// A notification sent when a term is added to or removed from the broadcaster's AutoMod blocked terms or permitted terms list.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Changes to private terms are not sent. Adding a term that's on the other list moves it to the new list; you receive only the add notification, not a remove notification for the list the term left. If the broadcaster removes a blocked term without logging the removal for moderators, no notification is sent.
+/// </para>
+/// </remarks>
 public sealed record Update : IEventSubType
 {
     /// <inheritdoc/>
@@ -56,31 +61,36 @@ public sealed record Update : IEventSubType
     public string? BroadcasterUserName { get; init; }
 
     /// <summary>
-    /// The ID of the moderator who changed the channel settings.
+    /// The ID of the user who added or removed the term.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the broadcaster or one of the broadcaster's moderators, and may differ from the moderator_user_id in the subscription's condition.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("moderator_user_id")]
     public string? ModeratorUserId { get; init; }
 
     /// <summary>
-    /// The moderators login.
+    /// The login of the user who added or removed the term.
     /// </summary>
     [JsonPropertyName("moderator_user_login")]
     public string? ModeratorUserLogin { get; init; }
 
     /// <summary>
-    /// The moderators user name.
+    /// The display name of the user who added or removed the term.
     /// </summary>
     [JsonPropertyName("moderator_user_name")]
     public string? ModeratorUserName { get; init; }
 
     /// <summary>
-    /// The status change applied to the terms. Possible options are: add_permitted, remove_permitted, add_blocked, remove_blocked.
+    /// The status change applied to the terms.
     /// </summary>
     [JsonPropertyName("action")]
     public TermAction? Action { get; init; }
 
     /// <summary>
-    /// Indicates whether this term was added due to an Automod message approve/deny action.
+    /// Indicates whether this term was added or removed due to an AutoMod message approve/deny action.
     /// </summary>
     [JsonPropertyName("from_automod")]
     public bool? FromAutomod { get; init; }

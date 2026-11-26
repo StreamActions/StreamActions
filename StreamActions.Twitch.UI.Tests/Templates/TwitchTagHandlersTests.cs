@@ -1327,7 +1327,7 @@ public sealed class TwitchTagHandlersTests
             throw new NotSupportedException();
 
         /// <inheritdoc />
-        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, CancellationToken cancellationToken = default) =>
+        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, bool clearClientSecret = false, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
         /// <inheritdoc />

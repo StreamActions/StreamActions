@@ -64,20 +64,20 @@ public sealed record Resolve : IEventSubType
     /// <summary>
     /// Optional. User ID of moderator who approved/denied the request.
     /// </summary>
-    [JsonPropertyName("moderator_id")]
-    public string? ModeratorId { get; init; }
+    [JsonPropertyName("moderator_user_id")]
+    public string? ModeratorUserId { get; init; }
 
     /// <summary>
-    /// Optional. The moderators login name
+    /// Optional. The moderator's login name.
     /// </summary>
-    [JsonPropertyName("moderator_login")]
-    public string? ModeratorLogin { get; init; }
+    [JsonPropertyName("moderator_user_login")]
+    public string? ModeratorUserLogin { get; init; }
 
     /// <summary>
-    /// Optional. The moderators display name
+    /// Optional. The moderator's display name.
     /// </summary>
-    [JsonPropertyName("moderator_name")]
-    public string? ModeratorName { get; init; }
+    [JsonPropertyName("moderator_user_name")]
+    public string? ModeratorUserName { get; init; }
 
     /// <summary>
     /// User ID of user that requested to be unbanned.

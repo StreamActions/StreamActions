@@ -24,8 +24,16 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.EventSub.Channel.HypeTrain;
 
 /// <summary>
-/// An event that is sent when a Hype Train begins.
+/// An event that is sent when a Hype Train begins on the specified channel.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The contributions that started the Hype Train are included in this notification's <see cref="Total"/>, <see cref="Progress"/>, and <see cref="TopContributions"/>; no channel.hype_train.progress notifications are sent for them. EventSub does not make strong assurances about the order of message delivery, so it is possible to receive channel.hype_train.progress notifications before you receive the corresponding <see cref="Begin"/> notification.
+/// </para>
+/// <para>
+/// For a shared Hype Train, each participating broadcaster that has Hype Trains enabled gets its own notification, with that broadcaster in <see cref="BroadcasterUserId"/> and the same <see cref="Id"/>. A broadcaster whose channel joins a shared chat session while a shared Hype Train is in progress also gets this notification when the channel joins.
+/// </para>
+/// </remarks>
 public sealed record Begin : IEventSubType
 {
     /// <inheritdoc/>
@@ -64,6 +72,11 @@ public sealed record Begin : IEventSubType
     /// <summary>
     /// Total points contributed to the Hype Train.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For Bits contributions, each Bit counts as 1 point. For subscription contributions, each subscription (or each month of a multi-month gift) counts as 500, 1000, or 2500 points for a Tier 1, 2, or 3 subscription.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("total")]
     public int? Total { get; init; }
 
@@ -80,8 +93,13 @@ public sealed record Begin : IEventSubType
     public int? Goal { get; init; }
 
     /// <summary>
-    /// The contributors with the most points contributed.
+    /// For each contribution type used, the contributor with the most points, counting only the contributions that started the Hype Train.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// There is one entry per contribution type, in no particular order. Anonymous contributors are represented by Twitch stand-in accounts. For a shared Hype Train, only contributions made in this broadcaster's channel count, so the array may be empty.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("top_contributions")]
     public IReadOnlyList<Contribution>? TopContributions { get; init; }
 

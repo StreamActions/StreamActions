@@ -48,4 +48,22 @@ public sealed record PayItForward
     /// </summary>
     [JsonPropertyName("gifter_user_login")]
     public string? GifterUserLogin { get; init; }
+
+    /// <summary>
+    /// Optional. The user ID of the subscription gift recipient.
+    /// </summary>
+    [JsonPropertyName("recipient_user_id")]
+    public string? RecipientUserId { get; init; }
+
+    /// <summary>
+    /// Optional. The user name of the subscription gift recipient.
+    /// </summary>
+    [JsonPropertyName("recipient_user_name")]
+    public string? RecipientUserName { get; init; }
+
+    /// <summary>
+    /// Optional. The user login of the subscription gift recipient.
+    /// </summary>
+    [JsonPropertyName("recipient_user_login")]
+    public string? RecipientUserLogin { get; init; }
 }

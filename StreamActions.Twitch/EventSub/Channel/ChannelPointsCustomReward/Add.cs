@@ -74,7 +74,7 @@ public sealed record Add : IEventSubType
     public bool? IsPaused { get; init; }
 
     /// <summary>
-    /// Is the reward currently in stock. If false, viewers can't redeem.
+    /// Is the reward currently in stock. If false, viewers can't redeem. Also false if <see cref="MaxPerStream"/> is enabled and the broadcaster isn't live.
     /// </summary>
     [JsonPropertyName("is_in_stock")]
     public bool? IsInStock { get; init; }
@@ -122,13 +122,13 @@ public sealed record Add : IEventSubType
     public MaxPerUserPerStream? MaxPerUserPerStream { get; init; }
 
     /// <summary>
-    /// Custom background color for the reward.
+    /// Custom background color for the reward, as a hex color code with a # prefix (for example, #FA1ED2). Is an empty string if the reward was created without a background color.
     /// </summary>
     [JsonPropertyName("background_color")]
     public string? BackgroundColor { get; init; }
 
     /// <summary>
-    /// Set of custom images of 1x, 2x and 4x sizes for the reward. Can be null if no images have been uploaded.
+    /// Set of custom images of 1x, 2x and 4x sizes for the reward. Always null in this notification, because a custom image can be uploaded only after the reward is created. The <see cref="Update"/> notification reports the image once it's uploaded.
     /// </summary>
     [JsonPropertyName("image")]
     public Image? Image { get; init; }
@@ -152,7 +152,7 @@ public sealed record Add : IEventSubType
     public DateTime? CooldownExpiresAt { get; init; }
 
     /// <summary>
-    /// The number of redemptions redeemed during the current live stream. Counts against the max_per_stream limit. Null if the broadcasters stream isn't live or max_per_stream isn't enabled.
+    /// The number of redemptions redeemed during the current live stream. Counts against the max_per_stream limit. Null if the broadcaster's stream isn't live or max_per_stream isn't enabled.
     /// </summary>
     [JsonPropertyName("redemptions_redeemed_current_stream")]
     public int? RedemptionsRedeemedCurrentStream { get; init; }

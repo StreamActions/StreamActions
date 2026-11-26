@@ -17,6 +17,10 @@
 # along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+"""
+Parser for Twitch OAuth token documentation (Authorization Code, PKCE, and Client Credentials flows).
+"""
+
 from pathlib import Path
 import sys
 
@@ -33,6 +37,9 @@ class TwitchOAuthParser(TwitchMarkdownBaseParser):
     """
 
     def parse(self, data: str) -> dict:
+        """
+        Parse Twitch OAuth Markdown content into TOC and endpoint parameter definitions.
+        """
         ret = {
             "toc": {},
             "endpoints": {},
@@ -41,14 +48,18 @@ class TwitchOAuthParser(TwitchMarkdownBaseParser):
         ret["toc"][category] = []
 
         targets = {
+            "Client Credentials Grant Flow": "requestBody",
+            "Get the user to authorize your app (PKCE)": "requestQuery",
+            "Use the authorization code to get a token (PKCE)": "requestBody",
             "Get the user to authorize your app": "requestQuery",
             "Use the authorization code to get a token": "requestBody",
-            "Client credentials grant flow": "requestBody",
         }
+        targets_by_lower = {k.lower(): v for k, v in targets.items()}
 
         for section in self.splitSectionsMulti(data, levels=(2, 3), stop_at_higher=False):
             title = section["title"]
-            if title not in targets:
+            target_key = targets_by_lower.get(title.lower())
+            if target_key is None:
                 continue
 
             slug = section["slug"]
@@ -69,7 +80,7 @@ class TwitchOAuthParser(TwitchMarkdownBaseParser):
 
             ret["endpoints"][title] = {
                 "slug": slug,
-                targets[title]: req_data,
+                target_key: req_data,
             }
 
         return ret

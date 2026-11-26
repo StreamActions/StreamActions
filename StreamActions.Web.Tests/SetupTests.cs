@@ -75,6 +75,28 @@ public sealed partial class SetupTests
         _ = component.Markup.Should().NotContain(secretBootstrapToken);
     }
 
+    /// <summary>
+    /// Verifies that <see cref="Setup"/> renders an optional <c>clientSecret</c> input without <c>required</c> so operators can configure Public PKCE clients.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "Setup")]
+    public void Setup_WhenInitialSetup_RendersOptionalClientSecretWithoutRequiredAttribute()
+    {
+        using BunitContext context = new();
+        _ = context.Services.AddSingleton<IBootstrapTokenService>(
+            new StubBootstrapTokenService(new BootstrapTokenRequestResult(true, "bootstrap-token-123", null)));
+        _ = context.Services.AddSingleton<IPanelUserStore>(new StubPanelUserStore(hasRootUser: false));
+        _ = context.Services.AddSingleton<AntiforgeryStateProvider>(new StubAntiforgeryStateProvider());
+
+        IRenderedComponent<Setup> component = context.Render<Setup>();
+
+        AngleSharp.Dom.IElement clientSecretInput = component.Find("#client-secret");
+        AngleSharp.Dom.IElement clientSecretLabel = component.Find("label[for='client-secret']");
+        _ = clientSecretInput.HasAttribute("required").Should().BeFalse();
+        _ = clientSecretInput.GetAttribute("placeholder").Should().Contain("Public PKCE");
+        _ = clientSecretLabel.TextContent.Should().Contain("optional for Public PKCE clients");
+    }
+
     [Fact]
     [Trait("Member", "Setup")]
     public void Setup_WhenRootUserExists_RendersRootRecoveryMode()
@@ -316,6 +338,42 @@ public sealed partial class SetupTests
 
     [Fact]
     [Trait("Member", "MapSetupEndpoints")]
+    public async Task PostSetupVerify_WhenPublicClientProvidedWithoutSecret_SavesPublicOAuthCredentials()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDaemonDirectories dirs = new();
+        using WebTestApplicationFactory factory = new(dirs);
+        using HttpClient client = factory.CreateClient();
+
+        IBootstrapTokenService tokenService = factory.Services.GetRequiredService<IBootstrapTokenService>();
+        BootstrapTokenRequestResult tokenResult = tokenService.RequestOrReuseActiveToken();
+        _ = tokenResult.Succeeded.Should().BeTrue();
+
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/setup/verify",
+            new
+            {
+                bootstrapToken = tokenResult.Token,
+                platformId = "twitch",
+                clientId = "public-setup-cid",
+                clientSecret = "   ",
+            },
+            ct);
+
+        _ = response.StatusCode.Should().Be(HttpStatusCode.OK);
+        SetupVerifyResponse? verifyResponse = await response.Content.ReadFromJsonAsync<SetupVerifyResponse>(ct);
+        _ = verifyResponse.Should().NotBeNull();
+        _ = verifyResponse!.OAuthCredentialsSaved.Should().BeTrue();
+
+        IInstanceOAuthConfigService oauthService = factory.Services.GetRequiredService<IInstanceOAuthConfigService>();
+        PlatformOAuthAppCredentials? saved = await oauthService.GetAsync("twitch", ct);
+        _ = saved.Should().NotBeNull();
+        _ = saved!.ClientId.Should().Be("public-setup-cid");
+        _ = saved.ClientSecret.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Member", "MapSetupEndpoints")]
     public async Task PostSetupVerify_WhenInitialSetupWithDangerousFeaturesOptIn_SeedsDefaultWorkspacePlanGlobalGroupGrants()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
@@ -462,13 +520,13 @@ public sealed partial class SetupTests
         public IReadOnlyList<string> DefaultBotScopes => ["openid"];
 
         /// <inheritdoc/>
-        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null) => throw new NotSupportedException();
+        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null, string? codeChallenge = null, string? codeChallengeMethod = null) => throw new NotSupportedException();
 
         /// <inheritdoc/>
-        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string clientSecret, string code, Uri redirectUri, string? expectedNonce = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string? clientSecret, string code, Uri redirectUri, string? expectedNonce = null, string? codeVerifier = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         /// <inheritdoc/>
-        public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string? clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         /// <inheritdoc/>
         public ValueTask<PlatformTokenValidationResult> ValidateTokenAsync(string accessToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();

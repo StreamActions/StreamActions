@@ -31,6 +31,7 @@ using StreamActions.Core.Models;
 using StreamActions.Core.Models.Entities;
 using StreamActions.Core.Permissions;
 using StreamActions.Web.Security;
+using System.Buffers.Text;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -226,8 +227,7 @@ internal static class AuthEndpoints
         if (HttpMethods.IsPost(httpContext.Request.Method)
             && string.Equals(normalizedFlow, "login", StringComparison.Ordinal)
             && oauthPolicy == InstanceOAuthAppPolicy.RequireStreamerOAuthApp
-            && !string.IsNullOrWhiteSpace(customClientId)
-            && !string.IsNullOrWhiteSpace(customClientSecret))
+            && !string.IsNullOrWhiteSpace(customClientId))
         {
             if (!string.IsNullOrWhiteSpace(customRedirectUri))
             {
@@ -240,7 +240,9 @@ internal static class AuthEndpoints
             }
 
             clientId = customClientId.Trim();
-            clientSecret = customClientSecret.Trim();
+            clientSecret = string.IsNullOrWhiteSpace(customClientSecret)
+                ? null
+                : customClientSecret.Trim();
             storeCustomCredentialsInFlow = true;
         }
         else if (HttpMethods.IsPost(httpContext.Request.Method)
@@ -326,7 +328,7 @@ internal static class AuthEndpoints
             }
         }
 
-        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+        if (string.IsNullOrWhiteSpace(clientId))
         {
             return Results.Redirect($"/login?error=oauth_not_configured&platform={Uri.EscapeDataString(normalizedPlatform)}");
         }
@@ -334,6 +336,8 @@ internal static class AuthEndpoints
         string state = GenerateRandomToken();
         bool useOidcNonce = normalizedFlow is "login" or "setup" or "link" or "stepup";
         string? nonce = useOidcNonce ? GenerateRandomToken() : null;
+        string codeVerifier = GeneratePkceCodeVerifier();
+        string codeChallenge = ComputePkceS256Challenge(codeVerifier);
         bool forceVerify = normalizedFlow is "bot" or "instance-bot" or "stepup";
         IReadOnlyList<string> scopes = ResolveRequestedScopes(provider, normalizedFlow, rawScopes);
 
@@ -344,7 +348,9 @@ internal static class AuthEndpoints
             scopes,
             state,
             forceVerify: forceVerify,
-            nonce: nonce);
+            nonce: nonce,
+            codeChallenge: codeChallenge,
+            codeChallengeMethod: "S256");
 
         AuthFlowCookiePayload payload = new()
         {
@@ -355,6 +361,7 @@ internal static class AuthEndpoints
             ReturnUrl = AuthClaims.IsSafeLocalRedirect(returnUrl) ? returnUrl!.Trim() : null,
             WorkspaceId = workspaceId,
             StepUpUserId = stepUpUserId,
+            CodeVerifier = codeVerifier,
             CustomClientId = storeCustomCredentialsInFlow ? clientId : null,
             CustomClientSecret = storeCustomCredentialsInFlow ? clientSecret : null,
             CustomRedirectUri = storeCustomCredentialsInFlow ? explicitRedirectUri?.ToString() : null,
@@ -438,11 +445,12 @@ internal static class AuthEndpoints
         string? clientSecret;
         Uri? explicitRedirectUri = null;
 
-        if (!string.IsNullOrWhiteSpace(flowPayload.CustomClientId)
-            && !string.IsNullOrWhiteSpace(flowPayload.CustomClientSecret))
+        if (!string.IsNullOrWhiteSpace(flowPayload.CustomClientId))
         {
             clientId = flowPayload.CustomClientId;
-            clientSecret = flowPayload.CustomClientSecret;
+            clientSecret = string.IsNullOrWhiteSpace(flowPayload.CustomClientSecret)
+                ? null
+                : flowPayload.CustomClientSecret;
             if (!string.IsNullOrWhiteSpace(flowPayload.CustomRedirectUri)
                 && TryParseHttpRedirectUri(flowPayload.CustomRedirectUri, out Uri? parsedCustomRedirectUri))
             {
@@ -460,13 +468,23 @@ internal static class AuthEndpoints
             }
 
             clientId = resolved.ClientId;
-            clientSecret = resolved.ClientSecret;
+            clientSecret = string.IsNullOrWhiteSpace(resolved.ClientSecret) ? null : resolved.ClientSecret;
             explicitRedirectUri = resolved.RedirectUri;
+        }
+
+        string? codeVerifier = string.IsNullOrWhiteSpace(flowPayload.CodeVerifier)
+            ? null
+            : flowPayload.CodeVerifier;
+
+        if (string.IsNullOrWhiteSpace(clientId)
+            || (string.IsNullOrWhiteSpace(clientSecret) && codeVerifier is null))
+        {
+            return Results.BadRequest("Invalid or expired authentication state.");
         }
 
         Uri redirectUri = explicitRedirectUri ?? BuildCallbackUri(httpContext.Request, $"/auth/{normalizedPlatform}/callback");
         PlatformOAuthTokenResult tokenResult = await provider
-            .ExchangeCodeAsync(clientId, clientSecret, code, redirectUri, flowPayload.Nonce, cancellationToken)
+            .ExchangeCodeAsync(clientId, clientSecret, code, redirectUri, flowPayload.Nonce, codeVerifier, cancellationToken)
             .ConfigureAwait(false);
 
         if (string.IsNullOrWhiteSpace(tokenResult.PlatformUserId))
@@ -1538,9 +1556,9 @@ internal static class AuthEndpoints
                 string.Equals(w.PrimaryPlatformId, platformId, StringComparison.OrdinalIgnoreCase));
 
             if (!flowPayload.UsedDbLookupOAuthApp
-                && !string.IsNullOrWhiteSpace(flowPayload.CustomClientId)
-                && !string.IsNullOrWhiteSpace(flowPayload.CustomClientSecret))
+                && !string.IsNullOrWhiteSpace(flowPayload.CustomClientId))
             {
+                bool clearSecret = string.IsNullOrWhiteSpace(flowPayload.CustomClientSecret);
                 if (matchingOwned is not null)
                 {
                     _ = await workspaceStore.SetCustomOAuthAppAsync(
@@ -1549,7 +1567,8 @@ internal static class AuthEndpoints
                         flowPayload.CustomClientId,
                         flowPayload.CustomClientSecret,
                         customRedirectUri,
-                        cancellationToken).ConfigureAwait(false);
+                        clearClientSecret: clearSecret,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
                 else if (ownedWorkspaces.Count == 0 && settings.AllowOpenRegistration)
                 {
@@ -1576,7 +1595,8 @@ internal static class AuthEndpoints
                         flowPayload.CustomClientId,
                         flowPayload.CustomClientSecret,
                         customRedirectUri,
-                        cancellationToken).ConfigureAwait(false);
+                        clearClientSecret: clearSecret,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
 
                     _ = await platformCredentialStore
                         .SaveTokenAsync(additionalWorkspace.Id, platformId, TokenRole.Broadcaster, tokenPayload, CredentialStatus.Active, cancellationToken)
@@ -1720,8 +1740,7 @@ internal static class AuthEndpoints
             },
             cancellationToken).ConfigureAwait(false);
 
-        if (!string.IsNullOrWhiteSpace(flowPayload.CustomClientId)
-            && !string.IsNullOrWhiteSpace(flowPayload.CustomClientSecret))
+        if (!string.IsNullOrWhiteSpace(flowPayload.CustomClientId))
         {
             _ = await workspaceStore.SetCustomOAuthAppAsync(
                 createdWorkspace.Id,
@@ -1729,7 +1748,8 @@ internal static class AuthEndpoints
                 flowPayload.CustomClientId,
                 flowPayload.CustomClientSecret,
                 customRedirectUri,
-                cancellationToken).ConfigureAwait(false);
+                clearClientSecret: string.IsNullOrWhiteSpace(flowPayload.CustomClientSecret),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         _ = await platformCredentialStore
@@ -2994,6 +3014,20 @@ internal static class AuthEndpoints
     private static string GenerateRandomToken() => RandomNumberGenerator.GetHexString(32, lowercase: true);
 
     /// <summary>
+    /// Generates an RFC 7636 PKCE code verifier using 32 cryptographically random bytes encoded as unpadded base64url (43 characters).
+    /// </summary>
+    /// <returns>A base64url-encoded RFC 7636 PKCE code verifier.</returns>
+    private static string GeneratePkceCodeVerifier() => Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
+
+    /// <summary>
+    /// Computes an RFC 7636 PKCE <c>S256</c> code challenge from the specified code verifier.
+    /// </summary>
+    /// <param name="codeVerifier">The RFC 7636 PKCE code verifier.</param>
+    /// <returns>The unpadded base64url-encoded SHA-256 hash of <paramref name="codeVerifier"/>.</returns>
+    private static string ComputePkceS256Challenge(string codeVerifier) =>
+        Base64Url.EncodeToString(SHA256.HashData(Encoding.ASCII.GetBytes(codeVerifier)));
+
+    /// <summary>
     /// Encrypts and writes the <c>StreamActions.AuthFlow</c> <see langword="HttpOnly"/> cookie.
     /// </summary>
     /// <param name="httpContext">The current HTTP context.</param>
@@ -3240,7 +3274,7 @@ internal sealed record AuthFlowCookiePayload
     public Guid? StepUpUserId { get; init; }
 
     /// <summary>
-    /// Gets the PKCE code verifier for external OIDC flows.
+    /// Gets the PKCE code verifier for platform OAuth and external OIDC flows.
     /// </summary>
     public string? CodeVerifier { get; init; }
 

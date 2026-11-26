@@ -19,6 +19,7 @@
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using StreamActions.Common.Net;
+using StreamActions.Twitch.Api;
 using StreamActions.Twitch.OAuth;
 using StreamActions.Twitch.Tests.Infrastructure;
 using System.Net;
@@ -77,7 +78,7 @@ public sealed class TokenTests : IDisposable
     #region AuthorizeOAuth
 
     /// <summary>
-    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?)"/> throws an <see cref="ArgumentNullException"/> when the authorization code is null or whitespace.
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?, string?)"/> throws an <see cref="ArgumentNullException"/> when the authorization code is null or whitespace.
     /// </summary>
     [Theory]
     [Trait("Member", "AuthorizeOAuth")]
@@ -92,7 +93,7 @@ public sealed class TokenTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?)"/> throws an <see cref="ArgumentNullException"/> when the redirect URI is null.
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?, string?)"/> throws an <see cref="ArgumentNullException"/> when the redirect URI is null.
     /// </summary>
     [Fact]
     [Trait("Member", "AuthorizeOAuth")]
@@ -104,7 +105,7 @@ public sealed class TokenTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?)"/> posts the authorization code, credentials, and redirect URI, and parses the returned token.
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?, string?)"/> posts the authorization code, credentials, and redirect URI, and parses the returned token.
     /// </summary>
     [Fact]
     [Trait("Member", "AuthorizeOAuth")]
@@ -144,7 +145,7 @@ public sealed class TokenTests : IDisposable
     }
 
     /// <summary>
-    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, TwitchSession?, string?)"/> posts custom session client credentials when provided.
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, TwitchSession?, string?, string?)"/> posts custom session client credentials when provided.
     /// </summary>
     [Fact]
     [Trait("Member", "AuthorizeOAuth")]
@@ -184,6 +185,110 @@ public sealed class TokenTests : IDisposable
         _ = request.Body.Should().Contain("client_id=custom_client_id");
         _ = request.Body.Should().Contain("client_secret=custom_client_secret");
         _ = request.Body.Should().Contain("redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fcallback");
+        _ = request.Body.Should().NotContain("code_verifier");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?, string?)"/> omits <c>client_secret</c> and posts <c>code_verifier</c> when initialized as a public client without a secret.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AuthorizeOAuth")]
+    public async Task AuthorizeOAuth_WhenPublicClientWithoutSecretAndCodeVerifierProvided_OmitsClientSecretAndPostsCodeVerifier()
+    {
+        TwitchApi.Init("public_global_client", clientSecret: null, $"{this._fixture.BaseUrl}/helix/");
+        string verifier = TwitchOAuthClient.GenerateCodeVerifier();
+        string expectedBearer = TestTokenFactory.CreateToken("BEARER");
+        this._fixture.RegisterJsonResponse("POST", "/oauth2/token", new
+        {
+            access_token = expectedBearer,
+            expires_in = 14400,
+            refresh_token = TestTokenFactory.CreateToken("REFRESH"),
+            scope = _authorizationScopes,
+            token_type = "bearer"
+        });
+
+        Token? token = await Token.AuthorizeOAuth("pkce_code", new Uri("http://localhost:3000/callback"), codeVerifier: verifier).ConfigureAwait(true);
+
+        _ = token.Should().NotBeNull();
+        _ = token.AccessToken.Should().Be(expectedBearer);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("grant_type=authorization_code");
+        _ = request.Body.Should().Contain("code=pkce_code");
+        _ = request.Body.Should().Contain("client_id=public_global_client");
+        _ = request.Body.Should().Contain($"code_verifier={Uri.EscapeDataString(verifier)}");
+        _ = request.Body.Should().NotContain("client_secret");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, TwitchSession?, string?, string?)"/> includes both <c>client_secret</c> and <c>code_verifier</c> for confidential PKCE clients.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AuthorizeOAuth")]
+    public async Task AuthorizeOAuth_WhenConfidentialPkceClientWithSecret_PostsBothClientSecretAndCodeVerifier()
+    {
+        string verifier = TwitchOAuthClient.GenerateCodeVerifier();
+        string expectedBearer = TestTokenFactory.CreateToken("BEARER");
+        this._fixture.RegisterJsonResponse("POST", "/oauth2/token", new
+        {
+            access_token = expectedBearer,
+            expires_in = 14400,
+            refresh_token = TestTokenFactory.CreateToken("REFRESH"),
+            scope = _authorizationScopes,
+            token_type = "bearer"
+        });
+
+        using TwitchSession session = new()
+        {
+            Token = TwitchToken.Empty,
+            CustomClientId = "conf_pkce_client",
+            CustomClientSecret = "conf_pkce_secret"
+        };
+
+        Token? token = await Token.AuthorizeOAuth("pkce_code", new Uri("http://localhost:3000/callback"), session, codeVerifier: verifier).ConfigureAwait(true);
+
+        _ = token.Should().NotBeNull();
+        _ = token.AccessToken.Should().Be(expectedBearer);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("client_id=conf_pkce_client");
+        _ = request.Body.Should().Contain("client_secret=conf_pkce_secret");
+        _ = request.Body.Should().Contain($"code_verifier={Uri.EscapeDataString(verifier)}");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, TwitchSession?, string?, string?)"/> throws <see cref="ArgumentException"/> when <c>codeVerifier</c> fails RFC 7636 validation.
+    /// </summary>
+    /// <param name="invalidVerifier">The invalid code verifier.</param>
+    [Theory]
+    [Trait("Member", "AuthorizeOAuth")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("too_short_verifier")]
+    [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+    [InlineData("bad char space in verifier 0123456789abcdefgh")]
+    public async Task AuthorizeOAuth_WhenCodeVerifierInvalid_ThrowsArgumentException(string invalidVerifier)
+    {
+        Func<Task> action = async () => await Token.AuthorizeOAuth("code_123", new Uri("http://localhost:3000/callback"), codeVerifier: invalidVerifier).ConfigureAwait(true);
+
+        _ = (await action.Should().ThrowAsync<ArgumentException>().ConfigureAwait(true))
+            .WithParameterName("codeVerifier");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.AuthorizeOAuth(string, Uri, string?, string?)"/> throws <see cref="InvalidOperationException"/> when <c>codeVerifier</c> is omitted and no client secret is configured.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "AuthorizeOAuth")]
+    public async Task AuthorizeOAuth_WhenCodeVerifierOmittedAndClientSecretMissing_ThrowsInvalidOperationException()
+    {
+        TwitchApi.Init("public_global_client", clientSecret: null, $"{this._fixture.BaseUrl}/helix/");
+
+        Func<Task> action = async () => await Token.AuthorizeOAuth("code_123", new Uri("http://localhost:3000/callback")).ConfigureAwait(true);
+
+        _ = await action.Should().ThrowAsync<InvalidOperationException>().ConfigureAwait(true);
     }
 
     #endregion AuthorizeOAuth
@@ -312,6 +417,88 @@ public sealed class TokenTests : IDisposable
         _ = request.Body.Should().Contain($"refresh_token={originalRefresh}");
         _ = request.Body.Should().Contain($"client_id={this._fixture.ClientId}");
         _ = request.Body.Should().Contain($"client_secret={this._fixture.ClientSecret}");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.RefreshOAuth(TwitchSession, string?)"/> omits <c>client_secret</c> from the form body when the session has no client secret.
+    /// </summary>
+    /// <param name="publicSecret">The null or whitespace client secret.</param>
+    [Theory]
+    [Trait("Member", "RefreshOAuth")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task RefreshOAuth_WhenSessionHasNoClientSecret_OmitsClientSecretFromFormBody(string? publicSecret)
+    {
+        string newBearer = TestTokenFactory.CreateToken("BEARER");
+        string newRefresh = TestTokenFactory.CreateToken("REFRESH");
+        this._fixture.RegisterJsonResponse("POST", "/oauth2/token", new
+        {
+            access_token = newBearer,
+            expires_in = 14000,
+            refresh_token = newRefresh,
+            scope = _refreshScopes,
+            token_type = "bearer"
+        });
+
+        using TwitchSession session = new()
+        {
+            CustomClientId = "public_client_id",
+            CustomClientSecret = publicSecret,
+            Token = new TwitchToken
+            {
+                Type = TwitchToken.TokenType.User,
+                OAuth = TestTokenFactory.CreateToken("BEARER"),
+                Refresh = "public_refresh_token"
+            }
+        };
+
+        Token? token = await Token.RefreshOAuth(session).ConfigureAwait(true);
+
+        _ = token.Should().NotBeNull();
+        _ = token.AccessToken.Should().Be(newBearer);
+        _ = token.RefreshToken.Should().Be(newRefresh);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("grant_type=refresh_token");
+        _ = request.Body.Should().Contain("refresh_token=public_refresh_token");
+        _ = request.Body.Should().Contain("client_id=public_client_id");
+        _ = request.Body.Should().NotContain("client_secret");
+    }
+
+    /// <summary>
+    /// Tests that <see cref="Token.RefreshOAuth(TwitchSession, string?)"/> omits <c>client_secret</c> when <see cref="TwitchApi"/> was initialized without a client secret.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "RefreshOAuth")]
+    public async Task RefreshOAuth_WhenTwitchApiInitializedWithoutClientSecret_OmitsClientSecretFromFormBody()
+    {
+        TwitchApi.Init("public_global_client", clientSecret: null, $"{this._fixture.BaseUrl}/helix/");
+        string newBearer = TestTokenFactory.CreateToken("BEARER");
+        this._fixture.RegisterJsonResponse("POST", "/oauth2/token", new
+        {
+            access_token = newBearer,
+            expires_in = 14000,
+            refresh_token = TestTokenFactory.CreateToken("REFRESH"),
+            scope = _refreshScopes,
+            token_type = "bearer"
+        });
+
+        using TwitchSession session = TestTokenFactory.CreateUserSession(Scope.ChatRead);
+        string originalRefresh = session.Token!.Refresh!;
+
+        Token? token = await Token.RefreshOAuth(session).ConfigureAwait(true);
+
+        _ = token.Should().NotBeNull();
+        _ = token.AccessToken.Should().Be(newBearer);
+
+        RecordedRequest? request = this._fixture.LastRequest;
+        _ = request.Should().NotBeNull();
+        _ = request.Body.Should().Contain("grant_type=refresh_token");
+        _ = request.Body.Should().Contain($"refresh_token={originalRefresh}");
+        _ = request.Body.Should().Contain("client_id=public_global_client");
+        _ = request.Body.Should().NotContain("client_secret");
     }
 
     #endregion RefreshOAuth

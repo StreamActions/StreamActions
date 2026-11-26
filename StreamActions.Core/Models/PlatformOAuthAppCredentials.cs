@@ -22,9 +22,9 @@ namespace StreamActions.Core.Models;
 /// Represents the instance-wide OAuth application credentials configured for a chat or streaming platform.
 /// </summary>
 /// <param name="ClientId">The OAuth application client identifier.</param>
-/// <param name="ClientSecret">The OAuth application client secret.</param>
+/// <param name="ClientSecret">The optional OAuth application client secret, or <see langword="null"/> for public clients.</param>
 /// <param name="RedirectUri">The optional explicit OAuth redirect URI override.</param>
 public sealed record PlatformOAuthAppCredentials(
     string ClientId,
-    string ClientSecret,
+    string? ClientSecret = null,
     Uri? RedirectUri = null);

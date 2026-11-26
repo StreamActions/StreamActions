@@ -74,6 +74,11 @@ public sealed record ConduitShard
         [JsonCustomEnum("webhook_callback_verification_failed")]
         WebhookCallbackVerificationFailed,
         /// <summary>
+        /// The notification delivery failure rate was too high.
+        /// </summary>
+        [JsonCustomEnum("notification_failures_exceeded")]
+        NotificationFailuresExceeded,
+        /// <summary>
         /// The shard is disconnected from the WebSocket server.
         /// </summary>
         [JsonCustomEnum("websocket_disconnected")]
@@ -84,10 +89,10 @@ public sealed record ConduitShard
         [JsonCustomEnum("websocket_failed_ping_pong")]
         WebsocketFailedPingPong,
         /// <summary>
-        /// The shard received too much inbound traffic.
+        /// The client sent a non-pong message. Clients may only send pong messages (and only in response to a ping message).
         /// </summary>
-        [JsonCustomEnum("websocket_received_inbound_traffic_overflow")]
-        WebsocketReceivedInboundTrafficOverflow,
+        [JsonCustomEnum("websocket_received_inbound_traffic")]
+        WebsocketReceivedInboundTraffic,
         /// <summary>
         /// The shard's connection was unused.
         /// </summary>
@@ -107,7 +112,12 @@ public sealed record ConduitShard
         /// The shard experienced a network error.
         /// </summary>
         [JsonCustomEnum("websocket_network_error")]
-        WebsocketNetworkError
+        WebsocketNetworkError,
+        /// <summary>
+        /// The client failed to reconnect to the Twitch WebSocket server within the required time after a Reconnect Message.
+        /// </summary>
+        [JsonCustomEnum("websocket_failed_to_reconnect")]
+        WebsocketFailedToReconnect
     }
 
     /// <summary>

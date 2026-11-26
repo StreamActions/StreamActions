@@ -50,5 +50,17 @@ public sealed record EventSubSubscriptionCreationParameters
     /// </summary>
     [JsonPropertyName("transport")]
     public EventSubTransport? Transport { get; init; }
+
+    /// <summary>
+    /// Whether notifications are batched. Must be <see langword="true"/> for <em>drop.entitlement.grant</em> subscriptions; <see langword="false"/> or omitted otherwise.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Optional in the request body. Must be <see langword="true"/> for <em>drop.entitlement.grant</em> subscriptions, and <see langword="false"/> or omitted otherwise.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("is_batching_enabled")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsBatchingEnabled { get; init; }
 }
 

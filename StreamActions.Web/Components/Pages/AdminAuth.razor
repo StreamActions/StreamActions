@@ -154,16 +154,43 @@
             }
         </select>
     </div>
+    <p data-platform-oauth-mode="true">
+        @if (_hasExistingPlatformSecret)
+        {
+            <span>Mode: <strong>Confidential</strong> (client secret stored + PKCE)</span>
+        }
+        else if (_hasExistingPlatformConfig)
+        {
+            <span>Mode: <strong>Public PKCE</strong> (no client secret stored)</span>
+        }
+        else
+        {
+            <span>Mode: <strong>Not configured</strong> (leave Client Secret blank for a Public PKCE client)</span>
+        }
+    </p>
     <div>
         <label for="platform-client-id">Client ID</label>
         <input id="platform-client-id" type="text" @bind="_platformClientId" autocomplete="off" />
     </div>
     <div>
         <label for="platform-client-secret">
-            Client Secret (@(_hasExistingPlatformSecret ? "configured; leave blank to keep existing" : "write-only"))
+            Client Secret (@(_hasExistingPlatformSecret ? "configured; leave blank to keep existing" : "optional for Public PKCE clients; write-only"))
         </label>
-        <input id="platform-client-secret" type="password" @bind="_platformClientSecret" autocomplete="new-password" />
+        <input id="platform-client-secret"
+               type="password"
+               @bind="_platformClientSecret"
+               placeholder="@(_hasExistingPlatformSecret ? "Leave blank to keep existing secret" : "Optional for Public PKCE clients")"
+               autocomplete="new-password" />
     </div>
+    @if (_hasExistingPlatformSecret)
+    {
+        <div>
+            <label for="platform-clear-client-secret">
+                <input id="platform-clear-client-secret" type="checkbox" @bind="_clearPlatformClientSecret" />
+                Clear stored client secret (switch to Public PKCE client)
+            </label>
+        </div>
+    }
     <div>
         <button type="button" @onclick="SavePlatformOAuthAsync">Save Platform OAuth</button>
         <button type="button" @onclick="ClearPlatformOAuthAsync">Remove Platform OAuth</button>
@@ -368,9 +395,19 @@
     private string _platformClientSecret = string.Empty;
 
     /// <summary>
-    /// Indicates whether the selected platform already has stored OAuth credentials.
+    /// Indicates whether the selected platform already has stored OAuth application credentials.
+    /// </summary>
+    private bool _hasExistingPlatformConfig;
+
+    /// <summary>
+    /// Indicates whether the selected platform currently has a stored client secret.
     /// </summary>
     private bool _hasExistingPlatformSecret;
+
+    /// <summary>
+    /// Indicates whether the administrator opted to clear the stored client secret on save and switch to a Public PKCE client.
+    /// </summary>
+    private bool _clearPlatformClientSecret;
 
     /// <summary>
     /// Configured instance-wide external OIDC providers.
@@ -564,11 +601,13 @@
 
         _platformClientId = existing?.ClientId ?? string.Empty;
         _platformClientSecret = string.Empty;
-        _hasExistingPlatformSecret = existing is not null;
+        _hasExistingPlatformConfig = existing is not null;
+        _hasExistingPlatformSecret = !string.IsNullOrWhiteSpace(existing?.ClientSecret);
+        _clearPlatformClientSecret = false;
     }
 
     /// <summary>
-    /// Saves instance-wide platform OAuth credentials without exposing any previously saved secret.
+    /// Saves instance-wide platform OAuth credentials (Confidential or Public PKCE) without exposing any previously saved secret.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous save operation.</returns>
     private async Task SavePlatformOAuthAsync()
@@ -580,28 +619,27 @@
             return;
         }
 
-        string? secretToPersist = string.IsNullOrWhiteSpace(_platformClientSecret)
+        string? enteredSecret = string.IsNullOrWhiteSpace(_platformClientSecret)
             ? null
             : _platformClientSecret.Trim();
 
-        if (secretToPersist is null)
+        string? secretToPersist = enteredSecret;
+        if (secretToPersist is null && !_clearPlatformClientSecret)
         {
             PlatformOAuthAppCredentials? existing = await InstanceOAuthConfigService
                 .GetAsync(_selectedPlatformId);
-            secretToPersist = existing?.ClientSecret;
-        }
-
-        if (string.IsNullOrWhiteSpace(secretToPersist))
-        {
-            _errorMessage = "Platform Client Secret is required when configuring credentials for the first time.";
-            return;
+            secretToPersist = string.IsNullOrWhiteSpace(existing?.ClientSecret)
+                ? null
+                : existing.ClientSecret;
         }
 
         await InstanceOAuthConfigService
             .SetAsync(_selectedPlatformId, new PlatformOAuthAppCredentials(_platformClientId.Trim(), secretToPersist));
 
         _platformClientSecret = string.Empty;
-        _hasExistingPlatformSecret = true;
+        _clearPlatformClientSecret = false;
+        _hasExistingPlatformConfig = true;
+        _hasExistingPlatformSecret = !string.IsNullOrWhiteSpace(secretToPersist);
         _statusMessage = $"Saved OAuth application credentials for {_selectedPlatformId}.";
     }
 
@@ -615,7 +653,9 @@
         _ = await InstanceOAuthConfigService.RemoveAsync(_selectedPlatformId);
         _platformClientId = string.Empty;
         _platformClientSecret = string.Empty;
+        _hasExistingPlatformConfig = false;
         _hasExistingPlatformSecret = false;
+        _clearPlatformClientSecret = false;
         _statusMessage = $"Removed OAuth application credentials for {_selectedPlatformId}.";
     }
 

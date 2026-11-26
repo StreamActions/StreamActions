@@ -27,6 +27,11 @@ namespace StreamActions.Twitch.EventSub.Channel.CustomPowerUpRedemption;
 /// <summary>
 /// A viewer has redeemed a custom power up on the specified channel.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The notification is also sent when broadcasters redeem their own Custom Power-up. They don't spend Bits on their own channel, but custom_power_up.bits still shows the Power-up's price. In that case, <see cref="UserId"/> matches <see cref="BroadcasterUserId"/>.
+/// </para>
+/// </remarks>
 public sealed record Add : IEventSubType
 {
     /// <inheritdoc/>
@@ -81,13 +86,13 @@ public sealed record Add : IEventSubType
     public string? UserName { get; init; }
 
     /// <summary>
-    /// The user input provided.
+    /// The user input provided. Empty string if not provided.
     /// </summary>
     [JsonPropertyName("user_input")]
     public string? UserInput { get; init; }
 
     /// <summary>
-    /// Defaults to unfulfilled.
+    /// The redemption status. Custom Power-ups skip the redemption request queue, so this is <see cref="RedemptionStatuses.Fulfilled"/>.
     /// </summary>
     [JsonPropertyName("status")]
     public RedemptionStatuses? Status { get; init; }

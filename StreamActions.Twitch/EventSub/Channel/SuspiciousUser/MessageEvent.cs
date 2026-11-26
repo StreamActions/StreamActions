@@ -20,7 +20,6 @@ using StreamActions.Common.Json.Serialization;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Channel.SuspiciousUser.Objects;
-using StreamActions.Twitch.EventSub.Common.ChatMessage;
 using System.Text.Json.Serialization;
 
 namespace StreamActions.Twitch.EventSub.Channel.SuspiciousUser;
@@ -76,10 +75,10 @@ public sealed record MessageEvent : IEventSubType
     public string? UserLogin { get; init; }
 
     /// <summary>
-    /// The status set for the suspicious user. Can be the following: none, active_monitoring, or restricted
+    /// The status set for the suspicious user. Can be the following: active_monitoring or restricted.
     /// </summary>
     [JsonPropertyName("low_trust_status")]
-    public LowTrustStatus? LowTrustStatus { get; init; }
+    public LowTrustStatuses? LowTrustStatus { get; init; }
 
     /// <summary>
     /// A list of channel IDs where the suspicious user is also banned.
@@ -103,13 +102,26 @@ public sealed record MessageEvent : IEventSubType
     /// The structured chat message.
     /// </summary>
     [JsonPropertyName("message")]
-    public Message? Message { get; init; }
+    public SuspiciousUserMessage? Message { get; init; }
 
     /// <summary>
-    /// The UUID that identifies the message.
+    /// The status set for the suspicious user.
     /// </summary>
-    [JsonPropertyName("message_id")]
-    public Guid? MessageId { get; init; }
+    [JsonConverter(typeof(JsonCustomEnumConverter<LowTrustStatuses>))]
+    public enum LowTrustStatuses
+    {
+        /// <summary>
+        /// Active monitoring.
+        /// </summary>
+        [JsonCustomEnum("active_monitoring")]
+        ActiveMonitoring,
+
+        /// <summary>
+        /// Restricted.
+        /// </summary>
+        [JsonCustomEnum("restricted")]
+        Restricted
+    }
 
     /// <summary>
     /// Types that apply to a suspicious user.

@@ -128,19 +128,19 @@ public sealed record Update : IEventSubType
     public string? HostUserLogin { get; init; }
 
     /// <summary>
-    /// Flag determining whether the host is allowing the guest's video to be seen.
+    /// Flag that signals whether the host is allowing the slot's video to be seen by participants within the session. Null if the guest is not slotted.
     /// </summary>
     [JsonPropertyName("host_video_enabled")]
     public bool? HostVideoEnabled { get; init; }
 
     /// <summary>
-    /// Flag determining whether the host is allowing the guest's audio to be heard.
+    /// Flag that signals whether the host is allowing the slot's audio to be heard by participants within the session. Null if the guest is not slotted.
     /// </summary>
     [JsonPropertyName("host_audio_enabled")]
     public bool? HostAudioEnabled { get; init; }
 
     /// <summary>
-    /// Value between 0 and 100 representing the host's volume setting for the guest.
+    /// Value from 0 to 200 that represents the slot's audio level as heard by participants within the session. The default is 100. Null if the guest is not slotted.
     /// </summary>
     [JsonPropertyName("host_volume")]
     public int? HostVolume { get; init; }
@@ -164,12 +164,6 @@ public sealed record Update : IEventSubType
         Accepted,
 
         /// <summary>
-        /// Ready.
-        /// </summary>
-        [JsonCustomEnum("ready")]
-        Ready,
-
-        /// <summary>
         /// Backstage.
         /// </summary>
         [JsonCustomEnum("backstage")]
@@ -179,6 +173,12 @@ public sealed record Update : IEventSubType
         /// Live.
         /// </summary>
         [JsonCustomEnum("live")]
-        Live
+        Live,
+
+        /// <summary>
+        /// Removed.
+        /// </summary>
+        [JsonCustomEnum("removed")]
+        Removed
     }
 }

@@ -183,7 +183,7 @@ public sealed record Notification : IEventSubType
     public BitsBadgeTier? BitsBadgeTier { get; init; }
 
     /// <summary>
-    /// Information about the announcement event. Null if notice_type is not charity_donation.
+    /// Information about the charity donation event. Null if notice_type is not charity_donation.
     /// </summary>
     [JsonPropertyName("charity_donation")]
     public CharityDonation? CharityDonation { get; init; }

@@ -88,7 +88,7 @@ public sealed record CharityCampaign
     public CharityAmount? CurrentAmount { get; init; }
 
     /// <summary>
-    /// The campaign's fundraising goal. This field is null if the broadcaster has not defined a fundraising goal.
+    /// The campaign's fundraising goal. If the broadcaster has not defined a fundraising goal, the value is 0.
     /// </summary>
     [JsonPropertyName("target_amount")]
     public CharityAmount? TargetAmount { get; init; }
@@ -124,10 +124,6 @@ public sealed record CharityCampaign
     /// <item>
     /// <term>401 Unauthorized</term>
     /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
-    /// </item>
-    /// <item>
-    /// <term>403 Forbidden</term>
-    /// <description>The broadcaster is not a partner or affiliate.</description>
     /// </item>
     /// </list>
     /// </para>

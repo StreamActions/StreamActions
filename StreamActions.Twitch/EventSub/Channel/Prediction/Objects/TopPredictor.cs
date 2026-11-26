@@ -44,14 +44,24 @@ public sealed record TopPredictor
     public string? UserName { get; init; }
 
     /// <summary>
-    /// The number of Channel Points won. This value is always null in the event payload for Prediction progress and Prediction lock. This value is 0 if the outcome did not win or if the Prediction was canceled and Channel Points were refunded.
+    /// The number of Channel Points paid out to the user, including the Channel Points they used.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This value is always null in the event payload for Prediction progress and Prediction lock. This value is 0 if the outcome did not win or if the Prediction was canceled and Channel Points were refunded.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("channel_points_won")]
     public int? ChannelPointsWon { get; init; }
 
     /// <summary>
     /// The number of Channel Points used to participate in the Prediction.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Can be 0 when a viewer participates without spending Channel Points.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("channel_points_used")]
     public int? ChannelPointsUsed { get; init; }
 }

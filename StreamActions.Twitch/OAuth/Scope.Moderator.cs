@@ -57,10 +57,10 @@ public sealed partial record Scope
     public static readonly Scope ModeratorManageBlockedTerms = new("moderator:manage:blocked_terms", "Manage a broadcaster's list of blocked terms.");
 
     /// <summary>
-    /// Delete chat messages in channels where you have the moderator role.
+    /// Delete chat messages in channels where you have the moderator role and manage pinned chat messages.
     /// </summary>
     /// <value>moderator:manage:chat_messages</value>
-    public static readonly Scope ModeratorManageChatMessages = new("moderator:manage:chat_messages", "Delete chat messages in channels where you have the moderator role.");
+    public static readonly Scope ModeratorManageChatMessages = new("moderator:manage:chat_messages", "Delete chat messages in channels where you have the moderator role and manage pinned chat messages.");
 
     /// <summary>
     /// Manage a broadcaster's chat room settings.
@@ -123,10 +123,10 @@ public sealed partial record Scope
     public static readonly Scope ModeratorReadBlockedTerms = new("moderator:read:blocked_terms", "View a broadcaster's list of blocked terms.");
 
     /// <summary>
-    /// Read deleted chat messages in channels where you have the moderator role.
+    /// Read deleted chat messages in channels where you have the moderator role and get pinned chat messages.
     /// </summary>
     /// <value>moderator:read:chat_messages</value>
-    public static readonly Scope ModeratorReadChatMessages = new("moderator:read:chat_messages", "Read deleted chat messages in channels where you have the moderator role.");
+    public static readonly Scope ModeratorReadChatMessages = new("moderator:read:chat_messages", "Read deleted chat messages in channels where you have the moderator role and get pinned chat messages.");
 
     /// <summary>
     /// View a broadcaster's chat room settings.

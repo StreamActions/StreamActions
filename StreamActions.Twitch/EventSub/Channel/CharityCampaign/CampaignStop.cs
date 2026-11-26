@@ -16,6 +16,7 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using StreamActions.Twitch.Api.Common;
 using StreamActions.Twitch.Api.EventSub;
 using StreamActions.Twitch.Api.EventSub.Conditions;
 using StreamActions.Twitch.EventSub.Channel.CharityCampaign.Objects;
@@ -46,20 +47,20 @@ public sealed record CampaignStop : IEventSubType
     /// <summary>
     /// An ID that identifies the broadcaster that's running the campaign.
     /// </summary>
-    [JsonPropertyName("broadcaster_id")]
-    public string? BroadcasterId { get; init; }
+    [JsonPropertyName("broadcaster_user_id")]
+    public string? BroadcasterUserId { get; init; }
 
     /// <summary>
     /// The broadcaster's login name.
     /// </summary>
-    [JsonPropertyName("broadcaster_login")]
-    public string? BroadcasterLogin { get; init; }
+    [JsonPropertyName("broadcaster_user_login")]
+    public string? BroadcasterUserLogin { get; init; }
 
     /// <summary>
     /// The broadcaster's display name.
     /// </summary>
-    [JsonPropertyName("broadcaster_name")]
-    public string? BroadcasterName { get; init; }
+    [JsonPropertyName("broadcaster_user_name")]
+    public string? BroadcasterUserName { get; init; }
 
     /// <summary>
     /// The charity's name.
@@ -83,6 +84,7 @@ public sealed record CampaignStop : IEventSubType
     /// A URL to the charity's website.
     /// </summary>
     [JsonPropertyName("charity_website")]
+    [JsonConverter(typeof(JsonEmptyStringToNullUriConverter))]
     public Uri? CharityWebsite { get; init; }
 
     /// <summary>

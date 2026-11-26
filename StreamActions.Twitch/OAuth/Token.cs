@@ -110,6 +110,7 @@ public sealed record Token : JsonApiResponse
 
     /// <summary>
     /// Attempts to refresh the User OAuth token assigned to the specified <see cref="TwitchSession"/>.
+    /// Omits <c>client_secret</c> for public clients when no client secret is configured.
     /// </summary>
     /// <param name="session">The <see cref="TwitchSession"/> to refresh.</param>
     /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> to read from OpenID Connect configuration.</param>
@@ -134,8 +135,20 @@ public sealed record Token : JsonApiResponse
             baseAddress = config.TokenEndpoint;
         }
 
-        using FormUrlEncodedContent content = new(new Dictionary<string, string>() { { "grant_type", "refresh_token" }, { "refresh_token", session.Token.Refresh ?? "" },
-            { "client_id", session.CustomClientId ?? TwitchApi.ClientId ?? "" }, { "client_secret", session.CustomClientSecret ?? TwitchApi.ClientSecret ?? "" } });
+        Dictionary<string, string> formParameters = new()
+        {
+            { "grant_type", "refresh_token" },
+            { "refresh_token", session.Token.Refresh ?? "" },
+            { "client_id", session.CustomClientId ?? TwitchApi.ClientId ?? "" }
+        };
+
+        string? clientSecret = ResolveClientSecret(session);
+        if (!string.IsNullOrWhiteSpace(clientSecret))
+        {
+            formParameters.Add("client_secret", clientSecret);
+        }
+
+        using FormUrlEncodedContent content = new(formParameters);
         using TwitchSession requestSession = CreateTokenRequestSession(session);
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions, session.CancellationToken).ConfigureAwait(false);
@@ -147,9 +160,13 @@ public sealed record Token : JsonApiResponse
     /// <param name="code">The authorization code.</param>
     /// <param name="redirectUri">The redirect Uri that was used.</param>
     /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> to read from OpenID Connect configuration.</param>
+    /// <param name="codeVerifier">Optional RFC 7636 PKCE code verifier corresponding to the code challenge sent in the authorization request.</param>
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="code"/> is <see langword="null"/> or whitespace, or <paramref name="redirectUri"/> is <see langword="null"/>.</exception>
-    public static Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null) => AuthorizeOAuth(code, redirectUri, session: null, baseAddress);
+    /// <exception cref="ArgumentException"><paramref name="codeVerifier"/> is provided but does not conform to RFC 7636 length (43-128) or character (<c>[A-Za-z0-9\-._~]</c>) requirements.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="codeVerifier"/> is <see langword="null"/> and no client secret is configured on <see cref="TwitchApi"/>.</exception>
+    public static Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, string? baseAddress = null, string? codeVerifier = null) =>
+        AuthorizeOAuth(code, redirectUri, session: null, baseAddress, codeVerifier);
 
     /// <summary>
     /// Attempts to authorize a new User OAuth token using an authorization code and optional per-session overrides.
@@ -158,9 +175,12 @@ public sealed record Token : JsonApiResponse
     /// <param name="redirectUri">The redirect Uri that was used.</param>
     /// <param name="session">Optional <see cref="TwitchSession"/> providing custom client credentials or HTTP overrides.</param>
     /// <param name="baseAddress">The uri to the Token endpoint. <see langword="null"/> to read from OpenID Connect configuration.</param>
+    /// <param name="codeVerifier">Optional RFC 7636 PKCE code verifier corresponding to the code challenge sent in the authorization request.</param>
     /// <returns>A <see cref="Token"/> with the new token data or a Twitch error.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="code"/> is <see langword="null"/> or whitespace, or <paramref name="redirectUri"/> is <see langword="null"/>.</exception>
-    public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, TwitchSession? session, string? baseAddress = null)
+    /// <exception cref="ArgumentException"><paramref name="codeVerifier"/> is provided but does not conform to RFC 7636 length (43-128) or character (<c>[A-Za-z0-9\-._~]</c>) requirements.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="codeVerifier"/> is <see langword="null"/> and no client secret is configured on <paramref name="session"/> or <see cref="TwitchApi"/>.</exception>
+    public static async Task<Token?> AuthorizeOAuth(string code, Uri redirectUri, TwitchSession? session, string? baseAddress = null, string? codeVerifier = null)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
@@ -169,6 +189,17 @@ public sealed record Token : JsonApiResponse
 
         ArgumentNullException.ThrowIfNull(redirectUri);
 
+        if (codeVerifier is not null)
+        {
+            TwitchOAuthClient.ValidateCodeVerifier(codeVerifier, nameof(codeVerifier));
+        }
+
+        string? clientSecret = ResolveClientSecret(session);
+        if (codeVerifier is null && string.IsNullOrWhiteSpace(clientSecret))
+        {
+            throw new InvalidOperationException("A client secret is required when codeVerifier is not provided.");
+        }
+
         CancellationToken cancellationToken = session?.CancellationToken ?? CancellationToken.None;
         if (string.IsNullOrWhiteSpace(baseAddress))
         {
@@ -176,14 +207,25 @@ public sealed record Token : JsonApiResponse
             baseAddress = config.TokenEndpoint;
         }
 
-        using FormUrlEncodedContent content = new(new Dictionary<string, string>
+        Dictionary<string, string> formParameters = new()
         {
             { "grant_type", "authorization_code" },
             { "code", code },
             { "client_id", session?.CustomClientId ?? TwitchApi.ClientId ?? "" },
-            { "client_secret", session?.CustomClientSecret ?? TwitchApi.ClientSecret ?? "" },
             { "redirect_uri", redirectUri.ToString() }
-        });
+        };
+
+        if (!string.IsNullOrWhiteSpace(clientSecret))
+        {
+            formParameters.Add("client_secret", clientSecret);
+        }
+
+        if (codeVerifier is not null)
+        {
+            formParameters.Add("code_verifier", codeVerifier);
+        }
+
+        using FormUrlEncodedContent content = new(formParameters);
         using TwitchSession? requestSession = session is not null ? CreateTokenRequestSession(session) : null;
         HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Post, new(baseAddress), requestSession ?? TwitchSession.Empty, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<Token>(TwitchApi.SerializerOptions, cancellationToken).ConfigureAwait(false);
@@ -316,6 +358,16 @@ public sealed record Token : JsonApiResponse
 
         return manager.GetConfigurationAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Resolves the effective client secret for an OAuth token request, avoiding global <see cref="TwitchApi.ClientSecret"/> fallback when <see cref="TwitchSession.CustomClientId"/> is overridden.
+    /// </summary>
+    /// <param name="session">The optional <see cref="TwitchSession"/>.</param>
+    /// <returns>The resolved client secret, or <see langword="null"/> if none is configured.</returns>
+    private static string? ResolveClientSecret(TwitchSession? session) =>
+        session is not null && !string.IsNullOrWhiteSpace(session.CustomClientId)
+            ? session.CustomClientSecret
+            : session?.CustomClientSecret ?? TwitchApi.ClientSecret;
 
     /// <summary>
     /// Creates a new <see cref="ConfigurationManager{T}"/> for retrieving OpenID Connect metadata and JWKS keys.

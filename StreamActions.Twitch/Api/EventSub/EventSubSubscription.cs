@@ -84,6 +84,17 @@ public sealed record EventSubSubscription
     public int? Cost { get; init; }
 
     /// <summary>
+    /// Whether notifications are batched. Included only if <see langword="true"/>, which is the case for <em>drop.entitlement.grant</em> subscriptions.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Included only if <see langword="true"/>, which is the case for <em>drop.entitlement.grant</em> subscriptions.
+    /// </para>
+    /// </remarks>
+    [JsonPropertyName("is_batching_enabled")]
+    public bool? IsBatchingEnabled { get; init; }
+
+    /// <summary>
     /// EventSub Subscription Status.
     /// </summary>
     [JsonConverter(typeof(JsonCustomEnumConverter<SubscriptionStatus>))]
@@ -124,6 +135,11 @@ public sealed record EventSubSubscription
         /// </summary>
         [JsonCustomEnum("moderator_removed")]
         ModeratorRemoved,
+        /// <summary>
+        /// The Guest Star moderator that authorized the subscription is no longer one of the broadcaster's Guest Star moderators.
+        /// </summary>
+        [JsonCustomEnum("guest_star_moderator_removed")]
+        GuestStarModeratorRemoved,
         /// <summary>
         /// One of the users specified in the <see cref="Condition"/> object was removed.
         /// </summary>

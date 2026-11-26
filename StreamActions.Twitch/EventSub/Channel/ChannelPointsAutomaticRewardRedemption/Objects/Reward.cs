@@ -33,10 +33,10 @@ public sealed record Reward
     public RewardTypes? Type { get; init; }
 
     /// <summary>
-    /// The reward cost.
+    /// The number of Channel Points used to redeem the reward.
     /// </summary>
-    [JsonPropertyName("cost")]
-    public int? Cost { get; init; }
+    [JsonPropertyName("channel_points")]
+    public int? ChannelPoints { get; init; }
 
     /// <summary>
     /// An object that contains the unlocked emote if the reward is an unlocked emote.

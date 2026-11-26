@@ -117,8 +117,13 @@ public interface IWorkspaceStore
     /// <param name="workspaceId">The workspace identifier.</param>
     /// <param name="platformId">The platform identifier.</param>
     /// <param name="clientId">The custom OAuth client identifier, or <see langword="null"/>/whitespace to clear custom credentials.</param>
-    /// <param name="clientSecret">The plaintext custom OAuth client secret, or <see langword="null"/> to preserve an existing secret when updating <paramref name="clientId"/>.</param>
+    /// <param name="clientSecret">
+    /// The plaintext custom OAuth client secret, or <see langword="null"/>/whitespace to preserve an existing secret (or configure a public client) unless <paramref name="clearClientSecret"/> is <see langword="true"/>.
+    /// </param>
     /// <param name="redirectUri">An optional explicit OAuth redirect URI override for the custom application.</param>
+    /// <param name="clearClientSecret">
+    /// <see langword="true"/> to explicitly clear any stored custom client secret when <paramref name="clientSecret"/> is <see langword="null"/> or whitespace; otherwise, <see langword="false"/>.
+    /// </param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>The updated <see cref="WorkspacePlatform"/>.</returns>
     ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(
@@ -127,6 +132,7 @@ public interface IWorkspaceStore
         string? clientId,
         string? clientSecret,
         Uri? redirectUri = null,
+        bool clearClientSecret = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>

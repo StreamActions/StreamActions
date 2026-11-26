@@ -369,6 +369,7 @@ public sealed class WorkspaceStore : IWorkspaceStore
         string? clientId,
         string? clientSecret,
         Uri? redirectUri = null,
+        bool clearClientSecret = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
@@ -393,11 +394,6 @@ public sealed class WorkspaceStore : IWorkspaceStore
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(clientSecret) && string.IsNullOrWhiteSpace(existing.EncryptedCustomClientSecret))
-                {
-                    throw new ArgumentException("A custom OAuth client secret is required when setting custom credentials.", nameof(clientSecret));
-                }
-
                 existing.CustomClientId = clientId.Trim();
                 existing.CustomRedirectUri = NormalizeOptionalRedirectUri(redirectUri?.ToString());
                 if (!string.IsNullOrWhiteSpace(clientSecret))
@@ -406,6 +402,10 @@ public sealed class WorkspaceStore : IWorkspaceStore
                         workspaceId,
                         normalizedPlatformId,
                         clientSecret.Trim());
+                }
+                else if (clearClientSecret)
+                {
+                    existing.EncryptedCustomClientSecret = null;
                 }
             }
 
@@ -423,22 +423,25 @@ public sealed class WorkspaceStore : IWorkspaceStore
         ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
 
         WorkspacePlatform? platform = await this.GetPlatformAsync(workspaceId, platformId, cancellationToken).ConfigureAwait(false);
-        if (platform is null
-            || string.IsNullOrWhiteSpace(platform.CustomClientId)
-            || string.IsNullOrWhiteSpace(platform.EncryptedCustomClientSecret))
+        if (platform is null || string.IsNullOrWhiteSpace(platform.CustomClientId))
         {
             return null;
+        }
+
+        Uri? redirectUri = !string.IsNullOrWhiteSpace(platform.CustomRedirectUri)
+            && Uri.TryCreate(platform.CustomRedirectUri, UriKind.Absolute, out Uri? parsedRedirectUri)
+            ? parsedRedirectUri
+            : null;
+
+        if (string.IsNullOrWhiteSpace(platform.EncryptedCustomClientSecret))
+        {
+            return new PlatformOAuthAppCredentials(platform.CustomClientId, null, redirectUri);
         }
 
         (bool success, string? plaintextSecret, CredentialStatus _) = this._secretProtection.TryUnprotectWorkspaceOAuth(
             workspaceId,
             platform.PlatformId,
             platform.EncryptedCustomClientSecret);
-
-        Uri? redirectUri = !string.IsNullOrWhiteSpace(platform.CustomRedirectUri)
-            && Uri.TryCreate(platform.CustomRedirectUri, UriKind.Absolute, out Uri? parsedRedirectUri)
-            ? parsedRedirectUri
-            : null;
 
         return success && !string.IsNullOrWhiteSpace(plaintextSecret)
             ? new PlatformOAuthAppCredentials(platform.CustomClientId, plaintextSecret, redirectUri)

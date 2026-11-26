@@ -117,19 +117,25 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
-    [Fact]
+    [Theory]
     [Trait("Member", "GetChannelGuestStarSettings")]
-    public async Task GetChannelGuestStarSettings_WhenValidRequest_SendsGetAndReturnsSettings()
+    [InlineData("TILED", ChannelGuestStarSettings.GuestStarGroupLayout.Tiled, "eihq8rew7q3hgierufhi3q")]
+    [InlineData("SCREENSHARE", ChannelGuestStarSettings.GuestStarGroupLayout.Screenshare, null)]
+    public async Task GetChannelGuestStarSettings_WhenValidRequest_SendsGetAndReturnsSettings(
+        string groupLayoutJson,
+        ChannelGuestStarSettings.GuestStarGroupLayout expectedLayout,
+        string? expectedBrowserSourceToken)
     {
-        const string jsonResponse = """
+        string tokenJson = expectedBrowserSourceToken is null ? "null" : $"\"{expectedBrowserSourceToken}\"";
+        string jsonResponse = $$"""
         {
           "data": [
             {
               "is_moderator_send_live_enabled": true,
               "slot_count": 4,
               "is_browser_source_audio_enabled": true,
-              "group_layout": "TILED_LAYOUT",
-              "browser_source_token": "eihq8rew7q3hgierufhi3q"
+              "group_layout": "{{groupLayoutJson}}",
+              "browser_source_token": {{tokenJson}}
             }
           ]
         }
@@ -148,8 +154,8 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
         _ = settings.IsModeratorSendLiveEnabled.Should().BeTrue();
         _ = settings.SlotCount.Should().Be(4);
         _ = settings.IsBrowserSourceAudioEnabled.Should().BeTrue();
-        _ = settings.GroupLayout.Should().Be(ChannelGuestStarSettings.GuestStarGroupLayout.TiledLayout);
-        _ = settings.BrowserSourceToken.Should().Be("eihq8rew7q3hgierufhi3q");
+        _ = settings.GroupLayout.Should().Be(expectedLayout);
+        _ = settings.BrowserSourceToken.Should().Be(expectedBrowserSourceToken);
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
@@ -234,18 +240,22 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
         _ = await action.Should().ThrowAsync<TwitchScopeMissingException>().ConfigureAwait(true);
     }
 
-    [Fact]
+    [Theory]
     [Trait("Member", "UpdateChannelGuestStarSettings")]
-    public async Task UpdateChannelGuestStarSettings_WhenValidRequest_SendsPutAndReturnsSuccess()
+    [InlineData(ChannelGuestStarSettings.GuestStarGroupLayout.Tiled, "TILED")]
+    [InlineData(ChannelGuestStarSettings.GuestStarGroupLayout.Screenshare, "SCREENSHARE")]
+    public async Task UpdateChannelGuestStarSettings_WhenValidRequest_SendsPatchAndReturnsSuccess(
+        ChannelGuestStarSettings.GuestStarGroupLayout groupLayout,
+        string expectedGroupLayoutJson)
     {
-        this._fixture.RegisterStatusCode("PUT", "/helix/guest_star/channel_settings", StatusCodes.Status204NoContent);
+        this._fixture.RegisterStatusCode("PATCH", "/helix/guest_star/channel_settings", StatusCodes.Status204NoContent);
 
         ChannelGuestStarSettingsUpdateParameters parameters = new()
         {
             SlotCount = 4,
             IsModeratorSendLiveEnabled = true,
             IsBrowserSourceAudioEnabled = true,
-            GroupLayout = ChannelGuestStarSettings.GuestStarGroupLayout.TiledLayout,
+            GroupLayout = groupLayout,
             RegenerateBrowserSources = false
         };
 
@@ -258,13 +268,13 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
 
         RecordedRequest? request = this._fixture.LastRequest;
         _ = request.Should().NotBeNull();
-        _ = request.Method.Should().Be("PUT");
+        _ = request.Method.Should().Be("PATCH");
         _ = request.Path.Should().Be("/helix/guest_star/channel_settings");
         _ = request.QueryString.Should().Contain("broadcaster_id=9321049");
         _ = request.Body.Should().Contain("\"is_moderator_send_live_enabled\":true");
         _ = request.Body.Should().Contain("\"slot_count\":4");
         _ = request.Body.Should().Contain("\"is_browser_source_audio_enabled\":true");
-        _ = request.Body.Should().Contain("\"group_layout\":\"TILED_LAYOUT\"");
+        _ = request.Body.Should().Contain($"\"group_layout\":\"{expectedGroupLayoutJson}\"");
         _ = request.Body.Should().Contain("\"regenerate_browser_sources\":false");
     }
 
@@ -276,7 +286,7 @@ public sealed class ChannelGuestStarSettingsTests : IDisposable
     [Trait("Member", "UpdateChannelGuestStarSettings")]
     public async Task UpdateChannelGuestStarSettings_WhenOptionalParametersAreNull_OmitsNullFieldsFromBody()
     {
-        this._fixture.RegisterStatusCode("PUT", "/helix/guest_star/channel_settings", StatusCodes.Status204NoContent);
+        this._fixture.RegisterStatusCode("PATCH", "/helix/guest_star/channel_settings", StatusCodes.Status204NoContent);
 
         ChannelGuestStarSettingsUpdateParameters parameters = new()
         {

@@ -24,7 +24,7 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.EventSub.Channel.HypeTrain;
 
 /// <summary>
-/// An event that is sent when a Hype Train ends.
+/// An event that is sent when a Hype Train ends on the specified channel.
 /// </summary>
 public sealed record HypeTrainEnd : IEventSubType
 {
@@ -64,12 +64,22 @@ public sealed record HypeTrainEnd : IEventSubType
     /// <summary>
     /// Total points contributed to the Hype Train.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For Bits contributions, each Bit counts as 1 point. For subscription contributions, each subscription (or each month of a multi-month gift) counts as 500, 1000, or 2500 points for a Tier 1, 2, or 3 subscription.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("total")]
     public int? Total { get; init; }
 
     /// <summary>
-    /// The contributors with the most points contributed.
+    /// The top contributor for each contribution type, with at most one bits entry and one subscription entry.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The top contributor of a type is the user who used the most Bits, or who bought or gifted the most subscriptions whatever their tier. Anonymous contributions aren't listed, so the array may be empty. For a shared Hype Train, the array is computed separately for each broadcaster, so it can differ between their notifications.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("top_contributions")]
     public IReadOnlyList<Contribution>? TopContributions { get; init; }
 

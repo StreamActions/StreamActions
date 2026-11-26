@@ -605,9 +605,9 @@ public sealed class MfaPagesTests
         public IReadOnlyList<string> DefaultLoginScopes => ["openid", "user:read:email"];
         public IReadOnlyList<string> DefaultBroadcasterScopes => ["chat:read", "chat:edit"];
         public IReadOnlyList<string> DefaultBotScopes => ["user:bot", "chat:read"];
-        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null) => throw new NotSupportedException();
-        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string clientSecret, string code, Uri redirectUri, string? expectedNonce = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null, string? codeChallenge = null, string? codeChallengeMethod = null) => throw new NotSupportedException();
+        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string? clientSecret, string code, Uri redirectUri, string? expectedNonce = null, string? codeVerifier = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string? clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<PlatformTokenValidationResult> ValidateTokenAsync(string accessToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask RevokeTokenAsync(string clientId, string token, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }

@@ -93,12 +93,6 @@ public sealed record Add : IEventSubType
     public Message? Message { get; init; }
 
     /// <summary>
-    /// A string that the user entered if the reward requires input.
-    /// </summary>
-    [JsonPropertyName("user_input")]
-    public string? UserInput { get; init; }
-
-    /// <summary>
     /// The UTC date and time (in RFC3339 format) of when the reward was redeemed.
     /// </summary>
     [JsonPropertyName("redeemed_at")]

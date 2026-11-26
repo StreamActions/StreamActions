@@ -42,4 +42,10 @@ public sealed record GiftPaidUpgrade
     /// </summary>
     [JsonPropertyName("gifter_user_name")]
     public string? GifterUserName { get; init; }
+
+    /// <summary>
+    /// Optional. The user login of the user who gifted the subscription. Null if anonymous.
+    /// </summary>
+    [JsonPropertyName("gifter_user_login")]
+    public string? GifterUserLogin { get; init; }
 }

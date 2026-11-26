@@ -39,14 +39,24 @@ public sealed record Outcome
     public string? Title { get; init; }
 
     /// <summary>
-    /// The color for the outcome. Valid values are pink and blue.
+    /// The color for the outcome. Valid values are blue and pink.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If the Prediction has two outcomes, one is blue and the other is pink. If it has more than two outcomes, all of them are blue.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("color")]
     public OutcomeColors? Color { get; init; }
 
     /// <summary>
-    /// The number of users who used Channel Points on this outcome.
+    /// The number of users who chose this outcome.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This includes viewers who took part without spending Channel Points, which happens where Channel Points can't be used on Predictions.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("users")]
     public int? Users { get; init; }
 
@@ -57,8 +67,13 @@ public sealed record Outcome
     public int? ChannelPoints { get; init; }
 
     /// <summary>
-    /// An array of users who used the most Channel Points on this outcome.
+    /// An array of the users who used the most Channel Points on this outcome, highest first.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A viewer who took part without spending Channel Points can appear with a <see cref="TopPredictor.ChannelPointsUsed"/> of 0.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("top_predictors")]
     public IReadOnlyList<TopPredictor>? TopPredictors { get; init; }
 

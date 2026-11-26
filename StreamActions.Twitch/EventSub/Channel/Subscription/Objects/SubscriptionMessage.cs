@@ -16,32 +16,24 @@
  * along with StreamActions.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using StreamActions.Common.Json.Serialization;
 using System.Text.Json.Serialization;
 
-namespace StreamActions.Twitch.EventSub.Channel.SuspiciousUser.Objects;
+namespace StreamActions.Twitch.EventSub.Channel.Subscription.Objects;
 
 /// <summary>
-/// The status set for the suspicious user.
+/// An object that contains the resubscription message and emote information needed to recreate the message.
 /// </summary>
-[JsonConverter(typeof(JsonCustomEnumConverter<LowTrustStatus>))]
-public enum LowTrustStatus
+public sealed record SubscriptionMessage
 {
     /// <summary>
-    /// No status.
+    /// The text of the resubscription chat message.
     /// </summary>
-    [JsonCustomEnum("none")]
-    None,
+    [JsonPropertyName("text")]
+    public string? Text { get; init; }
 
     /// <summary>
-    /// Active monitoring.
+    /// An array that includes the emote ID and start and end positions for where the emote appears in the text.
     /// </summary>
-    [JsonCustomEnum("active_monitoring")]
-    ActiveMonitoring,
-
-    /// <summary>
-    /// Restricted.
-    /// </summary>
-    [JsonCustomEnum("restricted")]
-    Restricted
+    [JsonPropertyName("emotes")]
+    public IReadOnlyList<SubscriptionMessageEmote>? Emotes { get; init; }
 }

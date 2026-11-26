@@ -43,5 +43,11 @@ public enum HypeTrainType
     /// Regular.
     /// </summary>
     [JsonCustomEnum("regular")]
-    Regular
+    Regular,
+
+    /// <summary>
+    /// Mythic.
+    /// </summary>
+    [JsonCustomEnum("mythic")]
+    Mythic
 }

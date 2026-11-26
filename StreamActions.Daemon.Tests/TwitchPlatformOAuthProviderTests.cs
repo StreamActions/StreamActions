@@ -30,6 +30,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using StreamActions.Core.Models;
 using StreamActions.Daemon.Platforms;
+using System.Buffers.Text;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Xunit;
@@ -64,6 +65,42 @@ public sealed class TwitchPlatformOAuthProviderTests
         _ = oidcQuery["scope"].ToString().Should().Be("openid user:read:email");
     }
 
+    [Fact]
+    [Trait("Member", "BuildAuthorizationUri")]
+    public void BuildAuthorizationUri_WhenPkceProvided_ForwardsCodeChallengeAndMethod()
+    {
+        TwitchOAuthEndpointOptions options = new()
+        {
+            AuthorizeEndpoint = "http://127.0.0.1:5000/oauth2/authorize",
+        };
+        TwitchPlatformOAuthProvider provider = new(options);
+        Uri redirectUri = new("https://panel.example.com/auth/twitch/callback");
+
+        Uri oauthUri = provider.BuildAuthorizationUri(
+            "cid-1",
+            redirectUri,
+            ["chat:read"],
+            "state-1",
+            codeChallenge: "challenge-abc",
+            codeChallengeMethod: "S256");
+        Dictionary<string, StringValues> oauthQuery = QueryHelpers.ParseQuery(oauthUri.Query);
+        _ = oauthQuery["code_challenge"].ToString().Should().Be("challenge-abc");
+        _ = oauthQuery["code_challenge_method"].ToString().Should().Be("S256");
+
+        Uri oidcUri = provider.BuildAuthorizationUri(
+            "cid-1",
+            redirectUri,
+            ["user:read:email"],
+            "state-2",
+            nonce: "nonce-1",
+            codeChallenge: "challenge-xyz",
+            codeChallengeMethod: "S256");
+        Dictionary<string, StringValues> oidcQuery = QueryHelpers.ParseQuery(oidcUri.Query);
+        _ = oidcQuery["code_challenge"].ToString().Should().Be("challenge-xyz");
+        _ = oidcQuery["code_challenge_method"].ToString().Should().Be("S256");
+        _ = oidcQuery["nonce"].ToString().Should().Be("nonce-1");
+    }
+
     #endregion
 
     #region ExchangeCodeAsync
@@ -94,7 +131,7 @@ public sealed class TwitchPlatformOAuthProviderTests
                 "auth-code-oidc",
                 new Uri("https://panel.example.com/callback"),
                 "expected-nonce-1",
-                ct);
+                cancellationToken: ct);
 
             _ = result.AccessToken.Should().Be("mock-access-token");
             _ = result.RefreshToken.Should().Be("mock-refresh-token");
@@ -129,7 +166,7 @@ public sealed class TwitchPlatformOAuthProviderTests
                 "auth-code-oauth",
                 new Uri("https://panel.example.com/callback"),
                 expectedNonce: null,
-                ct);
+                cancellationToken: ct);
 
             _ = result.AccessToken.Should().Be("mock-access-token");
             _ = result.PlatformUserId.Should().Be("987654");
@@ -163,10 +200,110 @@ public sealed class TwitchPlatformOAuthProviderTests
                 "auth-code-oidc",
                 new Uri("https://panel.example.com/callback"),
                 "expected-nonce",
-                ct).ConfigureAwait(false);
+                cancellationToken: ct).ConfigureAwait(false);
 
             _ = await act.Should().ThrowAsync<SecurityTokenException>();
         }
+    }
+
+    [Fact]
+    [Trait("Member", "ExchangeCodeAsync")]
+    public async Task ExchangeCodeAsync_ConfidentialWithPkce_SendsClientSecretAndCodeVerifier()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        MockTwitchOAuthServer server = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (server.ConfigureAwait(false))
+        {
+            using HttpClient httpClient = new();
+            TwitchPlatformOAuthProvider provider = new(server.EndpointOptions, httpClient);
+            string codeVerifier = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
+
+            server.IdTokenFactory = baseUrl => server.CreateSignedIdToken(
+                issuer: baseUrl,
+                audience: "twitch-cid",
+                subject: "123456",
+                preferredUsername: "conf_pkce_user",
+                nonce: "nonce-pkce-1");
+
+            PlatformOAuthTokenResult result = await provider.ExchangeCodeAsync(
+                "twitch-cid",
+                "twitch-secret",
+                "auth-code-pkce",
+                new Uri("https://panel.example.com/callback"),
+                expectedNonce: "nonce-pkce-1",
+                codeVerifier: codeVerifier,
+                cancellationToken: ct);
+
+            _ = result.AccessToken.Should().Be("mock-access-token");
+            _ = result.PlatformUserId.Should().Be("123456");
+
+            Dictionary<string, string> tokenForm = server.TokenRequests.Should().ContainSingle().Subject;
+            _ = tokenForm["client_id"].Should().Be("twitch-cid");
+            _ = tokenForm["client_secret"].Should().Be("twitch-secret");
+            _ = tokenForm["code_verifier"].Should().Be(codeVerifier);
+        }
+    }
+
+    [Fact]
+    [Trait("Member", "ExchangeCodeAsync")]
+    public async Task ExchangeCodeAsync_PublicClientWithPkce_OmitsClientSecretAndSendsCodeVerifier()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        MockTwitchOAuthServer server = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (server.ConfigureAwait(false))
+        {
+            using HttpClient httpClient = new();
+            TwitchPlatformOAuthProvider provider = new(server.EndpointOptions, httpClient);
+            string codeVerifier = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
+
+            server.IdTokenFactory = baseUrl => server.CreateSignedIdToken(
+                issuer: baseUrl,
+                audience: "public-cid",
+                subject: "789012",
+                preferredUsername: "public_pkce_user",
+                nonce: "nonce-public-1");
+
+            PlatformOAuthTokenResult result = await provider.ExchangeCodeAsync(
+                "public-cid",
+                clientSecret: null,
+                "auth-code-public",
+                new Uri("https://panel.example.com/callback"),
+                expectedNonce: "nonce-public-1",
+                codeVerifier: codeVerifier,
+                cancellationToken: ct);
+
+            _ = result.AccessToken.Should().Be("mock-access-token");
+            _ = result.PlatformUserId.Should().Be("789012");
+            _ = result.PlatformUsername.Should().Be("public_pkce_user");
+
+            Dictionary<string, string> tokenForm = server.TokenRequests.Should().ContainSingle().Subject;
+            _ = tokenForm["client_id"].Should().Be("public-cid");
+            _ = tokenForm.Should().NotContainKey("client_secret");
+            _ = tokenForm["code_verifier"].Should().Be(codeVerifier);
+        }
+    }
+
+    [Theory]
+    [Trait("Member", "ExchangeCodeAsync")]
+    [InlineData(null, null)]
+    [InlineData("   ", null)]
+    [InlineData(null, "   ")]
+    public async Task ExchangeCodeAsync_WhenClientSecretAndCodeVerifierBothMissing_ThrowsArgumentException(
+        string? clientSecret,
+        string? codeVerifier)
+    {
+        TwitchPlatformOAuthProvider provider = new(new TwitchOAuthEndpointOptions());
+        CancellationToken ct = TestContext.Current.CancellationToken;
+
+        Func<Task> act = async () => _ = await provider.ExchangeCodeAsync(
+            "public-cid",
+            clientSecret,
+            "auth-code",
+            new Uri("https://panel.example.com/callback"),
+            codeVerifier: codeVerifier,
+            cancellationToken: ct).ConfigureAwait(false);
+
+        _ = await act.Should().ThrowAsync<ArgumentException>();
     }
 
     #endregion
@@ -196,6 +333,33 @@ public sealed class TwitchPlatformOAuthProviderTests
 
             await provider.RevokeTokenAsync("twitch-cid", "refreshed-access-token", ct);
             _ = server.RevokedTokens.Should().Contain("refreshed-access-token");
+        }
+    }
+
+    [Theory]
+    [Trait("Member", "RefreshTokenAsync")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task RefreshTokenAsync_WhenPublicClientHasNoSecret_OmitsClientSecretAndReturnsRefreshedToken(string? publicSecret)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        MockTwitchOAuthServer server = await MockTwitchOAuthServer.StartAsync(ct);
+        await using (server.ConfigureAwait(false))
+        {
+            using HttpClient httpClient = new();
+            FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 6, 1, 12, 0, 0, TimeSpan.Zero));
+            TwitchPlatformOAuthProvider provider = new(server.EndpointOptions, httpClient, timeProvider);
+
+            PlatformOAuthTokenResult refreshed = await provider.RefreshTokenAsync("public-cid", publicSecret, "old-refresh", ct);
+            _ = refreshed.AccessToken.Should().Be("refreshed-access-token");
+            _ = refreshed.RefreshToken.Should().Be("new-refresh-token");
+
+            Dictionary<string, string> tokenForm = server.TokenRequests.Should().ContainSingle().Subject;
+            _ = tokenForm["grant_type"].Should().Be("refresh_token");
+            _ = tokenForm["client_id"].Should().Be("public-cid");
+            _ = tokenForm["refresh_token"].Should().Be("old-refresh");
+            _ = tokenForm.Should().NotContainKey("client_secret");
         }
     }
 
@@ -237,6 +401,8 @@ public sealed class TwitchPlatformOAuthProviderTests
         public int ValidateCalls { get; private set; }
 
         public List<string> RevokedTokens { get; } = [];
+
+        public List<Dictionary<string, string>> TokenRequests { get; } = [];
 
         private static readonly string[] _chatReadScopes = ["chat:read"];
 
@@ -287,6 +453,10 @@ public sealed class TwitchPlatformOAuthProviderTests
             _ = app.MapPost("/oauth2/token", async (HttpRequest request) =>
             {
                 IFormCollection form = await request.ReadFormAsync(cancellationToken).ConfigureAwait(false);
+                holder!.TokenRequests.Add(form.ToDictionary(
+                    static kvp => kvp.Key,
+                    static kvp => kvp.Value.ToString(),
+                    StringComparer.Ordinal));
                 string grantType = form["grant_type"].ToString();
                 if (string.Equals(grantType, "refresh_token", StringComparison.Ordinal))
                 {

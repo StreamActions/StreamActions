@@ -25,8 +25,13 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.EventSub.Automod.Message;
 
 /// <summary>
-/// An event that is sent when a message is caught by automod for review.
+/// An event that is sent when a message is caught by AutoMod for review.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Messages that match any of the channel's private blocked terms or blocked links don't trigger a notification, even if they also match public ones.
+/// </para>
+/// </remarks>
 public sealed record Hold : IEventSubType
 {
     /// <inheritdoc/>
@@ -57,19 +62,19 @@ public sealed record Hold : IEventSubType
     public string? BroadcasterUserName { get; init; }
 
     /// <summary>
-    /// The message senders user ID.
+    /// The message sender's user ID.
     /// </summary>
     [JsonPropertyName("user_id")]
     public string? UserId { get; init; }
 
     /// <summary>
-    /// The message senders login name.
+    /// The message sender's login name.
     /// </summary>
     [JsonPropertyName("user_login")]
     public string? UserLogin { get; init; }
 
     /// <summary>
-    /// The message senders display name.
+    /// The message sender's display name.
     /// </summary>
     [JsonPropertyName("user_name")]
     public string? UserName { get; init; }
@@ -87,7 +92,7 @@ public sealed record Hold : IEventSubType
     public Common.ChatMessage.Message? Message { get; init; }
 
     /// <summary>
-    /// The timestamp of when automod saved the message.
+    /// The UTC date and time (in RFC3339 format) of when Twitch received the chat message.
     /// </summary>
     [JsonPropertyName("held_at")]
     public DateTime? HeldAt { get; init; }
@@ -99,14 +104,19 @@ public sealed record Hold : IEventSubType
     public HoldReason? Reason { get; init; }
 
     /// <summary>
-    /// Optional. If the message was caught by automod, this will be populated.
+    /// Optional. The details of the AutoMod check that caught the message. Is null unless <see cref="Reason"/> is <see cref="HoldReason.Automod"/>.
     /// </summary>
     [JsonPropertyName("automod")]
     public Objects.Automod? Automod { get; init; }
 
     /// <summary>
-    /// Optional. If the message was caught due to a blocked term or a blocked link, this will be populated.
+    /// Optional. The details of the blocked terms or blocked links that caught the message. Is null unless <see cref="Reason"/> is <see cref="HoldReason.BlockedTerm"/> or <see cref="HoldReason.BlockedLink"/>.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// At most one of <see cref="Automod"/> and <see cref="BlockedTerm"/> is populated, even if the message also matched the other check.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("blocked_term")]
     public BlockedTerm? BlockedTerm { get; init; }
 
@@ -132,6 +142,12 @@ public sealed record Hold : IEventSubType
         /// The message was caught due to a blocked link.
         /// </summary>
         [JsonCustomEnum("blocked_link")]
-        BlockedLink
+        BlockedLink,
+
+        /// <summary>
+        /// The reason is unknown.
+        /// </summary>
+        [JsonCustomEnum("unknown")]
+        Unknown
     }
 }

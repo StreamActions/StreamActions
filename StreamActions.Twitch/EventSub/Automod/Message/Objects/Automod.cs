@@ -32,8 +32,13 @@ public sealed record Automod
     public string? Category { get; init; }
 
     /// <summary>
-    /// The level of severity (1-4).
+    /// The level of severity, from 1 to 4, where 1 is the most severe. Is 0 if AutoMod couldn't determine the category.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// AutoMod holds a message when its level is at or below the channel's AutoMod level for that category.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("level")]
     public int? Level { get; init; }
 

@@ -23,8 +23,13 @@ using System.Text.Json.Serialization;
 namespace StreamActions.Twitch.EventSub.Channel;
 
 /// <summary>
-/// An event that is sent when a viewer is unbanned from the specified channel.
+/// An event that is sent when a viewer is unbanned from the specified channel, or when a viewer's timeout is removed before it ends.
 /// </summary>
+/// <remarks>
+/// <para>
+/// A timeout that ends on its own doesn't send a notification. The event doesn't say whether a ban or a timeout was removed. To tell them apart, use channel.moderate, whose action is unban or untimeout.
+/// </para>
+/// </remarks>
 public sealed record Unban : IEventSubType
 {
     /// <inheritdoc/>

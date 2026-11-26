@@ -44,19 +44,7 @@ public sealed record GuestStarGuest
     public string? UserId { get; init; }
 
     /// <summary>
-    /// Display name of the guest assigned to this slot.
-    /// </summary>
-    [JsonPropertyName("user_display_name")]
-    public string? UserDisplayName { get; init; }
-
-    /// <summary>
-    /// Login of the guest assigned to this slot.
-    /// </summary>
-    [JsonPropertyName("user_login")]
-    public string? UserLogin { get; init; }
-
-    /// <summary>
-    /// Value from 0 to 100 representing the host's volume setting for this guest.
+    /// Value from 0 to 200 representing the host's volume setting for this guest. The default is 100.
     /// </summary>
     [JsonPropertyName("volume")]
     public int? Volume { get; init; }
@@ -70,13 +58,13 @@ public sealed record GuestStarGuest
     /// <summary>
     /// Information about the guest's audio settings.
     /// </summary>
-    [JsonPropertyName("audio_settings")]
+    [JsonPropertyName("audio")]
     public GuestStarMediaSettings? AudioSettings { get; init; }
 
     /// <summary>
     /// Information about the guest's video settings.
     /// </summary>
-    [JsonPropertyName("video_settings")]
+    [JsonPropertyName("video")]
     public GuestStarMediaSettings? VideoSettings { get; init; }
 }
 

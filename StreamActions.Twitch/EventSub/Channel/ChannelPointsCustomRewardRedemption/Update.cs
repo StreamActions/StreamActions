@@ -27,6 +27,11 @@ namespace StreamActions.Twitch.EventSub.Channel.ChannelPointsCustomRewardRedempt
 /// <summary>
 /// A redemption of a channel points custom reward has been updated for the specified channel.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Changing the status of several redemptions at once sends one notification per redemption.
+/// </para>
+/// </remarks>
 public sealed record Update : IEventSubType
 {
     /// <inheritdoc/>
@@ -81,13 +86,13 @@ public sealed record Update : IEventSubType
     public string? UserName { get; init; }
 
     /// <summary>
-    /// The user input provided. Null if not provided.
+    /// The user input provided. Empty string if not provided.
     /// </summary>
     [JsonPropertyName("user_input")]
     public string? UserInput { get; init; }
 
     /// <summary>
-    /// Defaults to unfulfilled. Possible values are unknown, unfulfilled, fulfilled, and canceled.
+    /// The redemption's status. Will be <see cref="RedemptionStatuses.Fulfilled"/> or <see cref="RedemptionStatuses.Canceled"/>.
     /// </summary>
     [JsonPropertyName("status")]
     public RedemptionStatuses? Status { get; init; }

@@ -61,13 +61,18 @@ public sealed record ChannelGuestStarSettings
     public GuestStarGroupLayout? GroupLayout { get; init; }
 
     /// <summary>
-    /// View only token to generate browser source URLs.
+    /// View only token to generate browser source URLs. Is <see langword="null"/> if the user in <c>moderator_id</c> isn't the broadcaster.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Is <see langword="null"/> if the user in <c>moderator_id</c> isn't the broadcaster.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("browser_source_token")]
     public string? BrowserSourceToken { get; init; }
 
     /// <summary>
-    /// The layout of guests within a session in the browser source.
+    /// The layout of guests within a session in the browser source. Layouts other than those listed are reported as <see cref="Tiled"/>.
     /// </summary>
     [JsonConverter(typeof(JsonCustomEnumConverter<GuestStarGroupLayout>))]
     public enum GuestStarGroupLayout
@@ -75,26 +80,14 @@ public sealed record ChannelGuestStarSettings
         /// <summary>
         /// All live guests are tiled within the browser source with the same size.
         /// </summary>
-        [JsonCustomEnum("TILED_LAYOUT")]
-        TiledLayout,
+        [JsonCustomEnum("TILED")]
+        Tiled,
 
         /// <summary>
         /// All live guests are tiled within the browser source with the same size. If there is an active screen share, it is sized larger than the other guests.
         /// </summary>
-        [JsonCustomEnum("SCREENSHARE_LAYOUT")]
-        ScreenshareLayout,
-
-        /// <summary>
-        /// All live guests are arranged in a horizontal bar within the browser source
-        /// </summary>
-        [JsonCustomEnum("HORIZONTAL_LAYOUT")]
-        HorizontalLayout,
-
-        /// <summary>
-        /// All live guests are arranged in a vertical bar within the browser source
-        /// </summary>
-        [JsonCustomEnum("VERTICAL_LAYOUT")]
-        VerticalLayout
+        [JsonCustomEnum("SCREENSHARE")]
+        Screenshare
     }
 
     /// <summary>
@@ -104,13 +97,14 @@ public sealed record ChannelGuestStarSettings
     /// <param name="broadcasterId">The ID of the broadcaster you want to get guest star settings for.</param>
     /// <param name="moderatorId">The ID of the broadcaster or a user that has permission to moderate the broadcaster's chat room.</param>
     /// <returns>A <see cref="ResponseData{TDataType}"/> with elements of type <see cref="ChannelGuestStarSettings"/> containing the response, or <see langword="null"/> if the request fails.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> is <see langword="null"/>; or <paramref name="broadcasterId"/> or <paramref name="moderatorId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> or <see cref="TwitchToken.OAuth"/> is <see langword="null"/> or whitespace.</exception>
-    /// <exception cref="TokenTypeException">This ID must match the user ID in the access token.</exception>
-    /// <exception cref="TwitchScopeMissingException">Thrown if the token is missing the required scopes.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelReadGuestStar"/>, <see cref="Scope.ChannelManageGuestStar"/>, <see cref="Scope.ModeratorReadGuestStar"/>, or <see cref="Scope.ModeratorManageGuestStar"/>.</exception>
     /// <remarks>
-    /// <para>This ID must match the user ID in the access token.</para>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">
@@ -121,6 +115,10 @@ public sealed record ChannelGuestStarSettings
     /// <item>
     /// <term>400 Bad Request</term>
     /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// <item>
     /// <term>403 Forbidden</term>
@@ -164,13 +162,14 @@ public sealed record ChannelGuestStarSettings
     /// <param name="broadcasterId">The ID of the broadcaster you want to update Guest Star settings for.</param>
     /// <param name="parameters">The parameters to update.</param>
     /// <returns>A <see cref="JsonApiResponse"/> containing the response.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="broadcasterId"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="session"/> or <paramref name="parameters"/> is <see langword="null"/>; or <paramref name="broadcasterId"/> is <see langword="null"/>, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException"><see cref="TwitchSession.Token"/> or <see cref="TwitchToken.OAuth"/> is <see langword="null"/> or whitespace.</exception>
-    /// <exception cref="TokenTypeException">This ID must match the user ID in the access token.</exception>
-    /// <exception cref="TwitchScopeMissingException">Thrown if the token is missing the required scopes.</exception>
+    /// <exception cref="TokenTypeException"><paramref name="session"/> is not a <see cref="TwitchToken.TokenType.User"/> token.</exception>
+    /// <exception cref="TwitchScopeMissingException"><paramref name="session"/> does not have the scope <see cref="Scope.ChannelManageGuestStar"/>.</exception>
     /// <remarks>
-    /// <para>This ID must match the user ID in the access token.</para>
+    /// <para>
+    /// This ID must match the user ID in the access token.
+    /// </para>
     /// <para>
     /// Response Codes:
     /// <list type="table">
@@ -181,6 +180,10 @@ public sealed record ChannelGuestStarSettings
     /// <item>
     /// <term>400 Bad Request</term>
     /// <description>The described parameter was missing or invalid.</description>
+    /// </item>
+    /// <item>
+    /// <term>401 Unauthorized</term>
+    /// <description>The OAuth token was invalid for this request due to the specified reason.</description>
     /// </item>
     /// </list>
     /// </para>
@@ -204,7 +207,7 @@ public sealed record ChannelGuestStarSettings
 
         using JsonContent content = JsonContent.Create(parameters, options: TwitchApi.SerializerOptions);
         Uri uri = Util.BuildUri(new("/guest_star/channel_settings", UriKind.Relative), queryParams);
-        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Put, uri, session, content).ConfigureAwait(false);
+        HttpResponseMessage response = await TwitchApi.PerformHttpRequest(HttpMethod.Patch, uri, session, content).ConfigureAwait(false);
         return await response.ReadFromJsonAsync<JsonApiResponse>(TwitchApi.SerializerOptions).ConfigureAwait(false);
     }
 }

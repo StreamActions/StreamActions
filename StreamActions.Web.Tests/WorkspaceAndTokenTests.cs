@@ -451,6 +451,132 @@ public sealed partial class WorkspaceAndTokenTests
         _ = component.Find("#custom-redirect-uri-twitch").HasAttribute("disabled").Should().BeTrue();
     }
 
+    /// <summary>
+    /// Verifies that <see cref="WorkspacePlatforms"/> supports Public PKCE saves, displays Confidential vs Public PKCE mode, preserves existing secrets, and wires secret clearing to <see cref="IWorkspaceStore.SetCustomOAuthAppAsync"/>.
+    /// </summary>
+    [Fact]
+    [Trait("Member", "WorkspacePlatforms")]
+    public void WorkspacePlatforms_CustomOAuth_SupportsPublicPkceSaveSecretPreservationAndSecretClearing()
+    {
+        Guid ownerId = Guid.NewGuid();
+        Guid workspaceId = Guid.NewGuid();
+        PanelUser owner = new() { Id = ownerId, DisplayName = "streamer_owner" };
+
+        Workspace workspace = new()
+        {
+            Id = workspaceId,
+            OwnerUserId = ownerId,
+            Name = "Custom OAuth Channel",
+            PrimaryPlatformId = "twitch",
+            StepUpSudoPolicy = StepUpSudoPolicy.Optional,
+            CreatedAtUtc = DateTimeOffset.UtcNow,
+        };
+
+        WorkspacePlatform twitchPlatform = new()
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = workspaceId,
+            PlatformId = "twitch",
+            Role = PlatformRole.Primary,
+            PlatformChannelId = "1001",
+            Metadata = new PlatformMetadata(),
+        };
+
+        InMemoryWorkspaceStore workspaceStore = new();
+        workspaceStore.Workspaces[workspaceId] = workspace;
+        workspaceStore.Platforms[(workspaceId, "TWITCH")] = twitchPlatform;
+
+        InMemoryPanelUserStore userStore = new();
+        userStore.Users[ownerId] = owner;
+        userStore.Identities[ownerId] = [];
+
+        InMemoryCredentialStore credStore = new();
+        StubInstanceSettingsService settingsService = new(new InstanceSettings
+        {
+            InstanceOAuthAppPolicy = nameof(InstanceOAuthAppPolicy.InstanceWithOptionalOverride),
+            InstanceBotAccountPolicy = nameof(InstanceBotAccountPolicy.DefaultOnly),
+            StepUpSudoPolicy = StepUpSudoPolicy.Optional,
+        });
+
+        ServiceCollection cacheServices = new();
+        _ = cacheServices.AddHybridCache();
+        using ServiceProvider cacheProvider = cacheServices.BuildServiceProvider();
+        HybridCache cache = cacheProvider.GetRequiredService<HybridCache>();
+        using InMemoryEventBus bus = new(NullLogger<InMemoryEventBus>.Instance);
+        StubPermissionStore permStore = new(workspace);
+        GrantGlobalFeature(permStore, workspaceId, BuiltInPermissionKeys.FeatureCustomOAuthApp, PermissionState.Allow);
+        PermissionService permService = new(permStore, new PermissionRegistry(), cache, bus);
+
+        PluginManager pluginManager = new([], cacheProvider, bus, NullLoggerFactory.Instance);
+        ScopeDriftDetector driftDetector = new(pluginManager, []);
+        BotCredentialResolver botResolver = new(settingsService, workspaceStore, credStore, permService);
+        StubWorkspaceSessionContext sessionContext = new(new AccessibleWorkspace(workspace, true, [twitchPlatform]));
+
+        using BunitContext context = new();
+        _ = context.AddAuthorization().SetAuthorized("streamer_owner").SetPolicies(AuthClaims.PanelAuthenticatedPolicy);
+        _ = context.Services.AddSingleton<AuthenticationStateProvider>(new StubAuthenticationStateProvider(
+            AuthClaims.BuildClaimsPrincipal(owner, mfaElevatedUntilUtc: DateTimeOffset.UtcNow.AddMinutes(10))));
+        _ = context.Services.AddSingleton<IWorkspaceSessionContext>(sessionContext);
+        _ = context.Services.AddSingleton<IWorkspaceStore>(workspaceStore);
+        _ = context.Services.AddSingleton<IPlatformCredentialStore>(credStore);
+        _ = context.Services.AddSingleton<IBotCredentialResolver>(botResolver);
+        _ = context.Services.AddSingleton<IScopeDriftDetector>(driftDetector);
+        _ = context.Services.AddSingleton<IInstanceSettingsService>(settingsService);
+        _ = context.Services.AddSingleton<IPanelUserStore>(userStore);
+        _ = context.Services.AddSingleton<IPermissionService>(permService);
+        _ = context.Services.AddSingleton<IPlatformOAuthProvider>(new StubPlatformOAuthProvider("twitch"));
+        _ = context.Services.AddSingleton<IMfaPolicyService>(new MfaPolicyService(
+            settingsService,
+            workspaceStore,
+            permStore,
+            new StubWorkspaceAccessService(new Dictionary<Guid, HashSet<Guid>> { [ownerId] = [workspaceId] }, workspaceStore)));
+        _ = context.Services.AddSingleton(TimeProvider.System);
+
+        IRenderedComponent<WorkspacePlatforms> component = context.Render<WorkspacePlatforms>();
+
+        // 1. Initially unconfigured: no secret, no clear-secret checkbox.
+        _ = component.Find("[data-custom-oauth-mode='twitch']").TextContent.Should().Contain("Not configured");
+        _ = component.FindAll("#custom-clear-client-secret-twitch").Should().BeEmpty();
+
+        // 2. Save Client ID without secret -> Public PKCE mode, clearClientSecret: false.
+        component.Find("#custom-client-id-twitch").Change("public-ws-cid");
+        component.Find("[data-custom-oauth='twitch'] button:contains('Save Custom OAuth')").Click();
+
+        _ = workspaceStore.Platforms[(workspaceId, "TWITCH")].CustomClientId.Should().Be("public-ws-cid");
+        _ = workspaceStore.Platforms[(workspaceId, "TWITCH")].EncryptedCustomClientSecret.Should().BeNull();
+        _ = workspaceStore.LastSetCustomOAuthCall.Should().Be(new SetCustomOAuthCall(workspaceId, "twitch", "public-ws-cid", null, null, false));
+        _ = component.Find("[data-custom-oauth-mode='twitch']").TextContent.Should().Contain("Public PKCE");
+        _ = component.FindAll("#custom-clear-client-secret-twitch").Should().BeEmpty();
+
+        // 3. Save a secret -> Confidential mode, clear-secret checkbox is rendered.
+        component.Find("#custom-client-secret-twitch").Change("ws-secret-1");
+        component.Find("[data-custom-oauth='twitch'] button:contains('Save Custom OAuth')").Click();
+
+        _ = workspaceStore.Platforms[(workspaceId, "TWITCH")].EncryptedCustomClientSecret.Should().Be("enc:ws-secret-1");
+        _ = component.Find("[data-custom-oauth-mode='twitch']").TextContent.Should().Contain("Confidential");
+        _ = component.FindAll("#custom-clear-client-secret-twitch").Should().ContainSingle();
+        _ = component.Markup.Should().NotContain("ws-secret-1");
+
+        // 4. Update Client ID with blank secret and checkbox unchecked -> existing secret preserved.
+        component.Find("#custom-client-id-twitch").Change("conf-ws-cid");
+        component.Find("[data-custom-oauth='twitch'] button:contains('Save Custom OAuth')").Click();
+
+        _ = workspaceStore.Platforms[(workspaceId, "TWITCH")].CustomClientId.Should().Be("conf-ws-cid");
+        _ = workspaceStore.Platforms[(workspaceId, "TWITCH")].EncryptedCustomClientSecret.Should().Be("enc:ws-secret-1");
+        _ = workspaceStore.LastSetCustomOAuthCall.Should().Be(new SetCustomOAuthCall(workspaceId, "twitch", "conf-ws-cid", null, null, false));
+        _ = component.Find("[data-custom-oauth-mode='twitch']").TextContent.Should().Contain("Confidential");
+
+        // 5. Check clear-secret checkbox and save -> wired with clearClientSecret: true, switches to Public PKCE.
+        component.Find("#custom-clear-client-secret-twitch").Change(true);
+        component.Find("[data-custom-oauth='twitch'] button:contains('Save Custom OAuth')").Click();
+
+        _ = workspaceStore.LastSetCustomOAuthCall.Should().Be(new SetCustomOAuthCall(workspaceId, "twitch", "conf-ws-cid", null, null, true));
+        _ = workspaceStore.Platforms[(workspaceId, "TWITCH")].CustomClientId.Should().Be("conf-ws-cid");
+        _ = workspaceStore.Platforms[(workspaceId, "TWITCH")].EncryptedCustomClientSecret.Should().BeNull();
+        _ = component.Find("[data-custom-oauth-mode='twitch']").TextContent.Should().Contain("Public PKCE");
+        _ = component.FindAll("#custom-clear-client-secret-twitch").Should().BeEmpty();
+    }
+
     #endregion
 
     #region PermissionsComponent
@@ -1104,8 +1230,37 @@ public sealed partial class WorkspaceAndTokenTests
             return ValueTask.FromResult(platform);
         }
 
-        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(this.Platforms[(workspaceId, platformId.ToUpperInvariant())]);
+        /// <summary>
+        /// Gets the arguments passed to the most recent <see cref="SetCustomOAuthAppAsync"/> call.
+        /// </summary>
+        public SetCustomOAuthCall? LastSetCustomOAuthCall { get; private set; }
+
+        public ValueTask<WorkspacePlatform> SetCustomOAuthAppAsync(Guid workspaceId, string platformId, string? clientId, string? clientSecret, Uri? redirectUri = null, bool clearClientSecret = false, CancellationToken cancellationToken = default)
+        {
+            this.LastSetCustomOAuthCall = new SetCustomOAuthCall(workspaceId, platformId, clientId, clientSecret, redirectUri, clearClientSecret);
+            WorkspacePlatform platform = this.Platforms[(workspaceId, platformId.ToUpperInvariant())];
+            if (string.IsNullOrWhiteSpace(clientId))
+            {
+                platform.CustomClientId = null;
+                platform.EncryptedCustomClientSecret = null;
+                platform.CustomRedirectUri = null;
+            }
+            else
+            {
+                platform.CustomClientId = clientId.Trim();
+                platform.CustomRedirectUri = redirectUri?.ToString();
+                if (!string.IsNullOrWhiteSpace(clientSecret))
+                {
+                    platform.EncryptedCustomClientSecret = $"enc:{clientSecret.Trim()}";
+                }
+                else if (clearClientSecret)
+                {
+                    platform.EncryptedCustomClientSecret = null;
+                }
+            }
+
+            return ValueTask.FromResult(platform);
+        }
 
         public ValueTask<PlatformOAuthAppCredentials?> GetCustomOAuthAppAsync(Guid workspaceId, string platformId, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult<PlatformOAuthAppCredentials?>(null);
@@ -1231,9 +1386,9 @@ public sealed partial class WorkspaceAndTokenTests
         public IReadOnlyList<string> DefaultLoginScopes => ["openid", "user:read:email"];
         public IReadOnlyList<string> DefaultBroadcasterScopes => ["chat:read", "chat:edit"];
         public IReadOnlyList<string> DefaultBotScopes => ["user:bot", "chat:read"];
-        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null) => throw new NotSupportedException();
-        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string clientSecret, string code, Uri redirectUri, string? expectedNonce = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Uri BuildAuthorizationUri(string clientId, Uri redirectUri, IReadOnlyCollection<string>? scopes, string state, bool forceVerify = false, string? nonce = null, string? codeChallenge = null, string? codeChallengeMethod = null) => throw new NotSupportedException();
+        public ValueTask<PlatformOAuthTokenResult> ExchangeCodeAsync(string clientId, string? clientSecret, string code, Uri redirectUri, string? expectedNonce = null, string? codeVerifier = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<PlatformOAuthTokenResult> RefreshTokenAsync(string clientId, string? clientSecret, string refreshToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask<PlatformTokenValidationResult> ValidateTokenAsync(string accessToken, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public ValueTask RevokeTokenAsync(string clientId, string token, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
@@ -1264,4 +1419,21 @@ public sealed partial class WorkspaceAndTokenTests
         public override CancellationToken ConnectionAborted { get; } = connectionAborted;
         public override void Abort() { }
     }
+
+    /// <summary>
+    /// Captures arguments passed to <see cref="InMemoryWorkspaceStore.SetCustomOAuthAppAsync"/>.
+    /// </summary>
+    /// <param name="WorkspaceId">The workspace identifier.</param>
+    /// <param name="PlatformId">The platform identifier.</param>
+    /// <param name="ClientId">The custom OAuth client identifier.</param>
+    /// <param name="ClientSecret">The custom OAuth client secret.</param>
+    /// <param name="RedirectUri">The optional redirect URI.</param>
+    /// <param name="ClearClientSecret">Whether explicit secret clearing was requested.</param>
+    private sealed record SetCustomOAuthCall(
+        Guid WorkspaceId,
+        string PlatformId,
+        string? ClientId,
+        string? ClientSecret,
+        Uri? RedirectUri,
+        bool ClearClientSecret);
 }

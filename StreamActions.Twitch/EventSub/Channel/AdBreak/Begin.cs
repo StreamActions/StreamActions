@@ -37,20 +37,35 @@ public sealed record Begin : IEventSubType
     public static string Version => "1";
 
     /// <summary>
-    /// Length in seconds of the mid-roll ad break requested.
+    /// The length of the ad break, in seconds.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This can differ from the length that was requested; for example, Twitch shortens a request that's longer than the maximum allowed for the channel.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("duration_seconds")]
     public int? DurationSeconds { get; init; }
 
     /// <summary>
-    /// Length of the mid-roll ad break requested.
+    /// The length of the ad break.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This can differ from the length that was requested; for example, Twitch shortens a request that's longer than the maximum allowed for the channel.
+    /// </para>
+    /// </remarks>
     [JsonIgnore]
     public TimeSpan? Duration => this.DurationSeconds.HasValue ? TimeSpan.FromSeconds(this.DurationSeconds.Value) : null;
 
     /// <summary>
-    /// The UTC timestamp of when the ad break began.
+    /// The UTC date and time (in RFC3339 format) of when the ad break began.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This can be several seconds after the ad break was requested, and viewers may start seeing ads later than this time.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("started_at")]
     public DateTime? StartedAt { get; init; }
 
@@ -79,8 +94,13 @@ public sealed record Begin : IEventSubType
     public string? BroadcasterUserName { get; init; }
 
     /// <summary>
-    /// The ID of the user that requested the ad. For automatic ads, this will be the ID of the broadcaster.
+    /// The ID of the user that requested the ad. For automatic ads, this is the ID of the broadcaster.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// If the ad break was synchronized from another channel during a co-streamed event, this is the ID of the channel that ran the original ad break, and <see cref="IsAutomatic"/> reflects that ad break.
+    /// </para>
+    /// </remarks>
     [JsonPropertyName("requester_user_id")]
     public string? RequesterUserId { get; init; }
 
